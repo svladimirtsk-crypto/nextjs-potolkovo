@@ -60,9 +60,9 @@ export default function Home() {
   };
 
   const heroImages = [
-    { src: "/hero1.jpeg", alt: "Натяжной потолок — теневой профиль" },
-    { src: "/hero2.jpeg", alt: "Парящий натяжной потолок с подсветкой" },
-    { src: "/hero3.jpeg", alt: "Световые линии в натяжном потолке" },
+    { src: "/hero1.JPEG", alt: "Натяжной потолок — теневой профиль" },
+    { src: "/hero2.JPEG", alt: "Парящий натяжной потолок с подсветкой" },
+    { src: "/hero3.JPEG", alt: "Световые линии в натяжном потолке" },
   ];
 
   const projects = [
