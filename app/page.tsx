@@ -153,7 +153,7 @@ export default function Home() {
         .hamburger.open span:nth-child(1){transform:rotate(45deg) translate(5px,5px)}
         .hamburger.open span:nth-child(2){opacity:0}
         .hamburger.open span:nth-child(3){transform:rotate(-45deg) translate(5px,-5px)}
-        .nav-logo{border-radius:50%;overflow:hidden;flex-shrink:0}
+        .nav-logo{border-radius:0%;overflow:hidden;flex-shrink:0}
         @media(max-width:768px){
           .hamburger{display:flex}
           .desktop-nav{display:none!important}
