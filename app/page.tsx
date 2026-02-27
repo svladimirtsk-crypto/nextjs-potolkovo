@@ -10,7 +10,7 @@ export default function Home() {
   const [projectSlide, setProjectSlide] = useState(0);
   const [heroSlide, setHeroSlide] = useState(0);
   const [formData, setFormData] = useState({ name: "", phone: "", message: "" });
-  const [formSent, setFormSent] = useState(false);
+  const [formStatus, setFormStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -47,7 +47,40 @@ export default function Home() {
 
   const isVisible = (id: string) => visibleSections.has(id);
   const scrollTo = (id: string) => { setMenuOpen(false); document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }); };
-  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); setFormSent(true); setTimeout(() => setFormSent(false), 4000); setFormData({ name: "", phone: "", message: "" }); };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormStatus("sending");
+
+    try {
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          access_key: "af2e2c48-e7c3-4301-923d-3fd5c57193a5",
+          subject: "Новая заявка с сайта ПОТОЛКОВО",
+          from_name: "ПОТОЛКОВО Сайт",
+          name: formData.name,
+          phone: formData.phone,
+          message: formData.message || "Не указано",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setFormStatus("sent");
+        setFormData({ name: "", phone: "", message: "" });
+        setTimeout(() => setFormStatus("idle"), 5000);
+      } else {
+        setFormStatus("error");
+        setTimeout(() => setFormStatus("idle"), 4000);
+      }
+    } catch {
+      setFormStatus("error");
+      setTimeout(() => setFormStatus("idle"), 4000);
+    }
+  };
 
   const heroImages = [
     { src: "/hero1.jpeg", alt: "Натяжной потолок — теневой профиль" },
@@ -100,6 +133,15 @@ export default function Home() {
     { q: "Составляете договор?", a: "Да, обязательно. Договор, смета, гарантийный талон. Всё официально и прозрачно.", icon: "📄" },
   ];
 
+  const submitBtnText = () => {
+    switch (formStatus) {
+      case "sending": return "Отправляю...";
+      case "sent": return "✓ Заявка отправлена!";
+      case "error": return "✕ Ошибка. Попробуйте ещё раз";
+      default: return "Отправить заявку →";
+    }
+  };
+
   return (
     <div style={{
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
@@ -121,10 +163,15 @@ export default function Home() {
         button,a{cursor:pointer}
         .cta-btn{display:inline-flex;align-items:center;gap:8px;padding:16px 36px;background:#1a1a1a;color:#fff;border:none;font-size:15px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;transition:all .3s cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden;font-family:inherit}
         .cta-btn:hover{background:#333;transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.2)}
+        .cta-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none}
         .cta-btn-outline{background:transparent;color:#1a1a1a;border:2px solid #1a1a1a}
         .cta-btn-outline:hover{background:#1a1a1a;color:#fff}
         .cta-btn-white{background:#fff;color:#1a1a1a}
         .cta-btn-white:hover{background:#e8e8e8}
+        .cta-btn-success{background:#2d7a3a}
+        .cta-btn-success:hover{background:#2d7a3a}
+        .cta-btn-error{background:#c0392b}
+        .cta-btn-error:hover{background:#c0392b}
         .nav-link{color:#666;text-decoration:none;font-size:14px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;transition:color .3s;cursor:pointer;background:none;border:none;font-family:inherit}
         .nav-link:hover{color:#1a1a1a}
         .service-card{background:#fff;border:1px solid #e8e8e8;transition:all .4s cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden}
@@ -153,7 +200,6 @@ export default function Home() {
         .hamburger.open span:nth-child(1){transform:rotate(45deg) translate(5px,5px)}
         .hamburger.open span:nth-child(2){opacity:0}
         .hamburger.open span:nth-child(3){transform:rotate(-45deg) translate(5px,-5px)}
-        .nav-logo{overflow:hidden;flex-shrink:0}
         @media(max-width:768px){
           .hamburger{display:flex}
           .desktop-nav{display:none!important}
@@ -180,27 +226,13 @@ export default function Home() {
         borderBottom: scrollY > 50 ? "1px solid #e8e8e8" : "1px solid transparent",
         zIndex: 1000, transition: "all .3s",
       }}>
-        <div
-          style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}
-          onClick={() => scrollTo("hero")}
-        >
-          <div className="nav-logo" style={{ width: 40, height: 40, position: "relative" }}>
-            <Image
-              src="/logo.jpeg"
-              alt="ПОТОЛКОВО логотип"
-              width={40}
-              height={40}
-              style={{ objectFit: "cover", borderRadius: "0%" }}
-              priority
-            />
-          </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }} onClick={() => scrollTo("hero")}>
+          <Image src="/logo.jpeg" alt="ПОТОЛКОВО логотип" width={40} height={40} priority style={{ objectFit: "contain" }} />
           <span style={{
             fontFamily: "'JetBrains Mono',monospace", fontSize: 18, fontWeight: 700,
             letterSpacing: 3, textTransform: "uppercase",
             color: scrollY > 50 ? "#1a1a1a" : "#fff", transition: "color .3s",
-          }}>
-            ПОТОЛКОВО
-          </span>
+          }}>ПОТОЛКОВО</span>
         </div>
         <div className="desktop-nav" style={{ display: "flex", gap: 32, alignItems: "center" }}>
           {[["Услуги", "services"], ["Проекты", "projects"], ["О нас", "about"], ["Контакт", "contact"]].map(([l, id]) => (
@@ -260,7 +292,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ADVANTAGES — без иконок-эмодзи */}
+      {/* ADVANTAGES */}
       <section id="advantages" style={{ padding: 0, background: "#1a1a1a", color: "#fff", position: "relative", overflow: "hidden" }}>
         <div style={{ maxWidth: 1400, margin: "0 auto" }}>
           <div className={`advantages-grid fade-up ${isVisible("advantages") ? "visible" : ""}`} style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 0 }}>
@@ -461,11 +493,16 @@ export default function Home() {
           </div>
           <div className="contact-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, marginTop: 64 }}>
             <form onSubmit={handleSubmit} className={`fade-up fade-up-d1 ${isVisible("contact") ? "visible" : ""}`} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <input type="text" placeholder="Имя" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
-              <input type="tel" placeholder="Телефон" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} required />
-              <textarea placeholder="Опишите задачу: помещение, тип потолка, площадь" rows={5} value={formData.message} onChange={e => setFormData({ ...formData, message: e.target.value })} style={{ resize: "vertical" }} />
-              <button type="submit" className="cta-btn" style={{ width: "100%", justifyContent: "center" }}>
-                {formSent ? "✓ Заявка отправлена" : "Отправить заявку →"}
+              <input type="text" placeholder="Имя" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required disabled={formStatus === "sending"} />
+              <input type="tel" placeholder="Телефон" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} required disabled={formStatus === "sending"} />
+              <textarea placeholder="Опишите задачу: помещение, тип потолка, площадь" rows={5} value={formData.message} onChange={e => setFormData({ ...formData, message: e.target.value })} style={{ resize: "vertical" }} disabled={formStatus === "sending"} />
+              <button
+                type="submit"
+                className={`cta-btn ${formStatus === "sent" ? "cta-btn-success" : ""} ${formStatus === "error" ? "cta-btn-error" : ""}`}
+                style={{ width: "100%", justifyContent: "center" }}
+                disabled={formStatus === "sending"}
+              >
+                {submitBtnText()}
               </button>
               <p style={{ fontSize: 12, color: "#aaa", textAlign: "center" }}>Отвечу в течение 2 часов в рабочее время</p>
             </form>
@@ -503,7 +540,7 @@ export default function Home() {
           <div className="footer-grid" style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr 1fr", gap: 80, alignItems: "start" }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-                <Image src="/logo.jpeg" alt="ПОТОЛКОВО" width={36} height={36} style={{ borderRadius: "50%", objectFit: "cover" }} />
+                <Image src="/logo.jpeg" alt="ПОТОЛКОВО" width={36} height={36} style={{ objectFit: "contain" }} />
                 <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 18, fontWeight: 700, letterSpacing: 3 }}>ПОТОЛКОВО</span>
               </div>
               <p style={{ fontSize: 14, color: "#888", lineHeight: 1.7, maxWidth: 360, marginBottom: 24 }}>
