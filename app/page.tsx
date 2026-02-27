@@ -190,7 +190,7 @@ export default function Home() {
               alt="ПОТОЛКОВО логотип"
               width={40}
               height={40}
-              style={{ objectFit: "cover", borderRadius: "50%" }}
+              style={{ objectFit: "cover", borderRadius: "0%" }}
               priority
             />
           </div>
