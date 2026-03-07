@@ -2,11 +2,11 @@ meta:
   environment: node
   toolchain:
     name: npm
-    version: 20
+    version: 18
 
 build:
-  install: npm install
-  build: npm run build
+  additionalCommands: npm run build   # опционально
 
 run:
-  command: npm run start
+  command: npm run start              # или scriptName (см. ниже)
+  containerPort: 3000                 # укажите порт, на котором слушает приложение
