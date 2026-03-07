@@ -20,27 +20,18 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setHeroSlide((prev) => (prev + 1) % heroImages.length);
-    }, 5000);
+    const interval = setInterval(() => setHeroSlide((p) => (p + 1) % heroImages.length), 5000);
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    setProjectSlide(0);
-  }, [activeProject]);
+  useEffect(() => { setProjectSlide(0); }, [activeProject]);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setVisibleSections((prev) => new Set(prev).add(entry.target.id));
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) setVisibleSections((prev) => new Set(prev).add(entry.target.id));
+      });
+    }, { threshold: 0.1 });
     document.querySelectorAll("section[id]").forEach((el) => observer.observe(el));
     return () => observer.disconnect();
   }, []);
@@ -51,7 +42,6 @@ export default function Home() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormStatus("sending");
-
     try {
       const response = await fetch("https://api.web3forms.com/submit", {
         method: "POST",
@@ -65,13 +55,10 @@ export default function Home() {
           message: formData.message || "Не указано",
         }),
       });
-
       const result = await response.json();
-
       if (result.success) {
         setFormStatus("sent");
         setFormData({ name: "", phone: "", message: "" });
-        setTimeout(() => setFormStatus("idle"), 5000);
       } else {
         setFormStatus("error");
         setTimeout(() => setFormStatus("idle"), 4000);
@@ -83,14 +70,14 @@ export default function Home() {
   };
 
   const heroImages = [
-    { src: "/hero1.jpeg", alt: "Натяжной потолок — теневой профиль" },
-    { src: "/hero2.jpeg", alt: "Парящий натяжной потолок с подсветкой" },
+    { src: "/hero1.jpeg", alt: "Натяжной потолок — теневой профиль в Москве" },
+    { src: "/hero2.jpeg", alt: "Парящий натяжной потолок с LED подсветкой" },
     { src: "/hero3.jpeg", alt: "Световые линии в натяжном потолке" },
   ];
 
   const advantages = [
     { num: "15+", label: "лет опыта", sub: "с 2010 года", image: "/adv-experience.jpeg" },
-    { num: "∞", label: "сложность", sub: "любые проекты", image: "/adv-complexity.jpeg" },
+    { num: "1200+", label: "объектов", sub: "выполнено", image: "/adv-complexity.jpeg" },
     { num: "1", label: "мастер", sub: "я лично", image: "/adv-master.jpeg" },
     { num: "0", label: "посредников", sub: "прямая работа", image: "/adv-direct.jpeg" },
   ];
@@ -104,7 +91,24 @@ export default function Home() {
     { image: "/svc-custom.jpeg", emoji: "🏗️", title: "Индивидуальные проекты", desc: "Купола, многоуровневые конструкции, нестандартные формы. Если можно натянуть — сделаю." },
     { image: "/svc-tracksale.jpeg", emoji: "🛒", title: "Продажа трекового освещения", desc: "Подберу и продам трековые системы под ваш проект. Магнитные треки, споты, линейные светильники." },
     { image: "/svc-simple.jpeg", emoji: "🏠", title: "Простые потолки для квартиры", desc: "Классический белый матовый или сатиновый потолок. Быстро, ровно, недорого. Идеально для ремонта квартир." },
-    { image: "/svc-multilevel.jpeg", emoji: "✨", title: "Светопрозрачные потолки", desc: "Полностью светящийся потолок. Полупрозрачное полотно с LED-подсветкой за ним — равномерное свечение по всей площади. Эффект окна в потолке." },
+    { image: "/svc-multilevel.jpeg", emoji: "✨", title: "Светопрозрачные потолки", desc: "Полностью светящийся потолок. Полупрозрачное полотно с LED-подсветкой за ним — равномерное свечение по всей площади." },
+  ];
+
+  const prices = [
+    { service: "Простой матовый потолок", price: "от 1 000 ₽/м²" },
+    { service: "Теневой профиль", price: "от 900 ₽/м.пог" },
+    { service: "Парящий с LED", price: "от 2 500 ₽/м.пог" },
+    { service: "Световые линии", price: "от 3 500 ₽/пог.м" },
+    { service: "Встроенный трек", price: "от 2 500 ₽/пог.м" },
+  ];
+
+  const reviews = [
+    { name: "Алексей", text: "Отличная работа! Потолок сделан аккуратно, быстро и качественно. Владимир — профессионал своего дела. Рекомендую!", rating: 5 },
+    { name: "Марина", text: "Делали теневой профиль в двух комнатах. Результат превзошёл ожидания. Чисто, без пыли, всё как договаривались.", rating: 5 },
+    { name: "Дмитрий", text: "Заказывал парящий потолок с подсветкой. Владимир помог с выбором, сделал расчёт освещения. Всё супер!", rating: 5 },
+    { name: "Елена", text: "Очень довольна работой. Мастер пунктуальный, аккуратный. Потолок идеальный. Договор, гарантия — всё официально.", rating: 5 },
+    { name: "Сергей", text: "Световые линии в кухне-гостиной. Выглядит как дизайнерский ремонт. Владимир реально знает своё дело.", rating: 5 },
+    { name: "Анна", text: "Рекомендую! Сделали потолки во всей квартире. Быстро, чисто, красиво. Особенно понравился скрытый карниз.", rating: 5 },
   ];
 
   const projects = [
@@ -114,7 +118,7 @@ export default function Home() {
     { title: "Световые линии", desc: "Офисное пространство. Геометричные световые линии вместо стандартных светильников. Расчёт освещённости по нормам.", tags: ["Световые линии", "Офис", "Расчёт света"], images: ["/proj-lines-1.jpeg", "/proj-lines-2.jpeg", "/proj-lines-3.jpeg"] },
     { title: "Скрытый карниз", desc: "Ниша под карниз в натяжном потолке. Шторы «из потолка» — чистый вид, никаких накладок.", tags: ["Скрытый карниз", "Ниша", "Чистый вид"], images: ["/proj-cornice-1.jpeg", "/proj-cornice-2.jpeg", "/proj-cornice-3.jpeg"] },
     { title: "Матовые потолки", desc: "Классика, которая не устаревает. Ровная матовая поверхность без бликов. Идеально для жилых комнат и спален.", tags: ["Матовый", "Классика", "Квартира"], images: ["/proj-matte-1.jpeg", "/proj-matte-2.jpeg", "/proj-matte-3.jpeg"] },
-    { title: "Контурная подсветка", desc: "Светодиодная лента по контуру потолка за полупрозрачной вставкой. Мягкое свечение, уютная атмосфера, управление с пульта.", tags: ["Контурная подсветка", "LED", "Атмосфера"], images: ["/proj-contour-1.jpeg", "/proj-contour-2.jpeg", "/proj-contour-3.jpeg"] },
+    { title: "Контурная подсветка", desc: "Светодиодная лента по контуру потолка за полупрозрачной вставкой. Мягкое свечение, уютная атмосфера.", tags: ["Контурная подсветка", "LED", "Атмосфера"], images: ["/proj-contour-1.jpeg", "/proj-contour-2.jpeg", "/proj-contour-3.jpeg"] },
   ];
 
   const processSteps = [
@@ -129,126 +133,79 @@ export default function Home() {
     { q: "Какую гарантию даёте?", a: "Полную. На полотно — гарантия производителя. На монтаж — моя личная гарантия. Составляю договор. Если что-то не так — приеду и исправлю.", icon: "🛡️" },
     { q: "Работаете за МКАД?", a: "Москва и МО полностью. Дальше — обсуждаемо.", icon: "📍" },
     { q: "Продаёте освещение?", a: "Да. Подберу трековые системы, магнитные треки, споты — под ваш проект, по адекватной цене.", icon: "💡" },
-    { q: "Будет ли шум и пыль?", a: "Работаю без лишнего шума и пыли. Использую пневмопистолеты вместо перфоратора где возможно, а при сверлении — перфоратор с пылесборником. Ваша квартира останется чистой.", icon: "🔇" },
+    { q: "Будет ли шум и пыль?", a: "Работаю без лишнего шума и пыли. Использую пневмопистолеты вместо перфоратора где возможно, а при сверлении — перфоратор с пылесборником.", icon: "🔇" },
     { q: "Составляете договор?", a: "Да, обязательно. Договор, смета, гарантийный талон. Всё официально и прозрачно.", icon: "📄" },
   ];
 
-  const submitBtnText = () => {
-    switch (formStatus) {
-      case "sending": return "Отправляю...";
-      case "sent": return "✓ Заявка отправлена!";
-      case "error": return "✕ Ошибка. Попробуйте ещё раз";
-      default: return "Отправить заявку →";
-    }
-  };
-
   return (
-    <div style={{
-      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-      color: "#1a1a1a", background: "#fafafa", overflowX: "hidden",
-    }}>
+    <div style={{ fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif", color: "#1a1a1a", background: "#fafafa", overflowX: "hidden" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
-        *{margin:0;padding:0;box-sizing:border-box}
-        html{scroll-behavior:smooth}
-        body{overflow-x:hidden}
-        ::selection{background:#1a1a1a;color:#fff}
-        .fade-up{opacity:0;transform:translateY(40px);transition:opacity .8s cubic-bezier(.16,1,.3,1),transform .8s cubic-bezier(.16,1,.3,1)}
-        .fade-up.visible{opacity:1;transform:translateY(0)}
+        *{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}body{overflow-x:hidden}::selection{background:#1a1a1a;color:#fff}
+        .fade-up{opacity:0;transform:translateY(40px);transition:opacity .8s cubic-bezier(.16,1,.3,1),transform .8s cubic-bezier(.16,1,.3,1)}.fade-up.visible{opacity:1;transform:translateY(0)}
         .fade-up-d1{transition-delay:.1s}.fade-up-d2{transition-delay:.2s}.fade-up-d3{transition-delay:.3s}.fade-up-d4{transition-delay:.4s}.fade-up-d5{transition-delay:.5s}.fade-up-d6{transition-delay:.6s}
         @keyframes float1{0%,100%{transform:translate(0,0) rotate(0)}33%{transform:translate(30px,-30px) rotate(120deg)}66%{transform:translate(-20px,20px) rotate(240deg)}}
-        @keyframes float2{0%,100%{transform:translate(0,0) rotate(0)}33%{transform:translate(-40px,20px) rotate(-120deg)}66%{transform:translate(25px,-35px) rotate(-240deg)}}
+        @keyframes float2{0%,100%{transform:translate(0,0)}33%{transform:translate(-40px,20px)}66%{transform:translate(25px,-35px)}}
         @keyframes float3{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(20px,-20px) scale(1.1)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
         .bg-shape{position:absolute;border-radius:50%;filter:blur(80px);opacity:.07;pointer-events:none}
         button,a{cursor:pointer}
-        .cta-btn{display:inline-flex;align-items:center;gap:8px;padding:16px 36px;background:#1a1a1a;color:#fff;border:none;font-size:15px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;transition:all .3s cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden;font-family:inherit}
-        .cta-btn:hover{background:#333;transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.2)}
-        .cta-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none}
-        .cta-btn-outline{background:transparent;color:#1a1a1a;border:2px solid #1a1a1a}
-        .cta-btn-outline:hover{background:#1a1a1a;color:#fff}
-        .cta-btn-white{background:#fff;color:#1a1a1a}
-        .cta-btn-white:hover{background:#e8e8e8}
-        .cta-btn-success{background:#2d7a3a}
-        .cta-btn-success:hover{background:#2d7a3a}
-        .cta-btn-error{background:#c0392b}
-        .cta-btn-error:hover{background:#c0392b}
-        .nav-link{color:#666;text-decoration:none;font-size:14px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;transition:color .3s;cursor:pointer;background:none;border:none;font-family:inherit}
-        .nav-link:hover{color:#1a1a1a}
+        .cta-btn{display:inline-flex;align-items:center;gap:8px;padding:16px 36px;background:#1a1a1a;color:#fff;border:none;font-size:15px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;transition:all .3s cubic-bezier(.16,1,.3,1);overflow:hidden;font-family:inherit}
+        .cta-btn:hover{background:#333;transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.2)}.cta-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none}
+        .cta-btn-outline{background:transparent;color:#1a1a1a;border:2px solid #1a1a1a}.cta-btn-outline:hover{background:#1a1a1a;color:#fff}
+        .cta-btn-white{background:#fff;color:#1a1a1a}.cta-btn-white:hover{background:#e8e8e8}
+        .cta-btn-success{background:#2d7a3a}.cta-btn-success:hover{background:#2d7a3a}.cta-btn-error{background:#c0392b}.cta-btn-error:hover{background:#c0392b}
+        .nav-link{color:#666;text-decoration:none;font-size:14px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;transition:color .3s;cursor:pointer;background:none;border:none;font-family:inherit}.nav-link:hover{color:#1a1a1a}
         .service-card{background:#fff;border:1px solid #e8e8e8;transition:all .4s cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden}
         .service-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:3px;background:#1a1a1a;transform:scaleX(0);transform-origin:left;transition:transform .4s cubic-bezier(.16,1,.3,1);z-index:2}
-        .service-card:hover{border-color:#1a1a1a;transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.08)}
-        .service-card:hover::before{transform:scaleX(1)}
+        .service-card:hover{border-color:#1a1a1a;transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.08)}.service-card:hover::before{transform:scaleX(1)}
         .project-tab{padding:12px 24px;background:transparent;border:1px solid #ddd;color:#888;font-size:13px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;transition:all .3s;font-family:inherit;white-space:nowrap}
-        .project-tab.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
-        .project-tab:hover:not(.active){border-color:#1a1a1a;color:#1a1a1a}
-        .slide-dot{width:10px;height:10px;border-radius:50%;border:2px solid #999;background:transparent;cursor:pointer;transition:all .3s;padding:0}
-        .slide-dot.active{background:#1a1a1a;border-color:#1a1a1a}
-        .slide-dot:hover{border-color:#1a1a1a}
-        .slide-arrow{width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.4);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .3s;font-size:18px;backdrop-filter:blur(10px);font-family:inherit}
-        .slide-arrow:hover{background:rgba(0,0,0,.7);border-color:#fff}
+        .project-tab.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}.project-tab:hover:not(.active){border-color:#1a1a1a;color:#1a1a1a}
+        .slide-dot{width:10px;height:10px;border-radius:50%;border:2px solid #999;background:transparent;cursor:pointer;transition:all .3s;padding:0}.slide-dot.active{background:#1a1a1a;border-color:#1a1a1a}
+        .slide-arrow{width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.5);background:rgba(0,0,0,.4);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .3s;font-size:18px;backdrop-filter:blur(10px);font-family:inherit}.slide-arrow:hover{background:rgba(0,0,0,.7);border-color:#fff}
         .tag{display:inline-block;padding:6px 14px;background:#f0f0f0;font-size:12px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:#666}
         .section-label{font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#999;margin-bottom:16px;font-family:'JetBrains Mono',monospace}
         .section-title{font-size:clamp(32px,5vw,56px);font-weight:800;line-height:1.1;letter-spacing:-1.5px;color:#1a1a1a;margin-bottom:24px}
-        input,textarea{width:100%;padding:16px 20px;border:1px solid #ddd;background:#fff;font-size:15px;font-family:inherit;color:#1a1a1a;transition:border-color .3s;outline:none}
-        input:focus,textarea:focus{border-color:#1a1a1a}
-        input::placeholder,textarea::placeholder{color:#aaa}
-        .mobile-menu{position:fixed;top:0;left:0;width:100%;height:100vh;background:#fafafa;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:32px;transform:translateY(-100%);transition:transform .5s cubic-bezier(.16,1,.3,1)}
-        .mobile-menu.open{transform:translateY(0)}
+        input,textarea{width:100%;padding:16px 20px;border:1px solid #ddd;background:#fff;font-size:15px;font-family:inherit;color:#1a1a1a;transition:border-color .3s;outline:none}input:focus,textarea:focus{border-color:#1a1a1a}input::placeholder,textarea::placeholder{color:#aaa}
+        .mobile-menu{position:fixed;top:0;left:0;width:100%;height:100vh;background:#fafafa;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:32px;transform:translateY(-100%);transition:transform .5s cubic-bezier(.16,1,.3,1)}.mobile-menu.open{transform:translateY(0)}
         .mobile-menu button{font-size:24px;font-weight:700;text-transform:uppercase;letter-spacing:2px;background:none;border:none;color:#1a1a1a;cursor:pointer;font-family:inherit}
-        .hamburger{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;z-index:1001;padding:8px}
-        .hamburger span{width:28px;height:2px;background:#1a1a1a;transition:all .3s}
-        .hamburger.open span:nth-child(1){transform:rotate(45deg) translate(5px,5px)}
-        .hamburger.open span:nth-child(2){opacity:0}
-        .hamburger.open span:nth-child(3){transform:rotate(-45deg) translate(5px,-5px)}
+        .hamburger{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;z-index:1001;padding:8px}.hamburger span{width:28px;height:2px;background:#1a1a1a;transition:all .3s}
+        .hamburger.open span:nth-child(1){transform:rotate(45deg) translate(5px,5px)}.hamburger.open span:nth-child(2){opacity:0}.hamburger.open span:nth-child(3){transform:rotate(-45deg) translate(5px,-5px)}
+        .price-row{display:flex;justify-content:space-between;align-items:center;padding:20px 0;border-bottom:1px solid #e8e8e8;transition:background .3s}.price-row:hover{background:#f8f8f8;padding-left:12px;padding-right:12px}
+        .review-card{background:#fff;border:1px solid #e8e8e8;padding:28px;transition:border-color .3s;flex-shrink:0;width:340px}.review-card:hover{border-color:#1a1a1a}
+        .reviews-track{display:flex;gap:20px;animation:reviewsScroll 30s linear infinite}.reviews-track:hover{animation-play-state:paused}
+        @keyframes reviewsScroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+        .urgency-badge{display:inline-flex;align-items:center;gap:8px;background:#2d7a3a;color:#fff;padding:10px 20px;font-size:13px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;animation:pulse 2s ease-in-out infinite}
+        .sent-message{text-align:center;padding:40px 24px}
         @media(max-width:768px){
-          .hamburger{display:flex}
-          .desktop-nav{display:none!important}
-          .hero-grid{grid-template-columns:1fr!important}
-          .services-grid{grid-template-columns:1fr!important}
-          .advantages-grid{grid-template-columns:repeat(2,1fr)!important}
-          .project-tabs{flex-wrap:wrap}
-          .footer-grid{grid-template-columns:1fr!important;text-align:center}
-          .contact-grid{grid-template-columns:1fr!important}
-          .process-grid{grid-template-columns:repeat(2,1fr)!important}
+          .hamburger{display:flex}.desktop-nav{display:none!important}.hero-grid{grid-template-columns:1fr!important}
+          .services-grid{grid-template-columns:1fr!important}.advantages-grid{grid-template-columns:repeat(2,1fr)!important}
+          .project-tabs{flex-wrap:wrap}.footer-grid{grid-template-columns:1fr!important;text-align:center}
+          .contact-grid{grid-template-columns:1fr!important}.process-grid{grid-template-columns:repeat(2,1fr)!important}
+          .price-grid{grid-template-columns:1fr!important}.review-card{width:280px}
         }
-        @media(max-width:480px){
-          .advantages-grid{grid-template-columns:1fr!important}
-          .process-grid{grid-template-columns:1fr!important}
-        }
+        @media(max-width:480px){.advantages-grid{grid-template-columns:1fr!important}.process-grid{grid-template-columns:1fr!important}}
       `}</style>
 
       {/* NAV */}
-      <nav style={{
-        position: "fixed", top: 0, left: 0, width: "100%", padding: "0 clamp(24px,5vw,80px)", height: 72,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        background: scrollY > 50 ? "rgba(250,250,250,0.95)" : "transparent",
-        backdropFilter: scrollY > 50 ? "blur(20px)" : "none",
-        borderBottom: scrollY > 50 ? "1px solid #e8e8e8" : "1px solid transparent",
-        zIndex: 1000, transition: "all .3s",
-      }}>
+      <nav style={{ position: "fixed", top: 0, left: 0, width: "100%", padding: "0 clamp(24px,5vw,80px)", height: 72, display: "flex", alignItems: "center", justifyContent: "space-between", background: scrollY > 50 ? "rgba(250,250,250,0.95)" : "transparent", backdropFilter: scrollY > 50 ? "blur(20px)" : "none", borderBottom: scrollY > 50 ? "1px solid #e8e8e8" : "1px solid transparent", zIndex: 1000, transition: "all .3s" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }} onClick={() => scrollTo("hero")}>
           <Image src="/logo.jpeg" alt="ПОТОЛКОВО логотип" width={40} height={40} priority style={{ objectFit: "contain" }} />
-          <span style={{
-            fontFamily: "'JetBrains Mono',monospace", fontSize: 18, fontWeight: 700,
-            letterSpacing: 3, textTransform: "uppercase",
-            color: scrollY > 50 ? "#1a1a1a" : "#fff", transition: "color .3s",
-          }}>ПОТОЛКОВО</span>
+          <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 18, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", color: scrollY > 50 ? "#1a1a1a" : "#fff", transition: "color .3s" }}>ПОТОЛКОВО</span>
         </div>
         <div className="desktop-nav" style={{ display: "flex", gap: 32, alignItems: "center" }}>
-          {[["Услуги", "services"], ["Проекты", "projects"], ["О нас", "about"], ["Контакт", "contact"]].map(([l, id]) => (
+          {[["Услуги", "services"], ["Цены", "prices"], ["Проекты", "projects"], ["Отзывы", "reviews"], ["О нас", "about"], ["Контакт", "contact"]].map(([l, id]) => (
             <button key={id} className="nav-link" onClick={() => scrollTo(id)} style={{ color: scrollY > 50 ? "#666" : "rgba(255,255,255,0.8)" }}>{l}</button>
           ))}
           <button className="cta-btn" style={{ padding: "10px 24px", fontSize: 12 }} onClick={() => scrollTo("contact")}>Оставить заявку</button>
         </div>
         <button className={`hamburger ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(!menuOpen)}>
-          <span style={{ background: scrollY > 50 ? "#1a1a1a" : "#fff" }} />
-          <span style={{ background: scrollY > 50 ? "#1a1a1a" : "#fff" }} />
-          <span style={{ background: scrollY > 50 ? "#1a1a1a" : "#fff" }} />
+          <span style={{ background: scrollY > 50 ? "#1a1a1a" : "#fff" }} /><span style={{ background: scrollY > 50 ? "#1a1a1a" : "#fff" }} /><span style={{ background: scrollY > 50 ? "#1a1a1a" : "#fff" }} />
         </button>
       </nav>
 
       <div className={`mobile-menu ${menuOpen ? "open" : ""}`}>
-        {[["Услуги", "services"], ["Проекты", "projects"], ["О нас", "about"], ["Контакт", "contact"]].map(([l, id]) => (
+        {[["Услуги", "services"], ["Цены", "prices"], ["Проекты", "projects"], ["Отзывы", "reviews"], ["О нас", "about"], ["Контакт", "contact"]].map(([l, id]) => (
           <button key={id} onClick={() => scrollTo(id)}>{l}</button>
         ))}
       </div>
@@ -257,19 +214,21 @@ export default function Home() {
       <section id="hero" style={{ minHeight: "100vh", display: "flex", alignItems: "center", position: "relative", overflow: "hidden" }}>
         {heroImages.map((img, i) => (
           <div key={i} style={{ position: "absolute", inset: 0, opacity: heroSlide === i ? 1 : 0, transition: "opacity 1s ease", zIndex: 0 }}>
-            <Image src={img.src} alt={img.alt} fill priority={i === 0} quality={85} sizes="100vw"
-              style={{ objectFit: "cover", objectPosition: "center", transform: heroSlide === i ? "scale(1)" : "scale(1.05)", transition: "transform 6s ease, opacity 1s ease" }} />
+            <Image src={img.src} alt={img.alt} fill priority={i === 0} quality={85} sizes="100vw" style={{ objectFit: "cover", objectPosition: "center", transform: heroSlide === i ? "scale(1)" : "scale(1.05)", transition: "transform 6s ease" }} />
           </div>
         ))}
         <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 1 }} />
         <div style={{ maxWidth: 1400, width: "100%", margin: "0 auto", position: "relative", zIndex: 2, padding: "120px clamp(24px,5vw,80px) 80px" }}>
-          <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, fontWeight: 500, letterSpacing: 3, color: "rgba(255,255,255,0.6)", marginBottom: 24, textTransform: "uppercase" }}>
-            Москва и МО / с 2010 года
+          {/* Urgency badge */}
+          <div className="urgency-badge" style={{ marginBottom: 24 }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#7dff8a", display: "inline-block" }} />
+            Свободные даты на этой неделе — запишитесь на замер
           </div>
-          <h1 style={{ fontSize: "clamp(40px,6vw,80px)", fontWeight: 900, lineHeight: 1.05, letterSpacing: -3, marginBottom: 32, color: "#fff" }}>
+          <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, fontWeight: 500, letterSpacing: 3, color: "rgba(255,255,255,0.6)", marginBottom: 24, textTransform: "uppercase" }}>Москва и МО / с 2010 года / 1200+ объектов</div>
+          <h1 style={{ fontSize: "clamp(40px,6vw,80px)", fontWeight: 900, lineHeight: 1.05, letterSpacing: -3, marginBottom: 32, color: "#fff", textShadow: "0 2px 20px rgba(0,0,0,0.5)" }}>
             Натяжные<br />потолки<br /><span style={{ color: "rgba(255,255,255,0.5)" }}>без компромиссов</span>
           </h1>
-          <p style={{ fontSize: 18, lineHeight: 1.7, color: "rgba(255,255,255,0.7)", maxWidth: 520, marginBottom: 48 }}>
+          <p style={{ fontSize: 18, lineHeight: 1.7, color: "rgba(255,255,255,0.7)", maxWidth: 520, marginBottom: 48, textShadow: "0 1px 10px rgba(0,0,0,0.3)" }}>
             Я — Владимир. Не компания с колл-центром. Частный мастер. Делаю лично. Любая сложность. Теневой профиль, световые линии, треки, купола.
           </p>
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 48 }}>
@@ -277,13 +236,7 @@ export default function Home() {
             <button className="cta-btn" style={{ background: "transparent", border: "2px solid rgba(255,255,255,0.5)" }} onClick={() => scrollTo("projects")}>Смотреть работы</button>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            {heroImages.map((_, i) => (
-              <button key={i} onClick={() => setHeroSlide(i)} style={{
-                width: heroSlide === i ? 32 : 10, height: 4, borderRadius: 2,
-                background: heroSlide === i ? "#fff" : "rgba(255,255,255,0.4)",
-                border: "none", cursor: "pointer", transition: "all .3s", padding: 0,
-              }} />
-            ))}
+            {heroImages.map((_, i) => (<button key={i} onClick={() => setHeroSlide(i)} style={{ width: heroSlide === i ? 32 : 10, height: 4, borderRadius: 2, background: heroSlide === i ? "#fff" : "rgba(255,255,255,0.4)", border: "none", cursor: "pointer", transition: "all .3s", padding: 0 }} />))}
           </div>
         </div>
         <div style={{ position: "absolute", bottom: 40, right: "clamp(24px,5vw,80px)", display: "flex", gap: 8, zIndex: 3 }}>
@@ -298,15 +251,9 @@ export default function Home() {
           <div className={`advantages-grid fade-up ${isVisible("advantages") ? "visible" : ""}`} style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 0 }}>
             {advantages.map((a, i) => (
               <div key={i} className={`fade-up ${isVisible("advantages") ? "visible" : ""} fade-up-d${i + 1}`}
-                style={{
-                  position: "relative", overflow: "hidden", minHeight: 320,
-                  display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 32,
-                  borderRight: i < 3 ? "1px solid rgba(255,255,255,0.08)" : "none",
-                  transition: "all .3s", cursor: "default",
-                }}
+                style={{ position: "relative", overflow: "hidden", minHeight: 320, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 32, borderRight: i < 3 ? "1px solid rgba(255,255,255,0.08)" : "none", transition: "all .3s", cursor: "default" }}
                 onMouseEnter={e => { const o = e.currentTarget.querySelector('.adv-overlay') as HTMLElement; if (o) o.style.opacity = '0.5' }}
-                onMouseLeave={e => { const o = e.currentTarget.querySelector('.adv-overlay') as HTMLElement; if (o) o.style.opacity = '0.7' }}
-              >
+                onMouseLeave={e => { const o = e.currentTarget.querySelector('.adv-overlay') as HTMLElement; if (o) o.style.opacity = '0.7' }}>
                 <Image src={a.image} alt={a.label} fill sizes="(max-width:768px) 50vw, 25vw" style={{ objectFit: "cover" }} />
                 <div className="adv-overlay" style={{ position: "absolute", inset: 0, background: "#1a1a1a", opacity: 0.7, transition: "opacity .4s" }} />
                 <div style={{ position: "relative", zIndex: 2, textAlign: "center" }}>
@@ -347,6 +294,66 @@ export default function Home() {
         </div>
       </section>
 
+      {/* PRICES */}
+      <section id="prices" style={{ padding: "120px clamp(24px,5vw,80px)", background: "#f2f2f2", position: "relative", overflow: "hidden" }}>
+        <div className="bg-shape" style={{ width: 400, height: 400, background: "#1a1a1a", top: "20%", right: "-5%", animation: "float3 20s ease-in-out infinite" }} />
+        <div style={{ maxWidth: 900, margin: "0 auto", position: "relative", zIndex: 1 }}>
+          <div className={`fade-up ${isVisible("prices") ? "visible" : ""}`}>
+            <div className="section-label">Цены</div>
+            <h2 className="section-title">Ориентировочные цены.<br /><span style={{ color: "#999" }}>Точные — после замера.</span></h2>
+          </div>
+          <div className={`fade-up fade-up-d2 ${isVisible("prices") ? "visible" : ""}`} style={{ marginTop: 48, background: "#fff", border: "1px solid #e8e8e8", padding: "8px 32px" }}>
+            {prices.map((p, i) => (
+              <div key={i} className="price-row">
+                <span style={{ fontSize: 16, fontWeight: 500 }}>{p.service}</span>
+                <span style={{ fontSize: 18, fontWeight: 700, fontFamily: "'JetBrains Mono',monospace", whiteSpace: "nowrap" }}>{p.price}</span>
+              </div>
+            ))}
+          </div>
+          <div className={`fade-up fade-up-d3 ${isVisible("prices") ? "visible" : ""}`} style={{ marginTop: 24, padding: 24, background: "#fff", border: "1px solid #e8e8e8" }}>
+            <p style={{ fontSize: 14, lineHeight: 1.7, color: "#666", marginBottom: 16 }}>
+              📐 <strong>Замер бесплатный.</strong> Приезжаю, считаю точную стоимость на месте. Без «потом уточним».
+            </p>
+            <p style={{ fontSize: 13, color: "#999" }}>
+              Цена зависит от площади, количества углов, типа профиля, освещения. Указанные цены — минимальные, для ориентира.
+            </p>
+          </div>
+          <div className={`fade-up fade-up-d4 ${isVisible("prices") ? "visible" : ""}`} style={{ marginTop: 32, textAlign: "center" }}>
+            <button className="cta-btn" onClick={() => scrollTo("contact")}>Рассчитать стоимость →</button>
+          </div>
+        </div>
+      </section>
+
+      {/* REVIEWS */}
+      <section id="reviews" style={{ padding: "120px 0", position: "relative", overflow: "hidden" }}>
+        <div style={{ maxWidth: 1400, margin: "0 auto", paddingLeft: "clamp(24px,5vw,80px)", paddingRight: "clamp(24px,5vw,80px)" }}>
+          <div className={`fade-up ${isVisible("reviews") ? "visible" : ""}`}>
+            <div className="section-label">Отзывы</div>
+            <h2 className="section-title">Клиенты говорят<br /><span style={{ color: "#999" }}>лучше любой рекламы.</span></h2>
+          </div>
+        </div>
+        {/* Scrolling reviews */}
+        <div className={`fade-up fade-up-d2 ${isVisible("reviews") ? "visible" : ""}`} style={{ marginTop: 48, overflow: "hidden" }}>
+          <div className="reviews-track">
+            {[...reviews, ...reviews].map((r, i) => (
+              <div key={i} className="review-card">
+                <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
+                  {[...Array(r.rating)].map((_, j) => (<span key={j} style={{ fontSize: 18, color: "#f5a623" }}>★</span>))}
+                </div>
+                <p style={{ fontSize: 14, lineHeight: 1.7, color: "#555", marginBottom: 16 }}>«{r.text}»</p>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1a1a" }}>{r.name}</div>
+                <div style={{ fontSize: 11, color: "#999", fontFamily: "'JetBrains Mono',monospace", marginTop: 4 }}>Авито · Подтверждённый отзыв</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className={`fade-up fade-up-d3 ${isVisible("reviews") ? "visible" : ""}`} style={{ textAlign: "center", marginTop: 40 }}>
+          <a href="https://www.avito.ru/user/c1ca26ca50cdbc5158be16e89486aa20/profile/all/predlozheniya_uslug?src=sharing&sellerId=c1ca26ca50cdbc5158be16e89486aa20" target="_blank" rel="noopener noreferrer" className="cta-btn cta-btn-outline" style={{ textDecoration: "none" }}>
+            Все отзывы на Авито →
+          </a>
+        </div>
+      </section>
+
       {/* PROJECTS */}
       <section id="projects" style={{ padding: "120px clamp(24px,5vw,80px)", background: "#f2f2f2", position: "relative", overflow: "hidden" }}>
         <div className="bg-shape" style={{ width: 400, height: 400, background: "#1a1a1a", top: "10%", left: "-5%", animation: "float2 18s ease-in-out infinite" }} />
@@ -379,9 +386,7 @@ export default function Home() {
               </div>
             </div>
             <div>
-              <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 64, fontWeight: 700, color: "#e0e0e0", lineHeight: 1, marginBottom: 16 }}>
-                {String(activeProject + 1).padStart(2, "0")}
-              </div>
+              <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 64, fontWeight: 700, color: "#e0e0e0", lineHeight: 1, marginBottom: 16 }}>{String(activeProject + 1).padStart(2, "0")}</div>
               <h3 style={{ fontSize: 28, fontWeight: 800, letterSpacing: -1, marginBottom: 16 }}>{projects[activeProject].title}</h3>
               <p style={{ fontSize: 15, lineHeight: 1.8, color: "#666", marginBottom: 24 }}>{projects[activeProject].desc}</p>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 32 }}>
@@ -402,29 +407,20 @@ export default function Home() {
               <div className="section-label">Обо мне</div>
               <h2 className="section-title">Владимир.<br /><span style={{ color: "#999" }}>Один мастер. Один стандарт.</span></h2>
               <div style={{ width: "100%", aspectRatio: "3/2", marginBottom: 32, position: "relative", overflow: "hidden", border: "1px solid #e8e8e8" }}>
-                <Image src="/about-master.jpeg" alt="Владимир — мастер по натяжным потолкам" fill sizes="(max-width:768px) 100vw, 50vw" style={{ objectFit: "cover" }} />
-                <div style={{ position: "absolute", bottom: 16, left: 16, background: "#1a1a1a", color: "#fff", padding: "8px 16px", fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: 1, textTransform: "uppercase", zIndex: 2 }}>
-                  Владимир / Основатель
-                </div>
+                <Image src="/about-master.jpeg" alt="Владимир — мастер по натяжным потолкам в Москве" fill sizes="(max-width:768px) 100vw, 50vw" style={{ objectFit: "cover" }} />
+                <div style={{ position: "absolute", bottom: 16, left: 16, background: "#1a1a1a", color: "#fff", padding: "8px 16px", fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: 1, textTransform: "uppercase", zIndex: 2 }}>Владимир / Основатель</div>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-                <p style={{ fontSize: 16, lineHeight: 1.8, color: "#555" }}>
-                  Я не франшиза. Не бригада с текучкой. Я — частный мастер, который с 2010 года занимается одним делом: натяжными потолками. Более 15 лет опыта на объектах любой сложности.
-                </p>
-                <p style={{ fontSize: 16, lineHeight: 1.8, color: "#555" }}>
-                  Сам замеряю. Сам проектирую. Сам монтирую. Каждый объект — моя личная репутация. Поэтому халтуры не бывает.
-                </p>
-                <p style={{ fontSize: 16, lineHeight: 1.8, color: "#555" }}>
-                  Работаю чисто: пневмопистолеты вместо перфоратора, а при сверлении — пылесборник. Составляю договор, даю гарантию на монтаж.
-                </p>
+                <p style={{ fontSize: 16, lineHeight: 1.8, color: "#555" }}>Я не франшиза. Не бригада с текучкой. Я — частный мастер, который с 2010 года занимается одним делом: натяжными потолками. Более 15 лет опыта, 1200+ выполненных объектов.</p>
+                <p style={{ fontSize: 16, lineHeight: 1.8, color: "#555" }}>Сам замеряю. Сам проектирую. Сам монтирую. Каждый объект — моя личная репутация.</p>
+                <p style={{ fontSize: 16, lineHeight: 1.8, color: "#555" }}>Работаю чисто: пневмопистолеты вместо перфоратора, а при сверлении — пылесборник. Составляю договор, даю гарантию на монтаж.</p>
               </div>
             </div>
             <div className={`fade-up fade-up-d2 ${isVisible("about") ? "visible" : ""}`} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#999", fontFamily: "'JetBrains Mono',monospace", marginBottom: 4 }}>Частые вопросы</div>
               {faqItems.map((item, i) => (
                 <div key={i} style={{ padding: 24, background: "#fff", border: "1px solid #e8e8e8", transition: "border-color .3s" }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = "#1a1a1a")}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = "#e8e8e8")}>
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = "#1a1a1a")} onMouseLeave={e => (e.currentTarget.style.borderColor = "#e8e8e8")}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                     <span style={{ fontSize: 20 }}>{item.icon}</span>
                     <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: -0.3 }}>{item.q}</div>
@@ -449,8 +445,7 @@ export default function Home() {
             {processSteps.map((item, i) => (
               <div key={i} className={`fade-up ${isVisible("process") ? "visible" : ""} fade-up-d${i + 1}`}
                 style={{ border: "1px solid rgba(255,255,255,0.1)", transition: "border-color .3s", overflow: "hidden" }}
-                onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)")}
-                onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")}>
+                onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)")} onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")}>
                 <div style={{ width: "100%", height: 160, position: "relative", overflow: "hidden" }}>
                   <Image src={item.image} alt={item.title} fill sizes="(max-width:768px) 50vw, 25vw" style={{ objectFit: "cover" }} />
                   <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom,rgba(26,26,26,0.3),rgba(26,26,26,0.8))" }} />
@@ -469,12 +464,14 @@ export default function Home() {
 
       {/* CTA BANNER */}
       <section style={{ padding: "80px clamp(24px,5vw,80px)", position: "relative", overflow: "hidden", minHeight: 400, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <Image src="/cta-banner.jpeg" alt="Интерьер с натяжным потолком" fill sizes="100vw" style={{ objectFit: "cover" }} />
+        <Image src="/cta-banner.jpeg" alt="Интерьер с натяжным потолком ПОТОЛКОВО" fill sizes="100vw" style={{ objectFit: "cover" }} />
         <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.7)" }} />
         <div style={{ maxWidth: 800, margin: "0 auto", textAlign: "center", position: "relative", zIndex: 1 }}>
-          <h2 style={{ fontSize: "clamp(28px,4vw,48px)", fontWeight: 800, color: "#fff", lineHeight: 1.2, marginBottom: 16, letterSpacing: -1 }}>
-            Готовы к потолку, который удивляет?
-          </h2>
+          <div className="urgency-badge" style={{ marginBottom: 24, display: "inline-flex" }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#7dff8a", display: "inline-block" }} />
+            Есть свободные даты на этой неделе
+          </div>
+          <h2 style={{ fontSize: "clamp(28px,4vw,48px)", fontWeight: 800, color: "#fff", lineHeight: 1.2, marginBottom: 16, letterSpacing: -1 }}>Готовы к потолку, который удивляет?</h2>
           <p style={{ fontSize: 16, color: "rgba(255,255,255,0.7)", marginBottom: 32 }}>Звоните или оставьте заявку — отвечу лично в течение 2 часов</p>
           <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
             <a href="tel:+79055219909" className="cta-btn cta-btn-white" style={{ textDecoration: "none" }}>📞 +7 905 521 99 09</a>
@@ -492,20 +489,31 @@ export default function Home() {
             <h2 className="section-title">Готовы начать?<br /><span style={{ color: "#999" }}>Напишите. Отвечу лично.</span></h2>
           </div>
           <div className="contact-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, marginTop: 64 }}>
-            <form onSubmit={handleSubmit} className={`fade-up fade-up-d1 ${isVisible("contact") ? "visible" : ""}`} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <input type="text" placeholder="Имя" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required disabled={formStatus === "sending"} />
-              <input type="tel" placeholder="Телефон" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} required disabled={formStatus === "sending"} />
-              <textarea placeholder="Опишите задачу: помещение, тип потолка, площадь" rows={5} value={formData.message} onChange={e => setFormData({ ...formData, message: e.target.value })} style={{ resize: "vertical" }} disabled={formStatus === "sending"} />
-              <button
-                type="submit"
-                className={`cta-btn ${formStatus === "sent" ? "cta-btn-success" : ""} ${formStatus === "error" ? "cta-btn-error" : ""}`}
-                style={{ width: "100%", justifyContent: "center" }}
-                disabled={formStatus === "sending"}
-              >
-                {submitBtnText()}
-              </button>
-              <p style={{ fontSize: 12, color: "#aaa", textAlign: "center" }}>Отвечу в течение 2 часов в рабочее время</p>
-            </form>
+            {/* Form or Success message */}
+            <div className={`fade-up fade-up-d1 ${isVisible("contact") ? "visible" : ""}`}>
+              {formStatus === "sent" ? (
+                <div className="sent-message" style={{ background: "#f0faf0", border: "1px solid #c8e6c9", padding: "48px 32px" }}>
+                  <div style={{ fontSize: 48, marginBottom: 16 }}>✓</div>
+                  <h3 style={{ fontSize: 24, fontWeight: 800, marginBottom: 12, color: "#2d7a3a" }}>Заявка получена!</h3>
+                  <p style={{ fontSize: 16, lineHeight: 1.7, color: "#555", marginBottom: 24 }}>Владимир перезвонит вам в течение 2 часов.</p>
+                  <p style={{ fontSize: 14, color: "#888", marginBottom: 24 }}>Если срочно — звоните:</p>
+                  <a href="tel:+79055219909" style={{ fontSize: 20, fontWeight: 700, color: "#1a1a1a", textDecoration: "none" }}>📞 +7 905 521 99 09</a>
+                  <div style={{ marginTop: 32 }}>
+                    <button className="cta-btn cta-btn-outline" style={{ fontSize: 13, padding: "12px 24px" }} onClick={() => setFormStatus("idle")}>Отправить ещё заявку</button>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  <input type="text" placeholder="Имя" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required disabled={formStatus === "sending"} />
+                  <input type="tel" placeholder="Телефон" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} required disabled={formStatus === "sending"} />
+                  <textarea placeholder="Опишите задачу: помещение, тип потолка, площадь" rows={5} value={formData.message} onChange={e => setFormData({ ...formData, message: e.target.value })} style={{ resize: "vertical" }} disabled={formStatus === "sending"} />
+                  <button type="submit" className={`cta-btn ${formStatus === "error" ? "cta-btn-error" : ""}`} style={{ width: "100%", justifyContent: "center" }} disabled={formStatus === "sending"}>
+                    {formStatus === "sending" ? "Отправляю..." : formStatus === "error" ? "✕ Ошибка. Попробуйте ещё раз" : "Отправить заявку →"}
+                  </button>
+                  <p style={{ fontSize: 12, color: "#aaa", textAlign: "center" }}>Отвечу в течение 2 часов в рабочее время</p>
+                </form>
+              )}
+            </div>
             <div className={`fade-up fade-up-d3 ${isVisible("contact") ? "visible" : ""}`} style={{ display: "flex", flexDirection: "column", gap: 28 }}>
               {[
                 { label: "Телефон", value: "+7 905 521 99 09", icon: "📞", href: "tel:+79055219909" },
@@ -525,9 +533,7 @@ export default function Home() {
                 </div>
               ))}
               <div style={{ padding: 24, background: "#f8f8f8", border: "1px solid #e8e8e8", marginTop: 4 }}>
-                <p style={{ fontSize: 14, lineHeight: 1.7, color: "#666" }}>
-                  💡 <strong>Совет:</strong> Напишите площадь помещения и тип потолка — так я сразу сориентирую по цене и срокам.
-                </p>
+                <p style={{ fontSize: 14, lineHeight: 1.7, color: "#666" }}>💡 <strong>Совет:</strong> Напишите площадь помещения и тип потолка — так я сразу сориентирую по цене и срокам.</p>
               </div>
             </div>
           </div>
@@ -543,18 +549,15 @@ export default function Home() {
                 <Image src="/logo.jpeg" alt="ПОТОЛКОВО" width={36} height={36} style={{ objectFit: "contain" }} />
                 <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 18, fontWeight: 700, letterSpacing: 3 }}>ПОТОЛКОВО</span>
               </div>
-              <p style={{ fontSize: 14, color: "#888", lineHeight: 1.7, maxWidth: 360, marginBottom: 24 }}>
-                Натяжные потолки любой сложности. Москва и МО. Частный мастер Владимир. С 2010 года.
-              </p>
+              <p style={{ fontSize: 14, color: "#888", lineHeight: 1.7, maxWidth: 360, marginBottom: 24 }}>Натяжные потолки любой сложности. Москва и МО. Частный мастер Владимир. С 2010 года. 1200+ объектов.</p>
               <a href="tel:+79055219909" style={{ fontSize: 20, fontWeight: 700, color: "#fff", textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>📞 +7 905 521 99 09</a>
             </div>
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#666", marginBottom: 16, fontFamily: "'JetBrains Mono',monospace" }}>Навигация</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {[["Услуги", "services"], ["Проекты", "projects"], ["О нас", "about"], ["Контакт", "contact"]].map(([l, id]) => (
+                {[["Услуги", "services"], ["Цены", "prices"], ["Проекты", "projects"], ["Отзывы", "reviews"], ["О нас", "about"], ["Контакт", "contact"]].map(([l, id]) => (
                   <button key={id} onClick={() => scrollTo(id)} style={{ background: "none", border: "none", color: "#888", fontSize: 14, cursor: "pointer", textAlign: "left", fontFamily: "inherit", padding: 0, transition: "color .3s" }}
-                    onMouseEnter={e => (e.currentTarget.style.color = "#fff")}
-                    onMouseLeave={e => (e.currentTarget.style.color = "#888")}>{l}</button>
+                    onMouseEnter={e => (e.currentTarget.style.color = "#fff")} onMouseLeave={e => (e.currentTarget.style.color = "#888")}>{l}</button>
                 ))}
               </div>
             </div>
