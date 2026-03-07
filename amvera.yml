@@ -1,4 +1,12 @@
-name: ""
 meta:
   environment: node
-  toolchain: {}
+  toolchain:
+    name: npm
+    version: 20
+
+build:
+  install: npm install
+  build: npm run build
+
+run:
+  command: npm run start
