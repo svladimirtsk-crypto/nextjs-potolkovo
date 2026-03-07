@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 
 export default function Home() {
@@ -12,6 +12,7 @@ export default function Home() {
   const [formData, setFormData] = useState({ name: "", phone: "", message: "" });
   const [formStatus, setFormStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
+  const reviewsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -77,7 +78,7 @@ export default function Home() {
 
   const advantages = [
     { num: "15+", label: "лет опыта", sub: "с 2010 года", image: "/adv-experience.jpeg" },
-    { num: "1200+", label: "объектов", sub: "выполнено", image: "/adv-complexity.jpeg" },
+    { num: "∞", label: "сложность", sub: "любые проекты", image: "/adv-complexity.jpeg" },
     { num: "1", label: "мастер", sub: "я лично", image: "/adv-master.jpeg" },
     { num: "0", label: "посредников", sub: "прямая работа", image: "/adv-direct.jpeg" },
   ];
@@ -103,12 +104,23 @@ export default function Home() {
   ];
 
   const reviews = [
-    { name: "Алексей", text: "Отличная работа! Потолок сделан аккуратно, быстро и качественно. Владимир — профессионал своего дела. Рекомендую!", rating: 5 },
-    { name: "Марина", text: "Делали теневой профиль в двух комнатах. Результат превзошёл ожидания. Чисто, без пыли, всё как договаривались.", rating: 5 },
-    { name: "Дмитрий", text: "Заказывал парящий потолок с подсветкой. Владимир помог с выбором, сделал расчёт освещения. Всё супер!", rating: 5 },
-    { name: "Елена", text: "Очень довольна работой. Мастер пунктуальный, аккуратный. Потолок идеальный. Договор, гарантия — всё официально.", rating: 5 },
-    { name: "Сергей", text: "Световые линии в кухне-гостиной. Выглядит как дизайнерский ремонт. Владимир реально знает своё дело.", rating: 5 },
-    { name: "Анна", text: "Рекомендую! Сделали потолки во всей квартире. Быстро, чисто, красиво. Особенно понравился скрытый карниз.", rating: 5 },
+    { name: "Юлия Кравченко", date: "15 января", text: "Всё очень понравилось, ребята быстро и качественно сделали потолки. Минимум шума и пыли. Молодцы, спасибо! Однозначно рекомендую.", rating: 5 },
+    { name: "СмотриПрофиль", date: "29 декабря 2025", text: "Приятные люди, профессионалы своего дела. Быстро и качественно сделали работу. Рекомендую! В ближайшее время планирую ещё обратиться.", rating: 5 },
+    { name: "Алена", date: "28 декабря 2025", text: "Мастер — профессионал своего дела! Быстро, качественно, красиво! И приемлемые цены! Промониторила много компаний и мастеров, у Владимира одна из самых низких цен, при этом качество на высоком уровне! Рекомендую!", rating: 5 },
+    { name: "Андрей Алатов", date: "3 декабря 2025", text: "Мастер своего дела. Вежливый, пунктуальный. Отличный мастер, советую.", rating: 5 },
+    { name: "BallonBliss", date: "9 ноября 2025", text: "Оперативно ответил, на замер приехал в этот же день, после замера назвал стоимость работ, предоплату не брал. На монтаж приехал в назначенный день, стоимость не изменилась. Потолки не пахли сразу, материалы хорошие. Результатом довольны.", rating: 5 },
+    { name: "Ирина", date: "11 октября 2025", text: "Владимир с напарником все сделал быстро и четко. Спасибо большое. Обращусь еще!", rating: 5 },
+    { name: "Ирина", date: "8 июля 2025", text: "Работа выполнена отлично. Мастера рекомендую!", rating: 5 },
+    { name: "Софья Богданова", date: "4 июля 2025", text: "Отличный мастер. Профессионал своего дела. И по вытяжкам и по потолкам и по электрике соображает. Спасибо большое.", rating: 5 },
+    { name: "Владелец", date: "20 июня 2025", text: "Мастер отличный, быстро качественно провел монтаж двух потолков менее чем за день, мы рекомендуем Владимира.", rating: 5 },
+    { name: "Эдуард", date: "18 июня 2025", text: "Спасибо большое всё прекрасно всё качественно спасибо за натяжные потолки работа выполнена на 100%.", rating: 5 },
+    { name: "Владимир", date: "16 мая 2025", text: "Спасибо Владимиру, все сделал качественно и быстро. Рекомендую.", rating: 5 },
+    { name: "Наталья Рябинина", date: "19 апреля 2025", text: "Работа выполнена качественно, быстро, цена соответствует заявленной. Владимир быстро, в этот же день, ответил на заявку. Мастер своего дела. Я очень довольна. Буду рекомендовать только его!", rating: 5 },
+    { name: "Сергей", date: "12 апреля 2025", text: "Всё прошло хорошо качественно и оперативно рекомендую!", rating: 5 },
+    { name: "Орехов Максим", date: "10 апреля 2025", text: "Спасибо Владимиру. Откликнулся быстро, работу сделал на «Отлично» по очень хорошей цене! Рекомендую!", rating: 5 },
+    { name: "Ия", date: "2 апреля 2025", text: "Договорились быстро. Работа сделана качественно. С исполнителем было приятно пообщаться. В перспективе потолок в другой комнате. Рекомендую.", rating: 5 },
+    { name: "Ильдар", date: "24 марта 2025", text: "Всё понравилось! Приехали быстро, замерили и через день уже начали работу. Ребята просто молодчики. Что приятно удивило, что сделали скидку. Оперативно и профессионально! Жена больше всех довольна.", rating: 5 },
+    { name: "Лариса", date: "20 марта 2025", text: "Всё сделано быстро и качественно. Всё как договаривались. Обязательно обратимся ещё.", rating: 5 },
   ];
 
   const projects = [
@@ -172,17 +184,18 @@ export default function Home() {
         .hamburger{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;z-index:1001;padding:8px}.hamburger span{width:28px;height:2px;background:#1a1a1a;transition:all .3s}
         .hamburger.open span:nth-child(1){transform:rotate(45deg) translate(5px,5px)}.hamburger.open span:nth-child(2){opacity:0}.hamburger.open span:nth-child(3){transform:rotate(-45deg) translate(5px,-5px)}
         .price-row{display:flex;justify-content:space-between;align-items:center;padding:20px 0;border-bottom:1px solid #e8e8e8;transition:background .3s}.price-row:hover{background:#f8f8f8;padding-left:12px;padding-right:12px}
-        .review-card{background:#fff;border:1px solid #e8e8e8;padding:28px;transition:border-color .3s;flex-shrink:0;width:340px}.review-card:hover{border-color:#1a1a1a}
-        .reviews-track{display:flex;gap:20px;animation:reviewsScroll 30s linear infinite}.reviews-track:hover{animation-play-state:paused}
-        @keyframes reviewsScroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+        .review-card{background:#fff;border:1px solid #e8e8e8;padding:28px;transition:border-color .3s;flex-shrink:0;width:340px;scroll-snap-align:start}.review-card:hover{border-color:#1a1a1a}
+        .reviews-scroll{display:flex;gap:20px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:8px}
+        .reviews-scroll::-webkit-scrollbar{display:none}
         .urgency-badge{display:inline-flex;align-items:center;gap:8px;background:#2d7a3a;color:#fff;padding:10px 20px;font-size:13px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;animation:pulse 2s ease-in-out infinite}
-        .sent-message{text-align:center;padding:40px 24px}
+        .review-scroll-btn{width:44px;height:44px;border-radius:50%;border:1px solid #ddd;background:#fff;color:#1a1a1a;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .3s;font-size:18px;font-family:inherit;flex-shrink:0}
+        .review-scroll-btn:hover{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
         @media(max-width:768px){
           .hamburger{display:flex}.desktop-nav{display:none!important}.hero-grid{grid-template-columns:1fr!important}
           .services-grid{grid-template-columns:1fr!important}.advantages-grid{grid-template-columns:repeat(2,1fr)!important}
           .project-tabs{flex-wrap:wrap}.footer-grid{grid-template-columns:1fr!important;text-align:center}
           .contact-grid{grid-template-columns:1fr!important}.process-grid{grid-template-columns:repeat(2,1fr)!important}
-          .price-grid{grid-template-columns:1fr!important}.review-card{width:280px}
+          .review-card{width:280px}
         }
         @media(max-width:480px){.advantages-grid{grid-template-columns:1fr!important}.process-grid{grid-template-columns:1fr!important}}
       `}</style>
@@ -219,12 +232,11 @@ export default function Home() {
         ))}
         <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 1 }} />
         <div style={{ maxWidth: 1400, width: "100%", margin: "0 auto", position: "relative", zIndex: 2, padding: "120px clamp(24px,5vw,80px) 80px" }}>
-          {/* Urgency badge */}
           <div className="urgency-badge" style={{ marginBottom: 24 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#7dff8a", display: "inline-block" }} />
             Свободные даты на этой неделе — запишитесь на замер
           </div>
-          <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, fontWeight: 500, letterSpacing: 3, color: "rgba(255,255,255,0.6)", marginBottom: 24, textTransform: "uppercase" }}>Москва и МО / с 2010 года / 1200+ объектов</div>
+          <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, fontWeight: 500, letterSpacing: 3, color: "rgba(255,255,255,0.6)", marginBottom: 24, textTransform: "uppercase" }}>Москва и МО / с 2010 года</div>
           <h1 style={{ fontSize: "clamp(40px,6vw,80px)", fontWeight: 900, lineHeight: 1.05, letterSpacing: -3, marginBottom: 32, color: "#fff", textShadow: "0 2px 20px rgba(0,0,0,0.5)" }}>
             Натяжные<br />потолки<br /><span style={{ color: "rgba(255,255,255,0.5)" }}>без компромиссов</span>
           </h1>
@@ -311,12 +323,8 @@ export default function Home() {
             ))}
           </div>
           <div className={`fade-up fade-up-d3 ${isVisible("prices") ? "visible" : ""}`} style={{ marginTop: 24, padding: 24, background: "#fff", border: "1px solid #e8e8e8" }}>
-            <p style={{ fontSize: 14, lineHeight: 1.7, color: "#666", marginBottom: 16 }}>
-              📐 <strong>Замер бесплатный.</strong> Приезжаю, считаю точную стоимость на месте. Без «потом уточним».
-            </p>
-            <p style={{ fontSize: 13, color: "#999" }}>
-              Цена зависит от площади, количества углов, типа профиля, освещения. Указанные цены — минимальные, для ориентира.
-            </p>
+            <p style={{ fontSize: 14, lineHeight: 1.7, color: "#666", marginBottom: 16 }}>📐 <strong>Замер бесплатный.</strong> Приезжаю, считаю точную стоимость на месте. Без «потом уточним».</p>
+            <p style={{ fontSize: 13, color: "#999" }}>Цена зависит от площади, количества углов, типа профиля, освещения. Указанные цены — минимальные, для ориентира.</p>
           </div>
           <div className={`fade-up fade-up-d4 ${isVisible("prices") ? "visible" : ""}`} style={{ marginTop: 32, textAlign: "center" }}>
             <button className="cta-btn" onClick={() => scrollTo("contact")}>Рассчитать стоимость →</button>
@@ -331,20 +339,44 @@ export default function Home() {
             <div className="section-label">Отзывы</div>
             <h2 className="section-title">Клиенты говорят<br /><span style={{ color: "#999" }}>лучше любой рекламы.</span></h2>
           </div>
-        </div>
-        {/* Scrolling reviews */}
-        <div className={`fade-up fade-up-d2 ${isVisible("reviews") ? "visible" : ""}`} style={{ marginTop: 48, overflow: "hidden" }}>
-          <div className="reviews-track">
-            {[...reviews, ...reviews].map((r, i) => (
-              <div key={i} className="review-card">
-                <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
-                  {[...Array(r.rating)].map((_, j) => (<span key={j} style={{ fontSize: 18, color: "#f5a623" }}>★</span>))}
+
+          {/* Rating block */}
+          <div className={`fade-up fade-up-d1 ${isVisible("reviews") ? "visible" : ""}`} style={{ display: "flex", alignItems: "center", gap: 24, marginTop: 32, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+              <span style={{ fontSize: 56, fontWeight: 900, fontFamily: "'JetBrains Mono',monospace", lineHeight: 1 }}>5.0</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <div style={{ display: "flex", gap: 3 }}>
+                  {[...Array(5)].map((_, j) => (<span key={j} style={{ fontSize: 22, color: "#f5a623" }}>★</span>))}
                 </div>
-                <p style={{ fontSize: 14, lineHeight: 1.7, color: "#555", marginBottom: 16 }}>«{r.text}»</p>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#1a1a1a" }}>{r.name}</div>
-                <div style={{ fontSize: 11, color: "#999", fontFamily: "'JetBrains Mono',monospace", marginTop: 4 }}>Авито · Подтверждённый отзыв</div>
+                <span style={{ fontSize: 13, color: "#999", fontFamily: "'JetBrains Mono',monospace" }}>на основании 17 оценок</span>
               </div>
-            ))}
+            </div>
+            <a href="https://www.avito.ru/user/c1ca26ca50cdbc5158be16e89486aa20/profile/all/predlozheniya_uslug?src=sharing&sellerId=c1ca26ca50cdbc5158be16e89486aa20" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "#1a1a1a", textDecoration: "none", borderBottom: "1px solid #ccc", paddingBottom: 2 }}>
+              Смотреть на Авито ↗
+            </a>
+          </div>
+
+          {/* Reviews scroll with arrows */}
+          <div className={`fade-up fade-up-d2 ${isVisible("reviews") ? "visible" : ""}`} style={{ marginTop: 32, display: "flex", alignItems: "center", gap: 12 }}>
+            <button className="review-scroll-btn" onClick={() => { if (reviewsRef.current) reviewsRef.current.scrollBy({ left: -360, behavior: "smooth" }); }}>←</button>
+            <div ref={reviewsRef} className="reviews-scroll" style={{ flex: 1 }}>
+              {reviews.map((r, i) => (
+                <div key={i} className="review-card">
+                  <div style={{ display: "flex", gap: 3, marginBottom: 12 }}>
+                    {[...Array(r.rating)].map((_, j) => (<span key={j} style={{ fontSize: 16, color: "#f5a623" }}>★</span>))}
+                  </div>
+                  <p style={{ fontSize: 14, lineHeight: 1.7, color: "#555", marginBottom: 16, minHeight: 72 }}>«{r.text}»</p>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1a1a" }}>{r.name}</div>
+                      <div style={{ fontSize: 11, color: "#999", fontFamily: "'JetBrains Mono',monospace", marginTop: 2 }}>Авито · Сделка состоялась</div>
+                    </div>
+                    <div style={{ fontSize: 11, color: "#bbb", fontFamily: "'JetBrains Mono',monospace", whiteSpace: "nowrap" }}>{r.date}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button className="review-scroll-btn" onClick={() => { if (reviewsRef.current) reviewsRef.current.scrollBy({ left: 360, behavior: "smooth" }); }}>→</button>
           </div>
         </div>
         <div className={`fade-up fade-up-d3 ${isVisible("reviews") ? "visible" : ""}`} style={{ textAlign: "center", marginTop: 40 }}>
@@ -411,7 +443,7 @@ export default function Home() {
                 <div style={{ position: "absolute", bottom: 16, left: 16, background: "#1a1a1a", color: "#fff", padding: "8px 16px", fontFamily: "'JetBrains Mono',monospace", fontSize: 11, letterSpacing: 1, textTransform: "uppercase", zIndex: 2 }}>Владимир / Основатель</div>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-                <p style={{ fontSize: 16, lineHeight: 1.8, color: "#555" }}>Я не франшиза. Не бригада с текучкой. Я — частный мастер, который с 2010 года занимается одним делом: натяжными потолками. Более 15 лет опыта, 1200+ выполненных объектов.</p>
+                <p style={{ fontSize: 16, lineHeight: 1.8, color: "#555" }}>Я не франшиза. Не бригада с текучкой. Я — частный мастер, который с 2010 года занимается одним делом: натяжными потолками. Более 15 лет опыта на объектах любой сложности.</p>
                 <p style={{ fontSize: 16, lineHeight: 1.8, color: "#555" }}>Сам замеряю. Сам проектирую. Сам монтирую. Каждый объект — моя личная репутация.</p>
                 <p style={{ fontSize: 16, lineHeight: 1.8, color: "#555" }}>Работаю чисто: пневмопистолеты вместо перфоратора, а при сверлении — пылесборник. Составляю договор, даю гарантию на монтаж.</p>
               </div>
@@ -489,10 +521,9 @@ export default function Home() {
             <h2 className="section-title">Готовы начать?<br /><span style={{ color: "#999" }}>Напишите. Отвечу лично.</span></h2>
           </div>
           <div className="contact-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, marginTop: 64 }}>
-            {/* Form or Success message */}
             <div className={`fade-up fade-up-d1 ${isVisible("contact") ? "visible" : ""}`}>
               {formStatus === "sent" ? (
-                <div className="sent-message" style={{ background: "#f0faf0", border: "1px solid #c8e6c9", padding: "48px 32px" }}>
+                <div style={{ textAlign: "center", background: "#f0faf0", border: "1px solid #c8e6c9", padding: "48px 32px" }}>
                   <div style={{ fontSize: 48, marginBottom: 16 }}>✓</div>
                   <h3 style={{ fontSize: 24, fontWeight: 800, marginBottom: 12, color: "#2d7a3a" }}>Заявка получена!</h3>
                   <p style={{ fontSize: 16, lineHeight: 1.7, color: "#555", marginBottom: 24 }}>Владимир перезвонит вам в течение 2 часов.</p>
@@ -549,7 +580,7 @@ export default function Home() {
                 <Image src="/logo.jpeg" alt="ПОТОЛКОВО" width={36} height={36} style={{ objectFit: "contain" }} />
                 <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 18, fontWeight: 700, letterSpacing: 3 }}>ПОТОЛКОВО</span>
               </div>
-              <p style={{ fontSize: 14, color: "#888", lineHeight: 1.7, maxWidth: 360, marginBottom: 24 }}>Натяжные потолки любой сложности. Москва и МО. Частный мастер Владимир. С 2010 года. 1200+ объектов.</p>
+              <p style={{ fontSize: 14, color: "#888", lineHeight: 1.7, maxWidth: 360, marginBottom: 24 }}>Натяжные потолки любой сложности. Москва и МО. Частный мастер Владимир. С 2010 года.</p>
               <a href="tel:+79055219909" style={{ fontSize: 20, fontWeight: 700, color: "#fff", textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>📞 +7 905 521 99 09</a>
             </div>
             <div>
