@@ -40,6 +40,14 @@ export default function Home() {
   const isVisible = (id: string) => visibleSections.has(id);
   const scrollTo = (id: string) => { setMenuOpen(false); document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }); };
 
+  const scrollReviews = (direction: number) => {
+    if (!reviewsRef.current) return;
+    const firstCard = reviewsRef.current.querySelector(".review-card") as HTMLElement;
+    if (!firstCard) return;
+    const scrollAmount = firstCard.offsetWidth + 16;
+    reviewsRef.current.scrollBy({ left: direction * scrollAmount, behavior: "smooth" });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormStatus("sending");
@@ -149,9 +157,11 @@ export default function Home() {
     { q: "Составляете договор?", a: "Да, обязательно. Договор, смета, гарантийный талон. Всё официально и прозрачно.", icon: "📄" },
   ];
 
+  const AVITO_URL = "https://www.avito.ru/user/c1ca26ca50cdbc5158be16e89486aa20/profile/all/predlozheniya_uslug?src=sharing&sellerId=c1ca26ca50cdbc5158be16e89486aa20";
+
   return (
     <div style={{ fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif", color: "#1a1a1a", background: "#fafafa", overflowX: "hidden" }}>
-            <style>{`
+      <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
         *{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}body{overflow-x:hidden}::selection{background:#1a1a1a;color:#fff}
         .fade-up{opacity:0;transform:translateY(40px);transition:opacity .8s cubic-bezier(.16,1,.3,1),transform .8s cubic-bezier(.16,1,.3,1)}.fade-up.visible{opacity:1;transform:translateY(0)}
@@ -159,15 +169,15 @@ export default function Home() {
         @keyframes float1{0%,100%{transform:translate(0,0) rotate(0)}33%{transform:translate(30px,-30px) rotate(120deg)}66%{transform:translate(-20px,20px) rotate(240deg)}}
         @keyframes float2{0%,100%{transform:translate(0,0)}33%{transform:translate(-40px,20px)}66%{transform:translate(25px,-35px)}}
         @keyframes float3{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(20px,-20px) scale(1.1)}}
-        @keyframes badgePulse{0%,100%{box-shadow:0 0 0 0 rgba(45,122,58,0.4)}70%{box-shadow:0 0 0 10px rgba(45,122,58,0)}}
-        @keyframes dotBlink{0%,100%{opacity:1}50%{opacity:.4}}
+        @keyframes badgePulse{0%,100%{box-shadow:0 0 0 0 rgba(45,122,58,0.5)}70%{box-shadow:0 0 0 12px rgba(45,122,58,0)}}
+        @keyframes dotBlink{0%,100%{opacity:1}50%{opacity:.3}}
         .bg-shape{position:absolute;border-radius:50%;filter:blur(80px);opacity:.07;pointer-events:none}
         button,a{cursor:pointer}
-        .cta-btn{display:inline-flex;align-items:center;gap:8px;padding:16px 36px;background:#1a1a1a;color:#fff;border:none;font-size:15px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;transition:all .3s cubic-bezier(.16,1,.3,1);overflow:hidden;font-family:inherit}
+        .cta-btn{display:inline-flex;align-items:center;gap:8px;padding:16px 36px;background:#1a1a1a;color:#fff;border:none;font-size:15px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;transition:all .3s cubic-bezier(.16,1,.3,1);overflow:hidden;font-family:'Inter',sans-serif}
         .cta-btn:hover{background:#333;transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.2)}.cta-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;box-shadow:none}
         .cta-btn-outline{background:transparent;color:#1a1a1a;border:2px solid #1a1a1a}.cta-btn-outline:hover{background:#1a1a1a;color:#fff}
         .cta-btn-white{background:#fff;color:#1a1a1a}.cta-btn-white:hover{background:#e8e8e8}
-        .cta-btn-success{background:#2d7a3a}.cta-btn-success:hover{background:#2d7a3a}.cta-btn-error{background:#c0392b}.cta-btn-error:hover{background:#c0392b}
+        .cta-btn-error{background:#c0392b}.cta-btn-error:hover{background:#c0392b}
         .nav-link{color:#666;text-decoration:none;font-size:14px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;transition:color .3s;cursor:pointer;background:none;border:none;font-family:inherit}.nav-link:hover{color:#1a1a1a}
         .service-card{background:#fff;border:1px solid #e8e8e8;transition:all .4s cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden}
         .service-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:3px;background:#1a1a1a;transform:scaleX(0);transform-origin:left;transition:transform .4s cubic-bezier(.16,1,.3,1);z-index:2}
@@ -185,16 +195,14 @@ export default function Home() {
         .hamburger{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;z-index:1001;padding:8px}.hamburger span{width:28px;height:2px;background:#1a1a1a;transition:all .3s}
         .hamburger.open span:nth-child(1){transform:rotate(45deg) translate(5px,5px)}.hamburger.open span:nth-child(2){opacity:0}.hamburger.open span:nth-child(3){transform:rotate(-45deg) translate(5px,-5px)}
         .price-row{display:flex;justify-content:space-between;align-items:center;padding:20px 0;border-bottom:1px solid #e8e8e8;transition:background .3s}.price-row:hover{background:#f8f8f8;padding-left:12px;padding-right:12px}
-        .urgency-badge{display:inline-flex;align-items:center;gap:10px;background:#2d7a3a;color:#fff;padding:12px 24px;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;letter-spacing:0.3px;animation:badgePulse 2s ease-in-out infinite;border:none;line-height:1.4}
+        .urgency-badge{display:inline-flex;align-items:center;gap:10px;background:#2d7a3a;color:#fff;padding:12px 24px;font-family:'Inter',sans-serif;font-size:14px;font-weight:600;letter-spacing:0.3px;line-height:1.4;animation:badgePulse 2s ease-in-out infinite;border:none}
         .urgency-dot{width:8px;height:8px;min-width:8px;border-radius:50%;background:#7dff8a;display:inline-block;animation:dotBlink 1.5s ease-in-out infinite}
         .review-card{background:#fff;border:1px solid #e8e8e8;padding:24px;transition:border-color .3s;flex-shrink:0;scroll-snap-align:start;width:340px}.review-card:hover{border-color:#1a1a1a}
         .reviews-scroll{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:4px 0}
         .reviews-scroll::-webkit-scrollbar{display:none}
         .review-scroll-btn{width:44px;height:44px;min-width:44px;border-radius:50%;border:1px solid #ddd;background:#fff;color:#1a1a1a;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .3s;font-size:18px;font-family:inherit;flex-shrink:0}
         .review-scroll-btn:hover{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
-        @media(max-width:1024px){
-          .review-card{width:300px}
-        }
+        @media(max-width:1024px){.review-card{width:300px}}
         @media(max-width:768px){
           .hamburger{display:flex}.desktop-nav{display:none!important}.hero-grid{grid-template-columns:1fr!important}
           .services-grid{grid-template-columns:1fr!important}.advantages-grid{grid-template-columns:repeat(2,1fr)!important}
@@ -206,11 +214,12 @@ export default function Home() {
         }
         @media(max-width:480px){
           .advantages-grid{grid-template-columns:1fr!important}.process-grid{grid-template-columns:1fr!important}
-          .review-card{width:80vw;max-width:300px;min-width:200px}
+          .review-card{width:78vw;max-width:300px;min-width:200px}
           .review-scroll-btn{width:32px;height:32px;min-width:32px;font-size:13px}
           .urgency-badge{font-size:11px;padding:8px 14px}
         }
       `}</style>
+
       {/* NAV */}
       <nav style={{ position: "fixed", top: 0, left: 0, width: "100%", padding: "0 clamp(24px,5vw,80px)", height: 72, display: "flex", alignItems: "center", justifyContent: "space-between", background: scrollY > 50 ? "rgba(250,250,250,0.95)" : "transparent", backdropFilter: scrollY > 50 ? "blur(20px)" : "none", borderBottom: scrollY > 50 ? "1px solid #e8e8e8" : "1px solid transparent", zIndex: 1000, transition: "all .3s" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }} onClick={() => scrollTo("hero")}>
@@ -243,7 +252,7 @@ export default function Home() {
         ))}
         <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 1 }} />
         <div style={{ maxWidth: 1400, width: "100%", margin: "0 auto", position: "relative", zIndex: 2, padding: "120px clamp(24px,5vw,80px) 80px" }}>
-                    <div className="urgency-badge" style={{ marginBottom: 24 }}>
+          <div className="urgency-badge" style={{ marginBottom: 24 }}>
             <span className="urgency-dot" />
             Свободные даты на этой неделе — запишитесь на замер
           </div>
@@ -269,14 +278,14 @@ export default function Home() {
       </section>
 
       {/* ADVANTAGES */}
-      <section id="advantages" style={{ padding: 0, background: "#1a1a1a", color: "#fff", position: "relative", overflow: "hidden" }}>
+      <section id="advantages" style={{ padding: 0, background: "#1a1a1a", color: "#fff" }}>
         <div style={{ maxWidth: 1400, margin: "0 auto" }}>
           <div className={`advantages-grid fade-up ${isVisible("advantages") ? "visible" : ""}`} style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 0 }}>
             {advantages.map((a, i) => (
               <div key={i} className={`fade-up ${isVisible("advantages") ? "visible" : ""} fade-up-d${i + 1}`}
-                style={{ position: "relative", overflow: "hidden", minHeight: 320, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 32, borderRight: i < 3 ? "1px solid rgba(255,255,255,0.08)" : "none", transition: "all .3s", cursor: "default" }}
-                onMouseEnter={e => { const o = e.currentTarget.querySelector('.adv-overlay') as HTMLElement; if (o) o.style.opacity = '0.5' }}
-                onMouseLeave={e => { const o = e.currentTarget.querySelector('.adv-overlay') as HTMLElement; if (o) o.style.opacity = '0.7' }}>
+                style={{ position: "relative", overflow: "hidden", minHeight: 320, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 32, borderRight: i < 3 ? "1px solid rgba(255,255,255,0.08)" : "none" }}
+                onMouseEnter={e => { const o = e.currentTarget.querySelector(".adv-overlay") as HTMLElement; if (o) o.style.opacity = "0.5"; }}
+                onMouseLeave={e => { const o = e.currentTarget.querySelector(".adv-overlay") as HTMLElement; if (o) o.style.opacity = "0.7"; }}>
                 <Image src={a.image} alt={a.label} fill sizes="(max-width:768px) 50vw, 25vw" style={{ objectFit: "cover" }} />
                 <div className="adv-overlay" style={{ position: "absolute", inset: 0, background: "#1a1a1a", opacity: 0.7, transition: "opacity .4s" }} />
                 <div style={{ position: "relative", zIndex: 2, textAlign: "center" }}>
@@ -343,48 +352,30 @@ export default function Home() {
         </div>
       </section>
 
-                {/* REVIEWS */}
+      {/* REVIEWS */}
       <section id="reviews" style={{ padding: "120px 0", position: "relative", overflow: "hidden" }}>
         <div style={{ paddingLeft: "clamp(24px,5vw,80px)", paddingRight: "clamp(24px,5vw,80px)" }}>
           <div className={`fade-up ${isVisible("reviews") ? "visible" : ""}`}>
             <div className="section-label">Отзывы</div>
             <h2 className="section-title">Клиенты говорят<br /><span style={{ color: "#999" }}>лучше любой рекламы.</span></h2>
           </div>
-
-          {/* Rating */}
           <div className={`fade-up fade-up-d1 ${isVisible("reviews") ? "visible" : ""}`} style={{ display: "flex", alignItems: "center", gap: 24, marginTop: 32, flexWrap: "wrap" }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
               <span style={{ fontSize: 56, fontWeight: 900, fontFamily: "'JetBrains Mono',monospace", lineHeight: 1 }}>5.0</span>
               <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <div style={{ display: "flex", gap: 3 }}>
-                  {[...Array(5)].map((_, j) => (<span key={j} style={{ fontSize: 22, color: "#f5a623" }}>★</span>))}
-                </div>
+                <div style={{ display: "flex", gap: 3 }}>{[...Array(5)].map((_, j) => (<span key={j} style={{ fontSize: 22, color: "#f5a623" }}>★</span>))}</div>
                 <span style={{ fontSize: 13, color: "#999", fontFamily: "'JetBrains Mono',monospace" }}>на основании 17 оценок</span>
               </div>
             </div>
-            <a href="https://www.avito.ru/user/c1ca26ca50cdbc5158be16e89486aa20/profile/all/predlozheniya_uslug?src=sharing&sellerId=c1ca26ca50cdbc5158be16e89486aa20" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "#1a1a1a", textDecoration: "none", borderBottom: "1px solid #ccc", paddingBottom: 2 }}>
-              Смотреть на Авито ↗
-            </a>
+            <a href={AVITO_URL} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "#1a1a1a", textDecoration: "none", borderBottom: "1px solid #ccc", paddingBottom: 2 }}>Смотреть на Авито ↗</a>
           </div>
-
-          {/* Scroll controls */}
           <div className={`fade-up fade-up-d2 ${isVisible("reviews") ? "visible" : ""}`} style={{ marginTop: 32 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <button className="review-scroll-btn" aria-label="Предыдущий отзыв" onClick={() => {
-                if (!reviewsRef.current) return;
-                const firstCard = reviewsRef.current.querySelector('.review-card') as HTMLElement;
-                if (!firstCard) return;
-                const gap = 16;
-                const scrollAmount = firstCard.offsetWidth + gap;
-                reviewsRef.current.scrollBy({ left: -scrollAmount, behavior: "smooth" });
-              }}>←</button>
-
+              <button className="review-scroll-btn" onClick={() => scrollReviews(-1)}>←</button>
               <div ref={reviewsRef} className="reviews-scroll" style={{ flex: 1 }}>
                 {reviews.map((r, i) => (
                   <div key={i} className="review-card">
-                    <div style={{ display: "flex", gap: 3, marginBottom: 12 }}>
-                      {[...Array(r.rating)].map((_, j) => (<span key={j} style={{ fontSize: 16, color: "#f5a623" }}>★</span>))}
-                    </div>
+                    <div style={{ display: "flex", gap: 3, marginBottom: 12 }}>{[...Array(r.rating)].map((_, j) => (<span key={j} style={{ fontSize: 16, color: "#f5a623" }}>★</span>))}</div>
                     <p style={{ fontSize: 14, lineHeight: 1.7, color: "#555", marginBottom: 16 }}>«{r.text}»</p>
                     <div>
                       <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1a1a" }}>{r.name}</div>
@@ -396,88 +387,12 @@ export default function Home() {
                   </div>
                 ))}
               </div>
-
-              <button className="review-scroll-btn" aria-label="Следующий отзыв" onClick={() => {
-                if (!reviewsRef.current) return;
-                const firstCard = reviewsRef.current.querySelector('.review-card') as HTMLElement;
-                if (!firstCard) return;
-                const gap = 16;
-                const scrollAmount = firstCard.offsetWidth + gap;
-                reviewsRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
-              }}>→</button>
+              <button className="review-scroll-btn" onClick={() => scrollReviews(1)}>→</button>
             </div>
           </div>
         </div>
-
         <div className={`fade-up fade-up-d3 ${isVisible("reviews") ? "visible" : ""}`} style={{ textAlign: "center", marginTop: 40 }}>
-          <a href="https://www.avito.ru/user/c1ca26ca50cdbc5158be16e89486aa20/profile/all/predlozheniya_uslug?src=sharing&sellerId=c1ca26ca50cdbc5158be16e89486aa20" target="_blank" rel="noopener noreferrer" className="cta-btn cta-btn-outline" style={{ textDecoration: "none" }}>
-            Все отзывы на Авито →
-          </a>
-        </div>
-      </section>
-
-          {/* Rating block */}
-          <div className={`fade-up fade-up-d1 ${isVisible("reviews") ? "visible" : ""}`} style={{ display: "flex", alignItems: "center", gap: 24, marginTop: 32, flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
-              <span style={{ fontSize: 56, fontWeight: 900, fontFamily: "'JetBrains Mono',monospace", lineHeight: 1 }}>5.0</span>
-              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <div style={{ display: "flex", gap: 3 }}>
-                  {[...Array(5)].map((_, j) => (<span key={j} style={{ fontSize: 22, color: "#f5a623" }}>★</span>))}
-                </div>
-                <span style={{ fontSize: 13, color: "#999", fontFamily: "'JetBrains Mono',monospace" }}>на основании 17 оценок</span>
-              </div>
-            </div>
-            <a href="https://www.avito.ru/user/c1ca26ca50cdbc5158be16e89486aa20/profile/all/predlozheniya_uslug?src=sharing&sellerId=c1ca26ca50cdbc5158be16e89486aa20" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "#1a1a1a", textDecoration: "none", borderBottom: "1px solid #ccc", paddingBottom: 2 }}>
-              Смотреть на Авито ↗
-            </a>
-          </div>
-        </div>
-
-        {/* Reviews scroll with arrows */}
-        <div className={`fade-up fade-up-d2 ${isVisible("reviews") ? "visible" : ""}`} style={{ marginTop: 32, paddingLeft: "clamp(24px,5vw,80px)", paddingRight: "clamp(24px,5vw,80px)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <button className="review-scroll-btn" onClick={() => {
-              if (reviewsRef.current) {
-                const card = reviewsRef.current.querySelector('.review-card') as HTMLElement;
-                const scrollAmount = card ? card.offsetWidth + 16 : 300;
-                reviewsRef.current.scrollBy({ left: -scrollAmount, behavior: "smooth" });
-              }
-            }}>←</button>
-            <div
-              ref={reviewsRef}
-              className="reviews-scroll"
-              style={{ flex: 1 }}
-            >
-              {reviews.map((r, i) => (
-                <div key={i} className="review-card">
-                  <div style={{ display: "flex", gap: 3, marginBottom: 12 }}>
-                    {[...Array(r.rating)].map((_, j) => (<span key={j} style={{ fontSize: 16, color: "#f5a623" }}>★</span>))}
-                  </div>
-                  <p style={{ fontSize: 14, lineHeight: 1.7, color: "#555", marginBottom: 16 }}>«{r.text}»</p>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 12 }}>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1a1a" }}>{r.name}</div>
-                      <div style={{ fontSize: 11, color: "#999", fontFamily: "'JetBrains Mono',monospace", marginTop: 2 }}>Авито · Сделка состоялась</div>
-                    </div>
-                    <div style={{ fontSize: 11, color: "#bbb", fontFamily: "'JetBrains Mono',monospace", whiteSpace: "nowrap" }}>{r.date}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button className="review-scroll-btn" onClick={() => {
-              if (reviewsRef.current) {
-                const card = reviewsRef.current.querySelector('.review-card') as HTMLElement;
-                const scrollAmount = card ? card.offsetWidth + 16 : 300;
-                reviewsRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
-              }
-            }}>→</button>
-          </div>
-        </div>
-
-        <div className={`fade-up fade-up-d3 ${isVisible("reviews") ? "visible" : ""}`} style={{ textAlign: "center", marginTop: 40 }}>
-          <a href="https://www.avito.ru/user/c1ca26ca50cdbc5158be16e89486aa20/profile/all/predlozheniya_uslug?src=sharing&sellerId=c1ca26ca50cdbc5158be16e89486aa20" target="_blank" rel="noopener noreferrer" className="cta-btn cta-btn-outline" style={{ textDecoration: "none" }}>
-            Все отзывы на Авито →
-          </a>
+          <a href={AVITO_URL} target="_blank" rel="noopener noreferrer" className="cta-btn cta-btn-outline" style={{ textDecoration: "none" }}>Все отзывы на Авито →</a>
         </div>
       </section>
 
@@ -594,7 +509,7 @@ export default function Home() {
         <Image src="/cta-banner.jpeg" alt="Интерьер с натяжным потолком ПОТОЛКОВО" fill sizes="100vw" style={{ objectFit: "cover" }} />
         <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.7)" }} />
         <div style={{ maxWidth: 800, margin: "0 auto", textAlign: "center", position: "relative", zIndex: 1 }}>
-                   <div className="urgency-badge" style={{ marginBottom: 24, display: "inline-flex" }}>
+          <div className="urgency-badge" style={{ marginBottom: 24, display: "inline-flex" }}>
             <span className="urgency-dot" />
             Есть свободные даты на этой неделе
           </div>
