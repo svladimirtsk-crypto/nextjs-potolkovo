@@ -184,20 +184,27 @@ export default function Home() {
         .hamburger{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;z-index:1001;padding:8px}.hamburger span{width:28px;height:2px;background:#1a1a1a;transition:all .3s}
         .hamburger.open span:nth-child(1){transform:rotate(45deg) translate(5px,5px)}.hamburger.open span:nth-child(2){opacity:0}.hamburger.open span:nth-child(3){transform:rotate(-45deg) translate(5px,-5px)}
         .price-row{display:flex;justify-content:space-between;align-items:center;padding:20px 0;border-bottom:1px solid #e8e8e8;transition:background .3s}.price-row:hover{background:#f8f8f8;padding-left:12px;padding-right:12px}
-        .review-card{background:#fff;border:1px solid #e8e8e8;padding:28px;transition:border-color .3s;flex-shrink:0;width:340px;scroll-snap-align:start}.review-card:hover{border-color:#1a1a1a}
-        .reviews-scroll{display:flex;gap:20px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:8px}
+        .review-card{background:#fff;border:1px solid #e8e8e8;padding:24px;transition:border-color .3s;flex-shrink:0;width:calc(33.333% - 12px);scroll-snap-align:start}.review-card:hover{border-color:#1a1a1a}
+        .reviews-scroll{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:4px 0}
         .reviews-scroll::-webkit-scrollbar{display:none}
-        .urgency-badge{display:inline-flex;align-items:center;gap:8px;background:#2d7a3a;color:#fff;padding:10px 20px;font-size:13px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;animation:pulse 2s ease-in-out infinite}
         .review-scroll-btn{width:44px;height:44px;border-radius:50%;border:1px solid #ddd;background:#fff;color:#1a1a1a;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .3s;font-size:18px;font-family:inherit;flex-shrink:0}
         .review-scroll-btn:hover{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+               @media(max-width:1024px){
+          .review-card{width:calc(50% - 8px)}
+        }
         @media(max-width:768px){
           .hamburger{display:flex}.desktop-nav{display:none!important}.hero-grid{grid-template-columns:1fr!important}
           .services-grid{grid-template-columns:1fr!important}.advantages-grid{grid-template-columns:repeat(2,1fr)!important}
           .project-tabs{flex-wrap:wrap}.footer-grid{grid-template-columns:1fr!important;text-align:center}
           .contact-grid{grid-template-columns:1fr!important}.process-grid{grid-template-columns:repeat(2,1fr)!important}
-          .review-card{width:280px}
+          .review-card{width:calc(100vw - 140px);min-width:260px}
+          .review-scroll-btn{width:36px;height:36px;font-size:14px}
         }
-        @media(max-width:480px){.advantages-grid{grid-template-columns:1fr!important}.process-grid{grid-template-columns:1fr!important}}
+        @media(max-width:480px){
+          .advantages-grid{grid-template-columns:1fr!important}.process-grid{grid-template-columns:1fr!important}
+          .review-card{width:calc(100vw - 120px);min-width:240px}
+          .review-scroll-btn{width:32px;height:32px;font-size:13px}
+        }
       `}</style>
 
       {/* NAV */}
@@ -332,7 +339,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* REVIEWS */}
+           {/* REVIEWS */}
       <section id="reviews" style={{ padding: "120px 0", position: "relative", overflow: "hidden" }}>
         <div style={{ maxWidth: 1400, margin: "0 auto", paddingLeft: "clamp(24px,5vw,80px)", paddingRight: "clamp(24px,5vw,80px)" }}>
           <div className={`fade-up ${isVisible("reviews") ? "visible" : ""}`}>
@@ -355,18 +362,30 @@ export default function Home() {
               Смотреть на Авито ↗
             </a>
           </div>
+        </div>
 
-          {/* Reviews scroll with arrows */}
-          <div className={`fade-up fade-up-d2 ${isVisible("reviews") ? "visible" : ""}`} style={{ marginTop: 32, display: "flex", alignItems: "center", gap: 12 }}>
-            <button className="review-scroll-btn" onClick={() => { if (reviewsRef.current) reviewsRef.current.scrollBy({ left: -360, behavior: "smooth" }); }}>←</button>
-            <div ref={reviewsRef} className="reviews-scroll" style={{ flex: 1 }}>
+        {/* Reviews scroll with arrows */}
+        <div className={`fade-up fade-up-d2 ${isVisible("reviews") ? "visible" : ""}`} style={{ marginTop: 32, paddingLeft: "clamp(24px,5vw,80px)", paddingRight: "clamp(24px,5vw,80px)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button className="review-scroll-btn" onClick={() => {
+              if (reviewsRef.current) {
+                const card = reviewsRef.current.querySelector('.review-card') as HTMLElement;
+                const scrollAmount = card ? card.offsetWidth + 16 : 300;
+                reviewsRef.current.scrollBy({ left: -scrollAmount, behavior: "smooth" });
+              }
+            }}>←</button>
+            <div
+              ref={reviewsRef}
+              className="reviews-scroll"
+              style={{ flex: 1 }}
+            >
               {reviews.map((r, i) => (
                 <div key={i} className="review-card">
                   <div style={{ display: "flex", gap: 3, marginBottom: 12 }}>
                     {[...Array(r.rating)].map((_, j) => (<span key={j} style={{ fontSize: 16, color: "#f5a623" }}>★</span>))}
                   </div>
-                  <p style={{ fontSize: 14, lineHeight: 1.7, color: "#555", marginBottom: 16, minHeight: 72 }}>«{r.text}»</p>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                  <p style={{ fontSize: 14, lineHeight: 1.7, color: "#555", marginBottom: 16 }}>«{r.text}»</p>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 12 }}>
                     <div>
                       <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1a1a" }}>{r.name}</div>
                       <div style={{ fontSize: 11, color: "#999", fontFamily: "'JetBrains Mono',monospace", marginTop: 2 }}>Авито · Сделка состоялась</div>
@@ -376,9 +395,16 @@ export default function Home() {
                 </div>
               ))}
             </div>
-            <button className="review-scroll-btn" onClick={() => { if (reviewsRef.current) reviewsRef.current.scrollBy({ left: 360, behavior: "smooth" }); }}>→</button>
+            <button className="review-scroll-btn" onClick={() => {
+              if (reviewsRef.current) {
+                const card = reviewsRef.current.querySelector('.review-card') as HTMLElement;
+                const scrollAmount = card ? card.offsetWidth + 16 : 300;
+                reviewsRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
+              }
+            }}>→</button>
           </div>
         </div>
+
         <div className={`fade-up fade-up-d3 ${isVisible("reviews") ? "visible" : ""}`} style={{ textAlign: "center", marginTop: 40 }}>
           <a href="https://www.avito.ru/user/c1ca26ca50cdbc5158be16e89486aa20/profile/all/predlozheniya_uslug?src=sharing&sellerId=c1ca26ca50cdbc5158be16e89486aa20" target="_blank" rel="noopener noreferrer" className="cta-btn cta-btn-outline" style={{ textDecoration: "none" }}>
             Все отзывы на Авито →
