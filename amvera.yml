@@ -1,15 +1,4 @@
+name: ""
 meta:
   environment: node
-  toolchain:
-    name: npm
-    version: 18 # или 20, в зависимости от вашей версии Node.js
-
-build:
-  install: npm install
-  build: npm run build
-
-run:
-  command: npm run start
-  persistence:
-    - mountPoint: /data
-      name: data
+  toolchain: {}
