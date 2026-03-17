@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -44,8 +45,7 @@ export default function Home() {
     if (!reviewsRef.current) return;
     const firstCard = reviewsRef.current.querySelector(".review-card") as HTMLElement;
     if (!firstCard) return;
-    const scrollAmount = firstCard.offsetWidth + 16;
-    reviewsRef.current.scrollBy({ left: direction * scrollAmount, behavior: "smooth" });
+    reviewsRef.current.scrollBy({ left: direction * (firstCard.offsetWidth + 16), behavior: "smooth" });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -92,15 +92,15 @@ export default function Home() {
   ];
 
   const services = [
-    { image: "/svc-shadow.jpeg", emoji: "⬛", title: "Теневой профиль", desc: "Потолок без плинтуса. Чёткий теневой зазор 8 мм. Выглядит дорого, потому что это дорого сделать правильно." },
-    { image: "/svc-floating.jpeg", emoji: "💡", title: "Парящие потолки", desc: "LED-подсветка по периметру. Потолок визуально отрывается от стен. Работает и как основной свет." },
-    { image: "/svc-lightlines.jpeg", emoji: "📐", title: "Световые линии", desc: "Встроенные в полотно линейные светильники. Любая геометрия. Замена люстрам и точечникам." },
-    { image: "/svc-track.jpeg", emoji: "🔦", title: "Трековое освещение", desc: "Встраиваемые треки в натяжной потолок. Направленный свет. Полный расчёт освещённости." },
-    { image: "/svc-cornice.jpeg", emoji: "🪟", title: "Скрытые карнизы", desc: "Ниша под шторы прямо в потолке. Карниз не виден. Шторы будто растут из потолка." },
-    { image: "/svc-custom.jpeg", emoji: "🏗️", title: "Индивидуальные проекты", desc: "Купола, многоуровневые конструкции, нестандартные формы. Если можно натянуть — сделаю." },
-    { image: "/svc-tracksale.jpeg", emoji: "🛒", title: "Продажа трекового освещения", desc: "Подберу и продам трековые системы под ваш проект. Магнитные треки, споты, линейные светильники." },
-    { image: "/svc-simple.jpeg", emoji: "🏠", title: "Простые потолки для квартиры", desc: "Классический белый матовый или сатиновый потолок. Быстро, ровно, недорого. Идеально для ремонта квартир." },
-    { image: "/svc-multilevel.jpeg", emoji: "✨", title: "Светопрозрачные потолки", desc: "Полностью светящийся потолок. Полупрозрачное полотно с LED-подсветкой за ним — равномерное свечение по всей площади." },
+    { image: "/svc-shadow.jpeg", emoji: "⬛", title: "Теневой профиль", desc: "Потолок без плинтуса. Чёткий теневой зазор 8 мм. Выглядит дорого, потому что это дорого сделать правильно.", href: "/uslugi/tenevoy-profil" },
+    { image: "/svc-floating.jpeg", emoji: "💡", title: "Парящие потолки", desc: "LED-подсветка по периметру. Потолок визуально отрывается от стен. Работает и как основной свет.", href: "/uslugi/paryashchie-potolki" },
+    { image: "/svc-lightlines.jpeg", emoji: "📐", title: "Световые линии", desc: "Встроенные в полотно линейные светильники. Любая геометрия. Замена люстрам и точечникам.", href: "/uslugi/svetovye-linii" },
+    { image: "/svc-track.jpeg", emoji: "🔦", title: "Трековое освещение", desc: "Встраиваемые треки в натяжной потолок. Направленный свет. Полный расчёт освещённости.", href: "/uslugi/trekovoe-osveshchenie" },
+    { image: "/svc-cornice.jpeg", emoji: "🪟", title: "Скрытые карнизы", desc: "Ниша под шторы прямо в потолке. Карниз не виден. Шторы будто растут из потолка.", href: "/uslugi/skrytye-karnizy" },
+    { image: "/svc-custom.jpeg", emoji: "🏗️", title: "Индивидуальные проекты", desc: "Купола, многоуровневые конструкции, нестандартные формы. Если можно натянуть — сделаю.", href: "/uslugi/individualnye-proekty" },
+    { image: "/svc-tracksale.jpeg", emoji: "🛒", title: "Продажа трекового освещения", desc: "Подберу и продам трековые системы под ваш проект. Магнитные треки, споты, линейные светильники.", href: "/uslugi/prodazha-trekovogo-osveshcheniya" },
+    { image: "/svc-simple.jpeg", emoji: "🏠", title: "Простые потолки для квартиры", desc: "Классический белый матовый или сатиновый потолок. Быстро, ровно, недорого. Идеально для ремонта квартир.", href: "/uslugi/prostye-potolki" },
+    { image: "/svc-multilevel.jpeg", emoji: "✨", title: "Светопрозрачные потолки", desc: "Полностью светящийся потолок. Полупрозрачное полотно с LED-подсветкой за ним — равномерное свечение по всей площади.", href: "/uslugi/svetoprozrachnye-potolki" },
   ];
 
   const prices = [
@@ -179,9 +179,10 @@ export default function Home() {
         .cta-btn-white{background:#fff;color:#1a1a1a}.cta-btn-white:hover{background:#e8e8e8}
         .cta-btn-error{background:#c0392b}.cta-btn-error:hover{background:#c0392b}
         .nav-link{color:#666;text-decoration:none;font-size:14px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;transition:color .3s;cursor:pointer;background:none;border:none;font-family:inherit}.nav-link:hover{color:#1a1a1a}
-        .service-card{background:#fff;border:1px solid #e8e8e8;transition:all .4s cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden}
+        .service-card{display:block;background:#fff;border:1px solid #e8e8e8;transition:all .4s cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden;text-decoration:none;color:inherit}
         .service-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:3px;background:#1a1a1a;transform:scaleX(0);transform-origin:left;transition:transform .4s cubic-bezier(.16,1,.3,1);z-index:2}
         .service-card:hover{border-color:#1a1a1a;transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.08)}.service-card:hover::before{transform:scaleX(1)}
+        .service-card-arrow{opacity:0;transform:translateX(-8px);transition:all .3s}.service-card:hover .service-card-arrow{opacity:1;transform:translateX(0)}
         .project-tab{padding:12px 24px;background:transparent;border:1px solid #ddd;color:#888;font-size:13px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;transition:all .3s;font-family:inherit;white-space:nowrap}
         .project-tab.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}.project-tab:hover:not(.active){border-color:#1a1a1a;color:#1a1a1a}
         .slide-dot{width:10px;height:10px;border-radius:50%;border:2px solid #999;background:transparent;cursor:pointer;transition:all .3s;padding:0}.slide-dot.active{background:#1a1a1a;border-color:#1a1a1a}
@@ -236,7 +237,6 @@ export default function Home() {
           <span style={{ background: scrollY > 50 ? "#1a1a1a" : "#fff" }} /><span style={{ background: scrollY > 50 ? "#1a1a1a" : "#fff" }} /><span style={{ background: scrollY > 50 ? "#1a1a1a" : "#fff" }} />
         </button>
       </nav>
-
       <div className={`mobile-menu ${menuOpen ? "open" : ""}`}>
         {[["Услуги", "services"], ["Цены", "prices"], ["Проекты", "projects"], ["Отзывы", "reviews"], ["О нас", "about"], ["Контакт", "contact"]].map(([l, id]) => (
           <button key={id} onClick={() => scrollTo(id)}>{l}</button>
@@ -245,31 +245,18 @@ export default function Home() {
 
       {/* HERO */}
       <section id="hero" style={{ minHeight: "100vh", display: "flex", alignItems: "center", position: "relative", overflow: "hidden" }}>
-        {heroImages.map((img, i) => (
-          <div key={i} style={{ position: "absolute", inset: 0, opacity: heroSlide === i ? 1 : 0, transition: "opacity 1s ease", zIndex: 0 }}>
-            <Image src={img.src} alt={img.alt} fill priority={i === 0} quality={85} sizes="100vw" style={{ objectFit: "cover", objectPosition: "center", transform: heroSlide === i ? "scale(1)" : "scale(1.05)", transition: "transform 6s ease" }} />
-          </div>
-        ))}
+        {heroImages.map((img, i) => (<div key={i} style={{ position: "absolute", inset: 0, opacity: heroSlide === i ? 1 : 0, transition: "opacity 1s ease", zIndex: 0 }}><Image src={img.src} alt={img.alt} fill priority={i === 0} quality={85} sizes="100vw" style={{ objectFit: "cover", objectPosition: "center", transform: heroSlide === i ? "scale(1)" : "scale(1.05)", transition: "transform 6s ease" }} /></div>))}
         <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 1 }} />
         <div style={{ maxWidth: 1400, width: "100%", margin: "0 auto", position: "relative", zIndex: 2, padding: "120px clamp(24px,5vw,80px) 80px" }}>
-          <div className="urgency-badge" style={{ marginBottom: 24 }}>
-            <span className="urgency-dot" />
-            Свободные даты на этой неделе — запишитесь на замер
-          </div>
+          <div className="urgency-badge" style={{ marginBottom: 24 }}><span className="urgency-dot" />Свободные даты на этой неделе — запишитесь на замер</div>
           <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, fontWeight: 500, letterSpacing: 3, color: "rgba(255,255,255,0.6)", marginBottom: 24, textTransform: "uppercase" }}>Москва и МО / с 2010 года</div>
-          <h1 style={{ fontSize: "clamp(40px,6vw,80px)", fontWeight: 900, lineHeight: 1.05, letterSpacing: -3, marginBottom: 32, color: "#fff", textShadow: "0 2px 20px rgba(0,0,0,0.5)" }}>
-            Натяжные<br />потолки<br /><span style={{ color: "rgba(255,255,255,0.5)" }}>без компромиссов</span>
-          </h1>
-          <p style={{ fontSize: 18, lineHeight: 1.7, color: "rgba(255,255,255,0.7)", maxWidth: 520, marginBottom: 48, textShadow: "0 1px 10px rgba(0,0,0,0.3)" }}>
-            Я — Владимир. Не компания с колл-центром. Частный мастер. Делаю лично. Любая сложность. Теневой профиль, световые линии, треки, купола.
-          </p>
+          <h1 style={{ fontSize: "clamp(40px,6vw,80px)", fontWeight: 900, lineHeight: 1.05, letterSpacing: -3, marginBottom: 32, color: "#fff", textShadow: "0 2px 20px rgba(0,0,0,0.5)" }}>Натяжные<br />потолки<br /><span style={{ color: "rgba(255,255,255,0.5)" }}>без компромиссов</span></h1>
+          <p style={{ fontSize: 18, lineHeight: 1.7, color: "rgba(255,255,255,0.7)", maxWidth: 520, marginBottom: 48, textShadow: "0 1px 10px rgba(0,0,0,0.3)" }}>Я — Владимир. Не компания с колл-центром. Частный мастер. Делаю лично. Любая сложность. Теневой профиль, световые линии, треки, купола.</p>
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 48 }}>
             <button className="cta-btn cta-btn-white" onClick={() => scrollTo("contact")}>Обсудить проект →</button>
             <button className="cta-btn" style={{ background: "transparent", border: "2px solid rgba(255,255,255,0.5)" }} onClick={() => scrollTo("projects")}>Смотреть работы</button>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            {heroImages.map((_, i) => (<button key={i} onClick={() => setHeroSlide(i)} style={{ width: heroSlide === i ? 32 : 10, height: 4, borderRadius: 2, background: heroSlide === i ? "#fff" : "rgba(255,255,255,0.4)", border: "none", cursor: "pointer", transition: "all .3s", padding: 0 }} />))}
-          </div>
+          <div style={{ display: "flex", gap: 8 }}>{heroImages.map((_, i) => (<button key={i} onClick={() => setHeroSlide(i)} style={{ width: heroSlide === i ? 32 : 10, height: 4, borderRadius: 2, background: heroSlide === i ? "#fff" : "rgba(255,255,255,0.4)", border: "none", cursor: "pointer", transition: "all .3s", padding: 0 }} />))}</div>
         </div>
         <div style={{ position: "absolute", bottom: 40, right: "clamp(24px,5vw,80px)", display: "flex", gap: 8, zIndex: 3 }}>
           <button className="slide-arrow" onClick={() => setHeroSlide((heroSlide - 1 + heroImages.length) % heroImages.length)}>←</button>
@@ -282,8 +269,7 @@ export default function Home() {
         <div style={{ maxWidth: 1400, margin: "0 auto" }}>
           <div className={`advantages-grid fade-up ${isVisible("advantages") ? "visible" : ""}`} style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 0 }}>
             {advantages.map((a, i) => (
-              <div key={i} className={`fade-up ${isVisible("advantages") ? "visible" : ""} fade-up-d${i + 1}`}
-                style={{ position: "relative", overflow: "hidden", minHeight: 320, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 32, borderRight: i < 3 ? "1px solid rgba(255,255,255,0.08)" : "none" }}
+              <div key={i} className={`fade-up ${isVisible("advantages") ? "visible" : ""} fade-up-d${i + 1}`} style={{ position: "relative", overflow: "hidden", minHeight: 320, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 32, borderRight: i < 3 ? "1px solid rgba(255,255,255,0.08)" : "none" }}
                 onMouseEnter={e => { const o = e.currentTarget.querySelector(".adv-overlay") as HTMLElement; if (o) o.style.opacity = "0.5"; }}
                 onMouseLeave={e => { const o = e.currentTarget.querySelector(".adv-overlay") as HTMLElement; if (o) o.style.opacity = "0.7"; }}>
                 <Image src={a.image} alt={a.label} fill sizes="(max-width:768px) 50vw, 25vw" style={{ objectFit: "cover" }} />
@@ -299,7 +285,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* SERVICES */}
+      {/* SERVICES — кликабельные карточки */}
       <section id="services" style={{ padding: "120px clamp(24px,5vw,80px)", position: "relative", overflow: "hidden" }}>
         <div className="bg-shape" style={{ width: 500, height: 500, background: "#1a1a1a", bottom: "0%", right: "-10%", animation: "float1 25s ease-in-out infinite" }} />
         <div style={{ maxWidth: 1400, margin: "0 auto", position: "relative", zIndex: 1 }}>
@@ -309,7 +295,7 @@ export default function Home() {
           </div>
           <div className="services-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 24, marginTop: 64 }}>
             {services.map((s, i) => (
-              <div key={i} className={`service-card fade-up ${isVisible("services") ? "visible" : ""} fade-up-d${Math.min((i % 6) + 1, 6)}`}>
+              <Link key={i} href={s.href} className={`service-card fade-up ${isVisible("services") ? "visible" : ""} fade-up-d${Math.min((i % 6) + 1, 6)}`}>
                 <div style={{ width: "100%", height: 180, position: "relative", overflow: "hidden" }}>
                   <Image src={s.image} alt={s.title} fill sizes="(max-width:768px) 100vw, 33vw" style={{ objectFit: "cover" }} />
                 </div>
@@ -317,10 +303,11 @@ export default function Home() {
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                     <span style={{ fontSize: 24 }}>{s.emoji}</span>
                     <h3 style={{ fontSize: 18, fontWeight: 700, letterSpacing: -0.3 }}>{s.title}</h3>
+                    <span className="service-card-arrow" style={{ marginLeft: "auto", fontSize: 18, color: "#999" }}>→</span>
                   </div>
                   <p style={{ fontSize: 14, lineHeight: 1.7, color: "#666" }}>{s.desc}</p>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -330,35 +317,22 @@ export default function Home() {
       <section id="prices" style={{ padding: "120px clamp(24px,5vw,80px)", background: "#f2f2f2", position: "relative", overflow: "hidden" }}>
         <div className="bg-shape" style={{ width: 400, height: 400, background: "#1a1a1a", top: "20%", right: "-5%", animation: "float3 20s ease-in-out infinite" }} />
         <div style={{ maxWidth: 900, margin: "0 auto", position: "relative", zIndex: 1 }}>
-          <div className={`fade-up ${isVisible("prices") ? "visible" : ""}`}>
-            <div className="section-label">Цены</div>
-            <h2 className="section-title">Ориентировочные цены.<br /><span style={{ color: "#999" }}>Точные — после замера.</span></h2>
-          </div>
+          <div className={`fade-up ${isVisible("prices") ? "visible" : ""}`}><div className="section-label">Цены</div><h2 className="section-title">Ориентировочные цены.<br /><span style={{ color: "#999" }}>Точные — после замера.</span></h2></div>
           <div className={`fade-up fade-up-d2 ${isVisible("prices") ? "visible" : ""}`} style={{ marginTop: 48, background: "#fff", border: "1px solid #e8e8e8", padding: "8px 32px" }}>
-            {prices.map((p, i) => (
-              <div key={i} className="price-row">
-                <span style={{ fontSize: 16, fontWeight: 500 }}>{p.service}</span>
-                <span style={{ fontSize: 18, fontWeight: 700, fontFamily: "'JetBrains Mono',monospace", whiteSpace: "nowrap" }}>{p.price}</span>
-              </div>
-            ))}
+            {prices.map((p, i) => (<div key={i} className="price-row"><span style={{ fontSize: 16, fontWeight: 500 }}>{p.service}</span><span style={{ fontSize: 18, fontWeight: 700, fontFamily: "'JetBrains Mono',monospace", whiteSpace: "nowrap" }}>{p.price}</span></div>))}
           </div>
           <div className={`fade-up fade-up-d3 ${isVisible("prices") ? "visible" : ""}`} style={{ marginTop: 24, padding: 24, background: "#fff", border: "1px solid #e8e8e8" }}>
             <p style={{ fontSize: 14, lineHeight: 1.7, color: "#666", marginBottom: 16 }}>📐 <strong>Замер бесплатный.</strong> Приезжаю, считаю точную стоимость на месте. Без «потом уточним».</p>
             <p style={{ fontSize: 13, color: "#999" }}>Цена зависит от площади, количества углов, типа профиля, освещения. Указанные цены — минимальные, для ориентира.</p>
           </div>
-          <div className={`fade-up fade-up-d4 ${isVisible("prices") ? "visible" : ""}`} style={{ marginTop: 32, textAlign: "center" }}>
-            <button className="cta-btn" onClick={() => scrollTo("contact")}>Рассчитать стоимость →</button>
-          </div>
+          <div className={`fade-up fade-up-d4 ${isVisible("prices") ? "visible" : ""}`} style={{ marginTop: 32, textAlign: "center" }}><button className="cta-btn" onClick={() => scrollTo("contact")}>Рассчитать стоимость →</button></div>
         </div>
       </section>
 
       {/* REVIEWS */}
       <section id="reviews" style={{ padding: "120px 0", position: "relative", overflow: "hidden" }}>
         <div style={{ paddingLeft: "clamp(24px,5vw,80px)", paddingRight: "clamp(24px,5vw,80px)" }}>
-          <div className={`fade-up ${isVisible("reviews") ? "visible" : ""}`}>
-            <div className="section-label">Отзывы</div>
-            <h2 className="section-title">Клиенты говорят<br /><span style={{ color: "#999" }}>лучше любой рекламы.</span></h2>
-          </div>
+          <div className={`fade-up ${isVisible("reviews") ? "visible" : ""}`}><div className="section-label">Отзывы</div><h2 className="section-title">Клиенты говорят<br /><span style={{ color: "#999" }}>лучше любой рекламы.</span></h2></div>
           <div className={`fade-up fade-up-d1 ${isVisible("reviews") ? "visible" : ""}`} style={{ display: "flex", alignItems: "center", gap: 24, marginTop: 32, flexWrap: "wrap" }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
               <span style={{ fontSize: 56, fontWeight: 900, fontFamily: "'JetBrains Mono',monospace", lineHeight: 1 }}>5.0</span>
@@ -400,40 +374,27 @@ export default function Home() {
       <section id="projects" style={{ padding: "120px clamp(24px,5vw,80px)", background: "#f2f2f2", position: "relative", overflow: "hidden" }}>
         <div className="bg-shape" style={{ width: 400, height: 400, background: "#1a1a1a", top: "10%", left: "-5%", animation: "float2 18s ease-in-out infinite" }} />
         <div style={{ maxWidth: 1400, margin: "0 auto", position: "relative", zIndex: 1 }}>
-          <div className={`fade-up ${isVisible("projects") ? "visible" : ""}`}>
-            <div className="section-label">Проекты</div>
-            <h2 className="section-title">Не рендеры.<br /><span style={{ color: "#999" }}>Реальные объекты.</span></h2>
-          </div>
+          <div className={`fade-up ${isVisible("projects") ? "visible" : ""}`}><div className="section-label">Проекты</div><h2 className="section-title">Не рендеры.<br /><span style={{ color: "#999" }}>Реальные объекты.</span></h2></div>
           <div className="project-tabs" style={{ display: "flex", gap: 8, marginTop: 48, overflowX: "auto", paddingBottom: 8 }}>
             {projects.map((p, i) => (<button key={i} className={`project-tab ${activeProject === i ? "active" : ""}`} onClick={() => setActiveProject(i)}>{p.title}</button>))}
           </div>
           <div className="hero-grid" style={{ marginTop: 48, display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 48, alignItems: "center" }}>
             <div style={{ position: "relative", overflow: "hidden" }}>
               <div style={{ aspectRatio: "4/3", position: "relative", background: "#e0e0e0", overflow: "hidden" }}>
-                {projects[activeProject].images.map((img, i) => (
-                  <div key={`${activeProject}-${i}`} style={{ position: "absolute", inset: 0, opacity: projectSlide === i ? 1 : 0, transition: "opacity .6s ease" }}>
-                    <Image src={img} alt={`${projects[activeProject].title} — фото ${i + 1}`} fill sizes="(max-width:768px) 100vw, 60vw" style={{ objectFit: "cover" }} />
-                  </div>
-                ))}
-                <div style={{ position: "absolute", bottom: 16, left: 16, fontFamily: "'JetBrains Mono',monospace", fontSize: 12, color: "#fff", background: "rgba(0,0,0,0.6)", padding: "6px 12px", backdropFilter: "blur(10px)", zIndex: 2 }}>
-                  {String(projectSlide + 1).padStart(2, "0")} / {String(projects[activeProject].images.length).padStart(2, "0")}
-                </div>
+                {projects[activeProject].images.map((img, i) => (<div key={`${activeProject}-${i}`} style={{ position: "absolute", inset: 0, opacity: projectSlide === i ? 1 : 0, transition: "opacity .6s ease" }}><Image src={img} alt={`${projects[activeProject].title} — фото ${i + 1}`} fill sizes="(max-width:768px) 100vw, 60vw" style={{ objectFit: "cover" }} /></div>))}
+                <div style={{ position: "absolute", bottom: 16, left: 16, fontFamily: "'JetBrains Mono',monospace", fontSize: 12, color: "#fff", background: "rgba(0,0,0,0.6)", padding: "6px 12px", backdropFilter: "blur(10px)", zIndex: 2 }}>{String(projectSlide + 1).padStart(2, "0")} / {String(projects[activeProject].images.length).padStart(2, "0")}</div>
                 <div style={{ position: "absolute", bottom: 16, right: 16, display: "flex", gap: 8, zIndex: 2 }}>
                   <button className="slide-arrow" style={{ width: 36, height: 36, fontSize: 14 }} onClick={() => setProjectSlide((projectSlide - 1 + projects[activeProject].images.length) % projects[activeProject].images.length)}>←</button>
                   <button className="slide-arrow" style={{ width: 36, height: 36, fontSize: 14 }} onClick={() => setProjectSlide((projectSlide + 1) % projects[activeProject].images.length)}>→</button>
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 6, marginTop: 12, justifyContent: "center" }}>
-                {projects[activeProject].images.map((_, i) => (<button key={i} className={`slide-dot ${projectSlide === i ? "active" : ""}`} onClick={() => setProjectSlide(i)} />))}
-              </div>
+              <div style={{ display: "flex", gap: 6, marginTop: 12, justifyContent: "center" }}>{projects[activeProject].images.map((_, i) => (<button key={i} className={`slide-dot ${projectSlide === i ? "active" : ""}`} onClick={() => setProjectSlide(i)} />))}</div>
             </div>
             <div>
               <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 64, fontWeight: 700, color: "#e0e0e0", lineHeight: 1, marginBottom: 16 }}>{String(activeProject + 1).padStart(2, "0")}</div>
               <h3 style={{ fontSize: 28, fontWeight: 800, letterSpacing: -1, marginBottom: 16 }}>{projects[activeProject].title}</h3>
               <p style={{ fontSize: 15, lineHeight: 1.8, color: "#666", marginBottom: 24 }}>{projects[activeProject].desc}</p>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 32 }}>
-                {projects[activeProject].tags.map((tag, i) => (<span key={i} className="tag">{tag}</span>))}
-              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 32 }}>{projects[activeProject].tags.map((tag, i) => (<span key={i} className="tag">{tag}</span>))}</div>
               <button className="cta-btn" style={{ fontSize: 13, padding: "14px 28px" }} onClick={() => scrollTo("contact")}>Хочу такой же →</button>
             </div>
           </div>
@@ -461,12 +422,8 @@ export default function Home() {
             <div className={`fade-up fade-up-d2 ${isVisible("about") ? "visible" : ""}`} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#999", fontFamily: "'JetBrains Mono',monospace", marginBottom: 4 }}>Частые вопросы</div>
               {faqItems.map((item, i) => (
-                <div key={i} style={{ padding: 24, background: "#fff", border: "1px solid #e8e8e8", transition: "border-color .3s" }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = "#1a1a1a")} onMouseLeave={e => (e.currentTarget.style.borderColor = "#e8e8e8")}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                    <span style={{ fontSize: 20 }}>{item.icon}</span>
-                    <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: -0.3 }}>{item.q}</div>
-                  </div>
+                <div key={i} style={{ padding: 24, background: "#fff", border: "1px solid #e8e8e8", transition: "border-color .3s" }} onMouseEnter={e => (e.currentTarget.style.borderColor = "#1a1a1a")} onMouseLeave={e => (e.currentTarget.style.borderColor = "#e8e8e8")}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}><span style={{ fontSize: 20 }}>{item.icon}</span><div style={{ fontSize: 15, fontWeight: 700, letterSpacing: -0.3 }}>{item.q}</div></div>
                   <div style={{ fontSize: 14, lineHeight: 1.7, color: "#666", paddingLeft: 30 }}>{item.a}</div>
                 </div>
               ))}
@@ -479,25 +436,17 @@ export default function Home() {
       <section id="process" style={{ padding: "120px clamp(24px,5vw,80px)", background: "#1a1a1a", color: "#fff", position: "relative", overflow: "hidden" }}>
         <div className="bg-shape" style={{ width: 600, height: 600, background: "#fff", bottom: "-20%", left: "30%", opacity: 0.02, animation: "float1 30s ease-in-out infinite" }} />
         <div style={{ maxWidth: 1400, margin: "0 auto", position: "relative", zIndex: 1 }}>
-          <div className={`fade-up ${isVisible("process") ? "visible" : ""}`}>
-            <div className="section-label" style={{ color: "#666" }}>Как работаю</div>
-            <h2 className="section-title" style={{ color: "#fff", marginBottom: 64 }}>Четыре шага.<br /><span style={{ color: "#666" }}>Без лишнего.</span></h2>
-          </div>
+          <div className={`fade-up ${isVisible("process") ? "visible" : ""}`}><div className="section-label" style={{ color: "#666" }}>Как работаю</div><h2 className="section-title" style={{ color: "#fff", marginBottom: 64 }}>Четыре шага.<br /><span style={{ color: "#666" }}>Без лишнего.</span></h2></div>
           <div className="process-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 24 }}>
             {processSteps.map((item, i) => (
-              <div key={i} className={`fade-up ${isVisible("process") ? "visible" : ""} fade-up-d${i + 1}`}
-                style={{ border: "1px solid rgba(255,255,255,0.1)", transition: "border-color .3s", overflow: "hidden" }}
-                onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)")} onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")}>
+              <div key={i} className={`fade-up ${isVisible("process") ? "visible" : ""} fade-up-d${i + 1}`} style={{ border: "1px solid rgba(255,255,255,0.1)", transition: "border-color .3s", overflow: "hidden" }} onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)")} onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")}>
                 <div style={{ width: "100%", height: 160, position: "relative", overflow: "hidden" }}>
                   <Image src={item.image} alt={item.title} fill sizes="(max-width:768px) 50vw, 25vw" style={{ objectFit: "cover" }} />
                   <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom,rgba(26,26,26,0.3),rgba(26,26,26,0.8))" }} />
                   <div style={{ position: "absolute", top: 16, left: 16, fontFamily: "'JetBrains Mono',monospace", fontSize: 36, fontWeight: 700, color: "rgba(255,255,255,0.3)" }}>{item.step}</div>
                   <div style={{ position: "absolute", bottom: 16, right: 16, fontSize: 28 }}>{item.icon}</div>
                 </div>
-                <div style={{ padding: 24 }}>
-                  <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>{item.title}</h3>
-                  <p style={{ fontSize: 14, lineHeight: 1.7, color: "#888" }}>{item.desc}</p>
-                </div>
+                <div style={{ padding: 24 }}><h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>{item.title}</h3><p style={{ fontSize: 14, lineHeight: 1.7, color: "#888" }}>{item.desc}</p></div>
               </div>
             ))}
           </div>
@@ -509,10 +458,7 @@ export default function Home() {
         <Image src="/cta-banner.jpeg" alt="Интерьер с натяжным потолком ПОТОЛКОВО" fill sizes="100vw" style={{ objectFit: "cover" }} />
         <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.7)" }} />
         <div style={{ maxWidth: 800, margin: "0 auto", textAlign: "center", position: "relative", zIndex: 1 }}>
-          <div className="urgency-badge" style={{ marginBottom: 24, display: "inline-flex" }}>
-            <span className="urgency-dot" />
-            Есть свободные даты на этой неделе
-          </div>
+          <div className="urgency-badge" style={{ marginBottom: 24, display: "inline-flex" }}><span className="urgency-dot" />Есть свободные даты на этой неделе</div>
           <h2 style={{ fontSize: "clamp(28px,4vw,48px)", fontWeight: 800, color: "#fff", lineHeight: 1.2, marginBottom: 16, letterSpacing: -1 }}>Готовы к потолку, который удивляет?</h2>
           <p style={{ fontSize: 16, color: "rgba(255,255,255,0.7)", marginBottom: 32 }}>Звоните или оставьте заявку — отвечу лично в течение 2 часов</p>
           <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
@@ -526,10 +472,7 @@ export default function Home() {
       <section id="contact" style={{ padding: "120px clamp(24px,5vw,80px)", position: "relative", overflow: "hidden" }}>
         <div className="bg-shape" style={{ width: 400, height: 400, background: "#1a1a1a", top: "10%", left: "60%", animation: "float2 20s ease-in-out infinite" }} />
         <div style={{ maxWidth: 1400, margin: "0 auto", position: "relative", zIndex: 1 }}>
-          <div className={`fade-up ${isVisible("contact") ? "visible" : ""}`}>
-            <div className="section-label">Контакт</div>
-            <h2 className="section-title">Готовы начать?<br /><span style={{ color: "#999" }}>Напишите. Отвечу лично.</span></h2>
-          </div>
+          <div className={`fade-up ${isVisible("contact") ? "visible" : ""}`}><div className="section-label">Контакт</div><h2 className="section-title">Готовы начать?<br /><span style={{ color: "#999" }}>Напишите. Отвечу лично.</span></h2></div>
           <div className="contact-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, marginTop: 64 }}>
             <div className={`fade-up fade-up-d1 ${isVisible("contact") ? "visible" : ""}`}>
               {formStatus === "sent" ? (
@@ -539,9 +482,7 @@ export default function Home() {
                   <p style={{ fontSize: 16, lineHeight: 1.7, color: "#555", marginBottom: 24 }}>Владимир перезвонит вам в течение 2 часов.</p>
                   <p style={{ fontSize: 14, color: "#888", marginBottom: 24 }}>Если срочно — звоните:</p>
                   <a href="tel:+79055219909" style={{ fontSize: 20, fontWeight: 700, color: "#1a1a1a", textDecoration: "none" }}>📞 +7 905 521 99 09</a>
-                  <div style={{ marginTop: 32 }}>
-                    <button className="cta-btn cta-btn-outline" style={{ fontSize: 13, padding: "12px 24px" }} onClick={() => setFormStatus("idle")}>Отправить ещё заявку</button>
-                  </div>
+                  <div style={{ marginTop: 32 }}><button className="cta-btn cta-btn-outline" style={{ fontSize: 13, padding: "12px 24px" }} onClick={() => setFormStatus("idle")}>Отправить ещё заявку</button></div>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -552,6 +493,10 @@ export default function Home() {
                     {formStatus === "sending" ? "Отправляю..." : formStatus === "error" ? "✕ Ошибка. Попробуйте ещё раз" : "Отправить заявку →"}
                   </button>
                   <p style={{ fontSize: 12, color: "#aaa", textAlign: "center" }}>Отвечу в течение 2 часов в рабочее время</p>
+                  <p style={{ fontSize: 11, color: "#bbb", textAlign: "center", lineHeight: 1.5 }}>
+                    Нажимая на кнопку, вы даёте согласие на обработку персональных данных в соответствии с{" "}
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: "#999", textDecoration: "underline" }}>Политикой конфиденциальности</a>
+                  </p>
                 </form>
               )}
             </div>
@@ -567,9 +512,7 @@ export default function Home() {
                   <div style={{ width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center", background: "#f2f2f2", fontSize: 20, flexShrink: 0 }}>{item.icon}</div>
                   <div>
                     <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#999", marginBottom: 4, fontFamily: "'JetBrains Mono',monospace" }}>{item.label}</div>
-                    {item.href ? (
-                      <a href={item.href} target="_blank" rel="noopener noreferrer" style={{ fontSize: 18, fontWeight: 600, color: "#1a1a1a", textDecoration: "none", borderBottom: "1px solid #ddd", paddingBottom: 2 }}>{item.value}</a>
-                    ) : (<div style={{ fontSize: 18, fontWeight: 600 }}>{item.value}</div>)}
+                    {item.href ? (<a href={item.href} target="_blank" rel="noopener noreferrer" style={{ fontSize: 18, fontWeight: 600, color: "#1a1a1a", textDecoration: "none", borderBottom: "1px solid #ddd", paddingBottom: 2 }}>{item.value}</a>) : (<div style={{ fontSize: 18, fontWeight: 600 }}>{item.value}</div>)}
                   </div>
                 </div>
               ))}
@@ -597,22 +540,24 @@ export default function Home() {
               <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#666", marginBottom: 16, fontFamily: "'JetBrains Mono',monospace" }}>Навигация</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {[["Услуги", "services"], ["Цены", "prices"], ["Проекты", "projects"], ["Отзывы", "reviews"], ["О нас", "about"], ["Контакт", "contact"]].map(([l, id]) => (
-                  <button key={id} onClick={() => scrollTo(id)} style={{ background: "none", border: "none", color: "#888", fontSize: 14, cursor: "pointer", textAlign: "left", fontFamily: "inherit", padding: 0, transition: "color .3s" }}
-                    onMouseEnter={e => (e.currentTarget.style.color = "#fff")} onMouseLeave={e => (e.currentTarget.style.color = "#888")}>{l}</button>
+                  <button key={id} onClick={() => scrollTo(id)} style={{ background: "none", border: "none", color: "#888", fontSize: 14, cursor: "pointer", textAlign: "left", fontFamily: "inherit", padding: 0, transition: "color .3s" }} onMouseEnter={e => (e.currentTarget.style.color = "#fff")} onMouseLeave={e => (e.currentTarget.style.color = "#888")}>{l}</button>
                 ))}
               </div>
             </div>
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#666", marginBottom: 16, fontFamily: "'JetBrains Mono',monospace" }}>Услуги</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {["Теневой профиль", "Парящие потолки", "Световые линии", "Трековое освещение", "Скрытые карнизы", "Простые потолки", "Светопрозрачные", "Продажа трек-света"].map(s => (
-                  <span key={s} style={{ fontSize: 14, color: "#888" }}>{s}</span>
+                {services.map(s => (
+                  <Link key={s.href} href={s.href} style={{ fontSize: 14, color: "#888", textDecoration: "none", transition: "color .3s" }} onMouseEnter={e => (e.currentTarget.style.color = "#fff")} onMouseLeave={e => (e.currentTarget.style.color = "#888")}>{s.title}</Link>
                 ))}
               </div>
             </div>
           </div>
           <div style={{ marginTop: 60, paddingTop: 24, borderTop: "1px solid #333", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
-            <span style={{ fontSize: 13, color: "#666" }}>© {new Date().getFullYear()} ПОТОЛКОВО. Все права защищены.</span>
+            <span style={{ fontSize: 13, color: "#666" }}>
+              © {new Date().getFullYear()} ПОТОЛКОВО.{" "}
+              <a href="/privacy" style={{ color: "#666", textDecoration: "underline" }}>Политика конфиденциальности</a>
+            </span>
             <span style={{ fontSize: 12, color: "#444", fontFamily: "'JetBrains Mono',monospace" }}>Москва и Московская область</span>
           </div>
         </div>
