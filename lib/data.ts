@@ -556,8 +556,8 @@ export const PROJECTS: ProjectData[] = [
     images: ["/proj-dome-1.jpeg", "/proj-dome-2.jpeg", "/proj-dome-3.jpeg"],
     type: "Индивидуальный проект",
     area: "18 м²",
-    duration: "2 дня",
-    priceFrom: "от 120 000 ₽",
+    duration: "4 дня",
+    priceFrom: "от 300 000 ₽",
   },
   {
     title: "Теневой профиль + трек",
@@ -567,7 +567,7 @@ export const PROJECTS: ProjectData[] = [
     type: "Теневой профиль + трек",
     area: "24 м²",
     duration: "1 день",
-    priceFrom: "от 96 000 ₽",
+    priceFrom: "от 150 000 ₽",
   },
   {
     title: "Парящий потолок",
@@ -577,7 +577,7 @@ export const PROJECTS: ProjectData[] = [
     type: "Парящий потолок",
     area: "32 м²",
     duration: "1 день",
-    priceFrom: "от 80 000 ₽",
+    priceFrom: "от 50 000 ₽",
   },
   {
     title: "Световые линии",
@@ -587,7 +587,7 @@ export const PROJECTS: ProjectData[] = [
     type: "Световые линии",
     area: "40 м²",
     duration: "1 день",
-    priceFrom: "от 140 000 ₽",
+    priceFrom: "от 80 000 ₽",
   },
   {
     title: "Скрытый карниз",
@@ -597,7 +597,7 @@ export const PROJECTS: ProjectData[] = [
     type: "Скрытый карниз",
     area: "20 м²",
     duration: "1 день",
-    priceFrom: "от 55 000 ₽",
+    priceFrom: "от 35 000 ₽",
   },
   {
     title: "Матовые потолки",
@@ -617,7 +617,7 @@ export const PROJECTS: ProjectData[] = [
     type: "Контурная подсветка",
     area: "28 м²",
     duration: "1 день",
-    priceFrom: "от 70 000 ₽",
+    priceFrom: "от 50 000 ₽",
   },
 ];
 
