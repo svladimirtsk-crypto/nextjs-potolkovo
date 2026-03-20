@@ -1,47 +1,34 @@
 import type { Metadata } from "next";
 import ServicePageLayout from "../_components/ServicePageLayout";
+import { getServiceBySlug, getOtherServices } from "@/lib/data";
+
+const service = getServiceBySlug("tenevoy-profil")!;
 
 export const metadata: Metadata = {
-  title: "Теневой профиль для натяжных потолков в Москве — ПОТОЛКОВО",
-  description: "Установка натяжных потолков с теневым профилем в Москве и МО. Чёткий зазор 8 мм, без плинтуса. Частный мастер, 15+ лет. Замер бесплатно.",
-  keywords: "теневой профиль, натяжной потолок без плинтуса, теневой зазор, shadow gap, натяжные потолки москва",
+  title: service.metaTitle,
+  description: service.metaDescription,
+  keywords: service.metaKeywords,
 };
 
 export default function Page() {
   return (
     <ServicePageLayout
-      breadcrumb="Теневой профиль"
-      badge="Услуга"
-      h1="Теневой профиль"
-      h1sub="для натяжных потолков"
-      description="Потолок без плинтуса и резиновых вставок. Чёткий теневой зазор 8 мм между потолком и стеной. Выглядит дорого, потому что это дорого сделать правильно."
-      ctaText="Заказать теневой профиль"
-      price="от 900 ₽/м.пог"
-      image="/svc-shadow.jpeg"
-      imageAlt="Теневой профиль для натяжного потолка в Москве"
-      sectionTitle="Что такое теневой профиль?"
-      sectionParagraphs={[
-        "Теневой профиль — это специальный алюминиевый профиль, который создаёт аккуратный зазор между натяжным потолком и стеной. Никаких плинтусов, никаких резиновых вставок.",
-        "Зазор составляет 8 мм и создаёт характерную тень — отсюда название. Потолок выглядит как самостоятельная плоскость, «парящая» отдельно от стен.",
-        "Теневой профиль идеально скрывает неровности стен, работает с любым покрытием стен и придаёт интерьеру дизайнерский вид.",
-      ]}
-      advantagesTitle="Преимущества"
-      advantages={[
-        { icon: "◇", title: "Без плинтуса", desc: "Чистая линия без пластиковых накладок" },
-        { icon: "□", title: "Скрывает неровности", desc: "Зазор компенсирует кривизну стен" },
-        { icon: "△", title: "Любые стены", desc: "Обои, покраска, штукатурка, кирпич" },
-        { icon: "○", title: "Долговечность", desc: "Алюминий не желтеет и не деформируется" },
-      ]}
-      otherServices={[
-        ["Парящие потолки", "/uslugi/paryashchie-potolki"],
-        ["Световые линии", "/uslugi/svetovye-linii"],
-        ["Трековое освещение", "/uslugi/trekovoe-osveshchenie"],
-        ["Скрытые карнизы", "/uslugi/skrytye-karnizy"],
-        ["Индивидуальные проекты", "/uslugi/individualnye-proekty"],
-        ["Продажа трек-света", "/uslugi/prodazha-trekovogo-osveshcheniya"],
-        ["Простые потолки", "/uslugi/prostye-potolki"],
-        ["Светопрозрачные потолки", "/uslugi/svetoprozrachnye-potolki"],
-      ]}
+      breadcrumb={service.breadcrumb}
+      badge={service.badge}
+      h1={service.h1}
+      h1sub={service.h1sub}
+      description={service.heroDescription}
+      ctaText={service.ctaText}
+      price={service.price}
+      image={service.image}
+      imageAlt={service.imageAlt}
+      sectionTitle={service.sectionTitle}
+      sectionParagraphs={service.sectionParagraphs}
+      whereTitle={service.whereTitle}
+      whereParagraphs={service.whereParagraphs}
+      advantagesTitle={service.advantagesTitle}
+      advantages={service.advantages}
+      otherServices={getOtherServices("tenevoy-profil")}
     />
   );
 }

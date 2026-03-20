@@ -1,47 +1,34 @@
 import type { Metadata } from "next";
 import ServicePageLayout from "../_components/ServicePageLayout";
+import { getServiceBySlug, getOtherServices } from "@/lib/data";
+
+const service = getServiceBySlug("prostye-potolki")!;
 
 export const metadata: Metadata = {
-  title: "Простые натяжные потолки для квартиры — Москва | ПОТОЛКОВО",
-  description: "Классический белый матовый или сатиновый натяжной потолок. Быстро, ровно, недорого. Мастер 15+ лет. Замер бесплатно.",
-  keywords: "простой натяжной потолок, матовый потолок, сатиновый потолок, потолок в квартиру москва",
+  title: service.metaTitle,
+  description: service.metaDescription,
+  keywords: service.metaKeywords,
 };
 
 export default function Page() {
   return (
     <ServicePageLayout
-      breadcrumb="Простые потолки"
-      badge="Услуга"
-      h1="Простые потолки"
-      h1sub="для квартиры"
-      description="Классический белый матовый или сатиновый потолок. Ровная поверхность без швов. Быстрый монтаж, адекватная цена, проверенные материалы."
-      ctaText="Заказать потолок"
-      price="от 1 000 ₽/м²"
-      image="/svc-simple.jpeg"
-      imageAlt="Простой матовый натяжной потолок в квартире"
-      sectionTitle="Для кого это"
-      sectionParagraphs={[
-        "Если вам нужен просто ровный, красивый потолок без сложных конструкций — это ваш вариант. Матовый или сатиновый, белый или цветной.",
-        "Монтаж одной комнаты занимает 2–3 часа. Без грязи, без пыли. Мебель можно не выносить — достаточно сдвинуть к центру.",
-        "Даже «простой» потолок я делаю качественно: ровные углы, аккуратные обходы труб, чистые светильники. Потому что репутация — одна.",
-      ]}
-      advantagesTitle="Преимущества"
-      advantages={[
-        { icon: "⚡", title: "Быстрый монтаж", desc: "Одна комната — 2-3 часа" },
-        { icon: "💰", title: "Доступная цена", desc: "Оптимальное соотношение цена/качество" },
-        { icon: "🧹", title: "Чисто", desc: "Без пыли и строительного мусора" },
-        { icon: "📄", title: "Договор", desc: "Официально, с гарантией" },
-      ]}
-      otherServices={[
-        ["Теневой профиль", "/uslugi/tenevoy-profil"],
-        ["Парящие потолки", "/uslugi/paryashchie-potolki"],
-        ["Световые линии", "/uslugi/svetovye-linii"],
-        ["Трековое освещение", "/uslugi/trekovoe-osveshchenie"],
-        ["Скрытые карнизы", "/uslugi/skrytye-karnizy"],
-        ["Индивидуальные проекты", "/uslugi/individualnye-proekty"],
-        ["Продажа трек-света", "/uslugi/prodazha-trekovogo-osveshcheniya"],
-        ["Светопрозрачные потолки", "/uslugi/svetoprozrachnye-potolki"],
-      ]}
+      breadcrumb={service.breadcrumb}
+      badge={service.badge}
+      h1={service.h1}
+      h1sub={service.h1sub}
+      description={service.heroDescription}
+      ctaText={service.ctaText}
+      price={service.price}
+      image={service.image}
+      imageAlt={service.imageAlt}
+      sectionTitle={service.sectionTitle}
+      sectionParagraphs={service.sectionParagraphs}
+      whereTitle={service.whereTitle}
+      whereParagraphs={service.whereParagraphs}
+      advantagesTitle={service.advantagesTitle}
+      advantages={service.advantages}
+      otherServices={getOtherServices("prostye-potolki")}
     />
   );
 }

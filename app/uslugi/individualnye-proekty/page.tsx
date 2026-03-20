@@ -1,47 +1,34 @@
 import type { Metadata } from "next";
 import ServicePageLayout from "../_components/ServicePageLayout";
+import { getServiceBySlug, getOtherServices } from "@/lib/data";
+
+const service = getServiceBySlug("individualnye-proekty")!;
 
 export const metadata: Metadata = {
-  title: "Индивидуальные натяжные потолки любой сложности — ПОТОЛКОВО",
-  description: "Купола, многоуровневые конструкции, нестандартные формы из натяжного потолка. Мастер 15+ лет. Москва и МО.",
-  keywords: "купол из потолка, нестандартный потолок, сложный натяжной потолок, многоуровневый потолок",
+  title: service.metaTitle,
+  description: service.metaDescription,
+  keywords: service.metaKeywords,
 };
 
 export default function Page() {
   return (
     <ServicePageLayout
-      breadcrumb="Индивидуальные проекты"
-      badge="Услуга"
-      h1="Индивидуальные проекты"
-      h1sub="любой сложности"
-      description="Купола, многоуровневые конструкции, нестандартные формы. Если это можно натянуть — я это сделаю. Есть опыт с купольными конструкциями и RGB-подсветкой."
-      ctaText="Обсудить проект"
-      price="Рассчитывается индивидуально"
-      image="/svc-custom.jpeg"
-      imageAlt="Индивидуальный проект натяжного потолка — купол"
-      sectionTitle="Что я могу сделать"
-      sectionParagraphs={[
-        "Любые нестандартные формы: купола, волны, многоуровневые конструкции с подсветкой, комбинации материалов.",
-        "Реализованный проект: объёмный купол из натяжного полотна с интегрированной RGB-подсветкой — полностью кастомная конструкция.",
-        "Каждый такой проект — это инженерия, расчёты и много ручной работы. Но именно такие задачи мне интересны больше всего.",
-      ]}
-      advantagesTitle="Почему я"
-      advantages={[
-        { icon: "🏗️", title: "Опыт 15+ лет", desc: "Сложные объекты — моя специализация" },
-        { icon: "📐", title: "Свой расчёт", desc: "Проектирую каркас и подсветку сам" },
-        { icon: "🎨", title: "Любая форма", desc: "Купола, волны, многоуровневые" },
-        { icon: "🌈", title: "RGB-подсветка", desc: "Управление цветом с пульта" },
-      ]}
-      otherServices={[
-        ["Теневой профиль", "/uslugi/tenevoy-profil"],
-        ["Парящие потолки", "/uslugi/paryashchie-potolki"],
-        ["Световые линии", "/uslugi/svetovye-linii"],
-        ["Трековое освещение", "/uslugi/trekovoe-osveshchenie"],
-        ["Скрытые карнизы", "/uslugi/skrytye-karnizy"],
-        ["Продажа трек-света", "/uslugi/prodazha-trekovogo-osveshcheniya"],
-        ["Простые потолки", "/uslugi/prostye-potolki"],
-        ["Светопрозрачные потолки", "/uslugi/svetoprozrachnye-potolki"],
-      ]}
+      breadcrumb={service.breadcrumb}
+      badge={service.badge}
+      h1={service.h1}
+      h1sub={service.h1sub}
+      description={service.heroDescription}
+      ctaText={service.ctaText}
+      price={service.price}
+      image={service.image}
+      imageAlt={service.imageAlt}
+      sectionTitle={service.sectionTitle}
+      sectionParagraphs={service.sectionParagraphs}
+      whereTitle={service.whereTitle}
+      whereParagraphs={service.whereParagraphs}
+      advantagesTitle={service.advantagesTitle}
+      advantages={service.advantages}
+      otherServices={getOtherServices("individualnye-proekty")}
     />
   );
 }

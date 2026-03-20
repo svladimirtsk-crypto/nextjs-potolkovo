@@ -1,47 +1,34 @@
 import type { Metadata } from "next";
 import ServicePageLayout from "../_components/ServicePageLayout";
+import { getServiceBySlug, getOtherServices } from "@/lib/data";
+
+const service = getServiceBySlug("svetovye-linii")!;
 
 export const metadata: Metadata = {
-  title: "Световые линии в натяжном потолке — Москва | ПОТОЛКОВО",
-  description: "Световые линии вместо люстр и точечников. Любая геометрия, расчёт освещённости. Мастер 15+ лет, договор. Замер бесплатно.",
-  keywords: "световые линии, натяжной потолок, свет в потолке, линейные светильники, световые линии москва",
+  title: service.metaTitle,
+  description: service.metaDescription,
+  keywords: service.metaKeywords,
 };
 
 export default function Page() {
   return (
     <ServicePageLayout
-      breadcrumb="Световые линии"
-      badge="Услуга"
-      h1="Световые линии"
-      h1sub="в натяжном потолке"
-      description="Встроенные линейные светильники прямо в полотне. Любая геометрия — прямые, углы, пересечения. Полноценная замена люстрам и точечникам."
-      ctaText="Заказать световые линии"
-      price="от 3 500 ₽/пог.м"
-      image="/svc-lightlines.jpeg"
-      imageAlt="Световые линии в натяжном потолке"
-      sectionTitle="Что такое световые линии?"
-      sectionParagraphs={[
-        "Световые линии — это LED-профиль, встроенный в натяжной потолок и закрытый полупрозрачной плёнкой. Результат — чистая светящаяся полоса, утопленная в потолок.",
-        "Можно делать любую геометрию: параллельные линии, пересечения, рамки, зигзаги. Ширина от 3 до 20 см.",
-        "Я рассчитываю освещённость по нормам — не «на глаз», а с конкретными люксами для каждой зоны. Результат: равномерный свет по всей площади без единой люстры.",
-      ]}
-      advantagesTitle="Преимущества"
-      advantages={[
-        { icon: "📐", title: "Любая геометрия", desc: "Прямые, углы, пересечения, фигуры" },
-        { icon: "💡", title: "Замена люстрам", desc: "Равномерный свет без точечников" },
-        { icon: "📊", title: "Расчёт света", desc: "Освещённость по нормам, не на глаз" },
-        { icon: "🎛️", title: "Диммирование", desc: "Управление яркостью с пульта" },
-      ]}
-      otherServices={[
-        ["Теневой профиль", "/uslugi/tenevoy-profil"],
-        ["Парящие потолки", "/uslugi/paryashchie-potolki"],
-        ["Трековое освещение", "/uslugi/trekovoe-osveshchenie"],
-        ["Скрытые карнизы", "/uslugi/skrytye-karnizy"],
-        ["Индивидуальные проекты", "/uslugi/individualnye-proekty"],
-        ["Продажа трек-света", "/uslugi/prodazha-trekovogo-osveshcheniya"],
-        ["Простые потолки", "/uslugi/prostye-potolki"],
-        ["Светопрозрачные потолки", "/uslugi/svetoprozrachnye-potolki"],
-      ]}
+      breadcrumb={service.breadcrumb}
+      badge={service.badge}
+      h1={service.h1}
+      h1sub={service.h1sub}
+      description={service.heroDescription}
+      ctaText={service.ctaText}
+      price={service.price}
+      image={service.image}
+      imageAlt={service.imageAlt}
+      sectionTitle={service.sectionTitle}
+      sectionParagraphs={service.sectionParagraphs}
+      whereTitle={service.whereTitle}
+      whereParagraphs={service.whereParagraphs}
+      advantagesTitle={service.advantagesTitle}
+      advantages={service.advantages}
+      otherServices={getOtherServices("svetovye-linii")}
     />
   );
 }
