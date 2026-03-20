@@ -1,47 +1,34 @@
 import type { Metadata } from "next";
 import ServicePageLayout from "../_components/ServicePageLayout";
+import { getServiceBySlug, getOtherServices } from "@/lib/data";
+
+const service = getServiceBySlug("skrytye-karnizy")!;
 
 export const metadata: Metadata = {
-  title: "Скрытый карниз в натяжном потолке — Москва | ПОТОЛКОВО",
-  description: "Ниша под карниз в натяжном потолке. Шторы из потолка — чистый вид без накладок. Мастер 15+ лет. Замер бесплатно.",
-  keywords: "скрытый карниз, ниша для штор, карниз в потолке, шторы из потолка",
+  title: service.metaTitle,
+  description: service.metaDescription,
+  keywords: service.metaKeywords,
 };
 
 export default function Page() {
   return (
     <ServicePageLayout
-      breadcrumb="Скрытые карнизы"
-      badge="Услуга"
-      h1="Скрытые карнизы"
-      h1sub="шторы из потолка"
-      description="Ниша под карниз прямо в натяжном потолке. Карниз не виден, шторы начинаются от потолка. Чистый вид без пластиковых накладок."
-      ctaText="Заказать скрытый карниз"
-      price="Рассчитывается индивидуально"
-      image="/svc-cornice.jpeg"
-      imageAlt="Скрытый карниз в натяжном потолке"
-      sectionTitle="Как устроен скрытый карниз?"
-      sectionParagraphs={[
-        "В натяжном потолке формируется ниша у окна. В нишу устанавливается обычный карниз — электрический или ручной.",
-        "Снаружи видна только ровная поверхность потолка и шторы, свободно падающие от самого потолка. Никаких труб и креплений на виду.",
-        "Важно: нишу нужно планировать до натяжки потолка. Если потолок уже установлен — переделать можно, но это сложнее.",
-      ]}
-      advantagesTitle="Преимущества"
-      advantages={[
-        { icon: "🪟", title: "Шторы из потолка", desc: "Нет карниза на виду — чистый вид" },
-        { icon: "📏", title: "Любой карниз", desc: "Ручной, электрический, многорядный" },
-        { icon: "🎨", title: "Любой стиль", desc: "Минимализм, классика, лофт" },
-        { icon: "✨", title: "Визуальная высота", desc: "Шторы от потолка увеличивают высоту" },
-      ]}
-      otherServices={[
-        ["Теневой профиль", "/uslugi/tenevoy-profil"],
-        ["Парящие потолки", "/uslugi/paryashchie-potolki"],
-        ["Световые линии", "/uslugi/svetovye-linii"],
-        ["Трековое освещение", "/uslugi/trekovoe-osveshchenie"],
-        ["Индивидуальные проекты", "/uslugi/individualnye-proekty"],
-        ["Продажа трек-света", "/uslugi/prodazha-trekovogo-osveshcheniya"],
-        ["Простые потолки", "/uslugi/prostye-potolki"],
-        ["Светопрозрачные потолки", "/uslugi/svetoprozrachnye-potolki"],
-      ]}
+      breadcrumb={service.breadcrumb}
+      badge={service.badge}
+      h1={service.h1}
+      h1sub={service.h1sub}
+      description={service.heroDescription}
+      ctaText={service.ctaText}
+      price={service.price}
+      image={service.image}
+      imageAlt={service.imageAlt}
+      sectionTitle={service.sectionTitle}
+      sectionParagraphs={service.sectionParagraphs}
+      whereTitle={service.whereTitle}
+      whereParagraphs={service.whereParagraphs}
+      advantagesTitle={service.advantagesTitle}
+      advantages={service.advantages}
+      otherServices={getOtherServices("skrytye-karnizy")}
     />
   );
 }
