@@ -1,47 +1,34 @@
 import type { Metadata } from "next";
 import ServicePageLayout from "../_components/ServicePageLayout";
+import { getServiceBySlug, getOtherServices } from "@/lib/data";
+
+const service = getServiceBySlug("svetoprozrachnye-potolki")!;
 
 export const metadata: Metadata = {
-  title: "Светопрозрачные натяжные потолки — полностью светящийся потолок | ПОТОЛКОВО",
-  description: "Светопрозрачный натяжной потолок — равномерное свечение по всей площади. Эффект окна в потолке. Мастер 15+ лет. Москва и МО.",
-  keywords: "светопрозрачный потолок, светящийся потолок, LED потолок, световой потолок москва",
+  title: service.metaTitle,
+  description: service.metaDescription,
+  keywords: service.metaKeywords,
 };
 
 export default function Page() {
   return (
     <ServicePageLayout
-      breadcrumb="Светопрозрачные потолки"
-      badge="Услуга"
-      h1="Светопрозрачные"
-      h1sub="потолки"
-      description="Полностью светящийся потолок. Полупрозрачное полотно с LED-подсветкой за ним — равномерное свечение по всей площади. Эффект окна в потолке."
-      ctaText="Заказать светопрозрачный потолок"
-      price="Рассчитывается индивидуально"
-      image="/svc-multilevel.jpeg"
-      imageAlt="Светопрозрачный натяжной потолок — полностью светящийся"
-      sectionTitle="Как это устроено"
-      sectionParagraphs={[
-        "За полупрозрачным полотном располагаются LED-панели или светодиодная лента с рассеивателем. Свет проходит через полотно равномерно по всей площади.",
-        "Результат — потолок, который светится целиком, как огромное окно в небо. Никаких точечников, люстр или видимых светильников.",
-        "Можно комбинировать с обычным натяжным потолком: светящаяся зона в центре, матовый потолок по краям.",
-      ]}
-      advantagesTitle="Преимущества"
-      advantages={[
-        { icon: "☀️", title: "Равномерный свет", desc: "Вся площадь потолка — один светильник" },
-        { icon: "🪟", title: "Эффект окна", desc: "Имитация естественного верхнего света" },
-        { icon: "🎛️", title: "Диммирование", desc: "Управление яркостью с пульта" },
-        { icon: "🎨", title: "Комбинации", desc: "Совмещение с матовым полотном" },
-      ]}
-      otherServices={[
-        ["Теневой профиль", "/uslugi/tenevoy-profil"],
-        ["Парящие потолки", "/uslugi/paryashchie-potolki"],
-        ["Световые линии", "/uslugi/svetovye-linii"],
-        ["Трековое освещение", "/uslugi/trekovoe-osveshchenie"],
-        ["Скрытые карнизы", "/uslugi/skrytye-karnizy"],
-        ["Индивидуальные проекты", "/uslugi/individualnye-proekty"],
-        ["Продажа трек-света", "/uslugi/prodazha-trekovogo-osveshcheniya"],
-        ["Простые потолки", "/uslugi/prostye-potolki"],
-      ]}
+      breadcrumb={service.breadcrumb}
+      badge={service.badge}
+      h1={service.h1}
+      h1sub={service.h1sub}
+      description={service.heroDescription}
+      ctaText={service.ctaText}
+      price={service.price}
+      image={service.image}
+      imageAlt={service.imageAlt}
+      sectionTitle={service.sectionTitle}
+      sectionParagraphs={service.sectionParagraphs}
+      whereTitle={service.whereTitle}
+      whereParagraphs={service.whereParagraphs}
+      advantagesTitle={service.advantagesTitle}
+      advantages={service.advantages}
+      otherServices={getOtherServices("svetoprozrachnye-potolki")}
     />
   );
 }
