@@ -1,47 +1,34 @@
 import type { Metadata } from "next";
 import ServicePageLayout from "../_components/ServicePageLayout";
+import { getServiceBySlug, getOtherServices } from "@/lib/data";
+
+const service = getServiceBySlug("prodazha-trekovogo-osveshcheniya")!;
 
 export const metadata: Metadata = {
-  title: "Продажа трекового освещения в Москве со скидкой — ПОТОЛКОВО",
-  description: "Магнитные треки, споты, линейные светильники. Подберу под проект и продам со скидкой. Проверенные бренды.",
-  keywords: "купить трековое освещение, магнитный трек купить, споты москва, трековый свет купить",
+  title: service.metaTitle,
+  description: service.metaDescription,
+  keywords: service.metaKeywords,
 };
 
 export default function Page() {
   return (
     <ServicePageLayout
-      breadcrumb="Продажа трек-света"
-      badge="Продажа"
-      h1="Продажа трекового"
-      h1sub="освещения"
-      description="Подберу и продам трековые системы под ваш проект со скидкой. Магнитные треки, споты, линейные светильники, подвесы. Только проверенные бренды."
-      ctaText="Подобрать освещение"
-      price="Скидка от розничной цены"
-      image="/svc-tracksale.jpeg"
-      imageAlt="Трековое освещение — магнитные треки и споты"
-      sectionTitle="Что предлагаю"
-      sectionParagraphs={[
-        "Работаю напрямую с поставщиками трекового освещения. Это значит — цены ниже, чем в розничных магазинах, при том же качестве.",
-        "Подберу систему под ваш интерьер: цвет трека (чёрный, белый, золото), тип светильников (споты, линейные, подвесы), мощность и цветовую температуру.",
-        "Могу сразу встроить треки в натяжной потолок — комплексное решение «свет + потолок» от одного мастера.",
-      ]}
-      advantagesTitle="Преимущества"
-      advantages={[
-        { icon: "🛒", title: "Дешевле магазина", desc: "Прямые закупки у поставщиков" },
-        { icon: "🎯", title: "Подбор под проект", desc: "Не просто продам — помогу выбрать" },
-        { icon: "✅", title: "Проверенные бренды", desc: "Только то, что ставлю сам" },
-        { icon: "🔧", title: "Монтаж сразу", desc: "Купили + установили = 1 визит" },
-      ]}
-      otherServices={[
-        ["Теневой профиль", "/uslugi/tenevoy-profil"],
-        ["Парящие потолки", "/uslugi/paryashchie-potolki"],
-        ["Световые линии", "/uslugi/svetovye-linii"],
-        ["Трековое освещение", "/uslugi/trekovoe-osveshchenie"],
-        ["Скрытые карнизы", "/uslugi/skrytye-karnizy"],
-        ["Индивидуальные проекты", "/uslugi/individualnye-proekty"],
-        ["Простые потолки", "/uslugi/prostye-potolki"],
-        ["Светопрозрачные потолки", "/uslugi/svetoprozrachnye-potolki"],
-      ]}
+      breadcrumb={service.breadcrumb}
+      badge={service.badge}
+      h1={service.h1}
+      h1sub={service.h1sub}
+      description={service.heroDescription}
+      ctaText={service.ctaText}
+      price={service.price}
+      image={service.image}
+      imageAlt={service.imageAlt}
+      sectionTitle={service.sectionTitle}
+      sectionParagraphs={service.sectionParagraphs}
+      whereTitle={service.whereTitle}
+      whereParagraphs={service.whereParagraphs}
+      advantagesTitle={service.advantagesTitle}
+      advantages={service.advantages}
+      otherServices={getOtherServices("prodazha-trekovogo-osveshcheniya")}
     />
   );
 }
