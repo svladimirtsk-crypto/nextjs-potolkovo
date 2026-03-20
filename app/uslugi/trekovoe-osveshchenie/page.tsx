@@ -1,47 +1,34 @@
 import type { Metadata } from "next";
 import ServicePageLayout from "../_components/ServicePageLayout";
+import { getServiceBySlug, getOtherServices } from "@/lib/data";
+
+const service = getServiceBySlug("trekovoe-osveshchenie")!;
 
 export const metadata: Metadata = {
-  title: "Трековое освещение в натяжной потолок — Москва | ПОТОЛКОВО",
-  description: "Встраиваемые магнитные треки в натяжной потолок. Продажа со скидкой + монтаж. Мастер 15+ лет. Замер бесплатно.",
-  keywords: "трековое освещение, магнитный трек, споты в потолок, трековый свет москва",
+  title: service.metaTitle,
+  description: service.metaDescription,
+  keywords: service.metaKeywords,
 };
 
 export default function Page() {
   return (
     <ServicePageLayout
-      breadcrumb="Трековое освещение"
-      badge="Услуга"
-      h1="Трековое освещение"
-      h1sub="встроенное в потолок"
-      description="Магнитные треки, споты, подвесы — встроенные в натяжной потолок. Подберу и продам со скидкой. Полный расчёт освещённости."
-      ctaText="Заказать трековый свет"
-      price="от 2 500 ₽/пог.м"
-      image="/svc-track.jpeg"
-      imageAlt="Трековое освещение в натяжном потолке"
-      sectionTitle="Как это работает"
-      sectionParagraphs={[
-        "Магнитный трек-профиль встраивается в натяжной потолок на этапе монтажа. В рельсу вставляются споты, линейные светильники или подвесы.",
-        "Светильники можно перемещать по рельсе, менять направление света, добавлять новые — без демонтажа потолка.",
-        "Подберу трековую систему под ваш интерьер и бюджет. Продаю напрямую со скидкой — без наценок магазинов.",
-      ]}
-      advantagesTitle="Преимущества"
-      advantages={[
-        { icon: "🔦", title: "Направленный свет", desc: "Подсветка картин, зон, акцентов" },
-        { icon: "🔄", title: "Гибкость", desc: "Перемещайте светильники без демонтажа" },
-        { icon: "🛒", title: "Продажа со скидкой", desc: "Подберу и продам дешевле магазина" },
-        { icon: "📊", title: "Расчёт освещения", desc: "Точный расчёт по нормам" },
-      ]}
-      otherServices={[
-        ["Теневой профиль", "/uslugi/tenevoy-profil"],
-        ["Парящие потолки", "/uslugi/paryashchie-potolki"],
-        ["Световые линии", "/uslugi/svetovye-linii"],
-        ["Скрытые карнизы", "/uslugi/skrytye-karnizy"],
-        ["Индивидуальные проекты", "/uslugi/individualnye-proekty"],
-        ["Продажа трек-света", "/uslugi/prodazha-trekovogo-osveshcheniya"],
-        ["Простые потолки", "/uslugi/prostye-potolki"],
-        ["Светопрозрачные потолки", "/uslugi/svetoprozrachnye-potolki"],
-      ]}
+      breadcrumb={service.breadcrumb}
+      badge={service.badge}
+      h1={service.h1}
+      h1sub={service.h1sub}
+      description={service.heroDescription}
+      ctaText={service.ctaText}
+      price={service.price}
+      image={service.image}
+      imageAlt={service.imageAlt}
+      sectionTitle={service.sectionTitle}
+      sectionParagraphs={service.sectionParagraphs}
+      whereTitle={service.whereTitle}
+      whereParagraphs={service.whereParagraphs}
+      advantagesTitle={service.advantagesTitle}
+      advantages={service.advantages}
+      otherServices={getOtherServices("trekovoe-osveshchenie")}
     />
   );
 }
