@@ -195,9 +195,7 @@ export default function Home() {
           <button className="cta-btn" style={{ padding: "10px 24px", fontSize: 12 }} onClick={() => scrollTo("contact")}>Оставить заявку</button>
         </div>
         {/* Мобильная кнопка быстрой связи в хедере */}
-        <a href={CONTACTS.telegram} target="_blank" rel="noopener noreferrer" className="mobile-header-cta" style={{ display: "none", alignItems: "center", justifyContent: "center", width: 40, height: 40, background: scrollY > 50 ? "#1a1a1a" : "rgba(255,255,255,.15)", color: scrollY > 50 ? "#fff" : "#fff", border: "none", fontSize: 18, transition: "all .3s", textDecoration: "none", marginRight: 48 }}>✈️</a>
-        <button className={`hamburger ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(!menuOpen)}>
-          <span style={{ background: scrollY > 50 ? "#1a1a1a" : "#fff" }} /><span style={{ background: scrollY > 50 ? "#1a1a1a" : "#fff" }} /><span style={{ background: scrollY > 50 ? "#1a1a1a" : "#fff" }} />
+        
         </button>
       </nav>
       <div className={`mobile-menu ${menuOpen ? "open" : ""}`}>
