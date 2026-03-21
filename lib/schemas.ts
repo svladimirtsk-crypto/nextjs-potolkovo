@@ -4,32 +4,55 @@ import { z } from "zod";
 
 // ---------- Enums ----------
 const roomTypeEnum = z.enum([
-  "kitchen", "bedroom", "living", "bathroom",
-  "corridor", "children", "office", "commercial",
+  "kitchen",
+  "bedroom",
+  "living",
+  "bathroom",
+  "corridor",
+  "children",
+  "office",
+  "commercial",
 ]);
 
 const priorityEnum = z.enum([
-  "practical", "modern", "max-light",
-  "min-height-loss", "design", "hidden-light",
+  "practical",
+  "modern",
+  "max-light",
+  "min-height-loss",
+  "design",
+  "hidden-light",
 ]);
 
 const lightingNeedEnum = z.enum([
-  "standard", "tracks", "light-lines",
-  "perimeter", "cornice-niche", "unsure",
+  "standard",
+  "tracks",
+  "light-lines",
+  "perimeter",
+  "cornice-niche",
+  "unsure",
 ]);
 
 const concernEnum = z.enum([
-  "low-ceiling", "low-light", "unsure-choice",
-  "want-modern", "complex-geometry", "wet-room", "clean-minimal",
+  "low-ceiling",
+  "low-light",
+  "unsure-choice",
+  "want-modern",
+  "complex-geometry",
+  "wet-room",
+  "clean-minimal",
 ]);
 
 const budgetEnum = z.enum(["basic", "medium", "premium", "unsure"]);
 
 const sourceIntentEnum = z.enum([
-  "lighting", "price", "low-height", "technical", "general",
+  "lighting",
+  "price",
+  "low-height",
+  "technical",
+  "general",
 ]);
 
-// ---------- Scenario 1 Schema ----------
+// ---------- Scenario 1 Input ----------
 export const roomSelectionSchema = z.object({
   scenario: z.literal("room-selection"),
   roomType: roomTypeEnum,
@@ -46,7 +69,7 @@ export const roomSelectionSchema = z.object({
   utmCampaign: z.string().optional(),
 });
 
-// ---------- Scenario 2 Schema ----------
+// ---------- Scenario 2 Input ----------
 export const techQuestionSchema = z.object({
   scenario: z.literal("tech-question"),
   question: z.string().min(5).max(1000),
@@ -67,7 +90,7 @@ export const advisorInputSchema = z.discriminatedUnion("scenario", [
   techQuestionSchema,
 ]);
 
-// ---------- Output Schemas ----------
+// ---------- Output ----------
 export const priceOptionSchema = z.object({
   name: z.string(),
   priceFrom: z.string(),
@@ -96,7 +119,10 @@ export const techQuestionOutputSchema = z.object({
   intent: z.string(),
   shortAnswer: z.string(),
   recommendedOptions: z.array(
-    z.object({ name: z.string(), description: z.string() })
+    z.object({
+      name: z.string(),
+      description: z.string(),
+    })
   ),
   whatToConsider: z.array(z.string()),
   estimatedImpact: z.object({
