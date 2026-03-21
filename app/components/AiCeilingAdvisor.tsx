@@ -561,7 +561,7 @@ export default function AiCeilingAdvisor() {
                 <label style={labelStyle}>Ваш вопрос *</label>
                 <textarea
                   style={{ ...inputStyle, resize: "vertical" as const, minHeight: 100 }}
-                  placeholder="Например: можно ли встроить трек при высоте потолка 250 см?"
+                  placeholder="Например: сколько требуется ватт освещения в гостинную 30 м2?"
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
                 />
