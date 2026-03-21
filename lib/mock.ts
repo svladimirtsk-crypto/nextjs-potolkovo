@@ -3,11 +3,7 @@
 // Mock-ответы, имитирующие экспертную консультацию.
 // Используются при MOCK_AI=true или при ошибке API.
 
-import type {
-  RoomSelectionOutput,
-  TechQuestionOutput,
-  ComputedContext,
-} from "./types";
+import type { TechQuestionInput, TechContext, TechQuestionOutput } from "./types";
 
 export function getMockRoomSelection(ctx: ComputedContext): RoomSelectionOutput {
   const isTrack = ctx.recommendedLighting.toLowerCase().includes("трек");
@@ -82,7 +78,10 @@ export function getMockRoomSelection(ctx: ComputedContext): RoomSelectionOutput 
   };
 }
 
-export function getMockTechQuestion(): TechQuestionOutput {
+export function getMockTechQuestion(
+  input: TechQuestionInput,
+  ctx: TechContext
+): TechQuestionOutput {
   return {
     scenario: "tech-question",
     intent: "технический вопрос по натяжному потолку",
