@@ -96,8 +96,8 @@ export interface RoomSelectionOutput {
     lighting: string;
     heightLoss: string;
   };
-  whyItFits: string[];       // любое количество — фронт рендерит через .map()
-  whatToConsider: string[];   // любое количество
+  whyItFits: string[];
+  whatToConsider: string[];
   priceOptions: PriceOption[];
   nextStep: string;
 }
@@ -112,8 +112,8 @@ export interface TechQuestionOutput {
   scenario: "tech-question";
   intent: string;
   shortAnswer: string;
-  recommendedOptions: RecommendedOption[];  // любое количество
-  whatToConsider: string[];                 // любое количество
+  recommendedOptions: RecommendedOption[];
+  whatToConsider: string[];
   estimatedImpact: {
     heightLoss: string;
     budgetNote: string;
@@ -141,4 +141,12 @@ export interface ComputedContext {
   estimatedTotalBasic: string;
   estimatedTotalOptimal: string;
   estimatedTotalPremium: string;
+}
+
+// ---------- Scenario 2 computed context ----------
+export interface TechContext {
+  roomLabel?: string;
+  heightNote?: string;
+  isWetRoom: boolean;
+  generalNotes: string[];
 }
