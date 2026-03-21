@@ -1,3 +1,4 @@
+// file: app/page.tsx
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -16,6 +17,8 @@ import {
   PROCESS_STEPS,
   FAQ_ITEMS,
 } from "@/lib/data";
+import AiCeilingAdvisor from "./components/AiCeilingAdvisor";
+import AiAdvisorTeaser from "./components/AiAdvisorTeaser";
 
 export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -194,8 +197,7 @@ export default function Home() {
           ))}
           <button className="cta-btn" style={{ padding: "10px 24px", fontSize: 12 }} onClick={() => scrollTo("contact")}>Оставить заявку</button>
         </div>
-        {/* Мобильная кнопка быстрой связи в хедере */}
-         
+        <a href={CONTACTS.telegram} target="_blank" rel="noopener noreferrer" className="mobile-header-cta" style={{ display: "none", alignItems: "center", justifyContent: "center", width: 40, height: 40, background: scrollY > 50 ? "#1a1a1a" : "rgba(255,255,255,.15)", color: scrollY > 50 ? "#fff" : "#fff", border: "none", fontSize: 18, transition: "all .3s", textDecoration: "none", marginRight: 48 }}>✈️</a>
         <button className={`hamburger ${menuOpen ? "open" : ""}`} onClick={() => setMenuOpen(!menuOpen)}>
           <span style={{ background: scrollY > 50 ? "#1a1a1a" : "#fff" }} /><span style={{ background: scrollY > 50 ? "#1a1a1a" : "#fff" }} /><span style={{ background: scrollY > 50 ? "#1a1a1a" : "#fff" }} />
         </button>
@@ -223,7 +225,6 @@ export default function Home() {
             <button className="cta-btn cta-btn-white" onClick={() => scrollTo("contact")}>Рассчитать стоимость →</button>
             <a href={CONTACTS.telegram} target="_blank" rel="noopener noreferrer" className="cta-btn" style={{ background: "transparent", border: "2px solid rgba(255,255,255,0.5)", textDecoration: "none" }}>✈️ Написать в Telegram</a>
           </div>
-          {/* Бейджи под кнопками */}
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 48 }}>
             {["Москва и МО", "Личный монтаж", "Без посредников", "Договор и гарантия"].map((b) => (
               <span key={b} className="hero-badge">{b}</span>
@@ -256,7 +257,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ADVANTAGES (цифры) */}
+      {/* ═══════════════ AI ADVISOR (main block) ═══════════════ */}
+      <AiCeilingAdvisor />
+
+      {/* ADVANTAGES */}
       <section id="advantages" style={{ padding: 0, background: "#1a1a1a", color: "#fff" }}>
         <div style={{ maxWidth: 1400, margin: "0 auto" }}>
           <div className={`advantages-grid fade-up ${isVisible("advantages") ? "visible" : ""}`} style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 0 }}>
@@ -324,7 +328,11 @@ export default function Home() {
             <p style={{ fontSize: 14, lineHeight: 1.7, color: "#666", marginBottom: 16 }}>📐 <strong>Замер бесплатный.</strong> Приезжаю, считаю точную стоимость на месте. Без «потом уточним».</p>
             <p style={{ fontSize: 13, color: "#999" }}>Цена зависит от площади, количества углов, типа профиля, освещения. Указанные цены — минимальные, для ориентира.</p>
           </div>
-          <div className={`fade-up fade-up-d4 ${isVisible("prices") ? "visible" : ""}`} style={{ marginTop: 32, textAlign: "center" }}><button className="cta-btn" onClick={() => scrollTo("contact")}>Рассчитать стоимость →</button></div>
+          {/* ═══ AI Advisor Teaser ═══ */}
+          <div className={`fade-up fade-up-d4 ${isVisible("prices") ? "visible" : ""}`} style={{ marginTop: 24 }}>
+            <AiAdvisorTeaser />
+          </div>
+          <div className={`fade-up fade-up-d5 ${isVisible("prices") ? "visible" : ""}`} style={{ marginTop: 32, textAlign: "center" }}><button className="cta-btn" onClick={() => scrollTo("contact")}>Рассчитать стоимость →</button></div>
         </div>
       </section>
 
@@ -344,15 +352,9 @@ export default function Home() {
             </div>
           ) : (
             <form onSubmit={handleMiniSubmit} className={`fade-up fade-up-d1 ${isVisible("mini-form") ? "visible" : ""}`} style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <div style={{ flex: "1 1 200px" }}>
-                <input type="text" placeholder="Имя" value={miniFormData.name} onChange={e => setMiniFormData({ ...miniFormData, name: e.target.value })} required disabled={miniFormStatus === "sending"} />
-              </div>
-              <div style={{ flex: "1 1 200px" }}>
-                <input type="tel" placeholder="Телефон" value={miniFormData.phone} onChange={e => setMiniFormData({ ...miniFormData, phone: e.target.value })} required disabled={miniFormStatus === "sending"} />
-              </div>
-              <div style={{ flex: "2 1 100%"}}>
-                <input type="text" placeholder="Что хотите сделать? (необязательно)" value={miniFormData.message} onChange={e => setMiniFormData({ ...miniFormData, message: e.target.value })} disabled={miniFormStatus === "sending"} />
-              </div>
+              <div style={{ flex: "1 1 200px" }}><input type="text" placeholder="Имя" value={miniFormData.name} onChange={e => setMiniFormData({ ...miniFormData, name: e.target.value })} required disabled={miniFormStatus === "sending"} /></div>
+              <div style={{ flex: "1 1 200px" }}><input type="tel" placeholder="Телефон" value={miniFormData.phone} onChange={e => setMiniFormData({ ...miniFormData, phone: e.target.value })} required disabled={miniFormStatus === "sending"} /></div>
+              <div style={{ flex: "2 1 100%" }}><input type="text" placeholder="Что хотите сделать? (необязательно)" value={miniFormData.message} onChange={e => setMiniFormData({ ...miniFormData, message: e.target.value })} disabled={miniFormStatus === "sending"} /></div>
               <div style={{ flex: "1 1 100%", textAlign: "center" }}>
                 <button type="submit" className={`cta-btn ${miniFormStatus === "error" ? "cta-btn-error" : ""}`} style={{ width: "100%", maxWidth: 400, justifyContent: "center" }} disabled={miniFormStatus === "sending"}>
                   {miniFormStatus === "sending" ? "Отправляю..." : miniFormStatus === "error" ? "✕ Ошибка. Попробуйте ещё" : "Рассчитать стоимость →"}
@@ -431,7 +433,6 @@ export default function Home() {
             <div>
               <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 64, fontWeight: 700, color: "#e0e0e0", lineHeight: 1, marginBottom: 16 }}>{String(activeProject + 1).padStart(2, "0")}</div>
               <h3 style={{ fontSize: 28, fontWeight: 800, letterSpacing: -1, marginBottom: 16 }}>{PROJECTS[activeProject].title}</h3>
-              {/* Project meta */}
               <div className="project-meta">
                 {PROJECTS[activeProject].type && <span className="project-meta-item">{PROJECTS[activeProject].type}</span>}
                 {PROJECTS[activeProject].area && <span className="project-meta-item">📐 {PROJECTS[activeProject].area}</span>}
