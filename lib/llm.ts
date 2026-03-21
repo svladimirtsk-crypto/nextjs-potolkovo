@@ -10,18 +10,11 @@ const AMVERA_BASE_URL =
 const AMVERA_MODEL = process.env.AMVERA_MODEL || "gpt-4.1";
 const MOCK_AI = process.env.MOCK_AI === "true";
 
-/**
- * Amvera Inference API message format:
- * { "role": "system" | "user" | "assistant", "text": "string" }
- */
 interface AmveraMessage {
   role: "system" | "user" | "assistant";
   text: string;
 }
 
-/**
- * Amvera Inference API request body for /models/gpt
- */
 interface AmveraRequestBody {
   model: string;
   messages: AmveraMessage[];
@@ -30,9 +23,6 @@ interface AmveraRequestBody {
   n?: number;
 }
 
-/**
- * Amvera Inference API response
- */
 interface AmveraResponse {
   id: string;
   object: string;
@@ -57,18 +47,22 @@ function buildPayload(messages: AmveraMessage[]): AmveraRequestBody {
   return {
     model: AMVERA_MODEL,
     messages,
-    temperature: 0.4,
-    max_completion_tokens: 2000,
+    // 0.5 — достаточно для разнообразных, но стабильных ответов.
+    // Ниже 0.3 — слишком шаблонно. Выше 0.7 — начинает фантазировать.
+    temperature: 0.5,
+    // ~2000 символов ответа ≈ 600-800 токенов.
+    // 1200 даёт запас для JSON-обёртки и структуры.
+    max_completion_tokens: 1200,
     n: 1,
   };
 }
 
 /**
- * Extract JSON object from a string that may contain
- * markdown fences, explanatory text, etc.
+ * Извлекает JSON из ответа модели, даже если тот обёрнут
+ * в markdown-блок или содержит пояснительный текст.
  */
 function extractJSON(text: string): string {
-  // Strip markdown code fences if present
+  // Markdown code fence
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (fenced) {
     const inner = fenced[1].trim();
@@ -77,7 +71,7 @@ function extractJSON(text: string): string {
     return inner;
   }
 
-  // Try to find a JSON object directly
+  // Прямой JSON-объект
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (jsonMatch) return jsonMatch[0];
 
@@ -103,7 +97,6 @@ export async function callLLM(
   user: string,
   mockFallback: AdvisorOutput
 ): Promise<AdvisorOutput> {
-  // --- Mock mode ---
   if (MOCK_AI) {
     console.log("[LLM] MOCK_AI=true, returning mock");
     return mockFallback;
@@ -135,33 +128,23 @@ export async function callLLM(
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(
-        "[LLM] Amvera API error:",
-        response.status,
-        response.statusText,
-        errorText
-      );
+      console.error("[LLM] Amvera API error:", response.status, response.statusText, errorText);
       return mockFallback;
     }
 
     const data: AmveraResponse = await response.json();
-
-    // Amvera returns message.text (not message.content)
     const content = data?.choices?.[0]?.message?.text;
 
     if (!content) {
-      console.error("[LLM] No text in Amvera response:", JSON.stringify(data));
+      console.error("[LLM] No text in response:", JSON.stringify(data));
       return mockFallback;
     }
 
-    console.log("[LLM] Raw response length:", content.length);
+    console.log("[LLM] Response length:", content.length, "chars");
 
     const result = parseResponse(content);
     if (!result) {
-      console.error(
-        "[LLM] Failed to parse response as valid JSON, returning mock. Raw:",
-        content.substring(0, 500)
-      );
+      console.error("[LLM] Parse failed. Raw:", content.substring(0, 500));
       return mockFallback;
     }
 
