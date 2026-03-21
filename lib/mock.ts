@@ -83,7 +83,12 @@ export function getMockRoomSelection(ctx: ComputedContext): RoomSelectionOutput 
   };
 }
 
-export function getMockTechQuestion(): TechQuestionOutput {
+import type { TechQuestionInput, TechContext, TechQuestionOutput } from "./types";
+
+export function getMockTechQuestion(
+  input: TechQuestionInput,
+  ctx: TechContext
+): TechQuestionOutput {
   return {
     scenario: "tech-question",
     intent: "технический вопрос по натяжному потолку",
