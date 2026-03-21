@@ -142,3 +142,9 @@ export interface ComputedContext {
   estimatedTotalOptimal: string;
   estimatedTotalPremium: string;
 }
+export interface TechContext {
+  roomLabel?: string;
+  heightNote?: string;
+  isWetRoom: boolean;
+  generalNotes: string[];
+}
