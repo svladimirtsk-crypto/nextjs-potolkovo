@@ -7,6 +7,7 @@ import type {
   Concern,
   BudgetLevel,
   ComputedContext,
+  TechContext,
 } from "./types";
 
 // ============================================================
@@ -45,10 +46,18 @@ function getRecommendedProfile(
   concern: Concern,
   _budget: BudgetLevel
 ): string {
-  if (concern === "low-ceiling") return "Обычный профиль (минимальная потеря высоты 3–4 см)";
-  if (priority === "modern" || priority === "design") return "Теневой профиль (чистые линии, без плинтуса)";
-  if (priority === "hidden-light") return "Парящий профиль (скрытая LED-подсветка по периметру)";
-  if (priority === "practical" || priority === "min-height-loss") return "Обычный профиль с маскировочной лентой";
+  if (concern === "low-ceiling") {
+    return "Обычный профиль (минимальная потеря высоты 3–4 см)";
+  }
+  if (priority === "modern" || priority === "design") {
+    return "Теневой профиль (чистые линии, без плинтуса)";
+  }
+  if (priority === "hidden-light") {
+    return "Парящий профиль (скрытая LED-подсветка по периметру)";
+  }
+  if (priority === "practical" || priority === "min-height-loss") {
+    return "Обычный профиль с маскировочной лентой";
+  }
   return "Теневой или обычный профиль (зависит от задачи)";
 }
 
@@ -61,17 +70,35 @@ function getRecommendedLighting(
   ceilingHeight: number
 ): string {
   if (lightingNeed === "tracks") {
-    if (ceilingHeight < 260) return "Встроенный магнитный трек (минимальная потеря высоты, направленный свет)";
+    if (ceilingHeight < 260) {
+      return "Встроенный магнитный трек (минимальная потеря высоты, направленный свет)";
+    }
     return "Встроенный магнитный трек (направленный свет, гибкая конфигурация)";
   }
-  if (lightingNeed === "light-lines") return "Световые линии (встроенные LED-линии, замена люстрам)";
-  if (lightingNeed === "perimeter") return "Контурная подсветка (LED по периметру, мягкий свет)";
-  if (lightingNeed === "cornice-niche") return "Ниша под карниз + подсветка (шторы от потолка)";
-  if (concern === "low-light") return "Комбинация: точечные + световые линии или трек";
+
+  if (lightingNeed === "light-lines") {
+    return "Световые линии (встроенные LED-линии, замена люстрам)";
+  }
+
+  if (lightingNeed === "perimeter") {
+    return "Контурная подсветка (LED по периметру, мягкий свет)";
+  }
+
+  if (lightingNeed === "cornice-niche") {
+    return "Ниша под карниз + подсветка (шторы от потолка)";
+  }
+
+  if (concern === "low-light") {
+    return "Комбинация: точечные + световые линии или трек";
+  }
+
   if (lightingNeed === "unsure") {
-    if (ceilingHeight >= 270) return "Рекомендуем трековое освещение или световые линии";
+    if (ceilingHeight >= 270) {
+      return "Рекомендуем трековое освещение или световые линии";
+    }
     return "Рекомендуем точечные светильники + контурную подсветку";
   }
+
   return "Точечные светильники (классическое решение)";
 }
 
@@ -83,16 +110,26 @@ function getHeightLoss(
   concern: Concern
 ): string {
   if (concern === "low-ceiling") {
-    if (lightingNeed === "standard" || lightingNeed === "unsure") return "3–4 см (минимальная)";
-    if (lightingNeed === "tracks") return "5–6 см";
-    if (lightingNeed === "light-lines") return "5–7 см";
+    if (lightingNeed === "standard" || lightingNeed === "unsure") {
+      return "3–4 см (минимальная)";
+    }
+    if (lightingNeed === "tracks") {
+      return "5–6 см";
+    }
+    if (lightingNeed === "light-lines") {
+      return "5–7 см";
+    }
     return "4–6 см";
   }
+
   if (lightingNeed === "standard") return "4–5 см";
   if (lightingNeed === "tracks") return "6–8 см";
   if (lightingNeed === "light-lines") return "6–10 см";
   if (lightingNeed === "perimeter") return "5–7 см";
-  if (lightingNeed === "cornice-niche") return "5–7 см (+ ниша ~10–15 см глубиной)";
+  if (lightingNeed === "cornice-niche") {
+    return "5–7 см (+ ниша ~10–15 см глубиной)";
+  }
+
   return "4–7 см (зависит от типа освещения)";
 }
 
@@ -121,9 +158,11 @@ function getCompatibilityNotes(
 
   if (ceilingHeight < 250) {
     notes.push("При высоте менее 250 см рекомендуется минимальный профиль для сохранения высоты");
+
     if (lightingNeed === "light-lines") {
       notes.push("Световые линии при низком потолке возможны, но нужен точный расчёт высоты");
     }
+
     if (lightingNeed === "tracks") {
       notes.push("Встроенный трек при низком потолке возможен — используется тонкий магнитный профиль");
     }
@@ -134,7 +173,7 @@ function getCompatibilityNotes(
   }
 
   if (lightingNeed === "light-lines" && roomType === "bathroom") {
-    notes.push("Световые линии в ванной — красивое решение, но нужна герметичная LED-лента");
+    notes.push("Световые линии в ванной возможны, но нужна герметичная LED-лента");
   }
 
   if (concern === "complex-geometry") {
@@ -152,18 +191,21 @@ function getWarnings(
   concern: Concern,
   ceilingHeight: number
 ): string[] {
-  const w: string[] = [];
+  const warnings: string[] = [];
+
   if (ceilingHeight < 240) {
-    w.push("Высота потолка менее 240 см — критически важно минимизировать потерю высоты");
+    warnings.push("Высота потолка менее 240 см — критически важно минимизировать потерю высоты");
   }
+
   if (roomType === "bathroom" && concern !== "wet-room") {
-    w.push("Ванная комната — обязательно использовать влагостойкие материалы");
+    warnings.push("В ванной обязательно использовать влагостойкие материалы");
   }
-  return w;
+
+  return warnings;
 }
 
 // ============================================================
-// BUDGET RANGES (per sqm, approximate)
+// BUDGET RANGES
 // ============================================================
 interface BudgetRange {
   label: string;
@@ -293,7 +335,6 @@ function getBudgetRanges(
     };
   }
 
-  // fallback
   return {
     basic: {
       label: "Практичный",
@@ -320,7 +361,7 @@ function getBudgetRanges(
 // ESTIMATED TOTALS
 // ============================================================
 function estimateTotal(area: number, multiplier: number): string {
-  const min = Math.round(area * multiplier / 1000) * 1000;
+  const min = Math.round((area * multiplier) / 1000) * 1000;
   return `ориентировочно от ${min.toLocaleString("ru-RU")} ₽`;
 }
 
@@ -334,9 +375,9 @@ export function computeContext(
   priority: Priority,
   lightingNeed: LightingNeed,
   concern: Concern,
-  _budget: BudgetLevel
+  budget: BudgetLevel
 ): ComputedContext {
-  const profile = getRecommendedProfile(priority, concern, _budget);
+  const profile = getRecommendedProfile(priority, concern, budget);
   const lighting = getRecommendedLighting(lightingNeed, concern, ceilingHeight);
   const heightLoss = getHeightLoss(lightingNeed, concern);
   const wet = isWetRoom(roomType, concern);
@@ -352,9 +393,21 @@ export function computeContext(
     heightLossRange: heightLoss,
     isWetRoom: wet,
     budgetRanges: {
-      basic: { label: budgets.basic.label, pricePerSqm: budgets.basic.pricePerSqm, description: budgets.basic.description },
-      optimal: { label: budgets.optimal.label, pricePerSqm: budgets.optimal.pricePerSqm, description: budgets.optimal.description },
-      premium: { label: budgets.premium.label, pricePerSqm: budgets.premium.pricePerSqm, description: budgets.premium.description },
+      basic: {
+        label: budgets.basic.label,
+        pricePerSqm: budgets.basic.pricePerSqm,
+        description: budgets.basic.description,
+      },
+      optimal: {
+        label: budgets.optimal.label,
+        pricePerSqm: budgets.optimal.pricePerSqm,
+        description: budgets.optimal.description,
+      },
+      premium: {
+        label: budgets.premium.label,
+        pricePerSqm: budgets.premium.pricePerSqm,
+        description: budgets.premium.description,
+      },
     },
     compatibilityNotes: compat,
     warnings: warns,
@@ -365,13 +418,10 @@ export function computeContext(
 }
 
 // ============================================================
-// TECH QUESTION CONTEXT (lighter version)
+// TECH QUESTION CONTEXT
 // ============================================================
-export interface TechContext {
-  roomLabel?: string;
-  heightNote?: string;
-  isWetRoom: boolean;
-  generalNotes: string[];
+function includesAny(text: string, variants: string[]): boolean {
+  return variants.some((variant) => text.includes(variant));
 }
 
 export function computeTechContext(
@@ -381,44 +431,60 @@ export function computeTechContext(
 ): TechContext {
   const lower = question.toLowerCase();
   const notes: string[] = [];
-  let wet = false;
+  let wet = roomType === "bathroom";
 
-  if (roomType) {
-    wet = roomType === "bathroom";
-    if (wet) notes.push("Ванная — обязательно влагостойкое полотно и защищённые соединения");
+  if (wet) {
+    notes.push("Для ванной нужны влагостойкое полотно и защищённые соединения");
   }
-  if (lower.includes("ванн") || lower.includes("влаг") || lower.includes("сыр")) {
+
+  if (includesAny(lower, ["ванн", "влаг", "сыр", "сануз", "душ"])) {
     wet = true;
-    if (!notes.some((n) => n.includes("влаг"))) {
-      notes.push("Для влажных помещений нужно влагостойкое полотно");
+    if (!notes.some((n) => n.toLowerCase().includes("влаг"))) {
+      notes.push("Для влажных помещений нужны влагостойкие материалы и герметичная электрика");
     }
   }
 
   let heightNote: string | undefined;
-  if (ceilingHeight) {
+  if (typeof ceilingHeight === "number") {
     if (ceilingHeight < 250) {
-      heightNote = `Высота ${ceilingHeight} см — рекомендуем решения с минимальной потерей высоты (3–5 см)`;
+      heightNote = `Высота ${ceilingHeight} см — лучше выбирать решения с минимальной потерей высоты`;
     } else if (ceilingHeight < 270) {
-      heightNote = `Высота ${ceilingHeight} см — стандартная, подходят большинство решений`;
+      heightNote = `Высота ${ceilingHeight} см — подходят стандартные решения, но встроенный свет нужно считать по модели`;
     } else {
-      heightNote = `Высота ${ceilingHeight} см — отлично, доступны все варианты включая многоуровневые`;
+      heightNote = `Высота ${ceilingHeight} см — доступны почти все решения, включая треки, линии и ниши`;
     }
   }
 
-  if (lower.includes("трек") || lower.includes("спот")) {
-    notes.push("Встроенные магнитные треки: потеря высоты 5–8 см, зависит от модели");
+  if (includesAny(lower, ["трек", "магнитн", "спот"])) {
+    notes.push("Для встроенного трека обычно нужна закладная и опускание примерно 5–8 см");
   }
-  if (lower.includes("свет") && lower.includes("лин")) {
-    notes.push("Световые линии: потеря высоты 6–10 см, расчёт мощности по нормам");
+
+  if (includesAny(lower, ["светов", "линии", "линейн"])) {
+    notes.push("Световые линии требуют расчёта мощности, охлаждения профиля и доступа к блоку питания");
   }
-  if (lower.includes("карниз") || lower.includes("штор")) {
-    notes.push("Ниша под карниз: глубина 10–15 см, ширина зависит от количества направляющих");
+
+  if (includesAny(lower, ["карниз", "штор", "ниша"])) {
+    notes.push("Нишу под карниз лучше закладывать заранее: важны глубина, отступ и количество рядов штор");
   }
-  if (lower.includes("теневой") || lower.includes("теневого")) {
-    notes.push("Теневой профиль: зазор 8 мм, без плинтуса, потеря высоты 3–5 см");
+
+  if (includesAny(lower, ["тенев"])) {
+    notes.push("Теневой профиль даёт чистое примыкание без плинтуса, обычно с потерей высоты 3–5 см");
   }
-  if (lower.includes("парящ")) {
-    notes.push("Парящий профиль: LED-подсветка по периметру, потеря высоты 5–7 см");
+
+  if (includesAny(lower, ["парящ"])) {
+    notes.push("Парящий профиль требует места под LED-ленту и блок питания, обычно 5–7 см по высоте");
+  }
+
+  if (includesAny(lower, ["люстр", "крюк"])) {
+    notes.push("Под люстру нужна закладная или крюк с правильной привязкой к чистовому уровню потолка");
+  }
+
+  if (includesAny(lower, ["труб", "обход", "короб", "вентиляц"])) {
+    notes.push("Обход труб, коробов и вентиляции влияет на чистоту примыкания и стоимость монтажа");
+  }
+
+  if (includesAny(lower, ["блок питания", "драйвер", "диммер"])) {
+    notes.push("Блоки питания и драйверы нужно размещать так, чтобы к ним был доступ для обслуживания");
   }
 
   return {
@@ -429,5 +495,4 @@ export function computeTechContext(
   };
 }
 
-// Export room labels for UI
 export { ROOM_LABELS };
