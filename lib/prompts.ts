@@ -62,8 +62,8 @@ JSON-формат ответа:
   "recommendedSolution": {
     "ceilingType": "...", "texture": "...", "profile": "...", "lighting": "...", "heightLoss": "..."
   },
-  "whyItFits": ["практичная причина 1", "причина 2", ...],
-  "whatToConsider": ["нюанс монтажа/эксплуатации 1", "нюанс 2", ...],
+  "whyItFits": ["практичная причина 1", "причина 2"],
+  "whatToConsider": ["нюанс монтажа/эксплуатации 1", "нюанс 2"],
   "priceOptions": [
     {"name": "Практичный", "priceFrom": "...", "description": "..."},
     {"name": "Оптимальный", "priceFrom": "...", "description": "..."},
@@ -115,7 +115,7 @@ JSON-формат ответа:
   "recommendedOptions": [
     {"name": "Вариант", "description": "описание с конкретикой по монтажу"}
   ],
-  "whatToConsider": ["практический нюанс 1", "нюанс 2", ...],
+  "whatToConsider": ["практический нюанс 1", "нюанс 2"],
   "estimatedImpact": {
     "heightLoss": "конкретный ориентир или 'зависит от конструкции'",
     "budgetNote": "ориентир или 'рассчитывается после замера'"
