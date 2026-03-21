@@ -4,29 +4,83 @@ import type { AdvisorOutput } from "./types";
 import { advisorOutputSchema } from "./schemas";
 
 const AMVERA_API_KEY = process.env.AMVERA_API_KEY || "";
-const AMVERA_BASE_URL = process.env.AMVERA_BASE_URL || "https://api.amvera.ru/v1";
+const AMVERA_BASE_URL =
+  process.env.AMVERA_BASE_URL ||
+  "https://kong-proxy.yc.amvera.ru/api/v1";
 const AMVERA_MODEL = process.env.AMVERA_MODEL || "gpt-4.1";
 const MOCK_AI = process.env.MOCK_AI === "true";
 
-interface ChatMessage {
+/**
+ * Amvera Inference API message format:
+ * { "role": "system" | "user" | "assistant", "text": "string" }
+ */
+interface AmveraMessage {
   role: "system" | "user" | "assistant";
-  content: string;
+  text: string;
 }
 
-function buildPayload(messages: ChatMessage[]) {
+/**
+ * Amvera Inference API request body for /models/gpt
+ */
+interface AmveraRequestBody {
+  model: string;
+  messages: AmveraMessage[];
+  temperature?: number;
+  max_completion_tokens?: number;
+  n?: number;
+}
+
+/**
+ * Amvera Inference API response
+ */
+interface AmveraResponse {
+  id: string;
+  object: string;
+  created: number;
+  model: string;
+  choices: Array<{
+    index: number;
+    message: {
+      role: string;
+      text: string;
+    };
+    finish_reason: string;
+  }>;
+  usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+}
+
+function buildPayload(messages: AmveraMessage[]): AmveraRequestBody {
   return {
     model: AMVERA_MODEL,
     messages,
     temperature: 0.4,
-    max_tokens: 2000,
-    response_format: { type: "json_object" as const },
+    max_completion_tokens: 2000,
+    n: 1,
   };
 }
 
+/**
+ * Extract JSON object from a string that may contain
+ * markdown fences, explanatory text, etc.
+ */
 function extractJSON(text: string): string {
-  // Try to find JSON in the text
+  // Strip markdown code fences if present
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fenced) {
+    const inner = fenced[1].trim();
+    const obj = inner.match(/\{[\s\S]*\}/);
+    if (obj) return obj[0];
+    return inner;
+  }
+
+  // Try to find a JSON object directly
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (jsonMatch) return jsonMatch[0];
+
   return text;
 }
 
@@ -36,7 +90,7 @@ function parseResponse(raw: string): AdvisorOutput | null {
     const parsed = JSON.parse(jsonStr);
     const validated = advisorOutputSchema.safeParse(parsed);
     if (validated.success) return validated.data;
-    console.error("[LLM] Validation failed:", validated.error.issues);
+    console.error("[LLM] Zod validation failed:", validated.error.issues);
     return null;
   } catch (e) {
     console.error("[LLM] JSON parse failed:", e);
@@ -49,47 +103,65 @@ export async function callLLM(
   user: string,
   mockFallback: AdvisorOutput
 ): Promise<AdvisorOutput> {
+  // --- Mock mode ---
   if (MOCK_AI) {
     console.log("[LLM] MOCK_AI=true, returning mock");
     return mockFallback;
   }
 
   if (!AMVERA_API_KEY) {
-    console.warn("[LLM] No AMVERA_API_KEY, returning mock");
+    console.warn("[LLM] No AMVERA_API_KEY set, returning mock");
     return mockFallback;
   }
 
   try {
-    const messages: ChatMessage[] = [
-      { role: "system", content: system },
-      { role: "user", content: user },
+    const messages: AmveraMessage[] = [
+      { role: "system", text: system },
+      { role: "user", text: user },
     ];
 
-    const response = await fetch(`${AMVERA_BASE_URL}/chat/completions`, {
+    const url = `${AMVERA_BASE_URL}/models/gpt`;
+
+    console.log("[LLM] Calling Amvera:", url, "model:", AMVERA_MODEL);
+
+    const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${AMVERA_API_KEY}`,
+        "X-Auth-Token": `Bearer ${AMVERA_API_KEY}`,
       },
       body: JSON.stringify(buildPayload(messages)),
     });
 
     if (!response.ok) {
-      console.error("[LLM] API error:", response.status, await response.text());
+      const errorText = await response.text();
+      console.error(
+        "[LLM] Amvera API error:",
+        response.status,
+        response.statusText,
+        errorText
+      );
       return mockFallback;
     }
 
-    const data = await response.json();
-    const content = data?.choices?.[0]?.message?.content;
+    const data: AmveraResponse = await response.json();
+
+    // Amvera returns message.text (not message.content)
+    const content = data?.choices?.[0]?.message?.text;
 
     if (!content) {
-      console.error("[LLM] No content in response");
+      console.error("[LLM] No text in Amvera response:", JSON.stringify(data));
       return mockFallback;
     }
+
+    console.log("[LLM] Raw response length:", content.length);
 
     const result = parseResponse(content);
     if (!result) {
-      console.error("[LLM] Failed to parse, returning mock");
+      console.error(
+        "[LLM] Failed to parse response as valid JSON, returning mock. Raw:",
+        content.substring(0, 500)
+      );
       return mockFallback;
     }
 
