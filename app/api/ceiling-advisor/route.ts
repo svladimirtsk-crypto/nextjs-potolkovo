@@ -3,7 +3,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { advisorInputSchema } from "@/lib/schemas";
 import { computeContext, computeTechContext } from "@/lib/ceiling-rules";
-import { buildRoomSelectionPrompt, buildTechQuestionPrompt } from "@/lib/prompts";
+import {
+  buildRoomSelectionPrompt,
+  buildTechQuestionPrompt,
+} from "@/lib/prompts";
 import { callLLM } from "@/lib/llm";
 import { getMockRoomSelection, getMockTechQuestion } from "@/lib/mock";
 import type { RoomSelectionInput, TechQuestionInput } from "@/lib/types";
@@ -19,9 +22,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: "Некорректные данные",
-          details: parsed.error.issues.map((i) => ({
-            path: i.path.join("."),
-            message: i.message,
+          details: parsed.error.issues.map((issue) => ({
+            path: issue.path.join("."),
+            message: issue.message,
           })),
         },
         { status: 400 }
@@ -32,11 +35,11 @@ export async function POST(request: NextRequest) {
 
     if (input.scenario === "room-selection") {
       return handleRoomSelection(input);
-    } else {
-      return handleTechQuestion(input);
     }
-  } catch (e) {
-    console.error("[API] Unhandled error:", e);
+
+    return handleTechQuestion(input);
+  } catch (error) {
+    console.error("[API] Unhandled error:", error);
     return NextResponse.json(
       { error: "Внутренняя ошибка сервера" },
       { status: 500 }
@@ -69,7 +72,7 @@ async function handleTechQuestion(input: TechQuestionInput) {
     input.ceilingHeight
   );
 
-  const mockFallback = getMockTechQuestion();
+  const mockFallback = getMockTechQuestion(input, ctx);
   const { system, user } = buildTechQuestionPrompt(input, ctx);
   const result = await callLLM(system, user, mockFallback);
 
