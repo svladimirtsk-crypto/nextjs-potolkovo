@@ -121,7 +121,8 @@ const btnPrimary: React.CSSProperties = {
 // COMPONENT
 // ============================================================
 export default function AiCeilingAdvisor() {
-  const [activeTab, setActiveTab] = useState<"room" | "tech">("room");
+  // *** Вкладка "tech" открыта по умолчанию ***
+  const [activeTab, setActiveTab] = useState<"room" | "tech">("tech");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [result, setResult] = useState<AdvisorOutput | null>(null);
   const [sourceIntent, setSourceIntent] = useState<SourceIntent>("general");
@@ -241,13 +242,11 @@ export default function AiCeilingAdvisor() {
   // ============================================================
   const renderRoomResult = (r: RoomSelectionOutput) => (
     <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-      {/* Summary */}
       <div style={{ padding: 24, background: "#f8faf8", border: "1px solid #d4e5d4" }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "#2d7a3a", letterSpacing: 1, textTransform: "uppercase", marginBottom: 8, fontFamily: "'JetBrains Mono',monospace" }}>Рекомендация</div>
         <p style={{ fontSize: 16, lineHeight: 1.7, color: "#333" }}>{r.quickSummary}</p>
       </div>
 
-      {/* Solution card */}
       <div style={{ padding: 24, background: "#fff", border: "1px solid #e8e8e8" }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "#999", letterSpacing: 1, textTransform: "uppercase", marginBottom: 16, fontFamily: "'JetBrains Mono',monospace" }}>Подобранное решение</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
@@ -266,7 +265,6 @@ export default function AiCeilingAdvisor() {
         </div>
       </div>
 
-      {/* Why it fits */}
       <div>
         <div style={{ fontSize: 13, fontWeight: 700, color: "#999", letterSpacing: 1, textTransform: "uppercase", marginBottom: 12, fontFamily: "'JetBrains Mono',monospace" }}>Почему это подойдёт</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -279,7 +277,6 @@ export default function AiCeilingAdvisor() {
         </div>
       </div>
 
-      {/* What to consider */}
       <div>
         <div style={{ fontSize: 13, fontWeight: 700, color: "#999", letterSpacing: 1, textTransform: "uppercase", marginBottom: 12, fontFamily: "'JetBrains Mono',monospace" }}>Что важно учесть</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -292,7 +289,6 @@ export default function AiCeilingAdvisor() {
         </div>
       </div>
 
-      {/* Price options */}
       <div>
         <div style={{ fontSize: 13, fontWeight: 700, color: "#999", letterSpacing: 1, textTransform: "uppercase", marginBottom: 16, fontFamily: "'JetBrains Mono',monospace" }}>Варианты по бюджету</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
@@ -308,7 +304,6 @@ export default function AiCeilingAdvisor() {
         <p style={{ fontSize: 12, color: "#aaa", marginTop: 8 }}>* Все цены ориентировочные. Точная стоимость рассчитывается после бесплатного замера.</p>
       </div>
 
-      {/* CTA */}
       {renderCTA(r.nextStep)}
     </div>
   );
@@ -318,13 +313,11 @@ export default function AiCeilingAdvisor() {
   // ============================================================
   const renderTechResult = (r: TechQuestionOutput) => (
     <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-      {/* Short answer */}
       <div style={{ padding: 24, background: "#f8faf8", border: "1px solid #d4e5d4" }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "#2d7a3a", letterSpacing: 1, textTransform: "uppercase", marginBottom: 8, fontFamily: "'JetBrains Mono',monospace" }}>Ответ</div>
         <p style={{ fontSize: 16, lineHeight: 1.7, color: "#333" }}>{r.shortAnswer}</p>
       </div>
 
-      {/* Options */}
       <div>
         <div style={{ fontSize: 13, fontWeight: 700, color: "#999", letterSpacing: 1, textTransform: "uppercase", marginBottom: 12, fontFamily: "'JetBrains Mono',monospace" }}>Варианты решения</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -337,7 +330,6 @@ export default function AiCeilingAdvisor() {
         </div>
       </div>
 
-      {/* What to consider */}
       <div>
         <div style={{ fontSize: 13, fontWeight: 700, color: "#999", letterSpacing: 1, textTransform: "uppercase", marginBottom: 12, fontFamily: "'JetBrains Mono',monospace" }}>Что важно учесть</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -350,7 +342,6 @@ export default function AiCeilingAdvisor() {
         </div>
       </div>
 
-      {/* Impact */}
       {(r.estimatedImpact.heightLoss || r.estimatedImpact.budgetNote) && (
         <div style={{ padding: 20, background: "#f5f5f5", border: "1px solid #e8e8e8" }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: "#999", letterSpacing: 1, textTransform: "uppercase", marginBottom: 12, fontFamily: "'JetBrains Mono',monospace" }}>Ориентиры</div>
@@ -371,7 +362,6 @@ export default function AiCeilingAdvisor() {
         </div>
       )}
 
-      {/* CTA */}
       {renderCTA(r.nextStep)}
     </div>
   );
@@ -469,27 +459,84 @@ export default function AiCeilingAdvisor() {
               letterSpacing: -1,
               color: "#1a1a1a",
               marginBottom: 12,
+              whiteSpace: "pre-line",
             }}
           >
-            {activeTab === "room"
-              ? "Подберите потолок и освещение\nпод вашу комнату"
-              : "Есть вопрос по потолку,\nсвету или конструкции?"}
+            {activeTab === "tech"
+              ? "Есть вопрос по потолку,\nсвету или конструкции?"
+              : "Подберите потолок и освещение\nпод вашу комнату"}
           </h2>
           <p style={{ fontSize: 15, color: "#666", lineHeight: 1.6, maxWidth: 520, margin: "0 auto" }}>
-            {activeTab === "room"
-              ? "Получите рекомендацию по типу потолка, варианту света, ориентиру по бюджету и тому, что важно учесть до замера."
-              : "Опишите ситуацию, и мы покажем понятное решение без сложных технических терминов."}
+            {activeTab === "tech"
+              ? "Опишите ситуацию, и мы покажем понятное решение без сложных технических терминов."
+              : "Получите рекомендацию по типу потолка, варианту света, ориентиру по бюджету и тому, что важно учесть до замера."}
           </p>
         </div>
 
-        {/* Tabs */}
+        {/* Tabs — технический вопрос первый */}
         {status === "idle" && (
           <div style={{ display: "flex", gap: 0, marginBottom: 32 }}>
+            <button style={tabStyle(activeTab === "tech")} onClick={() => { setActiveTab("tech"); resetForm(); }}>
+              💬 Технический вопрос
+            </button>
             <button style={tabStyle(activeTab === "room")} onClick={() => { setActiveTab("room"); resetForm(); }}>
               📐 Подбор потолка и света
             </button>
-            <button style={tabStyle(activeTab === "tech")} onClick={() => { setActiveTab("tech"); resetForm(); }}>
-              💬 Технический вопрос
+          </div>
+        )}
+
+        {/* TECH FORM */}
+        {status === "idle" && activeTab === "tech" && (
+          <div style={{ background: "#fff", border: "1px solid #e8e8e8", padding: "32px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div>
+                <label style={labelStyle}>Ваш вопрос *</label>
+                <textarea
+                  style={{ ...inputStyle, resize: "vertical" as const, minHeight: 100 }}
+                  placeholder="Например: Сколько ватт освещения нужно для помещения 20 м2? Какой тип освещения выбрать? Какие светодиодные ленты выбрать?"
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                <div>
+                  <label style={labelStyle}>Тип помещения <span style={{ color: "#bbb", fontWeight: 400 }}>(необязательно)</span></label>
+                  <select style={selectStyle} value={techRoomType} onChange={(e) => setTechRoomType(e.target.value as RoomType | "")}>
+                    <option value="">Не указано</option>
+                    {ROOM_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Высота потолка, см <span style={{ color: "#bbb", fontWeight: 400 }}>(необязательно)</span></label>
+                  <input style={inputStyle} type="number" placeholder="например, 260" min={200} max={600} value={techCeilingHeight} onChange={(e) => setTechCeilingHeight(e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <label style={labelStyle}>Дополнительные условия <span style={{ color: "#bbb", fontWeight: 400 }}>(необязательно)</span></label>
+                <input style={inputStyle} type="text" placeholder="например, есть трубы, эркер, неровные стены..." value={details} onChange={(e) => setDetails(e.target.value)} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                <div>
+                  <label style={labelStyle}>Ориентир бюджета <span style={{ color: "#bbb", fontWeight: 400 }}>(необязательно)</span></label>
+                  <select style={selectStyle} value={techBudget} onChange={(e) => setTechBudget(e.target.value as BudgetLevel | "")}>
+                    <option value="">Не указано</option>
+                    {BUDGET_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Телефон или Telegram <span style={{ color: "#bbb", fontWeight: 400 }}>(необязательно)</span></label>
+                  <input style={inputStyle} type="text" placeholder="для отправки результата" value={techContact} onChange={(e) => setTechContact(e.target.value)} />
+                </div>
+              </div>
+            </div>
+            <button
+              style={{ ...btnPrimary, marginTop: 24 }}
+              onClick={handleTechSubmit}
+              disabled={!question.trim() || question.trim().length < 5}
+              onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.background = "#333"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "#1a1a1a"; }}
+            >
+              ✦ Получить ответ →
             </button>
           </div>
         )}
@@ -549,62 +596,6 @@ export default function AiCeilingAdvisor() {
               onMouseLeave={(e) => { e.currentTarget.style.background = "#1a1a1a"; }}
             >
               ✦ Подобрать решение →
-            </button>
-          </div>
-        )}
-
-        {/* TECH FORM */}
-        {status === "idle" && activeTab === "tech" && (
-          <div style={{ background: "#fff", border: "1px solid #e8e8e8", padding: "32px" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              <div>
-                <label style={labelStyle}>Ваш вопрос *</label>
-                <textarea
-                  style={{ ...inputStyle, resize: "vertical" as const, minHeight: 100 }}
-                  placeholder="Например: сколько требуется ватт освещения в гостинную 30 м2?"
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                />
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-                <div>
-                  <label style={labelStyle}>Тип помещения <span style={{ color: "#bbb", fontWeight: 400 }}>(необязательно)</span></label>
-                  <select style={selectStyle} value={techRoomType} onChange={(e) => setTechRoomType(e.target.value as RoomType | "")}>
-                    <option value="">Не указано</option>
-                    {ROOM_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label style={labelStyle}>Высота потолка, см <span style={{ color: "#bbb", fontWeight: 400 }}>(необязательно)</span></label>
-                  <input style={inputStyle} type="number" placeholder="например, 260" min={200} max={600} value={techCeilingHeight} onChange={(e) => setTechCeilingHeight(e.target.value)} />
-                </div>
-              </div>
-              <div>
-                <label style={labelStyle}>Дополнительные условия <span style={{ color: "#bbb", fontWeight: 400 }}>(необязательно)</span></label>
-                <input style={inputStyle} type="text" placeholder="например, есть трубы, эркер, неровные стены..." value={details} onChange={(e) => setDetails(e.target.value)} />
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-                <div>
-                  <label style={labelStyle}>Ориентир бюджета <span style={{ color: "#bbb", fontWeight: 400 }}>(необязательно)</span></label>
-                  <select style={selectStyle} value={techBudget} onChange={(e) => setTechBudget(e.target.value as BudgetLevel | "")}>
-                    <option value="">Не указано</option>
-                    {BUDGET_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label style={labelStyle}>Телефон или Telegram <span style={{ color: "#bbb", fontWeight: 400 }}>(необязательно)</span></label>
-                  <input style={inputStyle} type="text" placeholder="для отправки результата" value={techContact} onChange={(e) => setTechContact(e.target.value)} />
-                </div>
-              </div>
-            </div>
-            <button
-              style={{ ...btnPrimary, marginTop: 24 }}
-              onClick={handleTechSubmit}
-              disabled={!question.trim() || question.trim().length < 5}
-              onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.background = "#333"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "#1a1a1a"; }}
-            >
-              ✦ Получить ответ →
             </button>
           </div>
         )}
