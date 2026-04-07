@@ -10,9 +10,9 @@ export function HomeFooter() {
   return (
     <footer className="border-t border-slate-200 bg-white">
       <Container className="py-12 sm:py-14">
-        <div className="grid gap-10 lg:grid-cols-[1.2fr_1fr_1fr]">
+        <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr_1fr]">
           <div>
-            <p className="font-mono text-sm font-bold uppercase tracking-[0.28em] text-slate-950">
+            <p className="font-mono text-sm font-bold uppercase tracking-[0.24em] text-slate-950">
               {contacts.brandName}
             </p>
             <p className="mt-4 max-w-md text-sm leading-7 text-slate-600">
@@ -62,7 +62,9 @@ export function HomeFooter() {
 
               <div className="pt-2 text-sm text-slate-500">
                 <p>{contacts.regionLabel}</p>
-                {contacts.workingHoursLabel ? <p className="mt-1">{contacts.workingHoursLabel}</p> : null}
+                {contacts.workingHoursLabel ? (
+                  <p className="mt-1">{contacts.workingHoursLabel}</p>
+                ) : null}
               </div>
             </div>
           </div>
