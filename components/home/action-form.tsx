@@ -97,7 +97,7 @@ export function ActionForm() {
       <p className="text-sm leading-6 text-slate-600">{actionContent.helperText}</p>
 
       <p className="text-xs leading-5 text-slate-500">
-        {legal.consentTextPrefix}
+        {legal.consentTextPrefix}{" "}
         <TextLink href={legal.privacyHref} className="text-xs">
           {legal.privacyLabel}
         </TextLink>
