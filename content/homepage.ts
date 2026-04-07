@@ -58,7 +58,7 @@ export const homepage = {
           "Чистые линии без плинтусов и аккуратный направленный свет для современного интерьера.",
         areaLabel: "24 м²",
         timelineLabel: "1 день",
-        priceLabel: "от 150 000 ₽",
+        priceLabel: "от 50 000 ₽",
         imageAssetKey: "proof-01",
         alt: "Теневой профиль и трековое освещение в квартире в Москве",
         ctaLabel: "Хочу так же",
@@ -71,7 +71,7 @@ export const homepage = {
         roomType: "Гостиная и коридор",
         summary:
           "Контурная подсветка по периметру и эффект лёгкого отрыва потолка от стен.",
-        areaLabel: "32 м²",
+        areaLabel: "22 м²",
         timelineLabel: "1 день",
         priceLabel: "от 50 000 ₽",
         imageAssetKey: "proof-02",
@@ -103,7 +103,7 @@ export const homepage = {
           "Шторы идут от потолка без видимого карниза и лишних накладок.",
         areaLabel: "20 м²",
         timelineLabel: "1 день",
-        priceLabel: "от 35 000 ₽",
+        priceLabel: "от 25 000 ₽",
         imageAssetKey: "proof-04",
         alt: "Скрытый карниз в натяжном потолке в жилом интерьере",
         ctaLabel: "Хочу так же",
@@ -148,10 +148,7 @@ export const homepage = {
     "Выберите площадь и нужные параметры. Калькулятор покажет ориентировочную стоимость, а точную цену я зафиксирую после замера.",
   includedLine:
     "Это ориентировочный расчёт для понимания бюджета. Итоговая смета фиксируется после осмотра помещения и согласования решения.",
-  fixedPriceNote:
-    "После замера цена фиксируется в смете и договоре.",
-  noExtraChargeNote:
-    "Если состав работ не меняется, цена тоже не меняется.",
+
   primaryCtaLabel: "Записаться на замер",
   calculator: {
     areaMin: 10,
@@ -172,7 +169,7 @@ export const homepage = {
       min: 1,
       max: 50,
       step: 1,
-      default: 2,
+      default: 3,
     },
 
     trackMeters: {
@@ -197,7 +194,7 @@ export const homepage = {
         label: "Теневой потолок",
         baseRatePerSqm: 800,
         extraLabel: "Теневой профиль",
-        extraRatePerMeter: 800,
+        extraRatePerMeter: 950,
       },
       {
         slug: "floating",
