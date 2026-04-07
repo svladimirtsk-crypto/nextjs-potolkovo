@@ -11,33 +11,60 @@ function formatCurrency(value: number) {
 export function MobileStickyCta() {
   const { snapshot, hasInteracted } = usePriceCalculatorBridge();
   const [isPriceVisible, setIsPriceVisible] = useState(false);
+  const [isActionVisible, setIsActionVisible] = useState(false);
 
   useEffect(() => {
     const priceSection = document.getElementById("price");
+    const actionSection = document.getElementById("action");
 
-    if (!priceSection) {
+    if (!priceSection && !actionSection) {
       return;
     }
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setIsPriceVisible(entry.isIntersecting);
-      },
-      {
-        threshold: 0.15,
-        rootMargin: "0px 0px -10% 0px",
-      }
-    );
+    const observers: IntersectionObserver[] = [];
 
-    observer.observe(priceSection);
+    if (priceSection) {
+      const priceObserver = new IntersectionObserver(
+        ([entry]) => {
+          setIsPriceVisible(entry.isIntersecting);
+        },
+        {
+          threshold: 0.15,
+          rootMargin: "0px 0px -10% 0px",
+        }
+      );
 
-    return () => observer.disconnect();
+      priceObserver.observe(priceSection);
+      observers.push(priceObserver);
+    }
+
+    if (actionSection) {
+      const actionObserver = new IntersectionObserver(
+        ([entry]) => {
+          setIsActionVisible(entry.isIntersecting);
+        },
+        {
+          threshold: 0.2,
+        }
+      );
+
+      actionObserver.observe(actionSection);
+      observers.push(actionObserver);
+    }
+
+    return () => {
+      observers.forEach((observer) => observer.disconnect());
+    };
   }, []);
+
+  if (isActionVisible) {
+    return null;
+  }
 
   const showCalculatedState = isPriceVisible || (hasInteracted && !!snapshot);
 
   return (
-    <div className="fixed inset-x-4 bottom-4 z-30 lg:hidden">
+    <div className="fixed inset-x-4 bottom-4 z-40 lg:hidden">
       <div className="rounded-2xl border border-white/10 bg-slate-950/95 p-4 text-white shadow-2xl backdrop-blur">
         {showCalculatedState && snapshot ? (
           <div className="flex items-end justify-between gap-3">
