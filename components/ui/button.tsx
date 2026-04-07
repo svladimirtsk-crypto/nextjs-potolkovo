@@ -47,7 +47,7 @@ export function Button(props: ButtonProps) {
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2",
     "disabled:opacity-60 disabled:pointer-events-none",
     // защита от “тёмный текст на тёмной кнопке”
-    "text-white",
+    "!text-white",
     getVariantClasses(variant),
     props.className ?? "",
   ]
