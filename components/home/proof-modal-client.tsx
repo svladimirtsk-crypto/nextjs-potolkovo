@@ -72,11 +72,18 @@ export function ProofModalClient({
     return homeAssets.find((entry) => entry.assetKey === item.imageAssetKey) ?? null;
   }, [item]);
 
-  const gallery = useMemo(() => {
+  const gallery = useMemo<string[]>(() => {
     if (!asset) return [];
-    if ("gallery" in asset && Array.isArray(asset.gallery) && asset.gallery.length > 0) {
-      return asset.gallery;
+
+    const maybeGallery =
+      "gallery" in asset && Array.isArray(asset.gallery)
+        ? [...asset.gallery]
+        : [];
+
+    if (maybeGallery.length > 0) {
+      return maybeGallery;
     }
+
     return [asset.src];
   }, [asset]);
 
