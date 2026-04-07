@@ -12,7 +12,7 @@ export function HomeProof() {
   return (
     <Section id="proof" className="bg-slate-950 text-white">
       <Container>
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <Heading
             eyebrow="Работы"
             title={proof.sectionTitle}
@@ -20,10 +20,11 @@ export function HomeProof() {
             tone="dark"
           />
 
-          <div className="space-y-2 lg:max-w-sm lg:text-right">
+          <div className="hidden space-y-2 lg:block lg:max-w-sm lg:text-right">
             <p className="text-sm font-medium text-white/80">6 реальных объектов</p>
-            <p className="text-sm text-white/60">
-              На телефоне — свайпайте. На компьютере — используйте стрелки.
+            <p className="text-sm leading-6 text-white/60">
+              Смотрите решения, сроки и ориентир по бюджету без тяжёлых галерей и
+              модалок.
             </p>
           </div>
         </div>
@@ -42,6 +43,10 @@ export function HomeProof() {
               </ProofTrackClient>
             </div>
           </div>
+
+          <p className="mt-4 text-sm text-white/60 lg:hidden">
+            Свайпайте, чтобы посмотреть больше работ.
+          </p>
         </div>
       </Container>
     </Section>
