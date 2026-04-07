@@ -16,8 +16,11 @@ export function HomeHero() {
   }
 
   return (
-    <Section id="hero" className="relative overflow-hidden bg-slate-950 py-0 text-white">
-      <div className="relative min-h-[calc(100svh-var(--header-height))]">
+    <Section
+      id="hero"
+      className="relative -mt-[var(--header-height)] overflow-hidden bg-slate-950 pt-[var(--header-height)] text-white"
+    >
+      <div className="relative min-h-[100svh]">
         <div className="absolute inset-0">
           <Image
             src={heroAsset.src}
@@ -28,11 +31,11 @@ export function HomeHero() {
             className="object-cover object-center"
           />
           <div className="absolute inset-0 bg-black/56" />
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/18 via-slate-950/28 to-slate-950/74" />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/86 via-slate-950/58 to-slate-950/18" />
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/12 via-slate-950/26 to-slate-950/74" />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/84 via-slate-950/56 to-slate-950/18" />
         </div>
 
-        <Container className="relative z-10 flex min-h-[calc(100svh-var(--header-height))] items-start py-14 sm:py-16 lg:py-20">
+        <Container className="relative z-10 flex min-h-[100svh] items-center py-14 sm:py-16 lg:py-20">
           <div className="max-w-xl lg:max-w-2xl">
             <p className="text-sm font-medium text-white/72 sm:text-[15px]">
               {hero.servicesInlineLabel}
