@@ -15,7 +15,7 @@ export function HomeProof() {
           eyebrow="Работы"
           title={proof.sectionTitle}
           description={proof.sectionIntro}
-          className="text-white"
+          tone="dark"
         />
 
         <div className="mt-10 sm:mt-12">
