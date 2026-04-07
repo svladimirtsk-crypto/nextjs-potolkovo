@@ -149,9 +149,9 @@ export const homepage = {
   includedLine:
     "Это ориентировочный расчёт для понимания бюджета. Итоговая смета фиксируется после осмотра помещения и согласования решения.",
   fixedPriceNote:
-    ,
+    " ",
   noExtraChargeNote:
-    ,
+    " ",
   primaryCtaLabel: "Записаться на замер",
   calculator: {
     areaMin: 10,
