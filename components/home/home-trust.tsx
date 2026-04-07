@@ -23,28 +23,34 @@ export function HomeTrust() {
           <FounderBlock />
         </div>
 
-        <div className="mt-10 flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
-          <div>
-            <p className="text-sm text-slate-500">{trust.externalRatingLabel}</p>
-            <div className="mt-2 flex items-center gap-3">
-              {trust.externalRatingValue ? (
-                <span className="text-3xl font-bold tracking-tight text-slate-950">
-                  {trust.externalRatingValue}
-                </span>
-              ) : null}
-              {trust.externalRatingSource ? (
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700">
-                  {trust.externalRatingSource}
-                </span>
-              ) : null}
-            </div>
-          </div>
+        <div className="mt-8 rounded-[2rem] border border-slate-200 bg-white p-5 sm:p-6 lg:p-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-500">
+                {trust.externalRatingLabel}
+              </p>
 
-          {trust.externalRatingUrl ? (
-            <TextLink href={trust.externalRatingUrl} className="text-sm font-medium">
-              Смотреть отзывы на внешнем источнике
-            </TextLink>
-          ) : null}
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                {trust.externalRatingValue ? (
+                  <span className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+                    {trust.externalRatingValue}
+                  </span>
+                ) : null}
+
+                {trust.externalRatingSource ? (
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-medium text-slate-700">
+                    {trust.externalRatingSource}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+
+            {trust.externalRatingUrl ? (
+              <TextLink href={trust.externalRatingUrl} className="text-sm font-medium">
+                Смотреть отзывы на внешнем источнике
+              </TextLink>
+            ) : null}
+          </div>
         </div>
 
         {trust.stats?.length ? (
@@ -52,12 +58,12 @@ export function HomeTrust() {
             {trust.stats.map((stat) => (
               <div
                 key={`${stat.label}-${stat.valueDisplay}`}
-                className="rounded-3xl border border-slate-200 bg-white p-5"
+                className="rounded-[1.5rem] border border-slate-200 bg-white p-5 sm:p-6"
               >
-                <p className="text-2xl font-bold tracking-tight text-slate-950">
+                <p className="text-3xl font-bold tracking-tight text-slate-950">
                   {stat.valueDisplay}
                 </p>
-                <p className="mt-2 text-sm text-slate-600">{stat.label}</p>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{stat.label}</p>
               </div>
             ))}
           </div>
