@@ -9,7 +9,7 @@ const price = homepage.price;
 
 export function HomePrice() {
   return (
-    <Section id="price" className="scroll-mt-24 className="bg-white">
+   <Section id="price" className="scroll-mt-24 bg-white">
       <Container>
         <Heading
           eyebrow="Цена"
