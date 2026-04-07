@@ -1,3 +1,7 @@
+import Image from "next/image";
+
+import { homeAssets } from "@/content/home-assets";
+
 type ProofItem = (typeof import("@/content/homepage").homepage.proof.items)[number];
 
 type ProofCardProps = {
@@ -24,9 +28,14 @@ function splitPriceLabel(priceLabel?: string) {
 }
 
 export function ProofCard({ item, mode, onOpen }: ProofCardProps) {
+  const isMobile = mode === "mobile";
   const price = splitPriceLabel(item.priceLabel);
 
-  const isMobile = mode === "mobile";
+  const asset = homeAssets.find((entry) => entry.assetKey === item.imageAssetKey);
+
+  if (!asset) {
+    return null;
+  }
 
   return (
     <article
@@ -43,12 +52,17 @@ export function ProofCard({ item, mode, onOpen }: ProofCardProps) {
         className="block w-full text-left"
         aria-label={`Открыть кейс: ${item.title}`}
       >
-        <div className={isMobile ? "aspect-[5/4] overflow-hidden" : "aspect-[5/4] overflow-hidden"}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={`/images/home/proof/${item.imageAssetKey.replace("proof-", "proof-")}.webp`}
+        <div className="relative aspect-[5/4] overflow-hidden">
+          <Image
+            src={asset.src}
             alt={item.alt}
-            className="h-full w-full object-cover"
+            fill
+            sizes={
+              isMobile
+                ? "(max-width: 768px) 78vw, 18.5rem"
+                : "(max-width: 1280px) 33vw, 380px"
+            }
+            className="object-cover"
           />
         </div>
 
@@ -93,7 +107,13 @@ export function ProofCard({ item, mode, onOpen }: ProofCardProps) {
               </p>
 
               <div className="mt-2 flex items-end gap-2">
-                <p className={isMobile ? "text-2xl font-bold tracking-tight" : "text-3xl font-bold tracking-tight"}>
+                <p
+                  className={
+                    isMobile
+                      ? "text-2xl font-bold tracking-tight"
+                      : "text-3xl font-bold tracking-tight"
+                  }
+                >
                   {price.main}
                 </p>
 
@@ -106,12 +126,7 @@ export function ProofCard({ item, mode, onOpen }: ProofCardProps) {
             </div>
           ) : null}
 
-          <div
-            className={[
-              "inline-flex min-h-11 items-center justify-center rounded-full border border-slate-950 bg-slate-950 px-4 text-sm font-semibold text-white",
-              isMobile ? "w-full" : "w-full",
-            ].join(" ")}
-          >
+          <div className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-slate-950 bg-slate-950 px-4 text-sm font-semibold text-white">
             Подробнее
           </div>
         </div>
