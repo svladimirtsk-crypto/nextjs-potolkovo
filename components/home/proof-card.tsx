@@ -1,13 +1,9 @@
-import Image from "next/image";
-
-import { homeAssets } from "@/content/home-assets";
-import { Button } from "@/components/ui/button";
-
 type ProofItem = (typeof import("@/content/homepage").homepage.proof.items)[number];
 
 type ProofCardProps = {
   item: ProofItem;
-  defaultCtaLabel: string;
+  mode: "mobile" | "desktop";
+  onOpen: () => void;
 };
 
 function splitPriceLabel(priceLabel?: string) {
@@ -27,83 +23,99 @@ function splitPriceLabel(priceLabel?: string) {
   };
 }
 
-export function ProofCard({ item, defaultCtaLabel }: ProofCardProps) {
-  const asset = homeAssets.find((entry) => entry.assetKey === item.imageAssetKey);
-
-  if (!asset) {
-    return null;
-  }
-
+export function ProofCard({ item, mode, onOpen }: ProofCardProps) {
   const price = splitPriceLabel(item.priceLabel);
 
+  const isMobile = mode === "mobile";
+
   return (
-    <article className="snap-start w-[86vw] max-w-[23rem] flex-none overflow-hidden rounded-3xl bg-white shadow-[0_14px_36px_rgba(2,6,23,0.18)] ring-1 ring-slate-200/70 sm:w-[21.5rem] lg:w-[23rem]">
-      <div className="relative aspect-[5/4] overflow-hidden">
-        <Image
-          src={asset.src}
-          alt={item.alt}
-          fill
-          sizes="(max-width: 640px) 86vw, (max-width: 1024px) 21.5rem, 23rem"
-          className="object-cover"
-        />
-      </div>
-
-      <div className="space-y-5 p-5 sm:p-6">
-        <div className="space-y-3">
-          <p className="text-sm font-medium text-slate-500">{item.serviceType}</p>
-
-          <h3 className="text-xl font-semibold tracking-tight text-slate-950">
-            {item.title}
-          </h3>
-
-          <p className="text-sm leading-6 text-slate-600">{item.summary}</p>
+    <article
+      className={[
+        "overflow-hidden border border-slate-200 bg-white text-slate-950 shadow-[0_8px_24px_rgba(2,6,23,0.12)]",
+        isMobile
+          ? "snap-start w-[78vw] max-w-[18.5rem] flex-none rounded-[1.5rem]"
+          : "rounded-[1.5rem]",
+      ].join(" ")}
+    >
+      <button
+        type="button"
+        onClick={onOpen}
+        className="block w-full text-left"
+        aria-label={`Открыть кейс: ${item.title}`}
+      >
+        <div className={isMobile ? "aspect-[5/4] overflow-hidden" : "aspect-[5/4] overflow-hidden"}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`/images/home/proof/${item.imageAssetKey.replace("proof-", "proof-")}.webp`}
+            alt={item.alt}
+            className="h-full w-full object-cover"
+          />
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
-            {item.roomType}
-          </span>
-
-          {item.areaLabel ? (
-            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
-              {item.areaLabel}
-            </span>
-          ) : null}
-
-          {item.timelineLabel ? (
-            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
-              {item.timelineLabel}
-            </span>
-          ) : null}
-        </div>
-
-        {item.priceLabel ? (
-          <div className="border-t border-slate-200 pt-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-              Ориентир по бюджету
+        <div className={isMobile ? "space-y-4 p-4" : "space-y-4 p-5"}>
+          <div className="space-y-2">
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+              {item.serviceType}
             </p>
 
-            <div className="mt-2 flex items-end gap-2">
-              <p className="text-3xl font-bold tracking-tight text-slate-950">
-                {price.main}
+            <h3
+              className={[
+                "font-semibold tracking-tight text-slate-950",
+                isMobile ? "text-lg leading-6" : "text-xl leading-7",
+              ].join(" ")}
+            >
+              {item.title}
+            </h3>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700">
+              {item.roomType}
+            </span>
+
+            {item.areaLabel ? (
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700">
+                {item.areaLabel}
+              </span>
+            ) : null}
+
+            {item.timelineLabel ? (
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700">
+                {item.timelineLabel}
+              </span>
+            ) : null}
+          </div>
+
+          {item.priceLabel ? (
+            <div className="border-t border-slate-200 pt-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                Ориентир по бюджету
               </p>
 
-              {price.suffix ? (
-                <span className="pb-1 text-sm font-medium text-slate-500">
-                  {price.suffix}
-                </span>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
+              <div className="mt-2 flex items-end gap-2">
+                <p className={isMobile ? "text-2xl font-bold tracking-tight" : "text-3xl font-bold tracking-tight"}>
+                  {price.main}
+                </p>
 
-        <Button
-          href={`#${item.actionTargetId ?? "action"}`}
-          className="w-full justify-center"
-        >
-          {item.ctaLabel ?? defaultCtaLabel}
-        </Button>
-      </div>
+                {price.suffix ? (
+                  <span className="pb-0.5 text-sm font-medium text-slate-500">
+                    {price.suffix}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
+          <div
+            className={[
+              "inline-flex min-h-11 items-center justify-center rounded-full border border-slate-950 bg-slate-950 px-4 text-sm font-semibold text-white",
+              isMobile ? "w-full" : "w-full",
+            ].join(" ")}
+          >
+            Подробнее
+          </div>
+        </div>
+      </button>
     </article>
   );
 }
