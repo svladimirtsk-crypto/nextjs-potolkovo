@@ -396,27 +396,32 @@ export const homepage = {
   },
 
   action: {
-    sectionTitle: "Запишитесь на замер — дальше всё беру на себя",
-    sectionSubtitle:
-      "Оставьте имя и телефон. Я свяжусь с вами, уточню задачу и предложу удобное время для замера.",
-    formTitle: "Бесплатный замер и расчёт стоимости",
-    nameFieldLabel: "Имя",
-    nameFieldPlaceholder: "Как к вам обращаться",
-    phoneFieldLabel: "Телефон",
-    phoneFieldPlaceholder: "+7 (___) ___-__-__",
-    submitButtonLabel: "Записаться на замер",
-    helperText: "Замер бесплатный. Вы ни к чему не обязаны.",
-    successTitle: "Заявка отправлена",
-    successMessage:
-      "Спасибо. Я свяжусь с вами, чтобы уточнить задачу и договориться о замере.",
-    errorMessage:
-      "Не удалось отправить заявку. Попробуйте ещё раз или свяжитесь со мной по телефону.",
-    validationMessage: "Пожалуйста, заполните имя и телефон.",
-    secondaryContactsTitle: "Или свяжитесь напрямую",
-    phoneButtonLabel: "Позвонить",
-    telegramButtonLabel: "Написать в Telegram",
-    anchorId: "action",
-  },
+  sectionTitle: "Запишитесь на замер — дальше всё беру на себя",
+  sectionSubtitle:
+    "Оставьте имя и телефон. Я свяжусь с вами, уточню задачу и предложу удобное время для замера.",
+  formTitle: "Бесплатный замер и расчёт стоимости",
+  nameFieldLabel: "Имя",
+  nameFieldPlaceholder: "Как к вам обращаться",
+  phoneFieldLabel: "Телефон",
+  phoneFieldPlaceholder: "+7 (___) ___-__-__",
+  addressFieldLabel: "Адрес или район",
+  addressFieldPlaceholder:
+    "Например: Химки, Люберцы, м. Сокол или ул. Ленина, 12",
+  addressFieldHint:
+    "Необязательно. Это поможет быстрее сориентироваться по выезду.",
+  submitButtonLabel: "Записаться на замер",
+  helperText: "Замер бесплатный. Вы ни к чему не обязаны.",
+  successTitle: "Заявка отправлена",
+  successMessage:
+    "Спасибо. Я свяжусь с вами, чтобы уточнить задачу и договориться о замере.",
+  errorMessage:
+    "Не удалось отправить заявку. Попробуйте ещё раз или свяжитесь со мной по телефону.",
+  validationMessage: "Пожалуйста, заполните имя и телефон.",
+  secondaryContactsTitle: "Или свяжитесь напрямую",
+  phoneButtonLabel: "Позвонить",
+  telegramButtonLabel: "Написать в Telegram",
+  anchorId: "action",
+},
 
   footer: {
     servicesGroupLabel: "Услуги",
