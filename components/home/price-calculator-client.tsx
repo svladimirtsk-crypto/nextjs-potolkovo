@@ -1,8 +1,12 @@
 "use client";
 
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import { homepage } from "@/content/homepage";
 import { Button } from "@/components/ui/button";
+import {
+  CalculatorLeadSnapshot,
+  usePriceCalculatorBridge,
+} from "./price-calculator-context";
 
 const calculator = homepage.price.calculator;
 
@@ -70,7 +74,7 @@ function SectionCard({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-[1.5rem] border border-slate-200 bg-slate-50/70 p-4 sm:p-5">
+    <section className="rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-4 sm:p-5">
       <div className="mb-4">
         <p className="text-sm font-semibold text-slate-950">{title}</p>
         {description ? (
@@ -118,13 +122,19 @@ function OptionCard({
 
         <span
           className={`mt-0.5 h-4 w-4 rounded-full border ${
-            active
-              ? "border-white bg-white"
-              : "border-slate-300 bg-transparent"
+            active ? "border-white bg-white" : "border-slate-300 bg-transparent"
           }`}
         />
       </div>
     </button>
+  );
+}
+
+function SummaryPill({ children }: { children: ReactNode }) {
+  return (
+    <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-white/80 backdrop-blur">
+      {children}
+    </span>
   );
 }
 
@@ -216,21 +226,17 @@ function PriceRow({
   label,
   value,
   strong = false,
-  muted = false,
 }: {
   label: string;
   value: string;
   strong?: boolean;
-  muted?: boolean;
 }) {
   return (
     <div
       className={`flex items-center justify-between gap-4 ${
         strong
           ? "text-sm font-semibold text-slate-950"
-          : muted
-            ? "text-sm text-slate-500"
-            : "text-sm text-slate-600"
+          : "text-sm text-slate-600"
       }`}
     >
       <span>{label}</span>
@@ -240,6 +246,8 @@ function PriceRow({
 }
 
 export function PriceCalculatorClient() {
+  const { setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
+
   const [area, setArea] = useState<number>(calculator.areaDefault);
 
   const [ceilingType, setCeilingType] = useState<CeilingType>("standard");
@@ -315,7 +323,78 @@ export function PriceCalculatorClient() {
     trackTotal +
     lightsTotal;
 
+  const snapshot = useMemo<CalculatorLeadSnapshot>(
+    () => ({
+      area,
+      ceilingTypeLabel: selectedCeiling.label,
+      ceilingBaseRate,
+      ceilingBaseTotal,
+
+      ceilingExtraLabel: hasSpecialCeiling
+        ? selectedCeiling.extraLabel ?? null
+        : null,
+      ceilingLength: hasSpecialCeiling ? ceilingLength : null,
+      ceilingExtraRatePerMeter: hasSpecialCeiling
+        ? selectedCeiling.extraRatePerMeter
+        : null,
+      ceilingExtraTotal,
+
+      corniceLabel:
+        selectedCornice.ratePerMeter > 0 ? selectedCornice.label : null,
+      corniceLength: selectedCornice.ratePerMeter > 0 ? corniceLength : null,
+      corniceRatePerMeter:
+        selectedCornice.ratePerMeter > 0 ? selectedCornice.ratePerMeter : null,
+      corniceTotal,
+
+      trackLabel: selectedTrack.ratePerMeter > 0 ? selectedTrack.label : null,
+      trackLength: selectedTrack.ratePerMeter > 0 ? trackLength : null,
+      trackRatePerMeter:
+        selectedTrack.ratePerMeter > 0 ? selectedTrack.ratePerMeter : null,
+      trackTotal,
+
+      lightsEnabled,
+      lightsCount: lightsEnabled ? lightsCount : null,
+      lightsRatePerUnit: calculator.lights.ratePerUnit,
+      lightsTotal,
+
+      total,
+    }),
+    [
+      area,
+      selectedCeiling,
+      ceilingBaseRate,
+      ceilingBaseTotal,
+      hasSpecialCeiling,
+      ceilingLength,
+      ceilingExtraTotal,
+      selectedCornice,
+      corniceLength,
+      corniceTotal,
+      selectedTrack,
+      trackLength,
+      trackTotal,
+      lightsEnabled,
+      lightsCount,
+      lightsTotal,
+      total,
+    ]
+  );
+
+  useEffect(() => {
+    setSnapshot(snapshot);
+  }, [setSnapshot, snapshot]);
+
+  const markInteracted = () => {
+    setHasInteracted(true);
+  };
+
+  const handleAreaChange = (value: number) => {
+    markInteracted();
+    setArea(value);
+  };
+
   const handleCeilingTypeChange = (slug: CeilingType) => {
+    markInteracted();
     setCeilingType(slug);
 
     if (slug !== "standard") {
@@ -324,6 +403,7 @@ export function PriceCalculatorClient() {
   };
 
   const handleCorniceTypeChange = (slug: CorniceType) => {
+    markInteracted();
     setCorniceType(slug);
 
     if (slug !== "none") {
@@ -332,6 +412,7 @@ export function PriceCalculatorClient() {
   };
 
   const handleTrackTypeChange = (slug: TrackType) => {
+    markInteracted();
     setTrackType(slug);
 
     if (slug !== "none") {
@@ -339,361 +420,364 @@ export function PriceCalculatorClient() {
     }
   };
 
+  const handleCeilingLengthChange = (value: number) => {
+    markInteracted();
+    setCeilingLength(value);
+  };
+
+  const handleCorniceLengthChange = (value: number) => {
+    markInteracted();
+    setCorniceLength(value);
+  };
+
+  const handleTrackLengthChange = (value: number) => {
+    markInteracted();
+    setTrackLength(value);
+  };
+
+  const handleLightsEnabledChange = (value: boolean) => {
+    markInteracted();
+    setLightsEnabled(value);
+  };
+
+  const handleLightsCountChange = (value: number) => {
+    markInteracted();
+    setLightsCount(value);
+  };
+
+  const applyPerimeterSuggestion = () => {
+    markInteracted();
+    setCeilingLength(perimeterSuggestion.recommended);
+  };
+
   return (
-    <>
-      <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 pb-28 shadow-sm sm:p-6 sm:pb-32 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start xl:gap-8 xl:p-8 xl:pb-8">
-        <div className="min-w-0 space-y-5">
-          <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 sm:p-5">
-            <p className="text-sm font-medium text-slate-500">
-              {calculator.baseDescription}
-            </p>
+    <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start xl:gap-8 xl:p-8">
+      <div className="min-w-0 space-y-5">
+        <div className="overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-5 text-white">
+          <p className="text-sm text-white/70">{calculator.baseDescription}</p>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <SummaryPill>Фиксация цены после замера</SummaryPill>
+            <SummaryPill>Личный монтаж</SummaryPill>
+            <SummaryPill>Москва и МО</SummaryPill>
+          </div>
+        </div>
+
+        <SectionCard title="Площадь помещения">
+          <RangeField
+            id="area-range"
+            label="Выберите площадь"
+            value={area}
+            min={calculator.areaMin}
+            max={calculator.areaMax}
+            step={calculator.areaStep}
+            unit="м²"
+            onChange={handleAreaChange}
+          />
+        </SectionCard>
+
+        <SectionCard
+          title="Тип потолка"
+          description="Для теневого и парящего потолка цена полотна считается по новой ставке за м², а профиль считается отдельно в погонных метрах."
+        >
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {calculator.ceilingTypes.map((option) => {
+              const meta =
+                option.slug === "standard"
+                  ? `от ${formatCurrency(option.baseRatePerSqm)} ₽ / м²`
+                  : `${formatCurrency(option.baseRatePerSqm)} ₽ / м² + ${formatCurrency(
+                      option.extraRatePerMeter
+                    )} ₽ / м.п.`;
+
+              return (
+                <OptionCard
+                  key={option.slug}
+                  active={ceilingType === option.slug}
+                  title={option.label}
+                  meta={meta}
+                  onClick={() => handleCeilingTypeChange(option.slug)}
+                />
+              );
+            })}
           </div>
 
-          <SectionCard title="Площадь помещения">
-            <RangeField
-              id="area-range"
-              label="Выберите площадь"
-              value={area}
-              min={calculator.areaMin}
-              max={calculator.areaMax}
-              step={calculator.areaStep}
-              unit="м²"
-              onChange={setArea}
+          {hasSpecialCeiling && (
+            <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+              <RangeField
+                id="ceiling-length-range"
+                label={`Длина: ${selectedCeiling.extraLabel}`}
+                value={ceilingLength}
+                min={calculator.specialMeters.min}
+                max={calculator.specialMeters.max}
+                step={calculator.specialMeters.step}
+                unit="м.п."
+                onChange={handleCeilingLengthChange}
+              />
+
+              <PerimeterHint
+                area={area}
+                suggestion={perimeterSuggestion}
+                onApply={applyPerimeterSuggestion}
+              />
+            </div>
+          )}
+        </SectionCard>
+
+        <SectionCard title="Карнизы">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {calculator.cornices.map((option) => {
+              const meta =
+                option.ratePerMeter > 0
+                  ? `от ${formatCurrency(option.ratePerMeter)} ₽ / м.п.`
+                  : "Без дополнительного расчёта";
+
+              return (
+                <OptionCard
+                  key={option.slug}
+                  active={corniceType === option.slug}
+                  title={option.label}
+                  meta={meta}
+                  onClick={() => handleCorniceTypeChange(option.slug)}
+                />
+              );
+            })}
+          </div>
+
+          {selectedCornice.ratePerMeter > 0 && (
+            <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+              <RangeField
+                id="cornice-length-range"
+                label="Длина карниза"
+                value={corniceLength}
+                min={calculator.corniceMeters.min}
+                max={calculator.corniceMeters.max}
+                step={calculator.corniceMeters.step}
+                unit="м.п."
+                onChange={handleCorniceLengthChange}
+              />
+            </div>
+          )}
+        </SectionCard>
+
+        <SectionCard title="Трековое освещение">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {calculator.tracks.map((option) => {
+              const meta =
+                option.ratePerMeter > 0
+                  ? `от ${formatCurrency(option.ratePerMeter)} ₽ / м.п.`
+                  : "Без дополнительного расчёта";
+
+              return (
+                <OptionCard
+                  key={option.slug}
+                  active={trackType === option.slug}
+                  title={option.label}
+                  meta={meta}
+                  onClick={() => handleTrackTypeChange(option.slug)}
+                />
+              );
+            })}
+          </div>
+
+          {selectedTrack.ratePerMeter > 0 && (
+            <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+              <RangeField
+                id="track-length-range"
+                label="Длина трека"
+                value={trackLength}
+                min={calculator.trackMeters.min}
+                max={calculator.trackMeters.max}
+                step={calculator.trackMeters.step}
+                unit="м.п."
+                onChange={handleTrackLengthChange}
+              />
+            </div>
+          )}
+        </SectionCard>
+
+        <SectionCard title={calculator.lights.label}>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <OptionCard
+              active={!lightsEnabled}
+              title="Без светильников"
+              meta="Без поштучного расчёта"
+              onClick={() => handleLightsEnabledChange(false)}
             />
-          </SectionCard>
 
-          <SectionCard
-            title="Тип потолка"
-            description="Выберите базовый тип потолка. Для теневого и парящего профиля появится отдельный расчёт в погонных метрах."
-          >
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {calculator.ceilingTypes.map((option) => {
-                const meta =
-                  option.slug === "standard"
-                    ? `от ${formatCurrency(option.baseRatePerSqm)} ₽ / м²`
-                    : `${formatCurrency(option.baseRatePerSqm)} ₽ / м² + ${formatCurrency(
-                        option.extraRatePerMeter
-                      )} ₽ / м.п.`;
+            <OptionCard
+              active={lightsEnabled}
+              title="Добавить светильники"
+              meta={`от ${formatCurrency(
+                calculator.lights.ratePerUnit
+              )} ₽ / шт.`}
+              onClick={() => handleLightsEnabledChange(true)}
+            />
+          </div>
 
-                return (
-                  <OptionCard
-                    key={option.slug}
-                    active={ceilingType === option.slug}
-                    title={option.label}
-                    meta={meta}
-                    onClick={() => handleCeilingTypeChange(option.slug)}
-                  />
-                );
-              })}
-            </div>
-
-            {hasSpecialCeiling && (
-              <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
-                <RangeField
-                  id="ceiling-length-range"
-                  label={`Длина: ${selectedCeiling.extraLabel}`}
-                  value={ceilingLength}
-                  min={calculator.specialMeters.min}
-                  max={calculator.specialMeters.max}
-                  step={calculator.specialMeters.step}
-                  unit="м.п."
-                  onChange={setCeilingLength}
-                />
-
-                <PerimeterHint
-                  area={area}
-                  suggestion={perimeterSuggestion}
-                  onApply={() => setCeilingLength(perimeterSuggestion.recommended)}
-                />
-              </div>
-            )}
-          </SectionCard>
-
-          <SectionCard title="Карнизы">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {calculator.cornices.map((option) => {
-                const meta =
-                  option.ratePerMeter > 0
-                    ? `от ${formatCurrency(option.ratePerMeter)} ₽ / м.п.`
-                    : "Без дополнительного расчёта";
-
-                return (
-                  <OptionCard
-                    key={option.slug}
-                    active={corniceType === option.slug}
-                    title={option.label}
-                    meta={meta}
-                    onClick={() => handleCorniceTypeChange(option.slug)}
-                  />
-                );
-              })}
-            </div>
-
-            {selectedCornice.ratePerMeter > 0 && (
-              <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
-                <RangeField
-                  id="cornice-length-range"
-                  label="Длина карниза"
-                  value={corniceLength}
-                  min={calculator.corniceMeters.min}
-                  max={calculator.corniceMeters.max}
-                  step={calculator.corniceMeters.step}
-                  unit="м.п."
-                  onChange={setCorniceLength}
-                />
-              </div>
-            )}
-          </SectionCard>
-
-          <SectionCard title="Трековое освещение">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {calculator.tracks.map((option) => {
-                const meta =
-                  option.ratePerMeter > 0
-                    ? `от ${formatCurrency(option.ratePerMeter)} ₽ / м.п.`
-                    : "Без дополнительного расчёта";
-
-                return (
-                  <OptionCard
-                    key={option.slug}
-                    active={trackType === option.slug}
-                    title={option.label}
-                    meta={meta}
-                    onClick={() => handleTrackTypeChange(option.slug)}
-                  />
-                );
-              })}
-            </div>
-
-            {selectedTrack.ratePerMeter > 0 && (
-              <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
-                <RangeField
-                  id="track-length-range"
-                  label="Длина трека"
-                  value={trackLength}
-                  min={calculator.trackMeters.min}
-                  max={calculator.trackMeters.max}
-                  step={calculator.trackMeters.step}
-                  unit="м.п."
-                  onChange={setTrackLength}
-                />
-              </div>
-            )}
-          </SectionCard>
-
-          <SectionCard title={calculator.lights.label}>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <OptionCard
-                active={!lightsEnabled}
-                title="Без светильников"
-                meta="Без поштучного расчёта"
-                onClick={() => setLightsEnabled(false)}
-              />
-
-              <OptionCard
-                active={lightsEnabled}
-                title="Добавить светильники"
-                meta={`от ${formatCurrency(
-                  calculator.lights.ratePerUnit
-                )} ₽ / шт.`}
-                onClick={() => setLightsEnabled(true)}
+          {lightsEnabled && (
+            <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+              <RangeField
+                id="lights-count-range"
+                label="Количество светильников"
+                value={lightsCount}
+                min={calculator.lights.countMin}
+                max={calculator.lights.countMax}
+                step={calculator.lights.countStep}
+                unit="шт."
+                onChange={handleLightsCountChange}
               />
             </div>
+          )}
+        </SectionCard>
 
-            {lightsEnabled && (
-              <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
-                <RangeField
-                  id="lights-count-range"
-                  label="Количество светильников"
-                  value={lightsCount}
-                  min={calculator.lights.countMin}
-                  max={calculator.lights.countMax}
-                  step={calculator.lights.countStep}
-                  unit="шт."
-                  onChange={setLightsCount}
-                />
-              </div>
-            )}
-          </SectionCard>
+        <SectionCard title="Состав расчёта">
+          <div className="space-y-3">
+            <PriceRow
+              label="Потолок"
+              value={`${area} м² × ${formatCurrency(ceilingBaseRate)} ₽`}
+            />
 
-          <SectionCard title="Состав расчёта">
-            <div className="space-y-3">
+            {ceilingExtraTotal > 0 && (
               <PriceRow
-                label="Потолок"
-                value={`${area} м² × ${formatCurrency(ceilingBaseRate)} ₽`}
+                label={selectedCeiling.extraLabel ?? "Профиль"}
+                value={`${ceilingLength} м.п. × ${formatCurrency(
+                  selectedCeiling.extraRatePerMeter
+                )} ₽`}
               />
+            )}
 
-              {ceilingExtraTotal > 0 && (
-                <PriceRow
-                  label={selectedCeiling.extraLabel ?? "Профиль"}
-                  value={`${ceilingLength} м.п. × ${formatCurrency(
-                    selectedCeiling.extraRatePerMeter
-                  )} ₽`}
-                />
-              )}
+            {corniceTotal > 0 && (
+              <PriceRow
+                label={selectedCornice.label}
+                value={`${corniceLength} м.п. × ${formatCurrency(
+                  selectedCornice.ratePerMeter
+                )} ₽`}
+              />
+            )}
 
-              {corniceTotal > 0 && (
-                <PriceRow
-                  label={selectedCornice.label}
-                  value={`${corniceLength} м.п. × ${formatCurrency(
-                    selectedCornice.ratePerMeter
-                  )} ₽`}
-                />
-              )}
+            {trackTotal > 0 && (
+              <PriceRow
+                label={selectedTrack.label}
+                value={`${trackLength} м.п. × ${formatCurrency(
+                  selectedTrack.ratePerMeter
+                )} ₽`}
+              />
+            )}
 
-              {trackTotal > 0 && (
-                <PriceRow
-                  label={selectedTrack.label}
-                  value={`${trackLength} м.п. × ${formatCurrency(
-                    selectedTrack.ratePerMeter
-                  )} ₽`}
-                />
-              )}
+            {lightsTotal > 0 && (
+              <PriceRow
+                label={calculator.lights.label}
+                value={`${lightsCount} шт. × ${formatCurrency(
+                  calculator.lights.ratePerUnit
+                )} ₽`}
+              />
+            )}
 
-              {lightsTotal > 0 && (
-                <PriceRow
-                  label={calculator.lights.label}
-                  value={`${lightsCount} шт. × ${formatCurrency(
-                    calculator.lights.ratePerUnit
-                  )} ₽`}
-                />
-              )}
-
-              <div className="border-t border-slate-200 pt-3">
-                <PriceRow
-                  label="Цена полотна за 1 м²"
-                  value={`${formatCurrency(ceilingBaseRate)} ₽ / м²`}
-                  strong
-                />
-              </div>
-            </div>
-          </SectionCard>
-        </div>
-
-        <div className="hidden xl:block xl:sticky xl:top-24 xl:self-start">
-          <div className="rounded-[1.75rem] bg-slate-950 p-6 text-white shadow-2xl shadow-slate-950/10">
-            <p className="text-sm text-white/60">Ориентировочная стоимость от</p>
-
-            <div className="mt-4 flex items-end gap-2">
-              <p className="text-5xl font-bold tracking-tight">
-                {formatCurrency(total)}
-              </p>
-              <span className="pb-2 text-lg font-medium text-white/70">₽</span>
-            </div>
-
-            <p className="mt-3 text-sm leading-6 text-white/70">
-              При площади {area} м² и выбранных параметрах.
-            </p>
-
-            <div className="mt-5 flex flex-wrap gap-2">
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/75">
-                {selectedCeiling.label}
-              </span>
-
-              {selectedCornice.ratePerMeter > 0 && (
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/75">
-                  {selectedCornice.label}
-                </span>
-              )}
-
-              {selectedTrack.ratePerMeter > 0 && (
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/75">
-                  {selectedTrack.label}
-                </span>
-              )}
-
-              {lightsEnabled && (
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/75">
-                  {calculator.lights.label}
-                </span>
-              )}
-            </div>
-
-            <div className="mt-8 space-y-3 text-sm text-white/75">
-              <div className="flex items-center justify-between gap-4">
-                <span>Потолок</span>
-                <span>{formatCurrency(ceilingBaseTotal)} ₽</span>
-              </div>
-
-              {ceilingExtraTotal > 0 && (
-                <div className="flex items-center justify-between gap-4">
-                  <span>{selectedCeiling.extraLabel}</span>
-                  <span>{formatCurrency(ceilingExtraTotal)} ₽</span>
-                </div>
-              )}
-
-              {corniceTotal > 0 && (
-                <div className="flex items-center justify-between gap-4">
-                  <span>{selectedCornice.label}</span>
-                  <span>{formatCurrency(corniceTotal)} ₽</span>
-                </div>
-              )}
-
-              {trackTotal > 0 && (
-                <div className="flex items-center justify-between gap-4">
-                  <span>{selectedTrack.label}</span>
-                  <span>{formatCurrency(trackTotal)} ₽</span>
-                </div>
-              )}
-
-              {lightsTotal > 0 && (
-                <div className="flex items-center justify-between gap-4">
-                  <span>{calculator.lights.label}</span>
-                  <span>{formatCurrency(lightsTotal)} ₽</span>
-                </div>
-              )}
-
-              <div className="border-t border-white/10 pt-3 text-base font-semibold text-white">
-                <div className="flex items-center justify-between gap-4">
-                  <span>Итого</span>
-                  <span>{formatCurrency(total)} ₽</span>
-                </div>
-              </div>
-
-              <p className="pt-2 text-sm leading-6 text-white/65">
-                {homepage.price.includedLine}
-              </p>
-              <p className="text-sm leading-6 text-white/65">
-                {homepage.price.fixedPriceNote}
-              </p>
-              <p className="text-sm leading-6 text-white/65">
-                {homepage.price.noExtraChargeNote}
-              </p>
-            </div>
-
-            <div className="mt-8">
-              <Button
-                href="#action"
-                variant="secondary"
-                className="w-full justify-center py-6 text-base"
-              >
-                {homepage.price.primaryCtaLabel}
-              </Button>
+            <div className="border-t border-slate-200 pt-3">
+              <PriceRow
+                label="Цена полотна за 1 м²"
+                value={`${formatCurrency(ceilingBaseRate)} ₽ / м²`}
+                strong
+              />
             </div>
           </div>
-        </div>
+        </SectionCard>
       </div>
 
-      <div className="fixed inset-x-4 bottom-4 z-30 xl:hidden">
-        <div className="rounded-2xl border border-white/10 bg-slate-950/95 p-4 text-white shadow-2xl backdrop-blur">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <p className="text-xs text-white/60">Ориентировочно от</p>
-              <p className="mt-1 text-2xl font-bold tracking-tight">
-                {formatCurrency(total)} ₽
-              </p>
+      <div className="xl:sticky xl:top-24 xl:self-start">
+        <div className="rounded-[1.75rem] bg-slate-950 p-6 text-white shadow-2xl shadow-slate-950/10">
+          <p className="text-sm text-white/60">Ориентировочная стоимость от</p>
+
+          <div className="mt-4 flex items-end gap-2">
+            <p className="text-5xl font-bold tracking-tight">
+              {formatCurrency(total)}
+            </p>
+            <span className="pb-2 text-lg font-medium text-white/70">₽</span>
+          </div>
+
+          <p className="mt-3 text-sm leading-6 text-white/70">
+            При площади {area} м² и выбранных параметрах.
+          </p>
+
+          <div className="mt-5 flex flex-wrap gap-2">
+            <SummaryPill>{selectedCeiling.label}</SummaryPill>
+
+            {selectedCornice.ratePerMeter > 0 ? (
+              <SummaryPill>{selectedCornice.label}</SummaryPill>
+            ) : null}
+
+            {selectedTrack.ratePerMeter > 0 ? (
+              <SummaryPill>{selectedTrack.label}</SummaryPill>
+            ) : null}
+
+            {lightsEnabled ? (
+              <SummaryPill>{calculator.lights.label}</SummaryPill>
+            ) : null}
+          </div>
+
+          <div className="mt-8 space-y-3 text-sm text-white/75">
+            <div className="flex items-center justify-between gap-4">
+              <span>Потолок</span>
+              <span>{formatCurrency(ceilingBaseTotal)} ₽</span>
             </div>
 
+            {ceilingExtraTotal > 0 && (
+              <div className="flex items-center justify-between gap-4">
+                <span>{selectedCeiling.extraLabel}</span>
+                <span>{formatCurrency(ceilingExtraTotal)} ₽</span>
+              </div>
+            )}
+
+            {corniceTotal > 0 && (
+              <div className="flex items-center justify-between gap-4">
+                <span>{selectedCornice.label}</span>
+                <span>{formatCurrency(corniceTotal)} ₽</span>
+              </div>
+            )}
+
+            {trackTotal > 0 && (
+              <div className="flex items-center justify-between gap-4">
+                <span>{selectedTrack.label}</span>
+                <span>{formatCurrency(trackTotal)} ₽</span>
+              </div>
+            )}
+
+            {lightsTotal > 0 && (
+              <div className="flex items-center justify-between gap-4">
+                <span>{calculator.lights.label}</span>
+                <span>{formatCurrency(lightsTotal)} ₽</span>
+              </div>
+            )}
+
+            <div className="border-t border-white/10 pt-3 text-base font-semibold text-white">
+              <div className="flex items-center justify-between gap-4">
+                <span>Итого</span>
+                <span>{formatCurrency(total)} ₽</span>
+              </div>
+            </div>
+
+            <p className="pt-2 text-sm leading-6 text-white/65">
+              {homepage.price.includedLine}
+            </p>
+            <p className="text-sm leading-6 text-white/65">
+              {homepage.price.fixedPriceNote}
+            </p>
+            <p className="text-sm leading-6 text-white/65">
+              {homepage.price.noExtraChargeNote}
+            </p>
+          </div>
+
+          <div className="mt-8">
             <Button
               href="#action"
               variant="secondary"
-              className="shrink-0 justify-center px-5 py-3 text-sm"
+              className="w-full justify-center py-6 text-base"
             >
-              На замер
+              {homepage.price.primaryCtaLabel}
             </Button>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
