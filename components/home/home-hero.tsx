@@ -16,11 +16,8 @@ export function HomeHero() {
   }
 
   return (
-    <Section
-      id="hero"
-      className="relative -mt-px overflow-hidden bg-slate-950 py-0 text-white"
-    >
-      <div className="relative min-h-[calc(100svh-var(--header-height))]">
+    <Section id="hero" className="relative overflow-hidden bg-slate-950 py-0 text-white">
+      <div className="relative min-h-[100svh]">
         <div className="absolute inset-0">
           <Image
             src={heroAsset.src}
@@ -30,32 +27,33 @@ export function HomeHero() {
             sizes="100vw"
             className="object-cover"
           />
-          <div className="absolute inset-0 bg-black/55" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/70" />
+          <div className="absolute inset-0 bg-black/58" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/30 to-black/75" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/48 via-black/18 to-transparent" />
         </div>
 
-        <Container className="relative z-10 flex min-h-[calc(100svh-var(--header-height))] items-center py-16 sm:py-20 lg:py-24">
-          <div className="max-w-3xl">
-            <p className="font-mono text-xs font-semibold uppercase tracking-[0.24em] text-white/65">
+        <Container className="relative z-10 flex min-h-[100svh] items-center pt-28 pb-16 sm:pt-32 sm:pb-20 lg:pt-36 lg:pb-24">
+          <div className="max-w-2xl">
+            <p className="font-mono text-xs font-semibold uppercase tracking-[0.24em] text-white/70">
               {hero.servicesInlineLabel}
             </p>
 
-            <h1 className="mt-6 text-balance text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-7xl">
+            <h1 className="mt-5 text-balance text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-7xl">
               {hero.h1}
             </h1>
 
-            <p className="mt-6 max-w-2xl text-pretty text-base leading-7 text-white/78 sm:text-lg sm:leading-8">
+            <p className="mt-5 max-w-2xl text-pretty text-base leading-7 text-white/82 sm:text-lg sm:leading-8">
               {hero.subtitle}
             </p>
 
             {hero.secondaryMicrocopy ? (
-              <p className="mt-4 text-sm leading-6 text-white/60 sm:text-base">
+              <p className="mt-4 text-sm leading-6 text-white/68 sm:text-base">
                 {hero.secondaryMicrocopy}
               </p>
             ) : null}
 
             <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
-              <Button href="#action" className="w-full sm:w-auto">
+              <Button href="#action" variant="secondary" className="w-full sm:w-auto">
                 {hero.primaryCtaLabel}
               </Button>
             </div>
