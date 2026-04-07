@@ -1,26 +1,81 @@
-import { contacts } from "@/content/contacts";
-import { homepage } from "@/content/homepage";
+"use client";
+
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { usePriceCalculatorBridge } from "./price-calculator-context";
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("ru-RU").format(value);
+}
 
 export function MobileStickyCta() {
-  return (
-    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/96 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur supports-[backdrop-filter]:bg-white/88 md:hidden">
-      <div className="mx-auto grid max-w-6xl grid-cols-[auto_1fr] gap-2">
-        <a
-          href={contacts.phoneHref}
-          className="inline-flex min-h-12 items-center justify-center rounded-full border border-slate-300 bg-white px-4 text-sm font-semibold"
-          style={{ color: "#020617" }}
-          aria-label={`Позвонить ${contacts.phoneDisplay}`}
-        >
-          Позвонить
-        </a>
+  const { snapshot, hasInteracted } = usePriceCalculatorBridge();
+  const [isPriceVisible, setIsPriceVisible] = useState(false);
 
-        <a
-          href="#action"
-          className="inline-flex min-h-12 items-center justify-center rounded-full border border-slate-950 bg-slate-950 px-4 text-sm font-semibold"
-          style={{ color: "#ffffff" }}
-        >
-          {homepage.header.primaryCtaLabel}
-        </a>
+  useEffect(() => {
+    const priceSection = document.getElementById("price");
+
+    if (!priceSection) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsPriceVisible(entry.isIntersecting);
+      },
+      {
+        threshold: 0.15,
+        rootMargin: "0px 0px -10% 0px",
+      }
+    );
+
+    observer.observe(priceSection);
+
+    return () => observer.disconnect();
+  }, []);
+
+  const showCalculatedState = isPriceVisible || (hasInteracted && !!snapshot);
+
+  return (
+    <div className="fixed inset-x-4 bottom-4 z-30 lg:hidden">
+      <div className="rounded-2xl border border-white/10 bg-slate-950/95 p-4 text-white shadow-2xl backdrop-blur">
+        {showCalculatedState && snapshot ? (
+          <div className="flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs text-white/60">
+                {isPriceVisible ? "Ваш расчёт" : "Последний расчёт"}
+              </p>
+              <p className="mt-1 truncate text-2xl font-bold tracking-tight">
+                {formatCurrency(snapshot.total)} ₽
+              </p>
+            </div>
+
+            <Button
+              href="#action"
+              variant="secondary"
+              className="shrink-0 justify-center px-5 py-3 text-sm"
+            >
+              На замер
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs text-white/60">Быстрый расчёт</p>
+              <p className="mt-1 text-sm font-semibold text-white">
+                Подберите параметры и узнайте ориентир по цене
+              </p>
+            </div>
+
+            <Button
+              href="#price"
+              variant="secondary"
+              className="shrink-0 justify-center px-5 py-3 text-sm"
+            >
+              Калькулятор
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
