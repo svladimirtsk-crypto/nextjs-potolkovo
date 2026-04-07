@@ -25,29 +25,29 @@ export function HomeHero() {
             fill
             priority
             sizes="100vw"
-            className="object-cover"
+            className="object-cover object-center"
           />
-          <div className="absolute inset-0 bg-black/58" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/30 to-black/72" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/42 via-black/18 to-transparent" />
+          <div className="absolute inset-0 bg-black/56" />
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/18 via-slate-950/28 to-slate-950/74" />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/86 via-slate-950/58 to-slate-950/18" />
         </div>
 
-        <Container className="relative z-10 flex min-h-[calc(100svh-var(--header-height))] items-center py-16 sm:py-20 lg:py-24">
-          <div className="max-w-2xl">
-            <p className="font-mono text-xs font-semibold uppercase tracking-[0.24em] text-white/70">
+        <Container className="relative z-10 flex min-h-[calc(100svh-var(--header-height))] items-start py-14 sm:py-16 lg:py-20">
+          <div className="max-w-xl lg:max-w-2xl">
+            <p className="text-sm font-medium text-white/72 sm:text-[15px]">
               {hero.servicesInlineLabel}
             </p>
 
-            <h1 className="mt-5 text-balance text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-7xl">
+            <h1 className="mt-5 text-balance text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl xl:text-7xl">
               {hero.h1}
             </h1>
 
-            <p className="mt-5 max-w-2xl text-pretty text-base leading-7 text-white/82 sm:text-lg sm:leading-8">
+            <p className="mt-5 max-w-2xl text-pretty text-base leading-7 text-white/84 sm:text-lg sm:leading-8">
               {hero.subtitle}
             </p>
 
             {hero.secondaryMicrocopy ? (
-              <p className="mt-4 text-sm leading-6 text-white/70 sm:text-base">
+              <p className="mt-4 max-w-xl text-sm leading-6 text-white/70 sm:text-base">
                 {hero.secondaryMicrocopy}
               </p>
             ) : null}
@@ -60,7 +60,7 @@ export function HomeHero() {
 
             <div className="mt-8 flex flex-wrap gap-2.5">
               {hero.trustChips.map((chip) => (
-                <Chip key={chip.label} tone="dark">
+                <Chip key={chip.label} tone="dark" className="px-3.5 py-2 text-[13px]">
                   {chip.label}
                 </Chip>
               ))}
