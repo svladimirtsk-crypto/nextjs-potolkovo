@@ -20,7 +20,7 @@ export function HomePromise() {
           {promise.guarantees.map((item) => (
             <article
               key={item.label}
-              className="rounded-3xl border border-white/10 bg-white/5 p-6"
+              className="rounded-[1.75rem] border border-white/10 bg-white/[0.06] p-6"
             >
               <p className="text-lg font-semibold tracking-tight text-white">
                 {item.label}
@@ -35,8 +35,8 @@ export function HomePromise() {
           ))}
         </div>
 
-        <div className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8">
-          <p className="text-base leading-7 text-white/80">{promise.includedLine}</p>
+        <div className="mt-8 rounded-[1.75rem] border border-white/10 bg-white/[0.06] p-6 sm:p-8">
+          <p className="text-base leading-7 text-white/82">{promise.includedLine}</p>
 
           {promise.closingNote ? (
             <p className="mt-4 text-sm leading-7 text-white/60">
@@ -56,11 +56,11 @@ export function HomePromise() {
             {promise.processSteps.map((step) => (
               <div
                 key={`${step.stepLabel ?? ""}-${step.title}`}
-                className="rounded-3xl border border-white/10 bg-white/5 p-5"
+                className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] p-5 sm:p-6"
               >
                 <div className="flex items-start gap-4">
                   {step.stepLabel ? (
-                    <span className="font-mono text-sm font-semibold uppercase tracking-[0.24em] text-white/45">
+                    <span className="mt-0.5 shrink-0 font-mono text-sm font-semibold uppercase tracking-[0.24em] text-white/45">
                       {step.stepLabel}
                     </span>
                   ) : null}
