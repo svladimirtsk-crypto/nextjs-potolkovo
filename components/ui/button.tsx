@@ -9,7 +9,7 @@ type CommonProps = {
 };
 
 type ButtonAsButtonProps = CommonProps & {
-  href?: undefined;
+  href?: never;
   type?: "button" | "submit" | "reset";
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
   disabled?: boolean;
@@ -33,6 +33,10 @@ function getVariantClasses(variant: ButtonVariant) {
   }
 }
 
+function isLinkProps(props: ButtonProps): props is ButtonAsLinkProps {
+  return "href" in props && typeof props.href === "string";
+}
+
 export function Button(props: ButtonProps) {
   const variant = props.variant ?? "primary";
   const baseClassName = [
@@ -43,7 +47,7 @@ export function Button(props: ButtonProps) {
     .filter(Boolean)
     .join(" ");
 
-  if ("href" in props && props.href) {
+  if (isLinkProps(props)) {
     return (
       <Link href={props.href} className={baseClassName}>
         {props.children}
