@@ -2,60 +2,138 @@ import { homepage } from "@/content/homepage";
 
 const scenarios = homepage.price.scenarios;
 
+function getOptionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim().length ? value : undefined;
+}
+
+function splitPriceLabel(priceLabel: string) {
+  const slashIndex = priceLabel.indexOf("/");
+
+  if (slashIndex === -1) {
+    return {
+      main: priceLabel,
+      suffix: "",
+    };
+  }
+
+  return {
+    main: priceLabel.slice(0, slashIndex).trim(),
+    suffix: priceLabel.slice(slashIndex).trim(),
+  };
+}
+
 export function PriceScenarios() {
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {scenarios.map((scenario) => {
-        const isHighlighted = "highlight" in scenario && Boolean(scenario.highlight);
+        const isHighlighted =
+          "highlight" in scenario && Boolean((scenario as { highlight?: boolean }).highlight);
 
-        // Явная проверка, что note — строка
-        const note =
-          "note" in scenario && typeof scenario.note === "string"
-            ? scenario.note
-            : undefined;
+        const note = getOptionalString(
+          "note" in scenario ? (scenario as { note?: unknown }).note : undefined
+        );
+
+        const price = splitPriceLabel(scenario.priceLabel);
 
         return (
           <article
             key={scenario.slug}
             className={[
-              "rounded-3xl border bg-white p-6",
-              isHighlighted ? "border-slate-950 shadow-sm" : "border-slate-200",
+              "flex min-h-full flex-col rounded-3xl border p-6 sm:p-7",
+              isHighlighted
+                ? "border-slate-950 bg-slate-950 text-white shadow-sm"
+                : "border-slate-200 bg-white text-slate-950",
             ]
               .filter(Boolean)
               .join(" ")}
           >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm text-slate-500">{scenario.serviceType}</p>
-                <h3 className="mt-2 text-xl font-semibold tracking-tight text-slate-950">
-                  {scenario.title}
-                </h3>
-              </div>
+            <div className="space-y-3">
+              <p
+                className={[
+                  "text-sm",
+                  isHighlighted ? "text-white/70" : "text-slate-500",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                {scenario.serviceType}
+              </p>
 
-              {isHighlighted ? (
-                <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-medium text-white">
-                  Популярно
-                </span>
+              <h3 className="text-xl font-semibold tracking-tight">
+                {scenario.title}
+              </h3>
+
+              <p
+                className={[
+                  "text-sm",
+                  isHighlighted ? "text-white/70" : "text-slate-600",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                {scenario.roomType}
+              </p>
+            </div>
+
+            <div className="mt-8">
+              <p
+                className={[
+                  "font-mono text-xs uppercase tracking-[0.18em]",
+                  isHighlighted ? "text-white/50" : "text-slate-400",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                {scenario.areaLabel}
+              </p>
+
+              <div className="mt-3 flex items-end gap-2">
+                <p className="text-4xl font-bold tracking-tight sm:text-5xl">
+                  {price.main}
+                </p>
+
+                {price.suffix ? (
+                  <span
+                    className={[
+                      "pb-1 text-sm font-medium",
+                      isHighlighted ? "text-white/60" : "text-slate-500",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                  >
+                    {price.suffix}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              {scenario.includesLabel ? (
+                <p
+                  className={[
+                    "text-sm leading-6",
+                    isHighlighted ? "text-white/78" : "text-slate-600",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  {scenario.includesLabel}
+                </p>
+              ) : null}
+
+              {note ? (
+                <p
+                  className={[
+                    "text-sm leading-6",
+                    isHighlighted ? "text-white/60" : "text-slate-500",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  {note}
+                </p>
               ) : null}
             </div>
-
-            <div className="mt-5 space-y-3">
-              <p className="text-sm text-slate-600">{scenario.roomType}</p>
-              <p className="font-mono text-sm text-slate-500">{scenario.areaLabel}</p>
-              <p className="text-3xl font-bold tracking-tight text-slate-950">
-                {scenario.priceLabel}
-              </p>
-            </div>
-
-            {scenario.includesLabel ? (
-              <p className="mt-4 text-sm leading-6 text-slate-600">
-                {scenario.includesLabel}
-              </p>
-            ) : null}
-
-            {note ? (
-              <p className="mt-3 text-sm leading-6 text-slate-500">{note}</p>
-            ) : null}
           </article>
         );
       })}
