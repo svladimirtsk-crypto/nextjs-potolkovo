@@ -1,33 +1,49 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import { Inter, JetBrains_Mono } from "next/font/google";
+
+import "./globals.css";
+
+const inter = Inter({
+  subsets: ["latin", "cyrillic"],
+  variable: "--font-sans",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin", "cyrillic"],
+  variable: "--font-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title:
-    "Натяжные потолки в Москве и МО — теневые, парящие, световые линии | ПОТОЛКОВО",
+  metadataBase: new URL("https://potolkovo-msk.ru"),
+  title: {
+    default: "ПОТОЛКОВО",
+    template: "%s | ПОТОЛКОВО",
+  },
   description:
-    "Натяжные потолки в Москве и Московской области. Теневые, парящие потолки, световые линии, трековое освещение. Работаю лично, без посредников. Бесплатный замер, договор и гарантия.",
-  keywords:
-    "натяжные потолки, москва, теневой профиль, парящий потолок, световые линии, трековое освещение, скрытый карниз, светопрозрачный потолок, натяжные потолки москва, установка натяжных потолков",
+    "Современные натяжные потолки в Москве и Московской области. Личный монтаж, договор и гарантия.",
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
-    title: "ПОТОЛКОВО — натяжные потолки в Москве без компромиссов",
-    description:
-      "Частный мастер Владимир. 15+ лет опыта. Теневой профиль, парящие потолки, световые линии, трековый свет. Договор, гарантия.",
     type: "website",
     locale: "ru_RU",
-    url: "https://potolkovo.ru",
+    siteName: "ПОТОЛКОВО",
+    url: "https://potolkovo-msk.ru",
   },
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html lang="ru">
-      <body>
-        {/* Yandex.Metrika counter */}
-        <Script id="yandex-metrica" strategy="afterInteractive">
+      <body className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}>
+        <Script id="yandex-metrika" strategy="afterInteractive">
           {`
             (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
             m[i].l=1*new Date();
@@ -36,15 +52,16 @@ export default function RootLayout({
             (window, document, "script", "https://mc.yandex.ru/metrika/tag.js?id=107200362", "ym");
 
             ym(107200362, "init", {
-                clickmap:true,
-                trackLinks:true,
-                accurateTrackBounce:true,
-                webvisor:true,
-                ecommerce:"dataLayer",
-                ssr: true
+              clickmap: true,
+              trackLinks: true,
+              accurateTrackBounce: true,
+              webvisor: true,
+              ecommerce: "dataLayer",
+              ssr: true
             });
           `}
         </Script>
+
         <noscript>
           <div>
             <img
@@ -54,7 +71,6 @@ export default function RootLayout({
             />
           </div>
         </noscript>
-        {/* /Yandex.Metrika counter */}
 
         {children}
       </body>
