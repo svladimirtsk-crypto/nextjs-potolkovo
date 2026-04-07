@@ -20,9 +20,14 @@ export function HomeProof() {
             tone="dark"
           />
 
-          <p className="text-sm text-white/60 lg:max-w-xs lg:text-right">
-            На телефоне — свайпайте, на компьютере — используйте стрелки →
-          </p>
+          <div className="space-y-2 lg:max-w-sm lg:text-right">
+            <p className="text-sm font-medium text-white/80">
+              6 реальных объектов
+            </p>
+            <p className="text-sm text-white/60">
+              На телефоне — свайпайте, на компьютере — используйте стрелки или колесо мыши.
+            </p>
+          </div>
         </div>
 
         <div className="mt-10 sm:mt-12">
