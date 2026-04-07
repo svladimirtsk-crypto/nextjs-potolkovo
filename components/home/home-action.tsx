@@ -79,9 +79,6 @@ export function HomeAction() {
                 {contacts.workingHoursLabel ? (
                   <p className="text-sm text-slate-500">{contacts.workingHoursLabel}</p>
                 ) : null}
-                {contacts.responseTimeLabel ? (
-                  <p className="text-sm text-slate-500">{contacts.responseTimeLabel}</p>
-                ) : null}
               </div>
             </div>
           </div>
