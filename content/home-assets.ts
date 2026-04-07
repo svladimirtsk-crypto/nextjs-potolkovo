@@ -15,6 +15,7 @@ export const homeAssets = [
   {
     assetKey: "proof-01",
     src: "/proj-shadow-1.jpeg",
+    gallery: ["/proj-shadow-1.jpeg", "/proj-shadow-2.jpeg", "/proj-shadow-3.jpeg"],
     alt: "Натяжной потолок с теневым профилем в жилом интерьере",
     width: 1600,
     height: 1067,
@@ -28,6 +29,7 @@ export const homeAssets = [
   {
     assetKey: "proof-02",
     src: "/proj-float-1.jpeg",
+    gallery: ["/proj-float-1.jpeg", "/proj-float-2.jpeg", "/proj-float-3.jpeg"],
     alt: "Парящий натяжной потолок с LED-подсветкой",
     width: 1600,
     height: 1067,
@@ -41,6 +43,7 @@ export const homeAssets = [
   {
     assetKey: "proof-03",
     src: "/proj-lines-1.jpeg",
+    gallery: ["/proj-lines-1.jpeg", "/proj-lines-2.jpeg", "/proj-lines-3.jpeg"],
     alt: "Световые линии в натяжном потолке",
     width: 1600,
     height: 1067,
@@ -54,6 +57,7 @@ export const homeAssets = [
   {
     assetKey: "proof-04",
     src: "/proj-cornice-1.jpeg",
+    gallery: ["/proj-cornice-1.jpeg", "/proj-cornice-2.jpeg", "/proj-cornice-3.jpeg"],
     alt: "Скрытый карниз в натяжном потолке",
     width: 1600,
     height: 1067,
@@ -67,6 +71,7 @@ export const homeAssets = [
   {
     assetKey: "proof-05",
     src: "/proj-matte-1.jpeg",
+    gallery: ["/proj-matte-1.jpeg", "/proj-matte-2.jpeg", "/proj-matte-3.jpeg"],
     alt: "Белый матовый натяжной потолок в квартире",
     width: 1600,
     height: 1067,
@@ -80,6 +85,7 @@ export const homeAssets = [
   {
     assetKey: "proof-06",
     src: "/proj-dome-1.jpeg",
+    gallery: ["/proj-dome-1.jpeg", "/proj-dome-2.jpeg", "/proj-dome-3.jpeg"],
     alt: "Индивидуальный проект натяжного потолка со сложной геометрией",
     width: 1600,
     height: 1067,
