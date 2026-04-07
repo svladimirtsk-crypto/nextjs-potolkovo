@@ -13,18 +13,23 @@ export function HomePage() {
   return (
     <>
       <HomeHeader />
-      <HomeHero />
 
-      <PriceCalculatorProvider>
-        <HomeProof />
-        <HomePrice />
-        <HomeTrust />
-        <HomePromise />
-        <HomeAction />
-        <MobileStickyCta />
-      </PriceCalculatorProvider>
+      <div className="pb-20 md:pb-0">
+        <main>
+          <HomeHero />
 
-      <HomeFooter />
+          <PriceCalculatorProvider>
+            <HomeProof />
+            <HomePrice />
+            <HomeTrust />
+            <HomePromise />
+            <HomeAction />
+            <MobileStickyCta />
+          </PriceCalculatorProvider>
+        </main>
+
+        <HomeFooter />
+      </div>
     </>
   );
 }
