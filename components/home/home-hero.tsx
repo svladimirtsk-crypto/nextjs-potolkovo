@@ -5,7 +5,6 @@ import { homepage } from "@/content/homepage";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { Container } from "@/components/ui/container";
-import { Section } from "@/components/ui/section";
 
 const hero = homepage.hero;
 const heroAsset = homeAssets.find((asset) => asset.assetKey === hero.heroAfterAssetKey);
@@ -16,7 +15,7 @@ export function HomeHero() {
   }
 
   return (
-    <Section
+    <section
       id="hero"
       className="relative -mt-[var(--header-height)] overflow-hidden bg-slate-950 pt-[var(--header-height)] text-white"
     >
@@ -71,6 +70,6 @@ export function HomeHero() {
           </div>
         </Container>
       </div>
-    </Section>
+    </section>
   );
 }
