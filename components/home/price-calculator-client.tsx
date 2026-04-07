@@ -3,7 +3,6 @@
 import { useMemo, useState, ChangeEvent } from "react";
 import { homepage } from "@/content/homepage";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils"; // Стандартная утилита в Next.js/Shadcn для объединения классов
 
 const calculator = homepage.price.calculator;
 
@@ -12,15 +11,13 @@ function formatCurrency(value: number) {
 }
 
 export function PriceCalculatorClient() {
-  // ИСПРАВЛЕНИЕ: Явно указываем <number>, чтобы TS не ограничивал состояние одним числом-константой
+  // Явно указываем <number>, чтобы исправить ошибку типа
   const [area, setArea] = useState<number>(calculator.areaDefault);
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
 
   const toggleOption = (slug: string) => {
     setSelectedOptions((prev) =>
-      prev.includes(slug) 
-        ? prev.filter((item) => item !== slug) 
-        : [...prev, slug]
+      prev.includes(slug) ? prev.filter((item) => item !== slug) : [...prev, slug]
     );
   };
 
@@ -33,7 +30,6 @@ export function PriceCalculatorClient() {
   const totalRate = calculator.baseRatePerSqm + selectedRate;
   const totalPrice = totalRate * area;
 
-  // Обработчик изменения ползунка
   const handleAreaChange = (e: ChangeEvent<HTMLInputElement>) => {
     setArea(Number(e.target.value));
   };
@@ -82,12 +78,11 @@ export function PriceCalculatorClient() {
                   key={option.slug}
                   type="button"
                   onClick={() => toggleOption(option.slug)}
-                  className={cn(
-                    "rounded-full border px-4 py-2 text-sm font-medium transition-all",
+                  className={`rounded-full border px-4 py-2 text-sm font-medium transition-all ${
                     isActive
                       ? "border-slate-950 bg-slate-950 text-white"
                       : "border-slate-300 bg-white text-slate-950 hover:border-slate-950"
-                  )}
+                  }`}
                 >
                   {option.label}
                 </button>
@@ -107,7 +102,7 @@ export function PriceCalculatorClient() {
             .map((option) => (
               <div
                 key={option.slug}
-                className="flex items-center justify-between gap-4 text-sm text-slate-600 animate-in fade-in slide-in-from-top-1"
+                className="flex items-center justify-between gap-4 text-sm text-slate-600"
               >
                 <span>{option.label}</span>
                 <span>+{formatCurrency(option.ratePerSqm)} ₽ / м²</span>
@@ -126,24 +121,20 @@ export function PriceCalculatorClient() {
       <div className="flex flex-col justify-between rounded-[1.75rem] bg-slate-950 p-6 text-white sm:p-8">
         <div>
           <p className="text-sm text-white/65">Ориентировочная стоимость</p>
-
           <div className="mt-4 flex items-end gap-2">
             <p className="text-5xl font-bold tracking-tight sm:text-6xl">
               {formatCurrency(totalPrice)}
             </p>
             <span className="pb-2 text-lg font-medium text-white/70">₽</span>
           </div>
-
           <p className="mt-3 text-sm leading-6 text-white/70">
             При площади {area} м² и выбранных параметрах.
           </p>
-
           <div className="mt-8 space-y-3 text-sm leading-6 text-white/70">
             <p>{homepage.price.includedLine}</p>
             <p>{homepage.price.fixedPriceNote}</p>
           </div>
         </div>
-
         <div className="mt-10">
           <Button href="#action" variant="secondary" className="w-full justify-center py-6 text-base">
             {homepage.price.primaryCtaLabel}
