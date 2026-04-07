@@ -1,7 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+import { homeAssets } from "@/content/home-assets";
 
 type ProofItem = (typeof import("@/content/homepage").homepage.proof.items)[number];
 
@@ -39,6 +41,7 @@ export function ProofModalClient({
 }: ProofModalClientProps) {
   const isOpen = selectedIndex !== null;
   const item = selectedIndex !== null ? items[selectedIndex] : null;
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -60,10 +63,29 @@ export function ProofModalClient({
     };
   }, [isOpen, onClose, onPrev, onNext]);
 
-  if (!item) {
+  useEffect(() => {
+    setActiveImageIndex(0);
+  }, [selectedIndex]);
+
+  const asset = useMemo(() => {
+    if (!item) return null;
+    return homeAssets.find((entry) => entry.assetKey === item.imageAssetKey) ?? null;
+  }, [item]);
+
+  const gallery = useMemo(() => {
+    if (!asset) return [];
+    if ("gallery" in asset && Array.isArray(asset.gallery) && asset.gallery.length > 0) {
+      return asset.gallery;
+    }
+    return [asset.src];
+  }, [asset]);
+
+  if (!item || !asset) {
     return null;
   }
 
+  const safeImageIndex = Math.min(activeImageIndex, Math.max(gallery.length - 1, 0));
+  const activeImage = gallery[safeImageIndex] ?? asset.src;
   const price = splitPriceLabel(item.priceLabel);
 
   return (
@@ -75,8 +97,8 @@ export function ProofModalClient({
         aria-label="Закрыть окно"
       />
 
-      <div className="absolute inset-x-0 bottom-0 top-0 overflow-hidden bg-white text-slate-950 lg:inset-x-auto lg:left-1/2 lg:top-1/2 lg:h-auto lg:max-h-[90svh] lg:w-[min(980px,calc(100vw-2rem))] lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-[2rem]">
-        <div className="flex h-full flex-col lg:max-h-[90svh]">
+      <div className="absolute inset-x-0 bottom-0 top-0 overflow-hidden bg-white text-slate-950 lg:inset-x-auto lg:left-1/2 lg:top-1/2 lg:h-auto lg:max-h-[92svh] lg:w-[min(1040px,calc(100vw-2rem))] lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-[2rem]">
+        <div className="flex h-full flex-col lg:max-h-[92svh]">
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4 sm:px-6">
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
@@ -118,15 +140,44 @@ export function ProofModalClient({
           </div>
 
           <div className="overflow-y-auto">
-            <div className="grid lg:grid-cols-[1.1fr_0.9fr]">
-              <div className="relative aspect-[5/4] border-b border-slate-200 lg:aspect-auto lg:min-h-[520px] lg:border-b-0 lg:border-r">
-                <Image
-                  src={`/images/home/proof/${item.imageAssetKey}.webp`}
-                  alt={item.alt}
-                  fill
-                  sizes="(max-width: 1024px) 100vw, 55vw"
-                  className="object-cover"
-                />
+            <div className="grid lg:grid-cols-[1.12fr_0.88fr]">
+              <div className="border-b border-slate-200 lg:border-b-0 lg:border-r">
+                <div className="relative aspect-[5/4] overflow-hidden bg-slate-100 lg:min-h-[520px] lg:aspect-auto">
+                  <Image
+                    src={activeImage}
+                    alt={`${item.alt} — фото ${safeImageIndex + 1}`}
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 56vw"
+                    className="object-cover"
+                  />
+                </div>
+
+                {gallery.length > 1 ? (
+                  <div className="grid grid-cols-3 gap-2 p-3 sm:p-4">
+                    {gallery.map((src, index) => (
+                      <button
+                        key={`${src}-${index}`}
+                        type="button"
+                        onClick={() => setActiveImageIndex(index)}
+                        className={[
+                          "relative aspect-[4/3] overflow-hidden rounded-xl border transition-colors",
+                          index === safeImageIndex
+                            ? "border-slate-950"
+                            : "border-slate-200 hover:border-slate-400",
+                        ].join(" ")}
+                        aria-label={`Показать фото ${index + 1}`}
+                      >
+                        <Image
+                          src={src}
+                          alt={`${item.alt} — миниатюра ${index + 1}`}
+                          fill
+                          sizes="(max-width: 1024px) 33vw, 180px"
+                          className="object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
               </div>
 
               <div className="p-5 sm:p-6 lg:p-8">
