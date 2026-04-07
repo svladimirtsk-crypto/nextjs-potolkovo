@@ -1,10 +1,10 @@
 import { contacts } from "@/content/contacts";
 import { homepage } from "@/content/homepage";
-import { Container } from "@/components/ui/container";
 import { Divider } from "@/components/ui/divider";
 import { Heading } from "@/components/ui/heading";
 import { Section } from "@/components/ui/section";
 import { TextLink } from "@/components/ui/text-link";
+import { Container } from "@/components/ui/container";
 
 import { ActionForm } from "./action-form";
 
@@ -14,7 +14,7 @@ export function HomeAction() {
   return (
     <Section id={actionContent.anchorId ?? "action"} className="bg-white">
       <Container>
-        <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-start">
+        <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
           <div>
             <Heading
               eyebrow="Заявка"
@@ -22,7 +22,7 @@ export function HomeAction() {
               description={actionContent.sectionSubtitle}
             />
 
-            <div className="mt-8 max-w-xl rounded-3xl border border-slate-200 bg-slate-50 p-6 sm:p-8">
+            <div className="mt-8 max-w-xl rounded-[2rem] border border-slate-200 bg-slate-50 p-6 shadow-[0_10px_28px_rgba(15,23,42,0.04)] sm:p-8">
               {actionContent.formTitle ? (
                 <h3 className="text-xl font-semibold tracking-tight text-slate-950">
                   {actionContent.formTitle}
@@ -35,7 +35,7 @@ export function HomeAction() {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8">
+          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 sm:p-8">
             <h3 className="text-xl font-semibold tracking-tight text-slate-950">
               {actionContent.secondaryContactsTitle}
             </h3>
