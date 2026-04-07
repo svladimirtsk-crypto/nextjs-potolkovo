@@ -2,12 +2,22 @@ import { homepage } from "@/content/homepage";
 
 const scenarios = homepage.price.scenarios;
 
+function getOptionalString(
+  value: unknown
+): string | undefined {
+  return typeof value === "string" && value.trim().length ? value : undefined;
+}
+
 export function PriceScenarios() {
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {scenarios.map((scenario) => {
-        const isHighlighted = "highlight" in scenario && Boolean(scenario.highlight);
-        const note = "note" in scenario ? scenario.note : undefined;
+        const isHighlighted =
+          "highlight" in scenario && Boolean((scenario as { highlight?: boolean }).highlight);
+
+        const note = getOptionalString(
+          "note" in scenario ? (scenario as { note?: unknown }).note : undefined
+        );
 
         return (
           <article
