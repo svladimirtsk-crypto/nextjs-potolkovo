@@ -1,42 +1,38 @@
 import { homepage } from "@/content/homepage";
 import { Container } from "@/components/ui/container";
-import { Heading } from "@/components/ui/heading";
-import { Section } from "@/components/ui/section";
-
 import { PriceCalculatorClient } from "./price-calculator-client";
 
-const price = homepage.price;
+const priceContent = homepage.price;
 
 export function HomePrice() {
   return (
-   <Section id="price" className="scroll-mt-24 bg-white">
+    <section
+      id="price"
+      aria-labelledby="price-title"
+      className="scroll-mt-24 bg-white py-16 sm:py-20"
+    >
       <Container>
-        <Heading
-          eyebrow="Цена"
-          title={price.sectionTitle}
-          description={price.sectionIntro}
-        />
+        <div className="mx-auto max-w-3xl text-center">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Цена
+          </p>
+
+          <h2
+            id="price-title"
+            className="mt-4 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl"
+          >
+            {priceContent.sectionTitle}
+          </h2>
+
+          <p className="mt-4 text-base leading-7 text-slate-600 sm:text-lg">
+            {priceContent.sectionIntro}
+          </p>
+        </div>
 
         <div className="mt-10 sm:mt-12">
           <PriceCalculatorClient />
         </div>
-
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5 sm:p-6">
-            <p className="text-sm font-semibold text-slate-950">После замера — фиксированная смета</p>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              {price.fixedPriceNote}
-            </p>
-          </div>
-
-          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5 sm:p-6">
-            <p className="text-sm font-semibold text-slate-950">Без пересборки цены по ходу работ</p>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              {price.noExtraChargeNote}
-            </p>
-          </div>
-        </div>
       </Container>
-    </Section>
+    </section>
   );
 }
