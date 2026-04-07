@@ -1,5 +1,6 @@
 "use client";
 
+import type { WheelEvent } from "react";
 import { useMemo, useRef } from "react";
 
 type ProofTrackClientProps = {
@@ -17,6 +18,27 @@ export function ProofTrackClient({ children }: ProofTrackClientProps) {
 
   const scrollRight = () => {
     ref.current?.scrollBy({ left: scrollByAmount, behavior: "smooth" });
+  };
+
+  const handleWheel = (event: WheelEvent<HTMLDivElement>) => {
+    const container = ref.current;
+
+    if (!container) {
+      return;
+    }
+
+    const canScrollHorizontally = container.scrollWidth > container.clientWidth;
+
+    if (!canScrollHorizontally) {
+      return;
+    }
+
+    if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+      event.preventDefault();
+      container.scrollBy({
+        left: event.deltaY,
+      });
+    }
   };
 
   return (
@@ -45,6 +67,7 @@ export function ProofTrackClient({ children }: ProofTrackClientProps) {
 
       <div
         ref={ref}
+        onWheel={handleWheel}
         className="no-scrollbar flex gap-4 overflow-x-auto pb-2 sm:gap-5 lg:gap-6"
       >
         {children}
