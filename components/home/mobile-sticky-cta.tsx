@@ -15,7 +15,7 @@ export function MobileStickyCta() {
 
         <a
           href="#action"
-          className="inline-flex min-h-12 items-center justify-center rounded-full bg-slate-950 px-4 text-sm font-semibold text-white"
+          className="inline-flex min-h-12 items-center justify-center rounded-full border border-slate-950 bg-slate-950 px-4 text-sm font-semibold text-white"
         >
           {homepage.header.primaryCtaLabel}
         </a>
