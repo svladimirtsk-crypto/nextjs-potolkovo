@@ -17,7 +17,7 @@ export function HomeHero() {
 
   return (
     <Section id="hero" className="relative overflow-hidden bg-slate-950 py-0 text-white">
-      <div className="relative min-h-[100svh]">
+      <div className="relative min-h-[calc(100svh-var(--header-height))]">
         <div className="absolute inset-0">
           <Image
             src={heroAsset.src}
@@ -28,11 +28,11 @@ export function HomeHero() {
             className="object-cover"
           />
           <div className="absolute inset-0 bg-black/58" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/30 to-black/75" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/48 via-black/18 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/30 to-black/72" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/42 via-black/18 to-transparent" />
         </div>
 
-        <Container className="relative z-10 flex min-h-[100svh] items-center pt-28 pb-16 sm:pt-32 sm:pb-20 lg:pt-36 lg:pb-24">
+        <Container className="relative z-10 flex min-h-[calc(100svh-var(--header-height))] items-center py-16 sm:py-20 lg:py-24">
           <div className="max-w-2xl">
             <p className="font-mono text-xs font-semibold uppercase tracking-[0.24em] text-white/70">
               {hero.servicesInlineLabel}
@@ -47,7 +47,7 @@ export function HomeHero() {
             </p>
 
             {hero.secondaryMicrocopy ? (
-              <p className="mt-4 text-sm leading-6 text-white/68 sm:text-base">
+              <p className="mt-4 text-sm leading-6 text-white/70 sm:text-base">
                 {hero.secondaryMicrocopy}
               </p>
             ) : null}
