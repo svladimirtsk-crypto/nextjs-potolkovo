@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 
 import {
   initialLeadFormState,
@@ -11,15 +11,32 @@ import { legal } from "@/content/legal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TextLink } from "@/components/ui/text-link";
+import {
+  getCalculatorSummaryLines,
+  serializeCalculatorSnapshot,
+  usePriceCalculatorBridge,
+} from "./price-calculator-context";
 
 const actionContent = homepage.action;
 
 export function ActionForm() {
+  const { snapshot, hasInteracted } = usePriceCalculatorBridge();
+
   const [state, formAction, isPending] = useActionState(
     submitLeadAction,
     initialLeadFormState
   );
   const [formKey, setFormKey] = useState(0);
+
+  const calculatorSummaryLines = useMemo(
+    () => (hasInteracted ? getCalculatorSummaryLines(snapshot) : []),
+    [hasInteracted, snapshot]
+  );
+
+  const calculatorSnapshotValue = useMemo(
+    () => (hasInteracted ? serializeCalculatorSnapshot(snapshot) : ""),
+    [hasInteracted, snapshot]
+  );
 
   useEffect(() => {
     if (state.status === "success") {
@@ -48,6 +65,23 @@ export function ActionForm() {
         </div>
       ) : null}
 
+      {calculatorSummaryLines.length ? (
+        <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
+          <p className="text-sm font-semibold text-slate-950">
+            В заявку попадёт ваш расчёт
+          </p>
+
+          <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
+            {calculatorSummaryLines.map((line) => (
+              <li key={line} className="flex gap-2">
+                <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-slate-950" />
+                <span>{line}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       <div>
         <Input
           label={actionContent.nameFieldLabel}
@@ -57,6 +91,7 @@ export function ActionForm() {
           autoComplete="name"
           required
         />
+
         {state.fieldErrors?.name?.length ? (
           <p className="mt-2 text-sm text-rose-700" aria-live="polite">
             {state.fieldErrors.name[0]}
@@ -74,12 +109,40 @@ export function ActionForm() {
           inputMode="tel"
           required
         />
+
         {state.fieldErrors?.phone?.length ? (
           <p className="mt-2 text-sm text-rose-700" aria-live="polite">
             {state.fieldErrors.phone[0]}
           </p>
         ) : null}
       </div>
+
+      <div>
+        <Input
+          label={actionContent.addressFieldLabel}
+          name="address"
+          type="text"
+          placeholder={actionContent.addressFieldPlaceholder}
+          autoComplete="street-address"
+        />
+
+        <p className="mt-2 text-sm text-slate-500">
+          {actionContent.addressFieldHint}
+        </p>
+
+        {state.fieldErrors?.address?.length ? (
+          <p className="mt-2 text-sm text-rose-700" aria-live="polite">
+            {state.fieldErrors.address[0]}
+          </p>
+        ) : null}
+      </div>
+
+      <input
+        type="hidden"
+        name="calculatorSnapshot"
+        value={calculatorSnapshotValue}
+        readOnly
+      />
 
       <input
         type="text"
@@ -90,17 +153,23 @@ export function ActionForm() {
         aria-hidden="true"
       />
 
-      <Button type="submit" className="w-full justify-center" disabled={isPending}>
+      <Button
+        type="submit"
+        className="w-full justify-center"
+        disabled={isPending}
+      >
         {isPending ? "Отправляю..." : actionContent.submitButtonLabel}
       </Button>
 
-      <p className="text-sm leading-6 text-slate-600">{actionContent.helperText}</p>
+      <p className="text-sm leading-6 text-slate-600">
+        {actionContent.helperText}
+      </p>
 
       <p className="text-xs leading-5 text-slate-500">
         {legal.consentTextPrefix}{" "}
         <TextLink href={legal.privacyHref} className="text-xs">
           {legal.privacyLabel}
-        </TextLink>
+        </TextLink>{" "}
         {legal.consentTextSuffix}
       </p>
     </form>
