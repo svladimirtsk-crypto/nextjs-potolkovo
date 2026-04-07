@@ -7,21 +7,22 @@ import { Container } from "@/components/ui/container";
 
 export function HomeHeader() {
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+    <header className="sticky top-0 z-50 border-b border-slate-200/90 bg-white/95 shadow-[0_1px_0_rgba(15,23,42,0.03)] backdrop-blur supports-[backdrop-filter]:bg-white/88">
       <Container className="flex min-h-[var(--header-height)] items-center justify-between gap-3">
         <Link
           href="/"
-          className="font-mono text-sm font-bold uppercase tracking-[0.28em] text-slate-950 sm:text-base"
+          className="inline-flex shrink-0 items-center font-mono text-sm font-bold uppercase tracking-[0.24em] text-slate-950 sm:text-[15px]"
+          aria-label={contacts.brandName}
         >
           {contacts.brandShortName}
         </Link>
 
-        <nav className="hidden items-center gap-6 lg:flex">
+        <nav className="hidden items-center gap-7 lg:flex">
           {homepage.header.navItems.map((item) => (
             <a
               key={item.targetId}
               href={`#${item.targetId}`}
-              className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-950"
+              className="text-sm font-medium text-slate-700 transition-colors hover:text-slate-950"
             >
               {item.label}
             </a>
@@ -40,7 +41,7 @@ export function HomeHeader() {
 
           <a
             href={contacts.phoneHref}
-            className="hidden text-sm font-medium text-slate-700 transition-colors hover:text-slate-950 sm:inline-flex"
+            className="hidden min-h-11 items-center rounded-full border border-slate-200 bg-white px-4 text-sm font-medium text-slate-800 transition-colors hover:border-slate-300 hover:text-slate-950 sm:inline-flex"
             aria-label={`${homepage.header.phoneLabelPrefix ?? "Позвонить"} ${contacts.phoneDisplay}`}
           >
             {contacts.phoneDisplay}
