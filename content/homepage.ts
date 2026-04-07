@@ -144,53 +144,106 @@ export const homepage = {
   },
 
   price: {
-    sectionTitle: "Быстрый ориентир по цене",
-    sectionIntro:
-      "Выберите площадь и нужные параметры. Калькулятор покажет ориентировочную стоимость, а точную цену я зафиксирую после замера.",
-    includedLine:
-      "Это ориентировочный расчёт для понимания бюджета. Итоговая смета фиксируется после осмотра помещения и согласования решения.",
-    fixedPriceNote:
-      "После замера цена фиксируется в смете и договоре.",
-    noExtraChargeNote:
-      "Если состав работ не меняется, цена тоже не меняется.",
-    primaryCtaLabel: "Записаться на замер",
-    calculator: {
-      areaMin: 10,
-      areaMax: 100,
-      areaStep: 1,
-      areaDefault: 25,
-      baseRatePerSqm: 1000,
-      baseLabel: "Простой потолок",
-      baseDescription: "Базовая стоимость простого потолка — 1 000 ₽ / м²",
-      options: [
-        {
-          slug: "lights",
-          label: "Светильники",
-          ratePerSqm: 300,
-        },
-        {
-          slug: "shadow",
-          label: "Теневой профиль",
-          ratePerSqm: 1000,
-        },
-        {
-          slug: "floating",
-          label: "Парящий потолок",
-          ratePerSqm: 2000,
-        },
-        {
-          slug: "track",
-          label: "Трековое освещение",
-          ratePerSqm: 1500,
-        },
-        {
-          slug: "cornice",
-          label: "Встроенный карниз",
-          ratePerSqm: 1000,
-        },
-      ],
+  sectionTitle: "Быстрый ориентир по цене",
+  sectionIntro:
+    "Выберите площадь и нужные параметры. Калькулятор покажет ориентировочную стоимость, а точную цену я зафиксирую после замера.",
+  includedLine:
+    "Это ориентировочный расчёт для понимания бюджета. Итоговая смета фиксируется после осмотра помещения и согласования решения.",
+  fixedPriceNote:
+    "После замера цена фиксируется в смете и договоре.",
+  noExtraChargeNote:
+    "Если состав работ не меняется, цена тоже не меняется.",
+  primaryCtaLabel: "Записаться на замер",
+  calculator: {
+    areaMin: 10,
+    areaMax: 100,
+    areaStep: 1,
+    areaDefault: 25,
+
+    meterMin: 1,
+    meterMax: 80,
+    meterStep: 1,
+
+    perimeterHintMinMultiplier: 4,
+    perimeterHintMaxMultiplier: 4.5,
+
+    baseDescription: "Базовая стоимость простого потолка — от 1 000 ₽ / м²",
+
+    ceilingTypes: [
+      {
+        slug: "standard",
+        label: "Простой потолок",
+        baseRatePerSqm: 1000,
+        extraLabel: null,
+        extraRatePerMeter: 0,
+      },
+      {
+        slug: "shadow",
+        label: "Теневой потолок",
+        baseRatePerSqm: 800,
+        extraLabel: "Теневой профиль",
+        extraRatePerMeter: 800,
+      },
+      {
+        slug: "floating",
+        label: "Парящий потолок",
+        baseRatePerSqm: 800,
+        extraLabel: "Парящий профиль",
+        extraRatePerMeter: 2500,
+      },
+    ],
+
+    cornices: [
+      {
+        slug: "none",
+        label: "Без карниза",
+        ratePerMeter: 0,
+      },
+      {
+        slug: "built-in",
+        label: "Встроенный карниз",
+        ratePerMeter: 4500,
+      },
+      {
+        slug: "hidden-niche",
+        label: "Скрытая ниша",
+        ratePerMeter: 1800,
+      },
+      {
+        slug: "surface",
+        label: "Накладной карниз",
+        ratePerMeter: 1000,
+      },
+    ],
+
+    tracks: [
+      {
+        slug: "none",
+        label: "Без трека",
+        ratePerMeter: 0,
+      },
+      {
+        slug: "built-in",
+        label: "Встроенный трек",
+        ratePerMeter: 2500,
+      },
+      {
+        slug: "surface",
+        label: "Накладной трек",
+        ratePerMeter: 1500,
+      },
+    ],
+
+    lights: {
+      label: "Светильники",
+      ratePerUnit: 750,
+      countMin: 1,
+      countMax: 40,
+      countStep: 1,
+      countDefault: 6,
     },
   },
+},
 
   trust: {
     sectionTitle: "Работаю лично. Отвечаю за результат.",
