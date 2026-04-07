@@ -24,12 +24,23 @@ type ButtonProps = ButtonAsButtonProps | ButtonAsLinkProps;
 function getVariantClasses(variant: ButtonVariant) {
   switch (variant) {
     case "secondary":
-      return "border border-slate-300 bg-white text-slate-950 hover:border-slate-950 hover:bg-slate-50";
+      return "border border-slate-300 bg-white hover:border-slate-950 hover:bg-slate-50";
     case "ghost":
-      return "border border-transparent bg-transparent text-slate-950 hover:bg-slate-100";
+      return "border border-transparent bg-transparent hover:bg-slate-100";
     case "primary":
     default:
-      return "border border-slate-950 bg-slate-950 text-white hover:border-slate-800 hover:bg-slate-800";
+      return "border border-slate-950 bg-slate-950 hover:border-slate-800 hover:bg-slate-800";
+  }
+}
+
+function getVariantTextStyle(variant: ButtonVariant) {
+  switch (variant) {
+    case "secondary":
+    case "ghost":
+      return { color: "#020617" };
+    case "primary":
+    default:
+      return { color: "#ffffff" };
   }
 }
 
@@ -43,7 +54,7 @@ export function Button(props: ButtonProps) {
   const baseClassName = [
     "inline-flex min-h-12 items-center justify-center rounded-full px-5 py-3 text-sm font-semibold",
     "transition-colors",
-    "[&>*]:text-inherit",
+    "[&_span]:text-inherit [&_svg]:text-inherit [&_*]:fill-current",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2",
     "disabled:pointer-events-none disabled:opacity-60",
     getVariantClasses(variant),
@@ -52,9 +63,11 @@ export function Button(props: ButtonProps) {
     .filter(Boolean)
     .join(" ");
 
+  const style = getVariantTextStyle(variant);
+
   if (isLinkProps(props)) {
     return (
-      <Link href={props.href} className={baseClassName}>
+      <Link href={props.href} className={baseClassName} style={style}>
         {props.children}
       </Link>
     );
@@ -66,6 +79,7 @@ export function Button(props: ButtonProps) {
       onClick={props.onClick}
       disabled={props.disabled}
       className={baseClassName}
+      style={style}
     >
       {props.children}
     </button>
