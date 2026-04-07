@@ -6,22 +6,27 @@ import { HomePrice } from "./home-price";
 import { HomePromise } from "./home-promise";
 import { HomeProof } from "./home-proof";
 import { HomeTrust } from "./home-trust";
+import { MobileStickyCta } from "./mobile-sticky-cta";
 
 export function HomePage() {
   return (
     <>
       <HomeHeader />
 
-      <main>
-        <HomeHero />
-        <HomeProof />
-        <HomePrice />
-        <HomeTrust />
-        <HomePromise />
-        <HomeAction />
-      </main>
+      <div className="pb-20 md:pb-0">
+        <main>
+          <HomeHero />
+          <HomeProof />
+          <HomePrice />
+          <HomeTrust />
+          <HomePromise />
+          <HomeAction />
+        </main>
 
-      <HomeFooter />
+        <HomeFooter />
+      </div>
+
+      <MobileStickyCta />
     </>
   );
 }
