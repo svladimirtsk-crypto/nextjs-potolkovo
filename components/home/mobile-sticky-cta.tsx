@@ -7,7 +7,8 @@ export function MobileStickyCta() {
       <div className="mx-auto grid max-w-6xl grid-cols-[auto_1fr] gap-2">
         <a
           href={contacts.phoneHref}
-          className="inline-flex min-h-12 items-center justify-center rounded-full border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-950"
+          className="inline-flex min-h-12 items-center justify-center rounded-full border border-slate-300 bg-white px-4 text-sm font-semibold"
+          style={{ color: "#020617" }}
           aria-label={`Позвонить ${contacts.phoneDisplay}`}
         >
           Позвонить
@@ -15,7 +16,8 @@ export function MobileStickyCta() {
 
         <a
           href="#action"
-          className="inline-flex min-h-12 items-center justify-center rounded-full border border-slate-950 bg-slate-950 px-4 text-sm font-semibold text-white"
+          className="inline-flex min-h-12 items-center justify-center rounded-full border border-slate-950 bg-slate-950 px-4 text-sm font-semibold"
+          style={{ color: "#ffffff" }}
         >
           {homepage.header.primaryCtaLabel}
         </a>
