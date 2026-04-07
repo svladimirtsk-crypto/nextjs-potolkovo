@@ -22,8 +22,8 @@ export function HomePrice() {
           <PriceScenarios />
         </div>
 
-        <div className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-6 sm:p-8">
-          <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end lg:gap-8">
+        <div className="mt-8 rounded-3xl bg-slate-50 p-6 sm:p-8 lg:p-10">
+          <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end lg:gap-8">
             <div className="space-y-3">
               <p className="text-base leading-7 text-slate-700">
                 {price.includedLine}
@@ -36,7 +36,7 @@ export function HomePrice() {
               </p>
             </div>
 
-            <Button href="#action" className="w-full lg:w-auto">
+            <Button href="#action" className="w-full justify-center lg:w-auto">
               {price.primaryCtaLabel}
             </Button>
           </div>
