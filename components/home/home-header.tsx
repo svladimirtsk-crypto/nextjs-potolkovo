@@ -7,7 +7,7 @@ import { Container } from "@/components/ui/container";
 
 export function HomeHeader() {
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200/90 bg-white/95 shadow-[0_1px_0_rgba(15,23,42,0.03)] backdrop-blur supports-[backdrop-filter]:bg-white/88">
+    <header className="sticky top-0 z-50 bg-white/96 shadow-[0_1px_0_rgba(15,23,42,0.08)] backdrop-blur supports-[backdrop-filter]:bg-white/88">
       <Container className="flex min-h-[var(--header-height)] items-center justify-between gap-3">
         <Link
           href="/"
