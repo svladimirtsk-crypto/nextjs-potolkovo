@@ -18,7 +18,7 @@ export function HomeHero() {
   return (
     <Section
       id="hero"
-      className="relative overflow-hidden bg-slate-950 py-0 text-white"
+      className="relative -mt-px overflow-hidden bg-slate-950 py-0 text-white"
     >
       <div className="relative min-h-[calc(100svh-var(--header-height))]">
         <div className="absolute inset-0">
