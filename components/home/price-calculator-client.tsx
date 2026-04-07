@@ -684,7 +684,7 @@ export function PriceCalculatorClient() {
         </SectionCard>
       </div>
 
-      <div className="xl:sticky xl:top-24 xl:self-start">
+      <div className="hidden xl:block xl:sticky xl:top-24 xl:self-start">
         <div className="rounded-[1.75rem] bg-slate-950 p-6 text-white shadow-2xl shadow-slate-950/10">
           <p className="text-sm text-white/60">Ориентировочная стоимость от</p>
 
