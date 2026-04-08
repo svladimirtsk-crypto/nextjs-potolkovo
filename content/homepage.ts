@@ -175,6 +175,12 @@ export const homepage = {
       default: 2,
     },
 
+    lightLineMeters: {
+  min: 1,
+  max: 50,
+  step: 1,
+  default: 2,
+},
     trackMeters: {
       min: 1,
       max: 50,
@@ -230,12 +236,6 @@ export const homepage = {
         ratePerMeter: 1000,
       },
     ],
-lightLineMeters: {
-  min: 1,
-  max: 50,
-  step: 1,
-  default: 2,
-},
 
 lightLines: {
   label: "Световые линии",
