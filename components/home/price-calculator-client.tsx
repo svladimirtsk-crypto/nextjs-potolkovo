@@ -451,7 +451,7 @@ export function PriceCalculatorClient() {
   };
 
   return (
-    <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start xl:gap-8 xl:p-8">
+    <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:p-8">
       <div className="min-w-0 space-y-5">
         <div className="overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-5 text-white">
           <p className="text-sm text-white/70">{calculator.baseDescription}</p>
@@ -684,7 +684,7 @@ export function PriceCalculatorClient() {
         </SectionCard>
       </div>
 
-      <div className="hidden xl:block xl:sticky xl:top-24 xl:self-start">
+      <div className="hidden lg:block lg:sticky lg:top-24 lg:self-start">
         <div className="rounded-[1.75rem] bg-slate-950 p-6 text-white shadow-2xl shadow-slate-950/10">
           <p className="text-sm text-white/60">Ориентировочная стоимость от</p>
 
