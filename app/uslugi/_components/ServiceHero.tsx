@@ -5,6 +5,8 @@ import type { ServicePageContent } from "@/content/services";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 
+const PRIMARY_CTA_LABEL = "Записаться на бесплатный замер";
+
 type ServiceHeroProps = {
   service: ServicePageContent;
 };
@@ -25,15 +27,6 @@ export function ServiceHero({ service }: ServiceHeroProps) {
                 className="transition-colors hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
               >
                 Главная
-              </Link>
-            </li>
-            <li aria-hidden="true">/</li>
-            <li>
-              <Link
-                href="/#services"
-                className="transition-colors hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
-              >
-                Услуги
               </Link>
             </li>
             <li aria-hidden="true">/</li>
@@ -74,25 +67,27 @@ export function ServiceHero({ service }: ServiceHeroProps) {
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <Button href="#action" className="justify-center">
-                {service.hero.primaryCtaLabel}
-              </Button>
-
-              <Button
-                href={contacts.phoneHref}
-                variant="secondary"
-                className="justify-center"
-              >
-                {service.hero.secondaryPhoneCtaLabel}
+                {PRIMARY_CTA_LABEL}
               </Button>
 
               <Button
                 href={contacts.telegramUrl}
-                variant="ghost"
+                variant="secondary"
                 className="justify-center"
               >
                 {service.hero.secondaryTelegramCtaLabel}
               </Button>
             </div>
+
+            <p className="mt-4 text-sm leading-6 text-slate-600">
+              Телефон:{" "}
+              <a
+                href={contacts.phoneHref}
+                className="font-semibold text-slate-950 underline underline-offset-4"
+              >
+                {contacts.phoneDisplay}
+              </a>
+            </p>
 
             <div className="mt-8 flex flex-wrap gap-2">
               {service.hero.quickFacts.map((fact) => (
