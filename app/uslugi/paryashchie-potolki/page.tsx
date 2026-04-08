@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getServicePageBySlug } from "@/content/services";
+import { getRequiredServicePageBySlug } from "@/content/services";
 import { ServicePageLayoutV2 } from "../_components/ServicePageLayoutV2";
 import { ServiceActionSection } from "../_components/ServiceActionSection";
 import { ServiceHero } from "../_components/ServiceHero";
@@ -9,11 +9,7 @@ import { ServiceProofStrip } from "../_components/ServiceProofStrip";
 import { ServiceRelatedServices } from "../_components/ServiceRelatedServices";
 import { ServiceTrustSection } from "../_components/ServiceTrustSection";
 
-const service = getServicePageBySlug("paryashchie-potolki");
-
-if (!service) {
-  throw new Error("Service content not found: paryashchie-potolki");
-}
+const service = getRequiredServicePageBySlug("paryashchie-potolki");
 
 export const metadata: Metadata = {
   title: service.metadata.title,
