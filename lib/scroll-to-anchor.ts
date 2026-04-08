@@ -23,7 +23,6 @@ function getHeaderOffset() {
 
 function clearHashFromUrl() {
   if (typeof window === "undefined") return;
-
   if (!window.location.hash) return;
 
   window.history.replaceState(
@@ -40,9 +39,7 @@ export function scrollToAnchorTarget(
     highlight?: boolean;
   }
 ) {
-  if (typeof window === "undefined" || typeof document === "undefined") {
-    return;
-  }
+  if (typeof window === "undefined" || typeof document === "undefined") return;
 
   const hash = href.startsWith("#") ? href.slice(1) : href.split("#")[1];
   if (!hash) return;
@@ -50,7 +47,7 @@ export function scrollToAnchorTarget(
   const target = document.getElementById(hash);
   if (!target) return;
 
-  // ВАЖНО: убираем hash из URL, чтобы refresh не прыгал к форме
+  // ключевое: не оставляем #action/#price в URL
   clearHashFromUrl();
 
   const headerOffset = getHeaderOffset();
@@ -88,9 +85,7 @@ export function scrollToAnchorTarget(
 
   if (options?.focus !== false) {
     const hadTabIndex = target.hasAttribute("tabindex");
-    if (!hadTabIndex) {
-      target.setAttribute("tabindex", "-1");
-    }
+    if (!hadTabIndex) target.setAttribute("tabindex", "-1");
 
     target.focus({ preventScroll: true });
 
