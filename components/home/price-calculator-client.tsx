@@ -773,9 +773,7 @@ export function PriceCalculatorClient({
         <CollapsibleSection
           id="light-lines"
           title="Световые линии"
-          description={`Расчёт по погонным метрам — от ${formatCurrency(
-            lightLinesConfig.ratePerMeter
-          )} ₽ / м.п.`}
+          description={}
           isDesktopAccordion={isDesktopAccordion}
           isOpen={openSections["light-lines"]}
           onToggle={toggleSection}
