@@ -8,21 +8,7 @@ import {
   CalculatorSnapshotValues,
   leadFormSchema,
 } from "@/lib/validation/lead-form-schema";
-
-export type LeadFormState = {
-  status: "idle" | "success" | "error";
-  message: string;
-  fieldErrors?: {
-    name?: string[];
-    phone?: string[];
-    address?: string[];
-  };
-};
-
-export const initialLeadFormState: LeadFormState = {
-  status: "idle",
-  message: "",
-};
+import type { LeadFormState } from "./submit-lead-state";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("ru-RU").format(value);
