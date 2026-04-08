@@ -33,14 +33,12 @@ function getVariantClasses(variant: ButtonVariant) {
         "!text-slate-950",
         "hover:border-slate-950 hover:bg-slate-50",
       ].join(" ");
-
     case "ghost":
       return [
         "border border-transparent bg-transparent",
         "!text-slate-950",
         "hover:bg-slate-100",
       ].join(" ");
-
     case "primary":
     default:
       return [
@@ -74,7 +72,7 @@ export function Button(props: ButtonProps) {
   if (isLinkProps(props)) {
     if (isHashHref(props.href)) {
       const handleHashClick = (event: MouseEvent<HTMLAnchorElement>) => {
-        // Не ломаем: открыть в новой вкладке / системные модификаторы
+        // не ломаем ctrl/cmd/shift click
         if (
           event.button !== 0 ||
           event.metaKey ||
@@ -86,11 +84,7 @@ export function Button(props: ButtonProps) {
         }
 
         event.preventDefault();
-
-        scrollToAnchorTarget(props.href, {
-          focus: true,
-          highlight: true,
-        });
+        scrollToAnchorTarget(props.href, { focus: true, highlight: true });
       };
 
       return (
