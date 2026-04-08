@@ -104,8 +104,8 @@ export function ProofModalClient({
         aria-label="Закрыть окно"
       />
 
-      <div className="absolute inset-x-0 bottom-0 top-0 overflow-hidden bg-white text-slate-950 lg:inset-x-auto lg:left-1/2 lg:top-1/2 lg:h-auto lg:max-h-[92svh] lg:w-[min(1040px,calc(100vw-2rem))] lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-[2rem]">
-        <div className="flex h-full flex-col lg:max-h-[92svh]">
+      <div className="absolute inset-x-0 bottom-0 top-0 overflow-hidden bg-white text-slate-950 lg:inset-y-4 lg:left-1/2 lg:w-[min(1180px,calc(100vw-2rem))] lg:-translate-x-1/2 lg:rounded-[2rem]">
+        <div className="flex h-full flex-col">
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4 sm:px-6">
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
@@ -146,15 +146,15 @@ export function ProofModalClient({
             </div>
           </div>
 
-          <div className="overflow-y-auto">
-            <div className="grid lg:grid-cols-[1.12fr_0.88fr]">
-              <div className="border-b border-slate-200 lg:border-b-0 lg:border-r">
-                <div className="relative aspect-[5/4] overflow-hidden bg-slate-100 lg:min-h-[520px] lg:aspect-auto">
+          <div className="min-h-0 flex-1 overflow-y-auto lg:overflow-hidden">
+            <div className="grid h-full lg:grid-cols-[1.15fr_0.85fr]">
+              <div className="flex min-h-0 flex-col border-b border-slate-200 lg:border-b-0 lg:border-r">
+                <div className="relative aspect-[5/4] overflow-hidden bg-slate-100 lg:min-h-0 lg:flex-1 lg:aspect-auto">
                   <Image
                     src={activeImage}
                     alt={`${item.alt} — фото ${safeImageIndex + 1}`}
                     fill
-                    sizes="(max-width: 1024px) 100vw, 56vw"
+                    sizes="(max-width: 1024px) 100vw, 58vw"
                     className="object-cover"
                   />
                 </div>
@@ -187,60 +187,63 @@ export function ProofModalClient({
                 ) : null}
               </div>
 
-              <div className="p-5 sm:p-6 lg:p-8">
-                <p className="text-sm font-medium text-slate-500">{item.serviceType}</p>
+              <div className="flex min-h-0 flex-col p-5 sm:p-6 lg:p-8">
+                <div>
+                  <p className="text-sm font-medium text-slate-500">{item.serviceType}</p>
 
-                <h3 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
-                  {item.title}
-                </h3>
+                  <h3 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
+                    {item.title}
+                  </h3>
 
-                <div className="mt-5 flex flex-wrap gap-2">
-                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
-                    {item.roomType}
-                  </span>
-
-                  {item.areaLabel ? (
+                  <div className="mt-5 flex flex-wrap gap-2">
                     <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
-                      {item.areaLabel}
+                      {item.roomType}
                     </span>
+
+                    {item.areaLabel ? (
+                      <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
+                        {item.areaLabel}
+                      </span>
+                    ) : null}
+
+                    {item.timelineLabel ? (
+                      <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
+                        {item.timelineLabel}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {item.summary ? (
+                    <p className="mt-6 text-base leading-7 text-slate-600">{item.summary}</p>
                   ) : null}
 
-                  {item.timelineLabel ? (
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
-                      {item.timelineLabel}
-                    </span>
+                  {item.priceLabel ? (
+                    <div className="mt-8 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                        Ориентир по бюджету
+                      </p>
+
+                      <div className="mt-2 flex items-end gap-2">
+                        <p className="text-4xl font-bold tracking-tight text-slate-950">
+                          {price.main}
+                        </p>
+
+                        {price.suffix ? (
+                          <span className="pb-1 text-sm font-medium text-slate-500">
+                            {price.suffix}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
                   ) : null}
                 </div>
 
-                {item.summary ? (
-                  <p className="mt-6 text-base leading-7 text-slate-600">{item.summary}</p>
-                ) : null}
-
-                {item.priceLabel ? (
-                  <div className="mt-8 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                      Ориентир по бюджету
-                    </p>
-
-                    <div className="mt-2 flex items-end gap-2">
-                      <p className="text-4xl font-bold tracking-tight text-slate-950">
-                        {price.main}
-                      </p>
-
-                      {price.suffix ? (
-                        <span className="pb-1 text-sm font-medium text-slate-500">
-                          {price.suffix}
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                ) : null}
-
-                <div className="mt-8 space-y-3">
+                <div className="mt-8 space-y-3 lg:mt-auto">
                   <a
                     href={`#${item.actionTargetId ?? "action"}`}
                     onClick={onClose}
-                    className="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-slate-950 bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition-colors hover:border-slate-800 hover:bg-slate-800"
+                    className="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-slate-950 bg-slate-950 px-5 py-3 text-sm font-semibold transition-colors hover:border-slate-800 hover:bg-slate-800"
+                    style={{ color: "#ffffff" }}
                   >
                     Хочу похожее решение
                   </a>
