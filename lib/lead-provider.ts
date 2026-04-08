@@ -4,6 +4,12 @@ type SubmitLeadPayload = {
   message?: string;
 };
 
+type Web3FormsResponse = {
+  success?: boolean;
+  message?: string;
+  error?: string;
+};
+
 export async function submitLeadToProvider(payload: SubmitLeadPayload) {
   const accessKey = process.env.WEB3FORMS_ACCESS_KEY;
 
@@ -28,10 +34,15 @@ export async function submitLeadToProvider(payload: SubmitLeadPayload) {
     }),
   });
 
-  const result = await response.json();
+  const result: Web3FormsResponse | null = await response.json().catch(() => null);
 
-  if (!response.ok || !result.success) {
-    throw new Error("Lead provider request failed.");
+  if (!response.ok || !result?.success) {
+    const details =
+      result?.message ||
+      result?.error ||
+      `HTTP ${response.status}`;
+
+    throw new Error(`Lead provider request failed: ${details}`);
   }
 
   return result;
