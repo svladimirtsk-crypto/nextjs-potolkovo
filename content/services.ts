@@ -1,5 +1,5 @@
 import { serviceLinks } from "./service-links";
-
+import { notFound } from "next/navigation";
 export const phase2ServiceSlugs = [
   "tenevoy-profil",
   "paryashchie-potolki",
@@ -606,7 +606,17 @@ export function getServicePageBySlug(
 
   return servicePageContent[slug];
 }
+export function getRequiredServicePageBySlug(
+  slug: Phase2ServiceSlug
+): ServicePageContent {
+  const service = servicePageContent[slug];
 
+  if (!service) {
+    notFound();
+  }
+
+  return service;
+}
 export function getRelatedServiceLinks(slug: Phase2ServiceSlug) {
   const relatedSlugs = new Set(servicePageContent[slug].relatedServiceSlugs);
 
