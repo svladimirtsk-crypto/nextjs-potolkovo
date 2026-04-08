@@ -21,6 +21,12 @@ export type CalculatorLeadSnapshot = {
   ceilingExtraRatePerMeter: number | null;
   ceilingExtraTotal: number;
 
+  lightLinesEnabled: boolean;
+  lightLinesLabel: string | null;
+  lightLinesLength: number | null;
+  lightLinesRatePerMeter: number | null;
+  lightLinesTotal: number;
+
   corniceLabel: string | null;
   corniceLength: number | null;
   corniceRatePerMeter: number | null;
@@ -121,6 +127,20 @@ export function getCalculatorSummaryLines(
     lines.push(
       `${snapshot.ceilingExtraLabel}: ${snapshot.ceilingLength} м.п. × ${formatCurrency(
         snapshot.ceilingExtraRatePerMeter
+      )} ₽`
+    );
+  }
+
+  if (
+    snapshot.lightLinesEnabled &&
+    snapshot.lightLinesTotal > 0 &&
+    snapshot.lightLinesLabel &&
+    snapshot.lightLinesLength &&
+    snapshot.lightLinesRatePerMeter !== null
+  ) {
+    lines.push(
+      `${snapshot.lightLinesLabel}: ${snapshot.lightLinesLength} м.п. × ${formatCurrency(
+        snapshot.lightLinesRatePerMeter
       )} ₽`
     );
   }
