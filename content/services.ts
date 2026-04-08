@@ -4,6 +4,9 @@ export const phase2ServiceSlugs = [
   "tenevoy-profil",
   "paryashchie-potolki",
   "svetovye-linii",
+  "trekovoe-osveshchenie",
+  "skrytye-karnizy",
+  "prostye-potolki",
 ] as const;
 
 export type Phase2ServiceSlug = (typeof phase2ServiceSlugs)[number];
