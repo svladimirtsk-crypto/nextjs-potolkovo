@@ -432,8 +432,9 @@ export function PriceCalculatorClient({
   );
 
   const [lightLinesEnabled, setLightLinesEnabled] = useState(false);
-  const [lightLinesLength, setLightLinesLength] = useState(
-    lightLineMeters.default
+  const [lightLinesLength, setLightLinesLength] = useState<number>(
+  lightLineMeters.default
+);
   );
 
   const [corniceType, setCorniceType] =
