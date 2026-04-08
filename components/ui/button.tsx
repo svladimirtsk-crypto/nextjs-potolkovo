@@ -1,8 +1,4 @@
-"use client";
-
 import Link from "next/link";
-import type { MouseEvent } from "react";
-import { isHashHref, scrollToAnchorTarget } from "@/lib/scroll-to-anchor";
 
 type ButtonVariant = "primary" | "secondary" | "ghost";
 
@@ -47,6 +43,8 @@ export function Button(props: ButtonProps) {
   const baseClassName = [
     "inline-flex min-h-12 items-center justify-center rounded-full px-5 py-3 text-sm font-semibold",
     "transition-colors",
+    // чтобы иконки/вложенные элементы не тащили свой цвет
+    "[&_span]:text-inherit [&_svg]:text-inherit [&_svg]:fill-current",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2",
     "disabled:pointer-events-none disabled:opacity-60",
     getVariantClasses(variant),
@@ -56,22 +54,6 @@ export function Button(props: ButtonProps) {
     .join(" ");
 
   if (isLinkProps(props)) {
-    if (isHashHref(props.href)) {
-      const handleHashClick = (event: MouseEvent<HTMLAnchorElement>) => {
-        event.preventDefault();
-        scrollToAnchorTarget(props.href, {
-          focus: true,
-          highlight: true,
-        });
-      };
-
-      return (
-        <a href={props.href} className={baseClassName} onClick={handleHashClick}>
-          {props.children}
-        </a>
-      );
-    }
-
     return (
       <Link href={props.href} className={baseClassName}>
         {props.children}
@@ -82,9 +64,9 @@ export function Button(props: ButtonProps) {
   return (
     <button
       type={props.type ?? "button"}
-      className={baseClassName}
       onClick={props.onClick}
       disabled={props.disabled}
+      className={baseClassName}
     >
       {props.children}
     </button>
