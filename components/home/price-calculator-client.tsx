@@ -435,7 +435,6 @@ export function PriceCalculatorClient({
   const [lightLinesLength, setLightLinesLength] = useState<number>(
   lightLineMeters.default
 );
-  );
 
   const [corniceType, setCorniceType] =
     useState<CorniceType>(resolvedCorniceType);
