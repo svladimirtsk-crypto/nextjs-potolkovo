@@ -3,9 +3,7 @@ export function isHashHref(href: string) {
 }
 
 function getScrollBehavior(): ScrollBehavior {
-  if (typeof window === "undefined") {
-    return "auto";
-  }
+  if (typeof window === "undefined") return "auto";
 
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches
     ? "auto"
@@ -13,9 +11,7 @@ function getScrollBehavior(): ScrollBehavior {
 }
 
 function getHeaderOffset() {
-  if (typeof window === "undefined") {
-    return 88;
-  }
+  if (typeof window === "undefined") return 88;
 
   const raw = getComputedStyle(document.documentElement)
     .getPropertyValue("--header-height")
@@ -23,6 +19,18 @@ function getHeaderOffset() {
 
   const parsed = Number.parseInt(raw, 10);
   return Number.isNaN(parsed) ? 88 : parsed;
+}
+
+function clearHashFromUrl() {
+  if (typeof window === "undefined") return;
+
+  if (!window.location.hash) return;
+
+  window.history.replaceState(
+    null,
+    "",
+    `${window.location.pathname}${window.location.search}`
+  );
 }
 
 export function scrollToAnchorTarget(
@@ -37,26 +45,17 @@ export function scrollToAnchorTarget(
   }
 
   const hash = href.startsWith("#") ? href.slice(1) : href.split("#")[1];
-
-  if (!hash) {
-    return;
-  }
+  if (!hash) return;
 
   const target = document.getElementById(hash);
+  if (!target) return;
 
-  if (!target) {
-    return;
-  }
+  // ВАЖНО: убираем hash из URL, чтобы refresh не прыгал к форме
+  clearHashFromUrl();
 
   const headerOffset = getHeaderOffset();
   const targetTop =
     target.getBoundingClientRect().top + window.scrollY - headerOffset - 12;
-
-  window.history.replaceState(
-    null,
-    "",
-    `${window.location.pathname}${window.location.search}#${hash}`
-  );
 
   window.scrollTo({
     top: Math.max(targetTop, 0),
