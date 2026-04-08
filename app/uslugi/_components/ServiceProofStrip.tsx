@@ -1,6 +1,5 @@
 import Image from "next/image";
 import type { ServicePageContent } from "@/content/services";
-import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 
 type ServiceProofStripProps = {
@@ -88,13 +87,6 @@ export function ServiceProofStrip({ service }: ServiceProofStripProps) {
               </div>
             </article>
           ))}
-        </div>
-
-        <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <Button href="#price">{service.hero.primaryCtaLabel}</Button>
-          <Button href="#action" variant="secondary">
-            Обсудить мой объект
-          </Button>
         </div>
       </Container>
     </section>
