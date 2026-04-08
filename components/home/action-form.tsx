@@ -1,11 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
-
-import { submitLeadAction } from "@/actions/submit-lead";
-import {
-  initialLeadFormState,
-} from "@/actions/submit-lead-state";
+import { useMemo, useState } from "react";
 import { homepage } from "@/content/homepage";
 import { legal } from "@/content/legal";
 import { Button } from "@/components/ui/button";
@@ -13,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { TextLink } from "@/components/ui/text-link";
 import {
   getCalculatorSummaryLines,
-  serializeCalculatorSnapshot,
   usePriceCalculatorBridge,
 } from "./price-calculator-context";
 
@@ -25,49 +19,184 @@ const addressFieldPlaceholder =
 const addressFieldHint =
   "Необязательно. Это поможет быстрее сориентироваться по выезду.";
 
+type FormStatus = "idle" | "success" | "error";
+
+type FieldErrors = {
+  name?: string;
+  phone?: string;
+  address?: string;
+};
+
+function normalizePhone(value: string) {
+  const digits = value.replace(/\D/g, "");
+
+  if (!digits) {
+    return "";
+  }
+
+  if (digits.startsWith("8") && digits.length === 11) {
+    return `+7${digits.slice(1)}`;
+  }
+
+  if (digits.startsWith("7") && digits.length === 11) {
+    return `+${digits}`;
+  }
+
+  if (digits.length >= 10 && digits.length <= 15) {
+    return `+${digits}`;
+  }
+
+  return value.trim();
+}
+
+function isValidPhone(value: string) {
+  return /^\+\d{10,15}$/.test(value);
+}
+
+function buildLeadMessage(lines: string[], address: string) {
+  const parts: string[] = ["Заявка с новой главной страницы"];
+
+  if (address.trim()) {
+    parts.push("", `Адрес / район: ${address.trim()}`);
+  }
+
+  if (lines.length) {
+    parts.push("", "Параметры из калькулятора:", ...lines.map((line) => `— ${line}`));
+  }
+
+  return parts.join("\n");
+}
+
 export function ActionForm() {
   const { snapshot, hasInteracted } = usePriceCalculatorBridge();
-
-  const [state, formAction, isPending] = useActionState(
-    submitLeadAction,
-    initialLeadFormState
-  );
-  const [formKey, setFormKey] = useState(0);
 
   const calculatorSummaryLines = useMemo(
     () => (hasInteracted ? getCalculatorSummaryLines(snapshot) : []),
     [hasInteracted, snapshot]
   );
 
-  const calculatorSnapshotValue = useMemo(
-    () => (hasInteracted ? serializeCalculatorSnapshot(snapshot) : ""),
-    [hasInteracted, snapshot]
-  );
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [status, setStatus] = useState<FormStatus>("idle");
+  const [message, setMessage] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [isPending, setIsPending] = useState(false);
 
-  useEffect(() => {
-    if (state.status === "success") {
-      setFormKey((prev) => prev + 1);
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    setStatus("idle");
+    setMessage("");
+    setFieldErrors({});
+
+    const trimmedName = name.trim();
+    const trimmedAddress = address.trim();
+    const normalizedPhone = normalizePhone(phone);
+
+    const nextErrors: FieldErrors = {};
+
+    if (!trimmedName) {
+      nextErrors.name = "Укажите имя.";
+    } else if (trimmedName.length > 80) {
+      nextErrors.name = "Слишком длинное имя.";
     }
-  }, [state.status]);
+
+    if (!normalizedPhone || !isValidPhone(normalizedPhone)) {
+      nextErrors.phone = "Укажите корректный телефон.";
+    }
+
+    if (trimmedAddress.length > 160) {
+      nextErrors.address = "Слишком длинный адрес или район.";
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      setStatus("error");
+      setMessage("Пожалуйста, заполните имя и телефон корректно.");
+      return;
+    }
+
+    const accessKey = process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY;
+
+    if (!accessKey) {
+      setStatus("error");
+      setMessage("На клиенте не настроен NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("access_key", accessKey);
+    formData.append("subject", "Новая заявка с сайта ПОТОЛКОВО");
+    formData.append("from_name", "ПОТОЛКОВО Сайт");
+    formData.append("name", trimmedName);
+    formData.append("phone", normalizedPhone);
+    formData.append("address", trimmedAddress);
+    formData.append(
+      "message",
+      buildLeadMessage(calculatorSummaryLines, trimmedAddress)
+    );
+    formData.append("botcheck", "");
+    formData.append("company", "");
+
+    setIsPending(true);
+
+    try {
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok || !result?.success) {
+        const errorText =
+          result?.message ||
+          result?.error ||
+          `HTTP ${response.status}`;
+
+        setStatus("error");
+        setMessage(`Ошибка отправки в Web3Forms: ${errorText}`);
+        return;
+      }
+
+      setStatus("success");
+      setMessage(
+        "Спасибо. Я свяжусь с вами, чтобы уточнить задачу и договориться о замере."
+      );
+
+      setName("");
+      setPhone("");
+      setAddress("");
+      setFieldErrors({});
+    } catch {
+      setStatus("error");
+      setMessage(
+        "Не удалось отправить заявку. Проверьте соединение и попробуйте ещё раз."
+      );
+    } finally {
+      setIsPending(false);
+    }
+  }
 
   return (
-    <form key={formKey} action={formAction} className="space-y-5">
-      {state.status === "success" ? (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {status === "success" ? (
         <div
           className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
           aria-live="polite"
         >
           <p className="font-medium">{actionContent.successTitle}</p>
-          <p className="mt-1">{state.message}</p>
+          <p className="mt-1">{message}</p>
         </div>
       ) : null}
 
-      {state.status === "error" ? (
+      {status === "error" ? (
         <div
           className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"
           aria-live="polite"
         >
-          {state.message || actionContent.errorMessage}
+          {message || actionContent.errorMessage}
         </div>
       ) : null}
 
@@ -96,11 +225,13 @@ export function ActionForm() {
           placeholder={actionContent.nameFieldPlaceholder}
           autoComplete="name"
           required
+          value={name}
+          onChange={(event) => setName(event.target.value)}
         />
 
-        {state.fieldErrors?.name?.length ? (
+        {fieldErrors.name ? (
           <p className="mt-2 text-sm text-rose-700" aria-live="polite">
-            {state.fieldErrors.name[0]}
+            {fieldErrors.name}
           </p>
         ) : null}
       </div>
@@ -114,11 +245,13 @@ export function ActionForm() {
           autoComplete="tel"
           inputMode="tel"
           required
+          value={phone}
+          onChange={(event) => setPhone(event.target.value)}
         />
 
-        {state.fieldErrors?.phone?.length ? (
+        {fieldErrors.phone ? (
           <p className="mt-2 text-sm text-rose-700" aria-live="polite">
-            {state.fieldErrors.phone[0]}
+            {fieldErrors.phone}
           </p>
         ) : null}
       </div>
@@ -130,23 +263,18 @@ export function ActionForm() {
           type="text"
           placeholder={addressFieldPlaceholder}
           autoComplete="street-address"
+          value={address}
+          onChange={(event) => setAddress(event.target.value)}
         />
 
         <p className="mt-2 text-sm text-slate-500">{addressFieldHint}</p>
 
-        {state.fieldErrors?.address?.length ? (
+        {fieldErrors.address ? (
           <p className="mt-2 text-sm text-rose-700" aria-live="polite">
-            {state.fieldErrors.address[0]}
+            {fieldErrors.address}
           </p>
         ) : null}
       </div>
-
-      <input
-        type="hidden"
-        name="calculatorSnapshot"
-        value={calculatorSnapshotValue}
-        readOnly
-      />
 
       <input
         type="text"
