@@ -773,7 +773,7 @@ export function PriceCalculatorClient({
         <CollapsibleSection
           id="light-lines"
           title="Световые линии"
-          description={}
+          
           isDesktopAccordion={isDesktopAccordion}
           isOpen={openSections["light-lines"]}
           onToggle={toggleSection}
