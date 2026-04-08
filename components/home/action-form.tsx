@@ -2,10 +2,10 @@
 
 import { useActionState, useEffect, useMemo, useState } from "react";
 
+import { submitLeadAction } from "@/actions/submit-lead";
 import {
   initialLeadFormState,
-  submitLeadAction,
-} from "@/actions/submit-lead";
+} from "@/actions/submit-lead-state";
 import { homepage } from "@/content/homepage";
 import { legal } from "@/content/legal";
 import { Button } from "@/components/ui/button";
