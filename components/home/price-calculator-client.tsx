@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { homepage } from "@/content/homepage";
+import type { ServiceCalculatorPreset } from "@/content/services";
 import { Button } from "@/components/ui/button";
 import {
   CalculatorLeadSnapshot,
@@ -18,6 +19,10 @@ type PerimeterSuggestion = {
   min: number;
   max: number;
   recommended: number;
+};
+
+type PriceCalculatorClientProps = {
+  preset?: ServiceCalculatorPreset;
 };
 
 function formatCurrency(value: number) {
@@ -245,30 +250,41 @@ function PriceRow({
   );
 }
 
-export function PriceCalculatorClient() {
+export function PriceCalculatorClient({
+  preset,
+}: PriceCalculatorClientProps) {
   const { setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
 
-  const [area, setArea] = useState<number>(calculator.areaDefault);
+  const resolvedAreaDefault = preset?.areaDefault ?? calculator.areaDefault;
+  const resolvedCeilingType = preset?.ceilingType ?? "standard";
+  const resolvedCorniceType = preset?.corniceType ?? "none";
+  const resolvedTrackType = preset?.trackType ?? "none";
+  const resolvedLightsEnabled = preset?.lightsEnabled ?? false;
+  const resolvedLightsCount =
+    preset?.lightsCount ?? calculator.lights.countDefault;
 
-  const [ceilingType, setCeilingType] = useState<CeilingType>("standard");
+  const [area, setArea] = useState<number>(resolvedAreaDefault);
+
+  const [ceilingType, setCeilingType] =
+    useState<CeilingType>(resolvedCeilingType);
   const [ceilingLength, setCeilingLength] = useState<number>(() =>
-    getPerimeterSuggestion(calculator.areaDefault).recommended
+    getPerimeterSuggestion(resolvedAreaDefault).recommended
   );
 
-  const [corniceType, setCorniceType] = useState<CorniceType>("none");
+  const [corniceType, setCorniceType] =
+    useState<CorniceType>(resolvedCorniceType);
   const [corniceLength, setCorniceLength] = useState<number>(
     calculator.corniceMeters.default
   );
 
-  const [trackType, setTrackType] = useState<TrackType>("none");
+  const [trackType, setTrackType] = useState<TrackType>(resolvedTrackType);
   const [trackLength, setTrackLength] = useState<number>(
     calculator.trackMeters.default
   );
 
-  const [lightsEnabled, setLightsEnabled] = useState<boolean>(false);
-  const [lightsCount, setLightsCount] = useState<number>(
-    calculator.lights.countDefault
-  );
+  const [lightsEnabled, setLightsEnabled] =
+    useState<boolean>(resolvedLightsEnabled);
+  const [lightsCount, setLightsCount] = useState<number>(resolvedLightsCount);
 
   const perimeterSuggestion = useMemo(() => getPerimeterSuggestion(area), [area]);
 
