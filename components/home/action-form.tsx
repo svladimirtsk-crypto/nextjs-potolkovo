@@ -19,6 +19,12 @@ import {
 
 const actionContent = homepage.action;
 
+const addressFieldLabel = "Адрес или район";
+const addressFieldPlaceholder =
+  "Например: Химки, Люберцы, м. Сокол или ул. Ленина, 12";
+const addressFieldHint =
+  "Необязательно. Это поможет быстрее сориентироваться по выезду.";
+
 export function ActionForm() {
   const { snapshot, hasInteracted } = usePriceCalculatorBridge();
 
@@ -119,16 +125,14 @@ export function ActionForm() {
 
       <div>
         <Input
-          label={actionContent.addressFieldLabel}
+          label={addressFieldLabel}
           name="address"
           type="text"
-          placeholder={actionContent.addressFieldPlaceholder}
+          placeholder={addressFieldPlaceholder}
           autoComplete="street-address"
         />
 
-        <p className="mt-2 text-sm text-slate-500">
-          {actionContent.addressFieldHint}
-        </p>
+        <p className="mt-2 text-sm text-slate-500">{addressFieldHint}</p>
 
         {state.fieldErrors?.address?.length ? (
           <p className="mt-2 text-sm text-rose-700" aria-live="polite">
