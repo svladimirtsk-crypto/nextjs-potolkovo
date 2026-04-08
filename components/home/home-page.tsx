@@ -14,7 +14,7 @@ export function HomePage() {
     <>
       <HomeHeader />
 
-      <div className="pb-20 md:pb-0">
+      <div className="pb-24 lg:pb-0">
         <main>
           <HomeHero />
 
