@@ -1,6 +1,7 @@
 "use client";
 
-import { ReactNode, useEffect, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { homepage } from "@/content/homepage";
 import type { ServiceCalculatorPreset } from "@/content/services";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,30 @@ import {
 } from "./price-calculator-context";
 
 const calculator = homepage.price.calculator;
+const extendedCalculator = calculator as typeof calculator & {
+  lightLineMeters?: {
+    min: number;
+    max: number;
+    step: number;
+    default: number;
+  };
+  lightLines?: {
+    label: string;
+    ratePerMeter: number;
+  };
+};
+
+const lightLineMeters = extendedCalculator.lightLineMeters ?? {
+  min: 1,
+  max: 50,
+  step: 1,
+  default: 2,
+};
+
+const lightLinesConfig = extendedCalculator.lightLines ?? {
+  label: "Световые линии",
+  ratePerMeter: 3500,
+};
 
 type CeilingType = (typeof calculator.ceilingTypes)[number]["slug"];
 type CorniceType = (typeof calculator.cornices)[number]["slug"];
@@ -21,8 +46,16 @@ type PerimeterSuggestion = {
   recommended: number;
 };
 
+type AccordionSectionId =
+  | "ceiling-profile"
+  | "light-lines"
+  | "cornices"
+  | "tracks"
+  | "lights";
+
 type PriceCalculatorClientProps = {
   preset?: ServiceCalculatorPreset;
+  compactSections?: boolean;
 };
 
 function formatCurrency(value: number) {
@@ -69,6 +102,18 @@ function getPerimeterSuggestion(area: number): PerimeterSuggestion {
   };
 }
 
+function getDefaultOpenSection(pathname: string): AccordionSectionId | null {
+  const routeMap: Record<string, AccordionSectionId> = {
+    "/uslugi/tenevoy-profil": "ceiling-profile",
+    "/uslugi/paryashchie-potolki": "ceiling-profile",
+    "/uslugi/skrytye-karnizy": "cornices",
+    "/uslugi/trekovoe-osveshchenie": "tracks",
+    "/uslugi/svetovye-linii": "light-lines",
+  };
+
+  return routeMap[pathname] ?? null;
+}
+
 function SectionCard({
   title,
   description,
@@ -87,6 +132,102 @@ function SectionCard({
         ) : null}
       </div>
       {children}
+    </section>
+  );
+}
+
+function CollapsibleSection({
+  id,
+  title,
+  description,
+  isDesktopAccordion,
+  isOpen,
+  onToggle,
+  children,
+}: {
+  id: AccordionSectionId;
+  title: string;
+  description?: string;
+  isDesktopAccordion: boolean;
+  isOpen: boolean;
+  onToggle: (id: AccordionSectionId) => void;
+  children: ReactNode;
+}) {
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const wasOpenRef = useRef(isOpen);
+
+  useEffect(() => {
+    if (
+      !isDesktopAccordion ||
+      !isOpen ||
+      wasOpenRef.current ||
+      !contentRef.current
+    ) {
+      wasOpenRef.current = isOpen;
+      return;
+    }
+
+    const rect = contentRef.current.getBoundingClientRect();
+    const viewportTop = 96;
+    const viewportBottom = window.innerHeight - 24;
+
+    if (rect.top < viewportTop || rect.bottom > viewportBottom) {
+      contentRef.current.scrollIntoView({
+        block: "nearest",
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+      });
+    }
+
+    wasOpenRef.current = isOpen;
+  }, [isDesktopAccordion, isOpen]);
+
+  if (!isDesktopAccordion) {
+    return (
+      <SectionCard title={title} description={description}>
+        {children}
+      </SectionCard>
+    );
+  }
+
+  return (
+    <section className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-slate-50/80">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left sm:px-5"
+        aria-expanded={isOpen}
+        aria-controls={`calculator-panel-${id}`}
+        onClick={() => onToggle(id)}
+      >
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-slate-950">{title}</p>
+          {description ? (
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              {description}
+            </p>
+          ) : null}
+        </div>
+
+        <span
+          aria-hidden="true"
+          className={`shrink-0 text-sm text-slate-500 transition-transform ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        >
+          ▾
+        </span>
+      </button>
+
+      {isOpen ? (
+        <div
+          id={`calculator-panel-${id}`}
+          ref={contentRef}
+          className="border-t border-slate-200 px-4 py-4 sm:px-5"
+        >
+          {children}
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -252,8 +393,27 @@ function PriceRow({
 
 export function PriceCalculatorClient({
   preset,
+  compactSections = false,
 }: PriceCalculatorClientProps) {
+  const pathname = usePathname();
   const { setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
+
+  const [isDesktopAccordion, setIsDesktopAccordion] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 1024px)");
+
+    const update = () => {
+      setIsDesktopAccordion(mediaQuery.matches && compactSections);
+    };
+
+    update();
+    mediaQuery.addEventListener("change", update);
+
+    return () => {
+      mediaQuery.removeEventListener("change", update);
+    };
+  }, [compactSections]);
 
   const resolvedAreaDefault = preset?.areaDefault ?? calculator.areaDefault;
   const resolvedCeilingType = preset?.ceilingType ?? "standard";
@@ -269,6 +429,11 @@ export function PriceCalculatorClient({
     useState<CeilingType>(resolvedCeilingType);
   const [ceilingLength, setCeilingLength] = useState<number>(() =>
     getPerimeterSuggestion(resolvedAreaDefault).recommended
+  );
+
+  const [lightLinesEnabled, setLightLinesEnabled] = useState(false);
+  const [lightLinesLength, setLightLinesLength] = useState(
+    lightLineMeters.default
   );
 
   const [corniceType, setCorniceType] =
@@ -310,12 +475,49 @@ export function PriceCalculatorClient({
   );
 
   const hasSpecialCeiling = selectedCeiling.extraRatePerMeter > 0;
+  const defaultOpenSection = getDefaultOpenSection(pathname);
+
+  const [openSections, setOpenSections] = useState<
+    Record<AccordionSectionId, boolean>
+  >({
+    "ceiling-profile": false,
+    "light-lines": false,
+    cornices: false,
+    tracks: false,
+    lights: false,
+  });
+
+  useEffect(() => {
+    if (!isDesktopAccordion) {
+      return;
+    }
+
+    setOpenSections({
+      "ceiling-profile":
+        defaultOpenSection === "ceiling-profile" && hasSpecialCeiling,
+      "light-lines": defaultOpenSection === "light-lines",
+      cornices: defaultOpenSection === "cornices",
+      tracks: defaultOpenSection === "tracks",
+      lights: defaultOpenSection === "lights",
+    });
+  }, [defaultOpenSection, hasSpecialCeiling, isDesktopAccordion]);
+
+  const toggleSection = (id: AccordionSectionId) => {
+    setOpenSections((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
 
   const ceilingBaseRate = selectedCeiling.baseRatePerSqm;
   const ceilingBaseTotal = area * ceilingBaseRate;
 
   const ceilingExtraTotal = hasSpecialCeiling
     ? ceilingLength * selectedCeiling.extraRatePerMeter
+    : 0;
+
+  const lightLinesTotal = lightLinesEnabled
+    ? lightLinesLength * lightLinesConfig.ratePerMeter
     : 0;
 
   const corniceTotal =
@@ -335,6 +537,7 @@ export function PriceCalculatorClient({
   const total =
     ceilingBaseTotal +
     ceilingExtraTotal +
+    lightLinesTotal +
     corniceTotal +
     trackTotal +
     lightsTotal;
@@ -354,6 +557,14 @@ export function PriceCalculatorClient({
         ? selectedCeiling.extraRatePerMeter
         : null,
       ceilingExtraTotal,
+
+      lightLinesEnabled,
+      lightLinesLabel: lightLinesEnabled ? lightLinesConfig.label : null,
+      lightLinesLength: lightLinesEnabled ? lightLinesLength : null,
+      lightLinesRatePerMeter: lightLinesEnabled
+        ? lightLinesConfig.ratePerMeter
+        : null,
+      lightLinesTotal,
 
       corniceLabel:
         selectedCornice.ratePerMeter > 0 ? selectedCornice.label : null,
@@ -383,6 +594,9 @@ export function PriceCalculatorClient({
       hasSpecialCeiling,
       ceilingLength,
       ceilingExtraTotal,
+      lightLinesEnabled,
+      lightLinesLength,
+      lightLinesTotal,
       selectedCornice,
       corniceLength,
       corniceTotal,
@@ -416,6 +630,16 @@ export function PriceCalculatorClient({
     if (slug !== "standard") {
       setCeilingLength(perimeterSuggestion.recommended);
     }
+  };
+
+  const handleLightLinesEnabledChange = (value: boolean) => {
+    markInteracted();
+    setLightLinesEnabled(value);
+  };
+
+  const handleLightLinesLengthChange = (value: number) => {
+    markInteracted();
+    setLightLinesLength(value);
   };
 
   const handleCorniceTypeChange = (slug: CorniceType) => {
@@ -516,30 +740,85 @@ export function PriceCalculatorClient({
               );
             })}
           </div>
-
-          {hasSpecialCeiling && (
-            <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
-              <RangeField
-                id="ceiling-length-range"
-                label={`Длина: ${selectedCeiling.extraLabel}`}
-                value={ceilingLength}
-                min={calculator.specialMeters.min}
-                max={calculator.specialMeters.max}
-                step={calculator.specialMeters.step}
-                unit="м.п."
-                onChange={handleCeilingLengthChange}
-              />
-
-              <PerimeterHint
-                area={area}
-                suggestion={perimeterSuggestion}
-                onApply={applyPerimeterSuggestion}
-              />
-            </div>
-          )}
         </SectionCard>
 
-        <SectionCard title="Карнизы">
+        {hasSpecialCeiling ? (
+          <CollapsibleSection
+            id="ceiling-profile"
+            title="Длина профиля"
+            description={selectedCeiling.extraLabel ?? "Профиль по периметру"}
+            isDesktopAccordion={isDesktopAccordion}
+            isOpen={openSections["ceiling-profile"]}
+            onToggle={toggleSection}
+          >
+            <RangeField
+              id="ceiling-length-range"
+              label={`Длина: ${selectedCeiling.extraLabel}`}
+              value={ceilingLength}
+              min={calculator.specialMeters.min}
+              max={calculator.specialMeters.max}
+              step={calculator.specialMeters.step}
+              unit="м.п."
+              onChange={handleCeilingLengthChange}
+            />
+
+            <PerimeterHint
+              area={area}
+              suggestion={perimeterSuggestion}
+              onApply={applyPerimeterSuggestion}
+            />
+          </CollapsibleSection>
+        ) : null}
+
+        <CollapsibleSection
+          id="light-lines"
+          title="Световые линии"
+          description={`Расчёт по погонным метрам — от ${formatCurrency(
+            lightLinesConfig.ratePerMeter
+          )} ₽ / м.п.`}
+          isDesktopAccordion={isDesktopAccordion}
+          isOpen={openSections["light-lines"]}
+          onToggle={toggleSection}
+        >
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <OptionCard
+              active={!lightLinesEnabled}
+              title="Без световых линий"
+              meta="Без дополнительного расчёта"
+              onClick={() => handleLightLinesEnabledChange(false)}
+            />
+
+            <OptionCard
+              active={lightLinesEnabled}
+              title="Добавить просчёт световых линий"
+              meta={`от ${formatCurrency(lightLinesConfig.ratePerMeter)} ₽ / м.п.`}
+              onClick={() => handleLightLinesEnabledChange(true)}
+            />
+          </div>
+
+          {lightLinesEnabled ? (
+            <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+              <RangeField
+                id="light-lines-length-range"
+                label="Длина световых линий"
+                value={lightLinesLength}
+                min={lightLineMeters.min}
+                max={lightLineMeters.max}
+                step={lightLineMeters.step}
+                unit="м.п."
+                onChange={handleLightLinesLengthChange}
+              />
+            </div>
+          ) : null}
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          id="cornices"
+          title="Карнизы"
+          isDesktopAccordion={isDesktopAccordion}
+          isOpen={openSections.cornices}
+          onToggle={toggleSection}
+        >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {calculator.cornices.map((option) => {
               const meta =
@@ -559,7 +838,7 @@ export function PriceCalculatorClient({
             })}
           </div>
 
-          {selectedCornice.ratePerMeter > 0 && (
+          {selectedCornice.ratePerMeter > 0 ? (
             <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
               <RangeField
                 id="cornice-length-range"
@@ -572,10 +851,16 @@ export function PriceCalculatorClient({
                 onChange={handleCorniceLengthChange}
               />
             </div>
-          )}
-        </SectionCard>
+          ) : null}
+        </CollapsibleSection>
 
-        <SectionCard title="Трековое освещение">
+        <CollapsibleSection
+          id="tracks"
+          title="Трековое освещение"
+          isDesktopAccordion={isDesktopAccordion}
+          isOpen={openSections.tracks}
+          onToggle={toggleSection}
+        >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {calculator.tracks.map((option) => {
               const meta =
@@ -595,7 +880,7 @@ export function PriceCalculatorClient({
             })}
           </div>
 
-          {selectedTrack.ratePerMeter > 0 && (
+          {selectedTrack.ratePerMeter > 0 ? (
             <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
               <RangeField
                 id="track-length-range"
@@ -608,10 +893,16 @@ export function PriceCalculatorClient({
                 onChange={handleTrackLengthChange}
               />
             </div>
-          )}
-        </SectionCard>
+          ) : null}
+        </CollapsibleSection>
 
-        <SectionCard title={calculator.lights.label}>
+        <CollapsibleSection
+          id="lights"
+          title={calculator.lights.label}
+          isDesktopAccordion={isDesktopAccordion}
+          isOpen={openSections.lights}
+          onToggle={toggleSection}
+        >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <OptionCard
               active={!lightsEnabled}
@@ -630,7 +921,7 @@ export function PriceCalculatorClient({
             />
           </div>
 
-          {lightsEnabled && (
+          {lightsEnabled ? (
             <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
               <RangeField
                 id="lights-count-range"
@@ -643,8 +934,8 @@ export function PriceCalculatorClient({
                 onChange={handleLightsCountChange}
               />
             </div>
-          )}
-        </SectionCard>
+          ) : null}
+        </CollapsibleSection>
 
         <SectionCard title="Состав расчёта">
           <div className="space-y-3">
@@ -653,41 +944,50 @@ export function PriceCalculatorClient({
               value={`${area} м² × ${formatCurrency(ceilingBaseRate)} ₽`}
             />
 
-            {ceilingExtraTotal > 0 && (
+            {ceilingExtraTotal > 0 ? (
               <PriceRow
                 label={selectedCeiling.extraLabel ?? "Профиль"}
                 value={`${ceilingLength} м.п. × ${formatCurrency(
                   selectedCeiling.extraRatePerMeter
                 )} ₽`}
               />
-            )}
+            ) : null}
 
-            {corniceTotal > 0 && (
+            {lightLinesTotal > 0 ? (
+              <PriceRow
+                label={lightLinesConfig.label}
+                value={`${lightLinesLength} м.п. × ${formatCurrency(
+                  lightLinesConfig.ratePerMeter
+                )} ₽`}
+              />
+            ) : null}
+
+            {corniceTotal > 0 ? (
               <PriceRow
                 label={selectedCornice.label}
                 value={`${corniceLength} м.п. × ${formatCurrency(
                   selectedCornice.ratePerMeter
                 )} ₽`}
               />
-            )}
+            ) : null}
 
-            {trackTotal > 0 && (
+            {trackTotal > 0 ? (
               <PriceRow
                 label={selectedTrack.label}
                 value={`${trackLength} м.п. × ${formatCurrency(
                   selectedTrack.ratePerMeter
                 )} ₽`}
               />
-            )}
+            ) : null}
 
-            {lightsTotal > 0 && (
+            {lightsTotal > 0 ? (
               <PriceRow
                 label={calculator.lights.label}
                 value={`${lightsCount} шт. × ${formatCurrency(
                   calculator.lights.ratePerUnit
                 )} ₽`}
               />
-            )}
+            ) : null}
 
             <div className="border-t border-slate-200 pt-3">
               <PriceRow
@@ -718,6 +1018,10 @@ export function PriceCalculatorClient({
           <div className="mt-5 flex flex-wrap gap-2">
             <SummaryPill>{selectedCeiling.label}</SummaryPill>
 
+            {lightLinesTotal > 0 ? (
+              <SummaryPill>{lightLinesConfig.label}</SummaryPill>
+            ) : null}
+
             {selectedCornice.ratePerMeter > 0 ? (
               <SummaryPill>{selectedCornice.label}</SummaryPill>
             ) : null}
@@ -737,33 +1041,40 @@ export function PriceCalculatorClient({
               <span>{formatCurrency(ceilingBaseTotal)} ₽</span>
             </div>
 
-            {ceilingExtraTotal > 0 && (
+            {ceilingExtraTotal > 0 ? (
               <div className="flex items-center justify-between gap-4">
                 <span>{selectedCeiling.extraLabel}</span>
                 <span>{formatCurrency(ceilingExtraTotal)} ₽</span>
               </div>
-            )}
+            ) : null}
 
-            {corniceTotal > 0 && (
+            {lightLinesTotal > 0 ? (
+              <div className="flex items-center justify-between gap-4">
+                <span>{lightLinesConfig.label}</span>
+                <span>{formatCurrency(lightLinesTotal)} ₽</span>
+              </div>
+            ) : null}
+
+            {corniceTotal > 0 ? (
               <div className="flex items-center justify-between gap-4">
                 <span>{selectedCornice.label}</span>
                 <span>{formatCurrency(corniceTotal)} ₽</span>
               </div>
-            )}
+            ) : null}
 
-            {trackTotal > 0 && (
+            {trackTotal > 0 ? (
               <div className="flex items-center justify-between gap-4">
                 <span>{selectedTrack.label}</span>
                 <span>{formatCurrency(trackTotal)} ₽</span>
               </div>
-            )}
+            ) : null}
 
-            {lightsTotal > 0 && (
+            {lightsTotal > 0 ? (
               <div className="flex items-center justify-between gap-4">
                 <span>{calculator.lights.label}</span>
                 <span>{formatCurrency(lightsTotal)} ₽</span>
               </div>
-            )}
+            ) : null}
 
             <div className="border-t border-white/10 pt-3 text-base font-semibold text-white">
               <div className="flex items-center justify-between gap-4">
@@ -789,7 +1100,7 @@ export function PriceCalculatorClient({
               variant="secondary"
               className="w-full justify-center py-6 text-base"
             >
-              {homepage.price.primaryCtaLabel}
+              Записаться на бесплатный замер
             </Button>
           </div>
         </div>
