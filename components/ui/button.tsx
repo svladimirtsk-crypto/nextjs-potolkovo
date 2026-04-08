@@ -24,12 +24,26 @@ type ButtonProps = ButtonAsButtonProps | ButtonAsLinkProps;
 function getVariantClasses(variant: ButtonVariant) {
   switch (variant) {
     case "secondary":
-      return "border border-slate-300 bg-white text-slate-950 hover:border-slate-950 hover:bg-slate-50";
+      return [
+        "border border-slate-300 bg-white",
+        "!text-slate-950",
+        "hover:border-slate-950 hover:bg-slate-50",
+      ].join(" ");
+
     case "ghost":
-      return "border border-transparent bg-transparent text-slate-950 hover:bg-slate-100";
+      return [
+        "border border-transparent bg-transparent",
+        "!text-slate-950",
+        "hover:bg-slate-100",
+      ].join(" ");
+
     case "primary":
     default:
-      return "border border-slate-950 bg-slate-950 text-white hover:border-slate-800 hover:bg-slate-800";
+      return [
+        "border border-slate-950 bg-slate-950",
+        "!text-white",
+        "hover:border-slate-800 hover:bg-slate-800",
+      ].join(" ");
   }
 }
 
@@ -43,10 +57,10 @@ export function Button(props: ButtonProps) {
   const baseClassName = [
     "inline-flex min-h-12 items-center justify-center rounded-full px-5 py-3 text-sm font-semibold",
     "transition-colors",
-    // чтобы иконки/вложенные элементы не тащили свой цвет
-    "[&_span]:text-inherit [&_svg]:text-inherit [&_svg]:fill-current",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2",
     "disabled:pointer-events-none disabled:opacity-60",
+    // важно: чтобы вложенные элементы (span/svg) не тащили свой цвет
+    "[&_span]:!text-inherit [&_svg]:!text-inherit [&_svg]:fill-current",
     getVariantClasses(variant),
     props.className ?? "",
   ]
@@ -64,9 +78,9 @@ export function Button(props: ButtonProps) {
   return (
     <button
       type={props.type ?? "button"}
+      className={baseClassName}
       onClick={props.onClick}
       disabled={props.disabled}
-      className={baseClassName}
     >
       {props.children}
     </button>
