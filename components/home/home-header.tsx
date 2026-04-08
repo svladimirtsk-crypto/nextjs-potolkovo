@@ -148,7 +148,7 @@ export function HomeHeader() {
               <div
                 id="mobile-services-menu"
                 role="menu"
-                className="fixed left-4 right-4 top-[calc(var(--header-height)+12px)] z-50 mx-auto w-auto max-w-[22rem] rounded-2xl border border-slate-200 bg-white p-2 shadow-xl max-h-[calc(100vh-var(--header-height)-24px)] overflow-auto""
+                className="fixed left-4 right-4 top-[calc(var(--header-height)+12px)] z-50 mx-auto w-auto max-w-[22rem] rounded-2xl border border-slate-200 bg-white p-2 shadow-xl max-h-[calc(100vh-var(--header-height)-24px)] overflow-auto"
               >
                 {headerServiceLinks.map((item) => (
                   <Link
