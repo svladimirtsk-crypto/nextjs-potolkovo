@@ -62,7 +62,7 @@ export function MobileStickyCta() {
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 lg:hidden">
-      <div className="border-t border-white/10 bg-slate-950/98 text-white backdrop-blur">
+      <div className="border-t border-slate-200 bg-white/96 text-slate-950 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur supports-[backdrop-filter]:bg-white/88">
         <div
           className="mx-auto flex min-h-[76px] max-w-screen-sm items-center justify-between gap-3 px-4 py-3"
           style={{
@@ -72,17 +72,16 @@ export function MobileStickyCta() {
           {showCalculatedState && snapshot ? (
             <>
               <div className="min-w-0">
-                <p className="text-xs text-white/60">
+                <p className="text-xs text-slate-500">
                   {isPriceVisible ? "Ваш расчёт" : "Последний расчёт"}
                 </p>
-                <p className="mt-1 truncate text-2xl font-bold tracking-tight">
+                <p className="mt-1 truncate text-2xl font-bold tracking-tight text-slate-950">
                   {formatCurrency(snapshot.total)} ₽
                 </p>
               </div>
 
               <Button
                 href="#action"
-                variant="secondary"
                 className="shrink-0 justify-center px-5 py-3 text-sm"
               >
                 На замер
@@ -91,15 +90,14 @@ export function MobileStickyCta() {
           ) : (
             <>
               <div className="min-w-0">
-                <p className="text-xs text-white/60">Быстрый расчёт</p>
-                <p className="mt-1 text-sm font-semibold text-white">
+                <p className="text-xs text-slate-500">Быстрый расчёт</p>
+                <p className="mt-1 text-sm font-semibold text-slate-950">
                   Подберите параметры и узнайте ориентир по цене
                 </p>
               </div>
 
               <Button
                 href="#price"
-                variant="secondary"
                 className="shrink-0 justify-center px-5 py-3 text-sm"
               >
                 Калькулятор
