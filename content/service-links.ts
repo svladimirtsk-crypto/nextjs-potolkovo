@@ -60,7 +60,7 @@ export const serviceLinks = [
     shortLabel: "Простые",
     href: "/uslugi/prostye-potolki",
     priority: "medium",
-    showInHeader: false,
+    showInHeader: true, // ← было false, теперь в dropdown header
     showInFooter: true,
     seoMentionEligible: true,
     priceSectionEligible: true,
