@@ -128,6 +128,25 @@ function buildLeadMessage(
   return lines.join("\n");
 }
 
+function mapErrorToMessage(error: unknown) {
+  if (!(error instanceof Error)) {
+    return "Не удалось отправить заявку. Попробуйте ещё раз или свяжитесь со мной по телефону.";
+  }
+
+  if (error.message.includes("WEB3FORMS_ACCESS_KEY is not configured")) {
+    return "На сервере не настроен WEB3FORMS_ACCESS_KEY.";
+  }
+
+  if (error.message.startsWith("Lead provider request failed:")) {
+    return `Ошибка отправки в Web3Forms: ${error.message.replace(
+      "Lead provider request failed: ",
+      ""
+    )}`;
+  }
+
+  return "Не удалось отправить заявку. Попробуйте ещё раз или свяжитесь со мной по телефону.";
+}
+
 export async function submitLeadAction(
   _prevState: LeadFormState,
   formData: FormData
@@ -185,11 +204,12 @@ export async function submitLeadAction(
       message:
         "Спасибо. Я свяжусь с вами, чтобы уточнить задачу и договориться о замере.",
     };
-  } catch {
+  } catch (error) {
+    console.error("submitLeadAction error:", error);
+
     return {
       status: "error",
-      message:
-        "Не удалось отправить заявку. Попробуйте ещё раз или свяжитесь со мной по телефону.",
+      message: mapErrorToMessage(error),
     };
   }
 }
