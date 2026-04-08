@@ -2,8 +2,10 @@
 
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+
 import { homepage } from "@/content/homepage";
 import type { ServiceCalculatorPreset } from "@/content/services";
+
 import { Button } from "@/components/ui/button";
 import {
   CalculatorLeadSnapshot,
@@ -11,30 +13,6 @@ import {
 } from "./price-calculator-context";
 
 const calculator = homepage.price.calculator;
-const extendedCalculator = calculator as typeof calculator & {
-  lightLineMeters?: {
-    min: number;
-    max: number;
-    step: number;
-    default: number;
-  };
-  lightLines?: {
-    label: string;
-    ratePerMeter: number;
-  };
-};
-
-const lightLineMeters = extendedCalculator.lightLineMeters ?? {
-  min: 1,
-  max: 50,
-  step: 1,
-  default: 2,
-};
-
-const lightLinesConfig = extendedCalculator.lightLines ?? {
-  label: "Световые линии",
-  ratePerMeter: 3500,
-};
 
 type CeilingType = (typeof calculator.ceilingTypes)[number]["slug"];
 type CorniceType = (typeof calculator.cornices)[number]["slug"];
@@ -143,6 +121,7 @@ function CollapsibleSection({
   isDesktopAccordion,
   isOpen,
   onToggle,
+  lastToggledId,
   children,
 }: {
   id: AccordionSectionId;
@@ -151,17 +130,22 @@ function CollapsibleSection({
   isDesktopAccordion: boolean;
   isOpen: boolean;
   onToggle: (id: AccordionSectionId) => void;
+  lastToggledId: AccordionSectionId | null;
   children: ReactNode;
 }) {
   const contentRef = useRef<HTMLDivElement | null>(null);
   const wasOpenRef = useRef(isOpen);
 
   useEffect(() => {
+    // ВАЖНО: scrollIntoView делаем только если секцию открыл пользователь руками.
+    // Это убирает прыжок к калькулятору при входе на страницу услуги,
+    // когда секция открывается автоматически по route (defaultOpenSection).
     if (
       !isDesktopAccordion ||
       !isOpen ||
       wasOpenRef.current ||
-      !contentRef.current
+      !contentRef.current ||
+      lastToggledId !== id
     ) {
       wasOpenRef.current = isOpen;
       return;
@@ -181,7 +165,7 @@ function CollapsibleSection({
     }
 
     wasOpenRef.current = isOpen;
-  }, [isDesktopAccordion, isOpen]);
+  }, [id, isDesktopAccordion, isOpen, lastToggledId]);
 
   if (!isDesktopAccordion) {
     return (
@@ -427,17 +411,20 @@ export function PriceCalculatorClient({
 
   const [ceilingType, setCeilingType] =
     useState<CeilingType>(resolvedCeilingType);
+
   const [ceilingLength, setCeilingLength] = useState<number>(() =>
     getPerimeterSuggestion(resolvedAreaDefault).recommended
   );
 
-  const [lightLinesEnabled, setLightLinesEnabled] = useState(false);
+  const [lightLinesEnabled, setLightLinesEnabled] = useState<boolean>(false);
+
   const [lightLinesLength, setLightLinesLength] = useState<number>(
-  lightLineMeters.default
-);
+    calculator.lightLineMeters.default
+  );
 
   const [corniceType, setCorniceType] =
     useState<CorniceType>(resolvedCorniceType);
+
   const [corniceLength, setCorniceLength] = useState<number>(
     calculator.corniceMeters.default
   );
@@ -449,6 +436,7 @@ export function PriceCalculatorClient({
 
   const [lightsEnabled, setLightsEnabled] =
     useState<boolean>(resolvedLightsEnabled);
+
   const [lightsCount, setLightsCount] = useState<number>(resolvedLightsCount);
 
   const perimeterSuggestion = useMemo(() => getPerimeterSuggestion(area), [area]);
@@ -487,10 +475,13 @@ export function PriceCalculatorClient({
     lights: false,
   });
 
+  const [lastToggledSection, setLastToggledSection] =
+    useState<AccordionSectionId | null>(null);
+
   useEffect(() => {
-    if (!isDesktopAccordion) {
-      return;
-    }
+    if (!isDesktopAccordion) return;
+
+    setLastToggledSection(null);
 
     setOpenSections({
       "ceiling-profile":
@@ -503,6 +494,7 @@ export function PriceCalculatorClient({
   }, [defaultOpenSection, hasSpecialCeiling, isDesktopAccordion]);
 
   const toggleSection = (id: AccordionSectionId) => {
+    setLastToggledSection(id);
     setOpenSections((prev) => ({
       ...prev,
       [id]: !prev[id],
@@ -517,7 +509,7 @@ export function PriceCalculatorClient({
     : 0;
 
   const lightLinesTotal = lightLinesEnabled
-    ? lightLinesLength * lightLinesConfig.ratePerMeter
+    ? lightLinesLength * calculator.lightLines.ratePerMeter
     : 0;
 
   const corniceTotal =
@@ -559,10 +551,10 @@ export function PriceCalculatorClient({
       ceilingExtraTotal,
 
       lightLinesEnabled,
-      lightLinesLabel: lightLinesEnabled ? lightLinesConfig.label : null,
+      lightLinesLabel: lightLinesEnabled ? calculator.lightLines.label : null,
       lightLinesLength: lightLinesEnabled ? lightLinesLength : null,
       lightLinesRatePerMeter: lightLinesEnabled
-        ? lightLinesConfig.ratePerMeter
+        ? calculator.lightLines.ratePerMeter
         : null,
       lightLinesTotal,
 
@@ -614,9 +606,7 @@ export function PriceCalculatorClient({
     setSnapshot(snapshot);
   }, [setSnapshot, snapshot]);
 
-  const markInteracted = () => {
-    setHasInteracted(true);
-  };
+  const markInteracted = () => setHasInteracted(true);
 
   const handleAreaChange = (value: number) => {
     markInteracted();
@@ -630,6 +620,11 @@ export function PriceCalculatorClient({
     if (slug !== "standard") {
       setCeilingLength(perimeterSuggestion.recommended);
     }
+  };
+
+  const handleCeilingLengthChange = (value: number) => {
+    markInteracted();
+    setCeilingLength(value);
   };
 
   const handleLightLinesEnabledChange = (value: boolean) => {
@@ -651,6 +646,11 @@ export function PriceCalculatorClient({
     }
   };
 
+  const handleCorniceLengthChange = (value: number) => {
+    markInteracted();
+    setCorniceLength(value);
+  };
+
   const handleTrackTypeChange = (slug: TrackType) => {
     markInteracted();
     setTrackType(slug);
@@ -658,16 +658,6 @@ export function PriceCalculatorClient({
     if (slug !== "none") {
       setTrackLength(calculator.trackMeters.default);
     }
-  };
-
-  const handleCeilingLengthChange = (value: number) => {
-    markInteracted();
-    setCeilingLength(value);
-  };
-
-  const handleCorniceLengthChange = (value: number) => {
-    markInteracted();
-    setCorniceLength(value);
   };
 
   const handleTrackLengthChange = (value: number) => {
@@ -750,6 +740,7 @@ export function PriceCalculatorClient({
             isDesktopAccordion={isDesktopAccordion}
             isOpen={openSections["ceiling-profile"]}
             onToggle={toggleSection}
+            lastToggledId={lastToggledSection}
           >
             <RangeField
               id="ceiling-length-range"
@@ -773,9 +764,11 @@ export function PriceCalculatorClient({
         <CollapsibleSection
           id="light-lines"
           title="Световые линии"
+          // по задаче: убрали подпись "Расчёт по погонным метрам — от ..."
           isDesktopAccordion={isDesktopAccordion}
           isOpen={openSections["light-lines"]}
           onToggle={toggleSection}
+          lastToggledId={lastToggledSection}
         >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <OptionCard
@@ -788,7 +781,9 @@ export function PriceCalculatorClient({
             <OptionCard
               active={lightLinesEnabled}
               title="Добавить просчёт световых линий"
-              meta={`от ${formatCurrency(lightLinesConfig.ratePerMeter)} ₽ / м.п.`}
+              meta={`от ${formatCurrency(
+                calculator.lightLines.ratePerMeter
+              )} ₽ / м.п.`}
               onClick={() => handleLightLinesEnabledChange(true)}
             />
           </div>
@@ -799,9 +794,9 @@ export function PriceCalculatorClient({
                 id="light-lines-length-range"
                 label="Длина световых линий"
                 value={lightLinesLength}
-                min={lightLineMeters.min}
-                max={lightLineMeters.max}
-                step={lightLineMeters.step}
+                min={calculator.lightLineMeters.min}
+                max={calculator.lightLineMeters.max}
+                step={calculator.lightLineMeters.step}
                 unit="м.п."
                 onChange={handleLightLinesLengthChange}
               />
@@ -815,6 +810,7 @@ export function PriceCalculatorClient({
           isDesktopAccordion={isDesktopAccordion}
           isOpen={openSections.cornices}
           onToggle={toggleSection}
+          lastToggledId={lastToggledSection}
         >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {calculator.cornices.map((option) => {
@@ -857,6 +853,7 @@ export function PriceCalculatorClient({
           isDesktopAccordion={isDesktopAccordion}
           isOpen={openSections.tracks}
           onToggle={toggleSection}
+          lastToggledId={lastToggledSection}
         >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {calculator.tracks.map((option) => {
@@ -899,6 +896,7 @@ export function PriceCalculatorClient({
           isDesktopAccordion={isDesktopAccordion}
           isOpen={openSections.lights}
           onToggle={toggleSection}
+          lastToggledId={lastToggledSection}
         >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <OptionCard
@@ -952,9 +950,9 @@ export function PriceCalculatorClient({
 
             {lightLinesTotal > 0 ? (
               <PriceRow
-                label={lightLinesConfig.label}
+                label={calculator.lightLines.label}
                 value={`${lightLinesLength} м.п. × ${formatCurrency(
-                  lightLinesConfig.ratePerMeter
+                  calculator.lightLines.ratePerMeter
                 )} ₽`}
               />
             ) : null}
@@ -1016,7 +1014,7 @@ export function PriceCalculatorClient({
             <SummaryPill>{selectedCeiling.label}</SummaryPill>
 
             {lightLinesTotal > 0 ? (
-              <SummaryPill>{lightLinesConfig.label}</SummaryPill>
+              <SummaryPill>{calculator.lightLines.label}</SummaryPill>
             ) : null}
 
             {selectedCornice.ratePerMeter > 0 ? (
@@ -1047,7 +1045,7 @@ export function PriceCalculatorClient({
 
             {lightLinesTotal > 0 ? (
               <div className="flex items-center justify-between gap-4">
-                <span>{lightLinesConfig.label}</span>
+                <span>{calculator.lightLines.label}</span>
                 <span>{formatCurrency(lightLinesTotal)} ₽</span>
               </div>
             ) : null}
@@ -1080,15 +1078,23 @@ export function PriceCalculatorClient({
               </div>
             </div>
 
-            <p className="pt-2 text-sm leading-6 text-white/65">
-              {homepage.price.includedLine}
-            </p>
-            <p className="text-sm leading-6 text-white/65">
-              {homepage.price.fixedPriceNote}
-            </p>
-            <p className="text-sm leading-6 text-white/65">
-              {homepage.price.noExtraChargeNote}
-            </p>
+            {homepage.price.includedLine?.trim() ? (
+              <p className="pt-2 text-sm leading-6 text-white/65">
+                {homepage.price.includedLine}
+              </p>
+            ) : null}
+
+            {homepage.price.fixedPriceNote?.trim() ? (
+              <p className="text-sm leading-6 text-white/65">
+                {homepage.price.fixedPriceNote}
+              </p>
+            ) : null}
+
+            {homepage.price.noExtraChargeNote?.trim() ? (
+              <p className="text-sm leading-6 text-white/65">
+                {homepage.price.noExtraChargeNote}
+              </p>
+            ) : null}
           </div>
 
           <div className="mt-8">
@@ -1097,7 +1103,7 @@ export function PriceCalculatorClient({
               variant="secondary"
               className="w-full justify-center py-6 text-base"
             >
-              Записаться на бесплатный замер
+              {homepage.price.primaryCtaLabel}
             </Button>
           </div>
         </div>
