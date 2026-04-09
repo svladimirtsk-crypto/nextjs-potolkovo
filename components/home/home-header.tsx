@@ -11,9 +11,19 @@ import { Container } from "@/components/ui/container";
 
 const PRIMARY_CTA_LABEL = "Записаться на бесплатный замер";
 
+const priorityRank = {
+  high: 0,
+  medium: 1,
+  low: 2,
+} as const;
+
 const headerServiceLinks = serviceLinks
   .filter((item) => item.showInHeader)
-  .slice(0, 6);
+  .slice()
+  .sort(
+    (a, b) =>
+      (priorityRank[a.priority] ?? 9) - (priorityRank[b.priority] ?? 9)
+  );
 
 export function HomeHeader() {
   const [isDesktopServicesOpen, setIsDesktopServicesOpen] = useState(false);
