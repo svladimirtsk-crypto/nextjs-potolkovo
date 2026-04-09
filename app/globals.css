@@ -110,3 +110,45 @@ button {
     scroll-behavior: auto !important;
   }
 }
+
+/* Price calculator range: force black slider on mobile (esp. iOS Safari) */
+input.pc-range[type="range"] {
+  accent-color: var(--color-dark);
+}
+
+@media (max-width: 1023px) {
+  input.pc-range[type="range"] {
+    accent-color: var(--color-dark);
+  }
+
+  input.pc-range[type="range"]::-webkit-slider-runnable-track {
+    height: 8px;
+    border-radius: 9999px;
+    background: #e2e8f0; /* slate-200 */
+  }
+
+  input.pc-range[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 22px;
+    width: 22px;
+    border-radius: 9999px;
+    background: var(--color-dark); /* near-black */
+    border: none;
+    margin-top: -7px; /* (22-8)/2 to center thumb on track */
+  }
+
+  input.pc-range[type="range"]::-moz-range-track {
+    height: 8px;
+    border-radius: 9999px;
+    background: #e2e8f0;
+  }
+
+  input.pc-range[type="range"]::-moz-range-thumb {
+    height: 22px;
+    width: 22px;
+    border-radius: 9999px;
+    background: var(--color-dark);
+    border: none;
+  }
+}
