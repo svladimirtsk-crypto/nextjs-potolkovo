@@ -287,6 +287,31 @@ function RangeField({
   unit: string;
   onChange: (value: number) => void;
 }) {
+  const [manual, setManual] = useState<string>(String(value));
+
+  useEffect(() => {
+    setManual(String(value));
+  }, [value]);
+
+  const normalize = (num: number) => clamp(roundToStep(num, step), min, max);
+
+  const parseManual = (raw: string) => {
+    const normalizedRaw = raw.replace(",", ".").trim();
+    if (!normalizedRaw) return null;
+
+    const parsed = Number(normalizedRaw);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const commitManual = (raw: string) => {
+    const parsed = parseManual(raw);
+    if (parsed === null) return;
+
+    onChange(normalize(parsed));
+  };
+
+  const isIntegerStep = Number.isInteger(step);
+
   return (
     <div>
       <div className="flex items-center justify-between gap-4">
@@ -294,9 +319,39 @@ function RangeField({
           {label}
         </label>
 
-        <span className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-slate-950 shadow-sm ring-1 ring-slate-200">
-          {value} {unit}
-        </span>
+        <div className="flex items-center gap-2">
+          <input
+            aria-label={label}
+            value={manual}
+            onChange={(e) => {
+              const next = e.target.value;
+              setManual(next);
+              commitManual(next); // обновляем расчёт сразу при валидном числе
+            }}
+            onBlur={() => {
+              const parsed = parseManual(manual);
+              if (parsed === null) {
+                setManual(String(value));
+                return;
+              }
+
+              const next = normalize(parsed);
+              setManual(String(next));
+
+              if (next !== value) {
+                onChange(next);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                (e.currentTarget as HTMLInputElement).blur();
+              }
+            }}
+            inputMode={isIntegerStep ? "numeric" : "decimal"}
+            className="w-20 rounded-full bg-white px-3 py-1 text-sm font-semibold text-slate-950 shadow-sm ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 sm:w-24"
+          />
+          <span className="text-sm font-semibold text-slate-950">{unit}</span>
+        </div>
       </div>
 
       <input
@@ -307,7 +362,7 @@ function RangeField({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-4 h-2 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-slate-950"
+        className="pc-range mt-4 h-2 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-slate-950"
       />
 
       <div className="mt-2 flex justify-between text-xs text-slate-500">
