@@ -8,15 +8,16 @@ export interface ProductSpec {
   value: string;
 }
 
-export interface Product {
-  id: string;
-  title: string;
-  categoryId: string;
-  priceRub: number | null;
-  url: string;
-  availability: string;
-  specs: ProductSpec[];
-}
+ export interface Product {
+   id: string;
+   title: string;
+   categoryId: string;
+   priceRub: number | null;
+   url: string;
+   availability: string;
+   specs: ProductSpec[];
+   imageUrl?: string;
+ }
 
 export interface Catalog {
   supplierName: string;
