@@ -217,6 +217,12 @@ export function TrackSaleCatalogSection({
                       : "border-slate-200 bg-white shadow-sm hover:shadow-md"
                   }`}
                 >
+                  {/* Image area */}
+                  <ProductImage
+                    imageUrl={product.imageUrl}
+                    title={product.title}
+                  />
+
                   <div className="mb-4 flex-grow">
                     <h3 className="text-base font-semibold text-slate-950 mb-3 line-clamp-3">
                       {product.title}
@@ -284,6 +290,8 @@ export function TrackSaleCatalogSection({
   );
 }
 
+/* ─── Sub-components ─── */
+
 function CategoryButton({
   active,
   onClick,
@@ -304,5 +312,68 @@ function CategoryButton({
     >
       {label}
     </button>
+  );
+}
+
+function ProductImage({
+  imageUrl,
+  title,
+}: {
+  imageUrl?: string;
+  title: string;
+}) {
+  if (imageUrl) {
+    return (
+      <div className="mb-4 rounded-xl overflow-hidden bg-slate-100 aspect-[4/3]">
+        <img
+          src={imageUrl}
+          alt={title}
+          loading="lazy"
+          className="w-full h-full object-cover"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="mb-4 rounded-xl aspect-[4/3] flex items-center justify-center"
+      aria-hidden="true"
+    >
+      <div className="w-full h-full rounded-xl bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100 flex items-center justify-center">
+        <svg
+          width="48"
+          height="48"
+          viewBox="0 0 48 48"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="text-slate-300"
+        >
+          <rect
+            x="6"
+            y="10"
+            width="36"
+            height="28"
+            rx="4"
+            stroke="currentColor"
+            strokeWidth="2"
+          />
+          <circle
+            cx="17"
+            cy="21"
+            r="4"
+            stroke="currentColor"
+            strokeWidth="2"
+          />
+          <path
+            d="M6 32l10-8 8 6 8-10 10 12"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+    </div>
   );
 }
