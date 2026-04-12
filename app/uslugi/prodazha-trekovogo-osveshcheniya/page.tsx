@@ -1,16 +1,21 @@
 import type { Metadata } from "next";
 
 import { getRequiredServicePageBySlug } from "@/content/services";
+import type { IntentMode } from "./_components/TrackSaleIntentContext";
+import { TrackSaleIntentProvider } from "./_components/TrackSaleIntentContext";
 import { ServicePageLayoutV2 } from "../_components/ServicePageLayoutV2";
 import { ServiceHero } from "../_components/ServiceHero";
 import { ServiceActionSection } from "../_components/ServiceActionSection";
 import { ServiceRelatedServices } from "../_components/ServiceRelatedServices";
+import { TrackSaleIntentSwitch } from "./_components/TrackSaleIntentSwitch";
 import { TrackSaleDiscountSection } from "./_components/TrackSaleDiscountSection";
 import { TrackSaleCatalogSection } from "./_components/TrackSaleCatalogSection";
 import { TrackSaleFaqSection } from "./_components/TrackSaleFaqSection";
 import { TrackSaleOrderingSection } from "./_components/TrackSaleOrderingSection";
 
-const service = getRequiredServicePageBySlug("prodazha-trekovogo-osveshcheniya");
+const service = getRequiredServicePageBySlug(
+  "prodazha-trekovogo-osveshcheniya"
+);
 
 export const metadata: Metadata = {
   title: service.metadata.title,
@@ -25,23 +30,40 @@ export const metadata: Metadata = {
   },
 };
 
-export default function ProdazhaTrekovogoOsveshcheniyaPage() {
+type PageProps = {
+  searchParams: Promise<{ mode?: string }>;
+};
+
+export default async function ProdazhaTrekovogoOsveshcheniyaPage({
+  searchParams,
+}: PageProps) {
+  const params = await searchParams;
+  const initialMode: IntentMode =
+    params.mode === "buy" ? "buy" : "install";
+
   return (
-    <ServicePageLayoutV2
-      service={service}
-      hero={<ServiceHero service={service} />}
-      proof={<TrackSaleDiscountSection />}
-      price={
-        <TrackSaleCatalogSection
-          preset={service.price.calculatorPreset}
-          sectionTitle={service.price.sectionTitle}
-          sectionIntro={service.price.sectionIntro}
-        />
-      }
-      trust={<TrackSaleFaqSection />}
-      promise={<TrackSaleOrderingSection />}
-      action={<ServiceActionSection service={service} />}
-      related={<ServiceRelatedServices service={service} />}
-    />
+    <TrackSaleIntentProvider initialMode={initialMode}>
+      <ServicePageLayoutV2
+        service={service}
+        hero={<ServiceHero service={service} />}
+        proof={
+          <>
+            <TrackSaleIntentSwitch />
+            <TrackSaleDiscountSection />
+          </>
+        }
+        price={
+          <TrackSaleCatalogSection
+            preset={service.price.calculatorPreset}
+            sectionTitle={service.price.sectionTitle}
+            sectionIntro={service.price.sectionIntro}
+          />
+        }
+        trust={<TrackSaleFaqSection />}
+        promise={<TrackSaleOrderingSection />}
+        action={<ServiceActionSection service={service} />}
+        related={<ServiceRelatedServices service={service} />}
+      />
+    </TrackSaleIntentProvider>
   );
 }
