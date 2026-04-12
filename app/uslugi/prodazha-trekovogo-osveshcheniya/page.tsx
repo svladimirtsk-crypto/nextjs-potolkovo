@@ -5,13 +5,13 @@ import type { IntentMode } from "./_components/TrackSaleIntentContext";
 import { TrackSaleIntentProvider } from "./_components/TrackSaleIntentContext";
 import { ServicePageLayoutV2 } from "../_components/ServicePageLayoutV2";
 import { ServiceHero } from "../_components/ServiceHero";
-import { ServiceActionSection } from "../_components/ServiceActionSection";
 import { ServiceRelatedServices } from "../_components/ServiceRelatedServices";
 import { TrackSaleIntentSwitch } from "./_components/TrackSaleIntentSwitch";
 import { TrackSaleDiscountSection } from "./_components/TrackSaleDiscountSection";
 import { TrackSaleCatalogSection } from "./_components/TrackSaleCatalogSection";
 import { TrackSaleFaqSection } from "./_components/TrackSaleFaqSection";
 import { TrackSaleOrderingSection } from "./_components/TrackSaleOrderingSection";
+import { TrackSaleActionSection } from "./_components/TrackSaleActionSection";
 
 const service = getRequiredServicePageBySlug(
   "prodazha-trekovogo-osveshcheniya"
@@ -61,7 +61,7 @@ export default async function ProdazhaTrekovogoOsveshcheniyaPage({
         }
         trust={<TrackSaleFaqSection />}
         promise={<TrackSaleOrderingSection />}
-        action={<ServiceActionSection service={service} />}
+        action={<TrackSaleActionSection service={service} />}
         related={<ServiceRelatedServices service={service} />}
       />
     </TrackSaleIntentProvider>
