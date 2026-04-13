@@ -11,6 +11,7 @@ import {
 
 import type {
   CalculatorModalContextValue,
+  LightingSnapshot,
   OpenCalculatorOptions,
   WizardStep,
 } from "@/lib/calculator-modal-types";
@@ -28,14 +29,25 @@ export function CalculatorModalProvider({
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState<WizardStep>(0);
   const [options, setOptions] = useState<OpenCalculatorOptions | null>(null);
+  const [lightingDraft, setLightingDraftState] =
+    useState<LightingSnapshot | null>(null);
 
   const { hasInteracted } = usePriceCalculatorBridge();
+
+  const setLightingDraft = useCallback((draft: LightingSnapshot | null) => {
+    setLightingDraftState(draft);
+  }, []);
 
   const openCalculator = useCallback(
     (opts?: OpenCalculatorOptions) => {
       const resolvedOpts = opts ?? {};
       setOptions(resolvedOpts);
       setCurrentStep(resolvedOpts.initialStep ?? 0);
+
+      if (resolvedOpts.initialLighting) {
+        setLightingDraftState(resolvedOpts.initialLighting);
+      }
+
       setIsOpen(true);
     },
     []
@@ -57,8 +69,19 @@ export function CalculatorModalProvider({
       openCalculator,
       closeCalculator,
       goToStep,
+      lightingDraft,
+      setLightingDraft,
     }),
-    [isOpen, currentStep, options, openCalculator, closeCalculator, goToStep]
+    [
+      isOpen,
+      currentStep,
+      options,
+      openCalculator,
+      closeCalculator,
+      goToStep,
+      lightingDraft,
+      setLightingDraft,
+    ]
   );
 
   return (
