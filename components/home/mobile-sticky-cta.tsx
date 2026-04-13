@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
+import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
+import { scrollToAnchorTarget } from "@/lib/scroll-to-anchor";
 import { Button } from "@/components/ui/button";
-import { usePriceCalculatorBridge } from "./price-calculator-context";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("ru-RU").format(value);
@@ -10,101 +13,104 @@ function formatCurrency(value: number) {
 
 export function MobileStickyCta() {
   const { snapshot, hasInteracted } = usePriceCalculatorBridge();
+  const { openCalculator, closeCalculator } = useCalculatorModal();
 
-  const [isPriceVisible, setIsPriceVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const [isActionVisible, setIsActionVisible] = useState(false);
+  const [isPriceVisible, setIsPriceVisible] = useState(false);
+
+  const priceObserverRef = useRef<IntersectionObserver | null>(null);
+  const actionObserverRef = useRef<IntersectionObserver | null>(null);
 
   useEffect(() => {
     const priceSection = document.getElementById("price");
     const actionSection = document.getElementById("action");
 
-    const observers: IntersectionObserver[] = [];
+    if (!priceSection && !actionSection) return;
+
+    const observerOptions = {
+      root: null,
+      rootMargin: "0px 0px -10% 0px",
+      threshold: 0,
+    };
 
     if (priceSection) {
-      const priceObserver = new IntersectionObserver(
-        ([entry]) => {
-          setIsPriceVisible(entry.isIntersecting);
-        },
-        {
-          threshold: 0.15,
-          rootMargin: "0px 0px -10% 0px",
-        }
-      );
-
-      priceObserver.observe(priceSection);
-      observers.push(priceObserver);
+      priceObserverRef.current = new IntersectionObserver(([entry]) => {
+        setIsPriceVisible(entry.isIntersecting);
+      }, observerOptions);
+      priceObserverRef.current.observe(priceSection);
     }
 
     if (actionSection) {
-      const actionObserver = new IntersectionObserver(
-        ([entry]) => {
-          setIsActionVisible(entry.isIntersecting);
-        },
-        {
-          threshold: 0.2,
-        }
-      );
-
-      actionObserver.observe(actionSection);
-      observers.push(actionObserver);
+      actionObserverRef.current = new IntersectionObserver(([entry]) => {
+        setIsActionVisible(entry.isIntersecting);
+      }, observerOptions);
+      actionObserverRef.current.observe(actionSection);
     }
 
     return () => {
-      observers.forEach((observer) => observer.disconnect());
+      priceObserverRef.current?.disconnect();
+      actionObserverRef.current?.disconnect();
     };
   }, []);
 
-  if (isActionVisible) {
-    return null;
-  }
+  useEffect(() => {
+    if (isActionVisible) {
+      setIsVisible(false);
+      return;
+    }
 
-  const showCalculatedState = isPriceVisible || (hasInteracted && !!snapshot);
+    const scrolled = typeof window !== "undefined" && window.scrollY > 300;
+
+    if (isPriceVisible || scrolled) {
+      setIsVisible(true);
+    } else {
+      setIsVisible(false);
+    }
+  }, [isActionVisible, isPriceVisible]);
+
+  const showCalculatedState =
+    isPriceVisible || (hasInteracted && !!snapshot);
+
+  const handleCalculatorClick = () => {
+    openCalculator({ source: "mobile-sticky" });
+  };
+
+  const handleActionClick = () => {
+    closeCalculator();
+    scrollToAnchorTarget("#action", { focus: true, highlight: true });
+  };
+
+  if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 lg:hidden">
-      <div className="border-t border-slate-200 bg-white/96 text-slate-950 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur supports-[backdrop-filter]:bg-white/88">
-        <div
-          className="mx-auto flex min-h-[76px] max-w-screen-sm items-center justify-between gap-3 px-4 py-3"
-          style={{
-            paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)",
-          }}
-        >
-          {showCalculatedState && snapshot ? (
-            <>
-              <div className="min-w-0">
-                <p className="text-xs text-slate-500">
-                  {isPriceVisible ? "Ваш расчёт" : "Последний расчёт"}
-                </p>
-                <p className="mt-1 truncate text-2xl font-bold tracking-tight text-slate-950">
-                  {formatCurrency(snapshot.total)} ₽
-                </p>
-              </div>
-
-              <Button
-                href="#action"
-                className="shrink-0 justify-center px-5 py-3 text-sm"
-              >
-                На замер
-              </Button>
-            </>
-          ) : (
-            <>
-              <div className="min-w-0">
-                <p className="text-xs text-slate-500">Быстрый расчёт</p>
-                <p className="mt-1 text-sm font-semibold text-slate-950">
-                  Подберите параметры и узнайте ориентир по цене
-                </p>
-              </div>
-
-              <Button
-                href="#price"
-                className="shrink-0 justify-center px-5 py-3 text-sm"
-              >
-                Калькулятор
-              </Button>
-            </>
-          )}
-        </div>
+    <div className="fixed bottom-0 inset-x-0 z-40 lg:hidden">
+      <div className="border-t border-slate-200 bg-white/95 backdrop-blur px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+        {showCalculatedState && snapshot ? (
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-slate-500">от</p>
+              <p className="text-lg font-bold text-slate-950 truncate">
+                {formatCurrency(snapshot.total)} ₽
+              </p>
+            </div>
+            <Button
+              type="button"
+              onClick={handleActionClick}
+              className="shrink-0 justify-center"
+            >
+              На замер
+            </Button>
+          </div>
+        ) : (
+          <Button
+            type="button"
+            onClick={handleCalculatorClick}
+            className="w-full justify-center"
+          >
+            Рассчитать стоимость
+          </Button>
+        )}
       </div>
     </div>
   );
