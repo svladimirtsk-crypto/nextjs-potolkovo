@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+
 import { homepage } from "@/content/homepage";
 import { legal } from "@/content/legal";
 import { Button } from "@/components/ui/button";
@@ -8,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { TextLink } from "@/components/ui/text-link";
 import {
   getCalculatorSummaryLines,
+  getLightingSummaryLines,
   usePriceCalculatorBridge,
-} from "./price-calculator-context";
+} from "@/components/home/price-calculator-context";
 
 const actionContent = homepage.action;
 
@@ -30,9 +32,7 @@ type FieldErrors = {
 function normalizePhone(value: string) {
   const digits = value.replace(/\D/g, "");
 
-  if (!digits) {
-    return "";
-  }
+  if (!digits) return "";
 
   if (digits.startsWith("8") && digits.length === 11) {
     return `+7${digits.slice(1)}`;
@@ -53,8 +53,17 @@ function isValidPhone(value: string) {
   return /^\+\d{10,15}$/.test(value);
 }
 
-function buildLeadMessage(lines: string[], address: string) {
-  const parts: string[] = ["Заявка с новой главной страницы"];
+function buildLeadMessage(
+  lines: string[],
+  address: string,
+  lightingLines: string[],
+  source: string
+) {
+  const parts: string[] = ["Заявка с сайта ПОТОЛКОВО"];
+
+  if (source) {
+    parts.push(`Источник: ${source}`);
+  }
 
   if (address.trim()) {
     parts.push("", `Адрес / район: ${address.trim()}`);
@@ -64,15 +73,28 @@ function buildLeadMessage(lines: string[], address: string) {
     parts.push("", "Параметры из калькулятора:", ...lines.map((line) => `— ${line}`));
   }
 
+  if (lightingLines.length) {
+    parts.push("", ...lightingLines);
+  }
+
   return parts.join("\n");
 }
 
-export function ActionForm() {
+type ActionFormProps = {
+  source?: string;
+};
+
+export function ActionForm({ source }: ActionFormProps) {
   const { snapshot, hasInteracted } = usePriceCalculatorBridge();
 
   const calculatorSummaryLines = useMemo(
     () => (hasInteracted ? getCalculatorSummaryLines(snapshot) : []),
     [hasInteracted, snapshot]
+  );
+
+  const lightingSummaryLines = useMemo(
+    () => getLightingSummaryLines(snapshot),
+    [snapshot]
   );
 
   const [name, setName] = useState("");
@@ -134,10 +156,33 @@ export function ActionForm() {
     formData.append("address", trimmedAddress);
     formData.append(
       "message",
-      buildLeadMessage(calculatorSummaryLines, trimmedAddress)
+      buildLeadMessage(
+        calculatorSummaryLines,
+        trimmedAddress,
+        lightingSummaryLines,
+        source ?? ""
+      )
     );
     formData.append("botcheck", "");
     formData.append("company", "");
+
+    // Lighting metadata
+    formData.append(
+      "lighting_mode",
+      snapshot?.lighting?.mode ?? "none"
+    );
+    formData.append(
+      "lighting_note",
+      snapshot?.lighting?.customNote ?? ""
+    );
+    formData.append(
+      "lighting_kit",
+      snapshot?.lighting?.kitName ?? ""
+    );
+    formData.append(
+      "calculator_source",
+      source ?? ""
+    );
 
     setIsPending(true);
 
@@ -208,6 +253,23 @@ export function ActionForm() {
 
           <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
             {calculatorSummaryLines.map((line) => (
+              <li key={line} className="flex gap-2">
+                <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-slate-950" />
+                <span>{line}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {lightingSummaryLines.length > 0 ? (
+        <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
+          <p className="text-sm font-semibold text-slate-950">
+            Освещение
+          </p>
+
+          <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
+            {lightingSummaryLines.map((line) => (
               <li key={line} className="flex gap-2">
                 <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-slate-950" />
                 <span>{line}</span>
