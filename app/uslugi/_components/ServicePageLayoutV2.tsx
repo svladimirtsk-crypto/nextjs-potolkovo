@@ -1,9 +1,9 @@
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
+
 import type { ServicePageContent } from "@/content/services";
-import { HomeFooter } from "@/components/home/home-footer";
 import { HomeHeader } from "@/components/home/home-header";
+import { HomeFooter } from "@/components/home/home-footer";
 import { MobileStickyCta } from "@/components/home/mobile-sticky-cta";
-import { PriceCalculatorProvider } from "@/components/home/price-calculator-context";
 
 type ServicePageLayoutV2Props = {
   service: ServicePageContent;
@@ -17,6 +17,7 @@ type ServicePageLayoutV2Props = {
 };
 
 export function ServicePageLayoutV2({
+  service,
   hero,
   proof,
   price,
@@ -29,7 +30,7 @@ export function ServicePageLayoutV2({
     <>
       <a
         href="#hero"
-        className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:left-4 focus-visible:top-4 focus-visible:z-[100] focus-visible:rounded-full focus-visible:bg-slate-950 focus-visible:px-4 focus-visible:py-2 focus-visible:text-sm focus-visible:font-semibold focus-visible:text-white"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded-xl focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:shadow-lg"
       >
         Перейти к содержимому
       </a>
@@ -37,20 +38,17 @@ export function ServicePageLayoutV2({
       <HomeHeader />
 
       <div className="pb-24 lg:pb-0">
-        <PriceCalculatorProvider>
-          <main>
-            {hero}
-            {proof}
-            {price}
-            {trust}
-            {promise}
-            {action}
-            {related ?? null}
-          </main>
+        <main>
+          {hero}
+          {proof}
+          {price}
+          {trust}
+          {promise}
+          {action}
+          {related ?? null}
+        </main>
 
-          <MobileStickyCta />
-        </PriceCalculatorProvider>
-
+        <MobileStickyCta />
         <HomeFooter />
       </div>
     </>
