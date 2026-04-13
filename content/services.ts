@@ -30,6 +30,7 @@ export type ServiceCalculatorPreset = {
   lightsEnabled?: boolean;
   lightsCount?: number;
   introNote?: string;
+  lightingDefault?: "kit" | "custom" | "none";
 };
 
 export type ServiceProofImage = {
