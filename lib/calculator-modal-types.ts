@@ -28,4 +28,6 @@ export type CalculatorModalContextValue = {
   openCalculator: (options?: OpenCalculatorOptions) => void;
   closeCalculator: () => void;
   goToStep: (step: WizardStep) => void;
+  lightingDraft: LightingSnapshot | null;
+  setLightingDraft: (draft: LightingSnapshot | null) => void;
 };
