@@ -10,6 +10,8 @@ import {
   useState,
 } from "react";
 
+import type { LightingSnapshot } from "@/lib/calculator-modal-types";
+
 export type CalculatorLeadSnapshot = {
   area: number;
   ceilingTypeLabel: string;
@@ -43,6 +45,8 @@ export type CalculatorLeadSnapshot = {
   lightsTotal: number;
 
   total: number;
+
+  lighting?: LightingSnapshot;
 };
 
 type PriceCalculatorContextValue = {
@@ -186,4 +190,40 @@ export function getCalculatorSummaryLines(
   lines.push(`Итого: ${formatCurrency(snapshot.total)} ₽`);
 
   return lines;
+}
+
+export function getLightingSummaryLines(
+  snapshot: CalculatorLeadSnapshot | null
+): string[] {
+  if (!snapshot?.lighting || snapshot.lighting.mode === "none") {
+    return [];
+  }
+
+  const lighting = snapshot.lighting;
+
+  if (lighting.mode === "kit") {
+    const parts: string[] = [
+      `Освещение: Готовый комплект — ${lighting.kitName ?? "без названия"}`,
+    ];
+    if (lighting.totalRub != null) {
+      parts.push(`  Стоимость комплекта: ${formatCurrency(lighting.totalRub)} ₽`);
+    }
+    if (lighting.items && lighting.items.length > 0) {
+      parts.push("  Состав:");
+      lighting.items.forEach((item) => {
+        parts.push(
+          `    — ${item.name} × ${item.qty} (${formatCurrency(item.priceRub)} ₽/шт.)`
+        );
+      });
+    }
+    return parts;
+  }
+
+  if (lighting.mode === "custom") {
+    return [
+      `Освещение: Пожелание — ${lighting.customNote ?? "не указано"}`,
+    ];
+  }
+
+  return [];
 }
