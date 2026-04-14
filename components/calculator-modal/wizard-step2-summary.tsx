@@ -1,8 +1,9 @@
 "use client";
 
 import {
-  usePriceCalculatorBridge,
   getCalculatorSummaryLines,
+  getLightingSummaryLines,
+  usePriceCalculatorBridge,
 } from "@/components/home/price-calculator-context";
 import { useCalculatorModal } from "./calculator-modal-context";
 
@@ -10,46 +11,73 @@ function fmt(n: number) {
   return new Intl.NumberFormat("ru-RU").format(n);
 }
 
-export function WizardStep2Summary() {
+type WizardStep2SummaryProps = {
+  onConfirm: () => void;
+};
+
+export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
   const { snapshot } = usePriceCalculatorBridge();
   const { lightingDraft, ceilingTotal, lightingDiscountedTotal, grandTotal } =
     useCalculatorModal();
 
   const calcLines = getCalculatorSummaryLines(snapshot);
+  const lightingLines = getLightingSummaryLines(
+    snapshot
+      ? { ...snapshot, lighting: lightingDraft ?? undefined }
+      : null
+  );
+
+  const hasLighting =
+    lightingDraft !== null &&
+    lightingDraft.mode !== "none" &&
+    (lightingDraft.items?.length ?? 0) > 0;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Hero totals */}
-      <div className="rounded-2xl bg-slate-950 text-white p-5">
-        <p className="text-sm text-white/60">Потолок</p>
-        <p className="text-3xl font-bold">{fmt(ceilingTotal)} ₽</p>
+      <div className="rounded-2xl bg-slate-950 p-6 text-white">
+        <p className="text-sm text-white/60 mb-1">Потолок (работы)</p>
+        <p className="text-3xl font-bold tracking-tight">
+          {fmt(ceilingTotal)} ₽
+        </p>
 
-        {lightingDiscountedTotal > 0 && lightingDraft ? (
+        {hasLighting && lightingDiscountedTotal > 0 ? (
           <>
-            <p className="mt-3 text-sm text-white/60">Итого с освещением</p>
-            <p className="text-4xl font-bold">{fmt(grandTotal)} ₽</p>
-            <p className="text-xs text-white/50 mt-1">
-              Свет: {fmt(lightingDiscountedTotal)} ₽ (−15% от{" "}
-              {fmt(lightingDraft.totalRub ?? 0)} ₽)
+            <div className="my-4 border-t border-white/10" />
+            <p className="text-sm text-white/60 mb-1">Итого с освещением</p>
+            <p className="text-4xl font-bold tracking-tight">
+              ~{fmt(grandTotal)} ₽
+            </p>
+            <p className="mt-2 text-xs text-white/50">
+              Свет: {fmt(lightingDiscountedTotal)} ₽ со скидкой 15%
+              {lightingDraft.totalRub != null ? (
+                <> (от {fmt(lightingDraft.totalRub)} ₽)</>
+              ) : null}
             </p>
           </>
         ) : null}
       </div>
 
-      {/* Accordion details */}
-      <details className="group">
-        <summary className="cursor-pointer text-sm font-medium text-slate-700 hover:text-slate-950 list-none flex items-center gap-2">
-          <span className="group-open:rotate-90 transition-transform">▶</span>
-          Состав расчёта
+      {/* Details accordion */}
+      <details className="group rounded-2xl border border-slate-200 bg-slate-50">
+        <summary className="flex cursor-pointer select-none items-center justify-between px-4 py-3 text-sm font-semibold text-slate-950 list-none">
+          <span>Состав расчёта</span>
+          <span
+            className="text-slate-400 transition-transform group-open:rotate-180"
+            aria-hidden="true"
+          >
+            ▾
+          </span>
         </summary>
 
-        <div className="mt-3 pl-4 border-l-2 border-slate-200 space-y-4">
+        <div className="border-t border-slate-200 px-4 py-4 space-y-4">
+          {/* Ceiling lines */}
           {calcLines.length > 0 ? (
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
                 Потолок
               </p>
-              <ul className="space-y-1">
+              <ul className="space-y-1.5">
                 {calcLines.map((line) => (
                   <li key={line} className="text-sm text-slate-600">
                     {line}
@@ -57,29 +85,65 @@ export function WizardStep2Summary() {
                 ))}
               </ul>
             </div>
-          ) : null}
+          ) : (
+            <p className="text-sm text-slate-500">
+              Параметры не заданы — вернитесь на шаг 1
+            </p>
+          )}
 
-          {lightingDraft && lightingDraft.mode !== "none" && lightingDraft.items && lightingDraft.items.length > 0 ? (
+          {/* Lighting lines */}
+          {hasLighting && lightingDraft.items && lightingDraft.items.length > 0 ? (
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-                Освещение ({lightingDraft.mode === "kit" ? lightingDraft.kitName : "Каталог"})
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
+                Освещение
               </p>
-              <ul className="space-y-1">
+              {lightingDraft.kitName ? (
+                <p className="text-sm font-medium text-slate-700 mb-1">
+                  {lightingDraft.kitName}
+                </p>
+              ) : null}
+              <ul className="space-y-1.5">
                 {lightingDraft.items.map((item) => (
-                  <li key={item.sku} className="text-sm text-slate-600 flex justify-between gap-2">
+                  <li
+                    key={item.sku}
+                    className="flex items-center justify-between gap-2 text-sm text-slate-600"
+                  >
                     <span>{item.name} × {item.qty}</span>
-                    <span className="text-slate-400">{fmt(item.qty * item.priceRub)} ₽</span>
+                    <span className="shrink-0 text-slate-400">
+                      {fmt(item.qty * item.priceRub)} ₽
+                    </span>
                   </li>
                 ))}
               </ul>
+              {lightingDraft.totalRub != null ? (
+                <p className="mt-2 text-sm font-semibold text-slate-950">
+                  Свет итого: {fmt(lightingDraft.totalRub)} ₽
+                  {lightingDiscountedTotal > 0 ? (
+                    <span className="ml-2 text-emerald-600">
+                      → {fmt(lightingDiscountedTotal)} ₽ (−15%)
+                    </span>
+                  ) : null}
+                </p>
+              ) : null}
             </div>
           ) : null}
         </div>
       </details>
 
-      <p className="text-xs text-slate-500">
-        Точная смета фиксируется после бесплатного замера. Скидка 15% на освещение при заказе потолка.
+      {/* Note */}
+      <p className="text-xs text-slate-500 leading-5">
+        Точная смета фиксируется после бесплатного замера. Скидка 15% на
+        оборудование при заказе натяжного потолка.
       </p>
+
+      {/* CTA — visible on mobile since Footer might be out of view */}
+      <button
+        type="button"
+        onClick={onConfirm}
+        className="w-full rounded-2xl bg-slate-950 py-4 text-sm font-semibold text-white hover:bg-slate-800 transition-colors md:hidden"
+      >
+        Зафиксировать смету →
+      </button>
     </div>
   );
 }
