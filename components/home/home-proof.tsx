@@ -34,7 +34,16 @@ export function HomeProof() {
 
         {/* Mobile: horizontal scroll track */}
         <div className="mt-10 lg:hidden">
-          <ProofTrackClient items={proof.items} onOpen={openBySlug} />
+          <ProofTrackClient>
+            {proof.items.map((item) => (
+              <ProofCard
+                key={item.slug}
+                item={item}
+                mode="mobile"
+                onOpen={() => openBySlug(item.slug)}
+              />
+            ))}
+          </ProofTrackClient>
         </div>
 
         {/* Desktop: slider with arrows */}
