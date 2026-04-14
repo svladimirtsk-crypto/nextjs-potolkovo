@@ -10,7 +10,10 @@ import {
   useState,
 } from "react";
 
-import type { LightingSnapshot } from "@/lib/calculator-modal-types";
+import type {
+  DerivedInputs,
+  LightingSnapshot,
+} from "@/lib/calculator-modal-types";
 
 export type CalculatorLeadSnapshot = {
   area: number;
@@ -46,7 +49,15 @@ export type CalculatorLeadSnapshot = {
 
   total: number;
 
+  derivedInputs: DerivedInputs;
   lighting?: LightingSnapshot;
+};
+
+export const DEFAULT_DERIVED_INPUTS: DerivedInputs = {
+  pointSpotsQty: 0,
+  trackMountType: "none",
+  trackLengthMeters: 0,
+  recommendedSpotsQty: 0,
 };
 
 type PriceCalculatorContextValue = {
@@ -181,13 +192,13 @@ export function getCalculatorSummaryLines(
     snapshot.lightsCount !== null
   ) {
     lines.push(
-      `Светильники: ${snapshot.lightsCount} шт. × ${formatCurrency(
+      `Точечные светильники: ${snapshot.lightsCount} шт. × ${formatCurrency(
         snapshot.lightsRatePerUnit
       )} ₽`
     );
   }
 
-  lines.push(`Итого: ${formatCurrency(snapshot.total)} ₽`);
+  lines.push(`Итого потолок: ${formatCurrency(snapshot.total)} ₽`);
 
   return lines;
 }
@@ -206,7 +217,14 @@ export function getLightingSummaryLines(
       `Освещение: Готовый комплект — ${lighting.kitName ?? "без названия"}`,
     ];
     if (lighting.totalRub != null) {
-      parts.push(`  Стоимость комплекта: ${formatCurrency(lighting.totalRub)} ₽`);
+      parts.push(
+        `  Стоимость комплекта: ${formatCurrency(lighting.totalRub)} ₽`
+      );
+    }
+    if (lighting.discountedTotalRub != null) {
+      parts.push(
+        `  Со скидкой 15%: ${formatCurrency(lighting.discountedTotalRub)} ₽`
+      );
     }
     if (lighting.items && lighting.items.length > 0) {
       parts.push("  Состав:");
@@ -219,10 +237,24 @@ export function getLightingSummaryLines(
     return parts;
   }
 
-  if (lighting.mode === "custom") {
-    return [
-      `Освещение: Пожелание — ${lighting.customNote ?? "не указано"}`,
-    ];
+  if (lighting.mode === "catalog") {
+    const parts: string[] = ["Освещение: Собранный каталог"];
+    if (lighting.items && lighting.items.length > 0) {
+      lighting.items.forEach((item) => {
+        parts.push(
+          `  — ${item.name} × ${item.qty} (${formatCurrency(item.priceRub)} ₽/шт.)`
+        );
+      });
+    }
+    if (lighting.totalRub != null) {
+      parts.push(`  Стоимость: ${formatCurrency(lighting.totalRub)} ₽`);
+    }
+    if (lighting.discountedTotalRub != null) {
+      parts.push(
+        `  Со скидкой 15%: ${formatCurrency(lighting.discountedTotalRub)} ₽`
+      );
+    }
+    return parts;
   }
 
   return [];
