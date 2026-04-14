@@ -16,6 +16,7 @@ import type {
   WizardStep,
 } from "@/lib/calculator-modal-types";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
+import { applyLightingDiscount } from "@/lib/lighting-formulas";
 
 const CalculatorModalContext = createContext<CalculatorModalContextValue | null>(
   null
@@ -32,7 +33,7 @@ export function CalculatorModalProvider({
   const [lightingDraft, setLightingDraftState] =
     useState<LightingSnapshot | null>(null);
 
-  const { hasInteracted } = usePriceCalculatorBridge();
+  const { snapshot } = usePriceCalculatorBridge();
 
   const setLightingDraft = useCallback((draft: LightingSnapshot | null) => {
     setLightingDraftState(draft);
@@ -61,6 +62,15 @@ export function CalculatorModalProvider({
     setCurrentStep(step);
   }, []);
 
+  const ceilingTotal = snapshot?.total ?? 0;
+
+  const lightingDiscountedTotal = useMemo(() => {
+    if (!lightingDraft?.totalRub) return 0;
+    return applyLightingDiscount(lightingDraft.totalRub);
+  }, [lightingDraft?.totalRub]);
+
+  const grandTotal = ceilingTotal + lightingDiscountedTotal;
+
   const value = useMemo<CalculatorModalContextValue>(
     () => ({
       isOpen,
@@ -71,6 +81,9 @@ export function CalculatorModalProvider({
       goToStep,
       lightingDraft,
       setLightingDraft,
+      lightingDiscountedTotal,
+      ceilingTotal,
+      grandTotal,
     }),
     [
       isOpen,
@@ -81,6 +94,9 @@ export function CalculatorModalProvider({
       goToStep,
       lightingDraft,
       setLightingDraft,
+      lightingDiscountedTotal,
+      ceilingTotal,
+      grandTotal,
     ]
   );
 
