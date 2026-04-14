@@ -138,7 +138,7 @@ export function CatalogSection() {
 
                 <div className="shrink-0 text-right">
                   <p className="text-sm font-semibold text-slate-950">
-                    {noPrice ? "По запросу" : `${fmt(product.priceRub)} ₽`}
+                    {noPrice ? "По запросу" : `${fmt(product.priceRub ?? 0)} ₽`}
                   </p>
                 </div>
 
