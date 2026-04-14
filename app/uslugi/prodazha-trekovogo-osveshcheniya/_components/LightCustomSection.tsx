@@ -12,7 +12,8 @@ export function LightCustomSection() {
   const handleClick = () => {
     openCalculator({
       initialStep: 1,
-      source: "track-sale-custom",
+      initialLightingTab: "catalog",
+      source: "track-sale-catalog",
     });
   };
 
@@ -23,7 +24,7 @@ export function LightCustomSection() {
           <Heading
             eyebrow="Свой вариант"
             title="Есть свои пожелания по освещению?"
-            description="Соберите свой комплект: выберите тип трека, количество спотов, температуру света — и мы подготовим смету."
+            description="Откройте каталог и соберите свой комплект: выберите тип трека, количество спотов, температуру света — и мы подготовим смету."
           />
 
           <div className="mt-8">
@@ -32,7 +33,7 @@ export function LightCustomSection() {
               className="justify-center py-6 text-base"
               onClick={handleClick}
             >
-              Собрать свой комплект
+              Открыть каталог
             </Button>
           </div>
 
