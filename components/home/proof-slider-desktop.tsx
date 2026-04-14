@@ -1,36 +1,35 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
+import { useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { ProofCard } from "./proof-card";
+import type { homepage } from "@/content/homepage";
 
-type ProofSliderDesktopProps<T> = {
-  items: readonly T[];
+type ProofItem = (typeof homepage.proof.items)[number];
+
+type ProofSliderDesktopProps = {
+  items: ProofItem[];
   onOpen: (slug: string) => void;
-  renderCard: (item: T, onOpen: (slug: string) => void) => ReactNode;
 };
 
-export function ProofSliderDesktop<T extends { slug: string }>({
-  items,
-  onOpen,
-  renderCard,
-}: ProofSliderDesktopProps<T>) {
+export function ProofSliderDesktop({ items, onOpen }: ProofSliderDesktopProps) {
   const trackRef = useRef<HTMLDivElement>(null);
 
   const scroll = (dir: "prev" | "next") => {
     if (!trackRef.current) return;
-    const card = trackRef.current.querySelector("[data-proof-card]");
-    const cardWidth = card
-      ? card.getBoundingClientRect().width + 20
-      : 340;
+    const card = trackRef.current.querySelector<HTMLElement>("article");
+    const gap  = 20;
+    const cardWidth = card ? card.getBoundingClientRect().width + gap : 360;
     trackRef.current.scrollBy({
       left: dir === "next" ? cardWidth : -cardWidth,
-      behavior: "smooth",
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
     });
   };
 
   return (
     <div>
-      <style>{`.no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}`}</style>
       <div
         ref={trackRef}
         role="region"
@@ -40,28 +39,34 @@ export function ProofSliderDesktop<T extends { slug: string }>({
         {items.map((item) => (
           <div
             key={item.slug}
-            data-proof-card
-            className="snap-start w-[calc(33.333%-14px)] flex-none min-w-72"
+            className="snap-start flex-none"
+            style={{ width: "calc(33.333% - 14px)", minWidth: "280px" }}
           >
-            {renderCard(item, onOpen)}
+            <ProofCard
+              item={item}
+              mode="desktop"
+              onOpen={() => onOpen(item.slug)}
+            />
           </div>
         ))}
       </div>
 
       <div className="mt-4 flex items-center justify-end gap-2">
         <Button
-          variant="ghost"
           type="button"
+          variant="ghost"
           onClick={() => scroll("prev")}
           aria-label="Предыдущие работы"
+          className="px-4"
         >
           ←
         </Button>
         <Button
-          variant="ghost"
           type="button"
+          variant="ghost"
           onClick={() => scroll("next")}
           aria-label="Следующие работы"
+          className="px-4"
         >
           →
         </Button>
