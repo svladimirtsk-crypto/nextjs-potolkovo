@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import { type ReactNode } from "react";
 import dynamic from "next/dynamic";
 
 import { PriceCalculatorProvider } from "@/components/home/price-calculator-context";
