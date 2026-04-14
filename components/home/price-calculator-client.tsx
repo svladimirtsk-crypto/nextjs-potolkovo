@@ -429,20 +429,20 @@ export function PriceCalculatorClient({
   const resolvedLightsEnabled = preset?.lightsEnabled ?? false;
   const resolvedLightsCount   = preset?.lightsCount  ?? calculator.lights.countDefault;
 
-  // ── State ──────────────────────────────────────────────────────────────
+    // ── State ──────────────────────────────────────────────────────────────
   const [area, setArea]               = useState<number>(resolvedAreaDefault);
   const [ceilingType, setCeilingType] = useState<CeilingType>(resolvedCeilingType);
   const [ceilingLength, setCeilingLength] = useState<number>(
     () => getPerimeterSuggestion(resolvedAreaDefault).recommended
   );
-  const [lightLinesEnabled, setLightLinesEnabled] = useState(false);
-  const [lightLinesLength, setLightLinesLength]   = useState(calculator.lightLineMeters.default);
+  const [lightLinesEnabled, setLightLinesEnabled] = useState<boolean>(false);
+  const [lightLinesLength, setLightLinesLength]   = useState<number>(calculator.lightLineMeters.default);
   const [corniceType, setCorniceType] = useState<CorniceType>(resolvedCorniceType);
-  const [corniceLength, setCorniceLength] = useState(calculator.corniceMeters.default);
+  const [corniceLength, setCorniceLength] = useState<number>(calculator.corniceMeters.default);
   const [trackType, setTrackType]     = useState<TrackType>(resolvedTrackType);
-  const [trackLength, setTrackLength] = useState(calculator.trackMeters.default);
-  const [lightsEnabled, setLightsEnabled] = useState(resolvedLightsEnabled);
-  const [lightsCount, setLightsCount]     = useState(resolvedLightsCount);
+  const [trackLength, setTrackLength] = useState<number>(calculator.trackMeters.default);
+  const [lightsEnabled, setLightsEnabled] = useState<boolean>(resolvedLightsEnabled);
+  const [lightsCount, setLightsCount]     = useState<number>(resolvedLightsCount);
 
   const perimeterSuggestion = useMemo(() => getPerimeterSuggestion(area), [area]);
 
