@@ -6,21 +6,21 @@ import { Providers } from "./providers";
 import "./globals.css";
 
 const inter = Inter({
-  subsets: ["latin", "cyrillic"],
+  subsets:  ["latin", "cyrillic"],
   variable: "--font-sans",
-  display: "swap",
+  display:  "swap",
 });
 
 const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin", "cyrillic"],
+  subsets:  ["latin", "cyrillic"],
   variable: "--font-mono",
-  display: "swap",
+  display:  "swap",
 });
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://potolkovo-msk.ru"),
   title: {
-    default: "ПОТОЛКОВО",
+    default:  "ПОТОЛКОВО",
     template: "%s | ПОТОЛКОВО",
   },
   description:
@@ -29,18 +29,16 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   openGraph: {
-    type: "website",
-    locale: "ru_RU",
+    type:     "website",
+    locale:   "ru_RU",
     siteName: "ПОТОЛКОВО",
-    url: "https://potolkovo-msk.ru",
+    url:      "https://potolkovo-msk.ru",
   },
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ru">
       <body
@@ -59,6 +57,7 @@ export default function RootLayout({
             })();
           `}
         </Script>
+
         <Script id="yandex-metrika" strategy="afterInteractive">
           {`
             (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
