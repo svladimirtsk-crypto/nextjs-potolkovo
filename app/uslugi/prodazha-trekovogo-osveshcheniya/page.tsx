@@ -7,23 +7,22 @@ import { ServiceActionSection } from "../_components/ServiceActionSection";
 import { ServiceRelatedServices } from "../_components/ServiceRelatedServices";
 import { LightKitShowcase } from "./_components/LightKitShowcase";
 import { LightCustomSection } from "./_components/LightCustomSection";
+import { CatalogSection } from "./_components/CatalogSection";
 import { TrackSaleFaqSection } from "./_components/TrackSaleFaqSection";
 import { TrackSaleOrderingSection } from "./_components/TrackSaleOrderingSection";
 
-const service = getRequiredServicePageBySlug(
-  "prodazha-trekovogo-osveshcheniya"
-);
+const service = getRequiredServicePageBySlug("prodazha-trekovogo-osveshcheniya");
 
 export const metadata: Metadata = {
-  title: service.metadata.title,
+  title:       service.metadata.title,
   description: service.metadata.description,
-  keywords: service.metadata.keywords,
-  alternates: { canonical: service.metadata.canonicalPath },
+  keywords:    service.metadata.keywords,
+  alternates:  { canonical: service.metadata.canonicalPath },
   openGraph: {
-    title: service.metadata.ogTitle,
+    title:       service.metadata.ogTitle,
     description: service.metadata.ogDescription,
-    url: service.pathname,
-    images: [{ url: service.metadata.ogImage }],
+    url:         service.pathname,
+    images:      [{ url: service.metadata.ogImage }],
   },
 };
 
@@ -33,7 +32,12 @@ export default function ProdazhaTrekovogoOsveshcheniyaPage() {
       service={service}
       hero={<ServiceHero service={service} />}
       proof={<LightKitShowcase />}
-      price={<LightCustomSection />}
+      price={
+        <>
+          <LightCustomSection />
+          <CatalogSection />
+        </>
+      }
       trust={<TrackSaleFaqSection />}
       promise={<TrackSaleOrderingSection />}
       action={<ServiceActionSection service={service} />}
