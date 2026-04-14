@@ -15,18 +15,14 @@ import type {
   OpenCalculatorOptions,
   WizardStep,
 } from "@/lib/calculator-modal-types";
-import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
+import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 
 const CalculatorModalContext = createContext<CalculatorModalContextValue | null>(
   null
 );
 
-export function CalculatorModalProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState<WizardStep>(0);
   const [options, setOptions] = useState<OpenCalculatorOptions | null>(null);
@@ -39,20 +35,17 @@ export function CalculatorModalProvider({
     setLightingDraftState(draft);
   }, []);
 
-  const openCalculator = useCallback(
-    (opts?: OpenCalculatorOptions) => {
-      const resolvedOpts = opts ?? {};
-      setOptions(resolvedOpts);
-      setCurrentStep(resolvedOpts.initialStep ?? 0);
+  const openCalculator = useCallback((opts?: OpenCalculatorOptions) => {
+    const resolvedOpts = opts ?? {};
+    setOptions(resolvedOpts);
+    setCurrentStep(resolvedOpts.initialStep ?? 0);
 
-      if (resolvedOpts.initialLighting) {
-        setLightingDraftState(resolvedOpts.initialLighting);
-      }
+    if (resolvedOpts.initialLighting) {
+      setLightingDraftState(resolvedOpts.initialLighting);
+    }
 
-      setIsOpen(true);
-    },
-    []
-  );
+    setIsOpen(true);
+  }, []);
 
   const closeCalculator = useCallback(() => {
     setIsOpen(false);
@@ -62,12 +55,13 @@ export function CalculatorModalProvider({
     setCurrentStep(step);
   }, []);
 
+  // ── Derived totals для PriceStrip и Step 2 ──────────────────────────
   const ceilingTotal = snapshot?.total ?? 0;
 
   const lightingDiscountedTotal = useMemo(() => {
     if (!lightingDraft?.totalRub) return 0;
     return applyLightingDiscount(lightingDraft.totalRub);
-  }, [lightingDraft?.totalRub]);
+  }, [lightingDraft]);
 
   const grandTotal = ceilingTotal + lightingDiscountedTotal;
 
@@ -81,8 +75,8 @@ export function CalculatorModalProvider({
       goToStep,
       lightingDraft,
       setLightingDraft,
-      lightingDiscountedTotal,
       ceilingTotal,
+      lightingDiscountedTotal,
       grandTotal,
     }),
     [
@@ -94,8 +88,8 @@ export function CalculatorModalProvider({
       goToStep,
       lightingDraft,
       setLightingDraft,
-      lightingDiscountedTotal,
       ceilingTotal,
+      lightingDiscountedTotal,
       grandTotal,
     ]
   );
@@ -109,12 +103,10 @@ export function CalculatorModalProvider({
 
 export function useCalculatorModal(): CalculatorModalContextValue {
   const context = useContext(CalculatorModalContext);
-
   if (!context) {
     throw new Error(
       "useCalculatorModal must be used inside CalculatorModalProvider."
     );
   }
-
   return context;
 }
