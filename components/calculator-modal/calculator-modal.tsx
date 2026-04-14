@@ -7,6 +7,7 @@ import type { WizardStep } from "@/lib/calculator-modal-types";
 import { useCalculatorModal } from "./calculator-modal-context";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 import { scrollToAnchorTarget } from "@/lib/scroll-to-anchor";
+import { PriceStrip } from "./price-strip";
 import { WizardStep0Calculator } from "./wizard-step0-calculator";
 import { WizardStep1Lighting } from "./wizard-step1-lighting";
 import { WizardStep2Summary } from "./wizard-step2-summary";
@@ -30,8 +31,14 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
 }
 
 export function CalculatorModal() {
-  const { isOpen, currentStep, closeCalculator, goToStep, options, lightingDraft } =
-    useCalculatorModal();
+  const {
+    isOpen,
+    currentStep,
+    closeCalculator,
+    goToStep,
+    options,
+    lightingDraft,
+  } = useCalculatorModal();
   const { hasInteracted, snapshot, setSnapshot, setHasInteracted } =
     usePriceCalculatorBridge();
 
@@ -170,7 +177,7 @@ export function CalculatorModal() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="calc-modal-title"
-          className={`pointer-events-auto w-full md:max-w-2xl bg-white md:rounded-2xl rounded-t-2xl shadow-2xl max-h-[90dvh] md:max-h-[85dvh] flex flex-col ${transitionClass} ${
+          className={`pointer-events-auto w-full md:max-w-3xl bg-white md:rounded-2xl rounded-t-2xl shadow-2xl max-h-[90dvh] md:max-h-[88dvh] flex flex-col ${transitionClass} ${
             visible
               ? "opacity-100 translate-y-0 md:scale-100"
               : "opacity-0 translate-y-4 md:scale-95"
@@ -199,15 +206,25 @@ export function CalculatorModal() {
             </button>
           </div>
 
+          {/* PriceStrip — desktop: between header and body */}
+          <div className="hidden md:block shrink-0">
+            <PriceStrip />
+          </div>
+
           {/* Body */}
           <div className="flex-1 overflow-y-auto px-5 py-5">
-            <div className={currentStep === 0 ? "" : "hidden"}>
+            {currentStep === 0 ? (
               <WizardStep0Calculator preset={activePreset} />
-            </div>
+            ) : null}
             {currentStep === 1 ? <WizardStep1Lighting /> : null}
             {currentStep === 2 ? (
               <WizardStep2Summary onConfirm={handleConfirm} />
             ) : null}
+          </div>
+
+          {/* PriceStrip — mobile: sticky above footer */}
+          <div className="md:hidden shrink-0 sticky bottom-0">
+            <PriceStrip />
           </div>
 
           {/* Footer */}
