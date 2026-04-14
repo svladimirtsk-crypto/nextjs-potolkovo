@@ -173,7 +173,7 @@ export function ActionForm({ source }: ActionFormProps) {
     );
     formData.append(
       "lighting_note",
-      snapshot?.lighting?.customNote ?? ""
+       ""
     );
     formData.append(
       "lighting_kit",
