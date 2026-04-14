@@ -1,6 +1,5 @@
 import type { ServicePageContent } from "@/content/services";
 import { Container } from "@/components/ui/container";
-import { Heading } from "@/components/ui/heading";
 import { CalculatorTeaser } from "@/components/calculator-modal/calculator-teaser";
 
 type ServicePriceSectionProps = {
@@ -8,33 +7,46 @@ type ServicePriceSectionProps = {
 };
 
 export function ServicePriceSection({ service }: ServicePriceSectionProps) {
-  const priceContent = service.price;
-
   return (
-    <section id="price" className="scroll-mt-24 bg-white py-16 sm:py-20">
+    <section
+      id="price"
+      aria-labelledby={`${service.slug}-price-title`}
+      className="scroll-mt-24 bg-white py-16 sm:py-20"
+    >
       <Container>
-        <Heading
-          eyebrow="Стоимость"
-          title={priceContent.sectionTitle}
-          description={priceContent.sectionIntro}
-        />
-
-        {priceContent.calculatorPreset?.introNote?.trim() ? (
-          <p className="mt-4 text-sm text-slate-500">
-            {priceContent.calculatorPreset.introNote}
+        <div className="mx-auto max-w-3xl text-center">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Цена
           </p>
-        ) : null}
+
+          <h2
+            id={`${service.slug}-price-title`}
+            className="mt-4 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl"
+          >
+            {service.price.sectionTitle}
+          </h2>
+
+          <p className="mt-4 text-base leading-7 text-slate-600 sm:text-lg">
+            {service.price.sectionIntro}
+          </p>
+
+          {service.price.calculatorPreset.introNote ? (
+            <p className="mt-4 text-sm leading-6 text-slate-500">
+              {service.price.calculatorPreset.introNote}
+            </p>
+          ) : null}
+
+          <p className="mt-3 text-sm leading-6 text-slate-500">
+            {service.price.note}
+          </p>
+        </div>
 
         <div className="mt-10">
           <CalculatorTeaser
-            preset={priceContent.calculatorPreset}
+            preset={service.price.calculatorPreset}
             source={service.slug}
           />
         </div>
-
-        {priceContent.note?.trim() ? (
-          <p className="mt-6 text-sm text-slate-500">{priceContent.note}</p>
-        ) : null}
       </Container>
     </section>
   );
