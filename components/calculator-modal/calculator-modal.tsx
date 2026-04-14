@@ -218,7 +218,7 @@ export function CalculatorModal() {
             ) : null}
             {currentStep === 1 ? <WizardStep1Lighting /> : null}
             {currentStep === 2 ? (
-              <WizardStep2Summary onConfirm={handleConfirm} />
+              <WizardStep2Summary />
             ) : null}
           </div>
 
