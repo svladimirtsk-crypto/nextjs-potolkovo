@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import type { WizardStep } from "@/lib/calculator-modal-types";
@@ -12,22 +12,22 @@ import { WizardStep0Calculator } from "./wizard-step0-calculator";
 import { WizardStep1Lighting } from "./wizard-step1-lighting";
 import { WizardStep2Summary } from "./wizard-step2-summary";
 
-const STEP_TITLES = [
-  "Параметры потолка",
-  "Освещение",
-  "Итог расчёта",
-] as const;
+const STEP_TITLES: Record<WizardStep, string> = {
+  0: "Параметры потолка",
+  1: "Освещение",
+  2: "Итог расчёта",
+};
 
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
   const selector = [
-    'a[href]',
-    'button:not([disabled])',
-    'input:not([disabled])',
-    'select:not([disabled])',
-    'textarea:not([disabled])',
+    "a[href]",
+    "button:not([disabled])",
+    "input:not([disabled])",
+    "select:not([disabled])",
+    "textarea:not([disabled])",
     '[tabindex]:not([tabindex="-1"])',
   ].join(", ");
-  return Array.from(container.querySelectorAll(selector));
+  return Array.from(container.querySelectorAll<HTMLElement>(selector));
 }
 
 export function CalculatorModal() {
@@ -39,17 +39,23 @@ export function CalculatorModal() {
     options,
     lightingDraft,
   } = useCalculatorModal();
-  const { hasInteracted, snapshot, setSnapshot, setHasInteracted } =
-    usePriceCalculatorBridge();
 
-  const panelRef = useRef<HTMLDivElement>(null);
-  const overlayRef = useRef<HTMLDivElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const { snapshot, setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
+
+  const panelRef           = useRef<HTMLDivElement>(null);
+  const overlayRef         = useRef<HTMLDivElement>(null);
+  const previousFocusRef   = useRef<HTMLElement | null>(null);
+  const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
 
+  // SSR guard for portal
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const shouldApplyPreset =
-    options?.preset && (!hasInteracted || options.forcePreset === true);
-  const activePreset = shouldApplyPreset ? options.preset : undefined;
+    options?.preset && (!snapshot || options.forcePreset === true);
+  const activePreset = shouldApplyPreset ? options?.preset : undefined;
 
   // Enter animation + scroll lock + focus
   useEffect(() => {
@@ -65,17 +71,13 @@ export function CalculatorModal() {
     if (reducedMotion) {
       setVisible(true);
     } else {
-      requestAnimationFrame(() => {
-        setVisible(true);
-      });
+      requestAnimationFrame(() => setVisible(true));
     }
 
     requestAnimationFrame(() => {
       if (panelRef.current) {
         const focusable = getFocusableElements(panelRef.current);
-        if (focusable.length > 0) {
-          focusable[0].focus();
-        }
+        if (focusable.length > 0) focusable[0].focus();
       }
     });
 
@@ -86,9 +88,12 @@ export function CalculatorModal() {
 
   // Restore focus on close
   useEffect(() => {
-    if (!isOpen && previousFocusRef.current) {
-      previousFocusRef.current.focus();
-      previousFocusRef.current = null;
+    if (!isOpen) {
+      setVisible(false);
+      if (previousFocusRef.current) {
+        previousFocusRef.current.focus();
+        previousFocusRef.current = null;
+      }
     }
   }, [isOpen]);
 
@@ -106,9 +111,8 @@ export function CalculatorModal() {
       if (e.key === "Tab" && panelRef.current) {
         const focusable = getFocusableElements(panelRef.current);
         if (focusable.length === 0) return;
-
         const first = focusable[0];
-        const last = focusable[focusable.length - 1];
+        const last  = focusable[focusable.length - 1];
 
         if (e.shiftKey) {
           if (document.activeElement === first) {
@@ -130,16 +134,18 @@ export function CalculatorModal() {
 
   const handleOverlayClick = useCallback(
     (e: React.MouseEvent) => {
-      if (e.target === overlayRef.current) {
-        closeCalculator();
-      }
+      if (e.target === overlayRef.current) closeCalculator();
     },
     [closeCalculator]
   );
 
   const handleConfirm = useCallback(() => {
-    if (snapshot && lightingDraft) {
-      setSnapshot({ ...snapshot, lighting: lightingDraft });
+    // Merge lightingDraft into snapshot
+    if (snapshot) {
+      setSnapshot({
+        ...snapshot,
+        lighting: lightingDraft ?? undefined,
+      });
     }
     setHasInteracted(true);
     closeCalculator();
@@ -149,13 +155,12 @@ export function CalculatorModal() {
     });
   }, [snapshot, lightingDraft, setSnapshot, setHasInteracted, closeCalculator]);
 
-  if (!isOpen) return null;
+  if (!mounted || !isOpen) return null;
 
-  const stepTitle = STEP_TITLES[currentStep] ?? STEP_TITLES[0];
+  const stepTitle = STEP_TITLES[currentStep];
   const reducedMotion =
     typeof window !== "undefined" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
   const transitionClass = reducedMotion ? "" : "transition-all duration-200";
 
   return createPortal(
@@ -177,14 +182,18 @@ export function CalculatorModal() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="calc-modal-title"
-          className={`pointer-events-auto w-full md:max-w-3xl bg-white md:rounded-2xl rounded-t-2xl shadow-2xl max-h-[90dvh] md:max-h-[88dvh] flex flex-col ${transitionClass} ${
-            visible
-              ? "opacity-100 translate-y-0 md:scale-100"
-              : "opacity-0 translate-y-4 md:scale-95"
-          }`}
+          className={`
+            pointer-events-auto w-full
+            md:max-w-3xl
+            bg-white md:rounded-2xl rounded-t-2xl shadow-2xl
+            max-h-[90dvh] md:max-h-[88dvh]
+            flex flex-col
+            ${transitionClass}
+            ${visible ? "opacity-100 translate-y-0 md:scale-100" : "opacity-0 translate-y-4 md:scale-95"}
+          `}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 shrink-0">
+          <div className="flex shrink-0 items-center justify-between px-5 py-4 border-b border-slate-200">
             <div>
               <h2
                 id="calc-modal-title"
@@ -199,15 +208,16 @@ export function CalculatorModal() {
             <button
               type="button"
               onClick={closeCalculator}
-              className="h-10 w-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors min-h-[48px] min-w-[48px]"
               aria-label="Закрыть"
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+              style={{ minHeight: 48, minWidth: 48 }}
             >
               ✕
             </button>
           </div>
 
           {/* PriceStrip — desktop: between header and body */}
-          <div className="hidden md:block shrink-0">
+          <div className="hidden md:block">
             <PriceStrip />
           </div>
 
@@ -218,22 +228,23 @@ export function CalculatorModal() {
             ) : null}
             {currentStep === 1 ? <WizardStep1Lighting /> : null}
             {currentStep === 2 ? (
-              <WizardStep2Summary />
+              <WizardStep2Summary onConfirm={handleConfirm} />
             ) : null}
           </div>
 
           {/* PriceStrip — mobile: sticky above footer */}
-          <div className="md:hidden shrink-0 sticky bottom-0">
+          <div className="block md:hidden">
             <PriceStrip />
           </div>
 
           {/* Footer */}
-          <div className="border-t border-slate-200 px-5 py-4 flex items-center justify-between gap-3 shrink-0">
+          <div className="shrink-0 border-t border-slate-200 px-5 py-4 flex items-center justify-between gap-3">
             {currentStep > 0 ? (
               <button
                 type="button"
                 onClick={() => goToStep((currentStep - 1) as WizardStep)}
-                className="h-12 px-5 rounded-2xl text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors min-h-[48px]"
+                className="h-12 px-5 rounded-2xl text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                style={{ minHeight: 48 }}
               >
                 ← Назад
               </button>
@@ -245,7 +256,8 @@ export function CalculatorModal() {
               <button
                 type="button"
                 onClick={() => goToStep((currentStep + 1) as WizardStep)}
-                className="h-12 px-6 rounded-2xl bg-slate-950 text-white text-sm font-medium hover:bg-slate-800 transition-colors min-h-[48px]"
+                className="h-12 px-6 rounded-2xl bg-slate-950 text-white text-sm font-semibold hover:bg-slate-800 transition-colors"
+                style={{ minHeight: 48 }}
               >
                 Далее →
               </button>
@@ -253,9 +265,10 @@ export function CalculatorModal() {
               <button
                 type="button"
                 onClick={handleConfirm}
-                className="h-12 px-6 rounded-2xl bg-slate-950 text-white text-sm font-medium hover:bg-slate-800 transition-colors min-h-[48px]"
+                className="hidden md:flex h-12 px-6 rounded-2xl bg-slate-950 text-white text-sm font-semibold hover:bg-slate-800 transition-colors items-center"
+                style={{ minHeight: 48 }}
               >
-                Зафиксировать смету
+                Зафиксировать смету →
               </button>
             )}
           </div>
