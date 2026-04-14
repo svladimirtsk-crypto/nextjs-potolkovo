@@ -360,7 +360,7 @@ export function WizardStep1Lighting() {
                         <p className="text-xs text-slate-500">
                           {noPrice
                             ? "Цена по запросу"
-                            : `${fmt(product.priceRub)} ₽`}
+                            : `${fmt(product.priceRub ?? 0)} ₽`}
                         </p>
                       </div>
 
