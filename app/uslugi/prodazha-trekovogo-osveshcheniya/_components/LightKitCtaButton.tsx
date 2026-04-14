@@ -1,5 +1,6 @@
 "use client";
 
+import { applyLightingDiscount } from "@/lib/lighting-formulas";
 import type { LightingKit } from "@/lib/lighting-kits";
 import type { LightingSnapshot } from "@/lib/calculator-modal-types";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,8 @@ export function LightKitCtaButton({ kit }: LightKitCtaButtonProps) {
       kitName: kit.kitName,
       items: kit.items.map((i) => ({ ...i })),
       totalRub: kit.totalRub,
+      discountedTotalRub: applyLightingDiscount(kit.totalRub),
+      userCustomizedLighting: false,
     };
 
     openCalculator({
