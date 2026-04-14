@@ -10,10 +10,9 @@ import {
   useState,
 } from "react";
 
-import type {
-  DerivedInputs,
-  LightingSnapshot,
-} from "@/lib/calculator-modal-types";
+import type { DerivedInputs, LightingSnapshot } from "@/lib/calculator-modal-types";
+
+// ─── Snapshot ────────────────────────────────────────────────────────────────
 
 export type CalculatorLeadSnapshot = {
   area: number;
@@ -49,16 +48,14 @@ export type CalculatorLeadSnapshot = {
 
   total: number;
 
+  /** Производные параметры для рекомендаций освещения */
   derivedInputs: DerivedInputs;
+
+  /** Выбранное освещение (заполняется из модалки) */
   lighting?: LightingSnapshot;
 };
 
-export const DEFAULT_DERIVED_INPUTS: DerivedInputs = {
-  pointSpotsQty: 0,
-  trackMountType: "none",
-  trackLengthMeters: 0,
-  recommendedSpotsQty: 0,
-};
+// ─── Context ─────────────────────────────────────────────────────────────────
 
 type PriceCalculatorContextValue = {
   snapshot: CalculatorLeadSnapshot | null;
@@ -71,21 +68,12 @@ const PriceCalculatorContext = createContext<PriceCalculatorContextValue | null>
   null
 );
 
-export function PriceCalculatorProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export function PriceCalculatorProvider({ children }: { children: ReactNode }) {
   const [snapshot, setSnapshot] = useState<CalculatorLeadSnapshot | null>(null);
   const [hasInteracted, setHasInteracted] = useState(false);
 
   const value = useMemo(
-    () => ({
-      snapshot,
-      setSnapshot,
-      hasInteracted,
-      setHasInteracted,
-    }),
+    () => ({ snapshot, setSnapshot, hasInteracted, setHasInteracted }),
     [snapshot, hasInteracted]
   );
 
@@ -98,15 +86,15 @@ export function PriceCalculatorProvider({
 
 export function usePriceCalculatorBridge() {
   const context = useContext(PriceCalculatorContext);
-
   if (!context) {
     throw new Error(
       "usePriceCalculatorBridge must be used inside PriceCalculatorProvider."
     );
   }
-
   return context;
 }
+
+// ─── Serialization ───────────────────────────────────────────────────────────
 
 export function serializeCalculatorSnapshot(
   snapshot: CalculatorLeadSnapshot | null
@@ -114,23 +102,23 @@ export function serializeCalculatorSnapshot(
   return snapshot ? JSON.stringify(snapshot) : "";
 }
 
+// ─── Formatters ──────────────────────────────────────────────────────────────
+
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("ru-RU").format(value);
 }
 
+// ─── Summary lines (потолок) ─────────────────────────────────────────────────
+
 export function getCalculatorSummaryLines(
   snapshot: CalculatorLeadSnapshot | null
-) {
-  if (!snapshot) {
-    return [];
-  }
+): string[] {
+  if (!snapshot) return [];
 
-  const lines = [
+  const lines: string[] = [
     `Площадь: ${snapshot.area} м²`,
     `Тип потолка: ${snapshot.ceilingTypeLabel}`,
-    `Полотно: ${snapshot.area} м² × ${formatCurrency(
-      snapshot.ceilingBaseRate
-    )} ₽`,
+    `Полотно: ${snapshot.area} м² × ${formatCurrency(snapshot.ceilingBaseRate)} ₽`,
   ];
 
   if (
@@ -140,9 +128,7 @@ export function getCalculatorSummaryLines(
     snapshot.ceilingExtraRatePerMeter !== null
   ) {
     lines.push(
-      `${snapshot.ceilingExtraLabel}: ${snapshot.ceilingLength} м.п. × ${formatCurrency(
-        snapshot.ceilingExtraRatePerMeter
-      )} ₽`
+      `${snapshot.ceilingExtraLabel}: ${snapshot.ceilingLength} м.п. × ${formatCurrency(snapshot.ceilingExtraRatePerMeter)} ₽`
     );
   }
 
@@ -154,9 +140,7 @@ export function getCalculatorSummaryLines(
     snapshot.lightLinesRatePerMeter !== null
   ) {
     lines.push(
-      `${snapshot.lightLinesLabel}: ${snapshot.lightLinesLength} м.п. × ${formatCurrency(
-        snapshot.lightLinesRatePerMeter
-      )} ₽`
+      `${snapshot.lightLinesLabel}: ${snapshot.lightLinesLength} м.п. × ${formatCurrency(snapshot.lightLinesRatePerMeter)} ₽`
     );
   }
 
@@ -167,9 +151,7 @@ export function getCalculatorSummaryLines(
     snapshot.corniceRatePerMeter !== null
   ) {
     lines.push(
-      `${snapshot.corniceLabel}: ${snapshot.corniceLength} м.п. × ${formatCurrency(
-        snapshot.corniceRatePerMeter
-      )} ₽`
+      `${snapshot.corniceLabel}: ${snapshot.corniceLength} м.п. × ${formatCurrency(snapshot.corniceRatePerMeter)} ₽`
     );
   }
 
@@ -180,82 +162,49 @@ export function getCalculatorSummaryLines(
     snapshot.trackRatePerMeter !== null
   ) {
     lines.push(
-      `${snapshot.trackLabel}: ${snapshot.trackLength} м.п. × ${formatCurrency(
-        snapshot.trackRatePerMeter
-      )} ₽`
+      `${snapshot.trackLabel}: ${snapshot.trackLength} м.п. × ${formatCurrency(snapshot.trackRatePerMeter)} ₽`
     );
   }
 
-  if (
-    snapshot.lightsEnabled &&
-    snapshot.lightsTotal > 0 &&
-    snapshot.lightsCount !== null
-  ) {
+  if (snapshot.lightsEnabled && snapshot.lightsTotal > 0 && snapshot.lightsCount !== null) {
     lines.push(
-      `Точечные светильники: ${snapshot.lightsCount} шт. × ${formatCurrency(
-        snapshot.lightsRatePerUnit
-      )} ₽`
+      `Светильники: ${snapshot.lightsCount} шт. × ${formatCurrency(snapshot.lightsRatePerUnit)} ₽`
     );
   }
 
-  lines.push(`Итого потолок: ${formatCurrency(snapshot.total)} ₽`);
+  lines.push(`Итого (потолок): ${formatCurrency(snapshot.total)} ₽`);
 
   return lines;
 }
 
+// ─── Summary lines (освещение) ───────────────────────────────────────────────
+
 export function getLightingSummaryLines(
   snapshot: CalculatorLeadSnapshot | null
 ): string[] {
-  if (!snapshot?.lighting || snapshot.lighting.mode === "none") {
-    return [];
-  }
+  const lighting = snapshot?.lighting;
+  if (!lighting || lighting.mode === "none") return [];
 
-  const lighting = snapshot.lighting;
+  const lines: string[] = ["Освещение:"];
 
-  if (lighting.mode === "kit") {
-    const parts: string[] = [
-      `Освещение: Готовый комплект — ${lighting.kitName ?? "без названия"}`,
-    ];
-    if (lighting.totalRub != null) {
-      parts.push(
-        `  Стоимость комплекта: ${formatCurrency(lighting.totalRub)} ₽`
+  if ((lighting.mode === "kit" || lighting.mode === "catalog") && lighting.items?.length) {
+    if (lighting.kitName) {
+      lines.push(`  Комплект: ${lighting.kitName}`);
+    }
+    for (const item of lighting.items) {
+      lines.push(
+        `  — ${item.name} × ${item.qty} шт. × ${formatCurrency(item.priceRub)} ₽`
       );
     }
+    if (lighting.totalRub != null) {
+      lines.push(`  Итого (освещение): ${formatCurrency(lighting.totalRub)} ₽`);
+    }
     if (lighting.discountedTotalRub != null) {
-      parts.push(
+      lines.push(
         `  Со скидкой 15%: ${formatCurrency(lighting.discountedTotalRub)} ₽`
       );
     }
-    if (lighting.items && lighting.items.length > 0) {
-      parts.push("  Состав:");
-      lighting.items.forEach((item) => {
-        parts.push(
-          `    — ${item.name} × ${item.qty} (${formatCurrency(item.priceRub)} ₽/шт.)`
-        );
-      });
-    }
-    return parts;
   }
 
-  if (lighting.mode === "catalog") {
-    const parts: string[] = ["Освещение: Собранный каталог"];
-    if (lighting.items && lighting.items.length > 0) {
-      lighting.items.forEach((item) => {
-        parts.push(
-          `  — ${item.name} × ${item.qty} (${formatCurrency(item.priceRub)} ₽/шт.)`
-        );
-      });
-    }
-    if (lighting.totalRub != null) {
-      parts.push(`  Стоимость: ${formatCurrency(lighting.totalRub)} ₽`);
-    }
-    if (lighting.discountedTotalRub != null) {
-      parts.push(
-        `  Со скидкой 15%: ${formatCurrency(lighting.discountedTotalRub)} ₽`
-      );
-    }
-    return parts;
-  }
-
-  return [];
+  return lines;
 }
