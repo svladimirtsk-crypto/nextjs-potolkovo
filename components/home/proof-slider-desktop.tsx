@@ -8,7 +8,7 @@ import type { homepage } from "@/content/homepage";
 type ProofItem = (typeof homepage.proof.items)[number];
 
 type ProofSliderDesktopProps = {
-  items: ProofItem[];
+  items: readonly ProofItem[];
   onOpen: (slug: string) => void;
 };
 
@@ -18,7 +18,7 @@ export function ProofSliderDesktop({ items, onOpen }: ProofSliderDesktopProps) {
   const scroll = (dir: "prev" | "next") => {
     if (!trackRef.current) return;
     const card = trackRef.current.querySelector<HTMLElement>("article");
-    const gap  = 20;
+    const gap = 20;
     const cardWidth = card ? card.getBoundingClientRect().width + gap : 360;
     trackRef.current.scrollBy({
       left: dir === "next" ? cardWidth : -cardWidth,
