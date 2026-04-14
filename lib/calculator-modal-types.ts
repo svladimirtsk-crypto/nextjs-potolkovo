@@ -13,7 +13,7 @@ export type DerivedInputs = {
   pointSpotsQty: number;
   trackMountType: "built-in" | "surface" | "none";
   trackLengthMeters: number;
-  recommendedSpotsQty: number;
+  recommendedTrackSpotsQty: number;
 };
 
 export type LightingSnapshot = {
@@ -47,7 +47,7 @@ export type CalculatorModalContextValue = {
   goToStep: (step: WizardStep) => void;
   lightingDraft: LightingSnapshot | null;
   setLightingDraft: (draft: LightingSnapshot | null) => void;
-  lightingDiscountedTotal: number;
   ceilingTotal: number;
+  lightingDiscountedTotal: number;
   grandTotal: number;
 };
