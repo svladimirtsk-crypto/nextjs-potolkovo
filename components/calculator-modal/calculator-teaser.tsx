@@ -12,7 +12,7 @@ const BULLETS = [
   "Тип потолка и профиль",
   "Площадь помещения",
   "Карнизы и световые линии",
-  "Светильники и трековое освещение",
+  "Точечные светильники и трековое освещение",
 ];
 
 export function CalculatorTeaser({
@@ -29,7 +29,10 @@ export function CalculatorTeaser({
 
       <ul className="mt-6 space-y-2.5">
         {BULLETS.map((bullet) => (
-          <li key={bullet} className="flex items-start gap-2.5 text-sm text-slate-600">
+          <li
+            key={bullet}
+            className="flex items-start gap-2.5 text-sm text-slate-600"
+          >
             <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-950" />
             <span>{bullet}</span>
           </li>
