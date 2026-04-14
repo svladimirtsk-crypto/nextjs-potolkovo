@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 
 import { homepage } from "@/content/homepage";
 import { Container } from "@/components/ui/container";
@@ -13,18 +13,41 @@ import { ProofSliderDesktop } from "./proof-slider-desktop";
 
 export function HomeProof() {
   const proof = homepage.proof;
-  const [activeSlug, setActiveSlug] = useState<string | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
-  const openBySlug = useCallback((slug: string) => {
-    setActiveSlug(slug);
-  }, []);
+  const openBySlug = useCallback(
+    (slug: string) => {
+      const index = proof.items.findIndex((item) => item.slug === slug);
+      if (index >= 0) {
+        setSelectedIndex(index);
+      }
+    },
+    [proof.items]
+  );
 
   const closeModal = useCallback(() => {
-    setActiveSlug(null);
+    setSelectedIndex(null);
   }, []);
 
+  const handlePrev = useCallback(() => {
+    setSelectedIndex((prev) => {
+      if (prev === null) return null;
+      return prev > 0 ? prev - 1 : proof.items.length - 1;
+    });
+  }, [proof.items.length]);
+
+  const handleNext = useCallback(() => {
+    setSelectedIndex((prev) => {
+      if (prev === null) return null;
+      return prev < proof.items.length - 1 ? prev + 1 : 0;
+    });
+  }, [proof.items.length]);
+
   return (
-    <Section id="proof" className="scroll-mt-24 bg-white py-16 sm:py-20 lg:py-24">
+    <Section
+      id="proof"
+      className="scroll-mt-24 bg-white py-16 sm:py-20 lg:py-24"
+    >
       <Container>
         <Heading
           eyebrow="Портфолио"
@@ -64,8 +87,10 @@ export function HomeProof() {
 
       <ProofModalClient
         items={proof.items}
-        activeSlug={activeSlug}
+        selectedIndex={selectedIndex}
         onClose={closeModal}
+        onPrev={handlePrev}
+        onNext={handleNext}
       />
     </Section>
   );
