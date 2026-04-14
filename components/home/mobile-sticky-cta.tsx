@@ -15,20 +15,18 @@ export function MobileStickyCta() {
   const { snapshot, hasInteracted } = usePriceCalculatorBridge();
   const { openCalculator, closeCalculator } = useCalculatorModal();
 
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible]         = useState(false);
   const [isActionVisible, setIsActionVisible] = useState(false);
-  const [isPriceVisible, setIsPriceVisible] = useState(false);
+  const [isPriceVisible, setIsPriceVisible]   = useState(false);
 
-  const priceObserverRef = useRef<IntersectionObserver | null>(null);
+  const priceObserverRef  = useRef<IntersectionObserver | null>(null);
   const actionObserverRef = useRef<IntersectionObserver | null>(null);
 
   useEffect(() => {
-    const priceSection = document.getElementById("price");
+    const priceSection  = document.getElementById("price");
     const actionSection = document.getElementById("action");
 
-    if (!priceSection && !actionSection) return;
-
-    const observerOptions = {
+    const observerOptions: IntersectionObserverInit = {
       root: null,
       rootMargin: "0px 0px -10% 0px",
       threshold: 0,
@@ -59,18 +57,12 @@ export function MobileStickyCta() {
       setIsVisible(false);
       return;
     }
-
-    const scrolled = typeof window !== "undefined" && window.scrollY > 300;
-
-    if (isPriceVisible || scrolled) {
-      setIsVisible(true);
-    } else {
-      setIsVisible(false);
-    }
+    const scrolled =
+      typeof window !== "undefined" && window.scrollY > 300;
+    setIsVisible(isPriceVisible || scrolled);
   }, [isActionVisible, isPriceVisible]);
 
-  const showCalculatedState =
-    isPriceVisible || (hasInteracted && !!snapshot);
+  const showCalculatedState = isPriceVisible || (hasInteracted && !!snapshot);
 
   const handleCalculatorClick = () => {
     openCalculator({ source: "mobile-sticky" });
@@ -85,7 +77,12 @@ export function MobileStickyCta() {
 
   return (
     <div className="fixed bottom-0 inset-x-0 z-40 lg:hidden">
-      <div className="border-t border-slate-200 bg-white/95 backdrop-blur px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+      <div
+        className="border-t border-slate-200 bg-white/95 backdrop-blur px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]"
+        style={{
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)",
+        }}
+      >
         {showCalculatedState && snapshot ? (
           <div className="flex items-center gap-3">
             <div className="min-w-0 flex-1">
