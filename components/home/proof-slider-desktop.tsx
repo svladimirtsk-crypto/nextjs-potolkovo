@@ -1,27 +1,19 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 
-type ProofItem = {
-  slug: string;
-  title: string;
-  image: string;
-  category: string;
-  description?: string;
-};
-
-type ProofSliderDesktopProps = {
-  items: ProofItem[];
+type ProofSliderDesktopProps<T> = {
+  items: readonly T[];
   onOpen: (slug: string) => void;
-  renderCard: (item: ProofItem, onOpen: (slug: string) => void) => React.ReactNode;
+  renderCard: (item: T, onOpen: (slug: string) => void) => ReactNode;
 };
 
-export function ProofSliderDesktop({
+export function ProofSliderDesktop<T extends { slug: string }>({
   items,
   onOpen,
   renderCard,
-}: ProofSliderDesktopProps) {
+}: ProofSliderDesktopProps<T>) {
   const trackRef = useRef<HTMLDivElement>(null);
 
   const scroll = (dir: "prev" | "next") => {
