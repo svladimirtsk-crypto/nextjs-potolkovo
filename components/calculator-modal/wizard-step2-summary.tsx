@@ -6,6 +6,8 @@ import {
   usePriceCalculatorBridge,
 } from "@/components/home/price-calculator-context";
 import { useCalculatorModal } from "./calculator-modal-context";
+import { isSnapshotValid } from "@/lib/calculator-snapshot-guard";
+import type { WizardStep } from "@/lib/calculator-modal-types";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("ru-RU").format(n);
@@ -17,10 +19,15 @@ type WizardStep2SummaryProps = {
 
 export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
   const { snapshot } = usePriceCalculatorBridge();
-  const { lightingDraft, ceilingTotal, lightingDiscountedTotal, grandTotal } =
-    useCalculatorModal();
+  const {
+    lightingDraft,
+    ceilingTotal,
+    lightingDiscountedTotal,
+    grandTotal,
+    goToStep,
+  } = useCalculatorModal();
 
-  const calcLines    = getCalculatorSummaryLines(snapshot);
+  const calcLines     = getCalculatorSummaryLines(snapshot);
   const lightingLines = getLightingSummaryLines(
     snapshot ? { ...snapshot, lighting: lightingDraft ?? undefined } : null
   );
@@ -29,6 +36,30 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
     lightingDraft !== null &&
     lightingDraft.mode !== "none" &&
     (lightingDraft.items?.length ?? 0) > 0;
+
+  // Recovery state: попали на шаг 2 без валидного snapshot
+  // (например через openCalculator({ initialStep: 2 }) без данных)
+  if (!isSnapshotValid(snapshot)) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10 text-center space-y-4">
+        <div className="text-4xl" aria-hidden="true">📐</div>
+        <p className="text-base font-semibold text-slate-950">
+          Сначала укажите параметры потолка
+        </p>
+        <p className="text-sm text-slate-500 max-w-xs">
+          Выберите площадь и тип потолка на первом шаге — расчёт появится здесь автоматически.
+        </p>
+        <button
+          type="button"
+          onClick={() => goToStep(0 as WizardStep)}
+          className="mt-2 flex h-12 px-6 rounded-2xl bg-slate-950 text-white text-sm font-semibold hover:bg-slate-800 transition-colors items-center"
+          style={{ minHeight: 48 }}
+        >
+          Указать параметры →
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -69,24 +100,19 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
         </summary>
 
         <div className="border-t border-slate-200 px-4 py-4 space-y-4">
-          {calcLines.length > 0 ? (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
-                Потолок
-              </p>
-              <ul className="space-y-1.5">
-                {calcLines.map((line) => (
-                  <li key={line} className="text-sm text-slate-600">
-                    {line}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : (
-            <p className="text-sm text-slate-500">
-              Параметры не заданы — вернитесь на шаг 1
+          {/* Ceiling lines — всегда есть, snapshot валиден */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
+              Потолок
             </p>
-          )}
+            <ul className="space-y-1.5">
+              {calcLines.map((line) => (
+                <li key={line} className="text-sm text-slate-600">
+                  {line}
+                </li>
+              ))}
+            </ul>
+          </div>
 
           {hasLighting && lightingDraft.items && lightingDraft.items.length > 0 ? (
             <div>
@@ -128,7 +154,7 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
         </div>
       </details>
 
-      {/* ← ИЗМЕНЕНО: note переформулирован, убрано "фиксируется" до замера */}
+      {/* Note */}
       <p className="text-xs text-slate-500 leading-5">
         Это ориентировочный расчёт. Точную стоимость определим на бесплатном
         замере — приеду, посмотрю помещение и дам конкретные цифры.
