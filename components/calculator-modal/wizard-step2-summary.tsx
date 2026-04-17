@@ -20,11 +20,9 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
   const { lightingDraft, ceilingTotal, lightingDiscountedTotal, grandTotal } =
     useCalculatorModal();
 
-  const calcLines = getCalculatorSummaryLines(snapshot);
+  const calcLines    = getCalculatorSummaryLines(snapshot);
   const lightingLines = getLightingSummaryLines(
-    snapshot
-      ? { ...snapshot, lighting: lightingDraft ?? undefined }
-      : null
+    snapshot ? { ...snapshot, lighting: lightingDraft ?? undefined } : null
   );
 
   const hasLighting =
@@ -37,9 +35,7 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
       {/* Hero totals */}
       <div className="rounded-2xl bg-slate-950 p-6 text-white">
         <p className="text-sm text-white/60 mb-1">Потолок (работы)</p>
-        <p className="text-3xl font-bold tracking-tight">
-          {fmt(ceilingTotal)} ₽
-        </p>
+        <p className="text-3xl font-bold tracking-tight">{fmt(ceilingTotal)} ₽</p>
 
         {hasLighting && lightingDiscountedTotal > 0 ? (
           <>
@@ -58,7 +54,7 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
         ) : null}
       </div>
 
-      {/* Details accordion */}
+      {/* Details */}
       <details className="group rounded-2xl border border-slate-200 bg-slate-50">
         <summary className="flex cursor-pointer select-none items-center justify-between px-4 py-3 text-sm font-semibold text-slate-950 list-none">
           <span>Состав расчёта</span>
@@ -71,7 +67,6 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
         </summary>
 
         <div className="border-t border-slate-200 px-4 py-4 space-y-4">
-          {/* Ceiling lines */}
           {calcLines.length > 0 ? (
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
@@ -79,9 +74,7 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
               </p>
               <ul className="space-y-1.5">
                 {calcLines.map((line) => (
-                  <li key={line} className="text-sm text-slate-600">
-                    {line}
-                  </li>
+                  <li key={line} className="text-sm text-slate-600">{line}</li>
                 ))}
               </ul>
             </div>
@@ -91,7 +84,6 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
             </p>
           )}
 
-          {/* Lighting lines */}
           {hasLighting && lightingDraft.items && lightingDraft.items.length > 0 ? (
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
@@ -136,14 +128,11 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
         оборудование при заказе натяжного потолка.
       </p>
 
-      {/* CTA — visible on mobile since Footer might be out of view */}
-      <button
-        type="button"
-        onClick={onConfirm}
-        className="w-full rounded-2xl bg-slate-950 py-4 text-sm font-semibold text-white hover:bg-slate-800 transition-colors md:hidden"
-      >
-        Зафиксировать смету →
-      </button>
+      {/* 
+        P0.2: мобильная кнопка убрана отсюда — 
+        теперь она в footer модалки (calculator-modal.tsx) на всех экранах.
+        Оставляем onConfirm prop для совместимости.
+      */}
     </div>
   );
 }
