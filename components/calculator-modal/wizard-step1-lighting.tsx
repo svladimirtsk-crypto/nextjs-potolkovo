@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 
 import { catalog } from "@/content/eksmarket-assortment";
 import { LIGHTING_KITS } from "@/lib/lighting-kits";
@@ -41,11 +41,8 @@ function getRecommendedKits(
     results.push(...surfaceKits.slice(0, 2));
   }
 
-  if (results.length === 0) {
-    return LIGHTING_KITS.slice(0, 3);
-  }
+  if (results.length === 0) return LIGHTING_KITS.slice(0, 3);
 
-  // deduplicate by kitId
   const seen = new Set<string>();
   return results.filter((k) => {
     if (seen.has(k.kitId)) return false;
@@ -59,12 +56,8 @@ function scaleKit(
   targetQty: number
 ): { items: LightingItem[]; totalRub: number } {
   if (targetQty <= 0 || kit.defaultSpotsQty <= 0) {
-    return {
-      items: kit.items.map((i) => ({ ...i })),
-      totalRub: kit.totalRub,
-    };
+    return { items: kit.items.map((i) => ({ ...i })), totalRub: kit.totalRub };
   }
-
   const items: LightingItem[] = kit.items.map((i) => {
     const qty =
       i.sku === kit.spotsItemSku
@@ -72,7 +65,6 @@ function scaleKit(
         : i.qty;
     return { ...i, qty };
   });
-
   const totalRub = items.reduce((sum, i) => sum + i.qty * i.priceRub, 0);
   return { items, totalRub };
 }
@@ -199,7 +191,6 @@ function CatalogTab({
 
   return (
     <div className="space-y-4">
-      {/* Search */}
       <input
         type="search"
         placeholder="Поиск по каталогу..."
@@ -209,16 +200,12 @@ function CatalogTab({
         aria-label="Поиск по каталогу"
       />
 
-      {/* Category tabs */}
       <div className="flex flex-wrap gap-2">
         {catalog.categories.map((cat) => (
           <button
             key={cat.id}
             type="button"
-            onClick={() => {
-              setActiveCategoryId(cat.id);
-              setSearchQuery("");
-            }}
+            onClick={() => { setActiveCategoryId(cat.id); setSearchQuery(""); }}
             className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
               activeCategoryId === cat.id
                 ? "border-slate-950 bg-slate-950 text-white"
@@ -230,16 +217,13 @@ function CatalogTab({
         ))}
       </div>
 
-      {/* Products */}
       <div className="space-y-2">
         {visibleProducts.length === 0 ? (
-          <p className="text-sm text-slate-500 py-4 text-center">
-            Ничего не найдено
-          </p>
+          <p className="text-sm text-slate-500 py-4 text-center">Ничего не найдено</p>
         ) : null}
 
         {visibleProducts.map((product) => {
-          const qty = cartItems[product.id] ?? 0;
+          const qty      = cartItems[product.id] ?? 0;
           const hasPrice = product.priceRub !== null;
 
           return (
@@ -312,9 +296,7 @@ function CatalogTab({
         ) : null}
       </div>
 
-      <p className="text-xs text-slate-400">
-        {catalog.disclaimer}
-      </p>
+      <p className="text-xs text-slate-400">{catalog.disclaimer}</p>
     </div>
   );
 }
@@ -335,32 +317,48 @@ export function WizardStep1Lighting() {
   const initialTab: Tab =
     options?.initialLightingTab === "catalog" ? "catalog" : "recommendations";
 
-  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
-  const [selectedKitId, setSelectedKitId] = useState<string | null>(
+  const [activeTab, setActiveTab]           = useState<Tab>(initialTab);
+  const [selectedKitId, setSelectedKitId]   = useState<string | null>(
     lightingDraft?.mode === "kit" ? (lightingDraft.kitId ?? null) : null
   );
-  const [cartItems, setCartItems] = useState<CartItems>(() => {
-    if (
-      lightingDraft?.mode === "catalog" &&
-      lightingDraft.items?.length
-    ) {
-      return Object.fromEntries(
-        lightingDraft.items.map((i) => [i.sku, i.qty])
-      );
+  const [cartItems, setCartItems]           = useState<CartItems>(() => {
+    if (lightingDraft?.mode === "catalog" && lightingDraft.items?.length) {
+      return Object.fromEntries(lightingDraft.items.map((i) => [i.sku, i.qty]));
     }
     return {};
   });
 
+  // P0.4: синхронизация при изменении initialLighting извне
+  const prevInitialLightingRef = useRef<LightingSnapshot | null | undefined>(undefined);
+
+  useEffect(() => {
+    const incoming = options?.initialLighting;
+    // undefined → ещё не инициализировано, пропускаем
+    if (incoming === undefined) return;
+    // не перезаписываем, если значение то же самое (по ссылке)
+    if (incoming === prevInitialLightingRef.current) return;
+    prevInitialLightingRef.current = incoming;
+
+    if (!incoming) return;
+
+    if (incoming.mode === "catalog" && incoming.items?.length) {
+      const next: CartItems = {};
+      for (const item of incoming.items) {
+        next[item.sku] = item.qty;
+      }
+      setCartItems(next);
+      setSelectedKitId(null);
+    } else if (incoming.mode === "kit" && incoming.kitId) {
+      setSelectedKitId(incoming.kitId);
+      setCartItems({});
+    }
+  }, [options?.initialLighting]);
+
   const recommendedKits = useMemo(
-    () =>
-      getRecommendedKits(
-        derivedInputs.pointSpotsQty,
-        derivedInputs.trackMountType
-      ),
+    () => getRecommendedKits(derivedInputs.pointSpotsQty, derivedInputs.trackMountType),
     [derivedInputs.pointSpotsQty, derivedInputs.trackMountType]
   );
 
-  // Detect if derivedInputs changed since last user customization
   const inputsChanged =
     lightingDraft?.userCustomizedLighting === true &&
     lightingDraft.derivedInputsSnapshot !== undefined &&
@@ -377,7 +375,7 @@ export function WizardStep1Lighting() {
         : derivedInputs.recommendedTrackSpotsQty || kit.defaultSpotsQty;
 
     const { items, totalRub } = scaleKit(kit, targetQty);
-    const discountedTotalRub = applyLightingDiscount(totalRub);
+    const discountedTotalRub  = applyLightingDiscount(totalRub);
 
     const draft: LightingSnapshot = {
       mode: "kit",
@@ -408,7 +406,7 @@ export function WizardStep1Lighting() {
         };
       });
 
-    const totalRub = items.reduce((sum, i) => sum + i.qty * i.priceRub, 0);
+    const totalRub         = items.reduce((sum, i) => sum + i.qty * i.priceRub, 0);
     const discountedTotalRub = applyLightingDiscount(totalRub);
 
     if (items.length === 0) {
@@ -499,12 +497,8 @@ export function WizardStep1Lighting() {
           {derivedInputs.trackMountType !== "none" || derivedInputs.pointSpotsQty > 0 ? (
             <p className="text-xs text-slate-500">
               Подобрано по параметрам:{" "}
-              {derivedInputs.pointSpotsQty > 0
-                ? `${derivedInputs.pointSpotsQty} точечных`
-                : null}
-              {derivedInputs.pointSpotsQty > 0 && derivedInputs.trackMountType !== "none"
-                ? ", "
-                : null}
+              {derivedInputs.pointSpotsQty > 0 ? `${derivedInputs.pointSpotsQty} точечных` : null}
+              {derivedInputs.pointSpotsQty > 0 && derivedInputs.trackMountType !== "none" ? ", " : null}
               {derivedInputs.trackMountType !== "none"
                 ? `трек ${derivedInputs.trackLengthMeters} м.п.`
                 : null}
