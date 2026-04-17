@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import type { WizardStep } from "@/lib/calculator-modal-types";
@@ -11,12 +11,6 @@ import { PriceStrip } from "./price-strip";
 import { WizardStep0Calculator } from "./wizard-step0-calculator";
 import { WizardStep1Lighting } from "./wizard-step1-lighting";
 import { WizardStep2Summary } from "./wizard-step2-summary";
-
-const STEP_TITLES: Record<WizardStep, string> = {
-  0: "Параметры потолка",
-  1: "Освещение",
-  2: "Итог расчёта",
-};
 
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
   const selector = [
@@ -42,48 +36,55 @@ export function CalculatorModal() {
 
   const { snapshot, setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
 
-  const panelRef           = useRef<HTMLDivElement>(null);
-  const overlayRef         = useRef<HTMLDivElement>(null);
-  const previousFocusRef   = useRef<HTMLElement | null>(null);
-  const [mounted, setMounted] = useState(false);
-  const [visible, setVisible] = useState(false);
+  const panelRef         = useRef<HTMLDivElement>(null);
+  const overlayRef       = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const [mounted, setMounted]   = useState(false);
+  const [visible, setVisible]   = useState(false);
 
-  // SSR guard for portal
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  useEffect(() => { setMounted(true); }, []);
 
   const shouldApplyPreset =
     options?.preset && (!snapshot || options.forcePreset === true);
   const activePreset = shouldApplyPreset ? options?.preset : undefined;
 
+  // ── Динамический заголовок шага (P0.1) ───────────────────────────────
+  const stepTitle = useMemo(() => {
+    if (currentStep === 1) {
+      const hasLight =
+        lightingDraft &&
+        lightingDraft.mode !== "none" &&
+        (lightingDraft.items?.length ?? 0) > 0;
+      return hasLight ? "Освещение ✓" : "Освещение";
+    }
+    const titles: Record<WizardStep, string> = {
+      0: "Параметры потолка",
+      1: "Освещение",
+      2: "Итог расчёта",
+    };
+    return titles[currentStep];
+  }, [currentStep, lightingDraft]);
+
   // Enter animation + scroll lock + focus
   useEffect(() => {
     if (!isOpen) return;
-
     previousFocusRef.current = document.activeElement as HTMLElement;
     document.body.style.overflow = "hidden";
-
     const reducedMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)"
     ).matches;
-
     if (reducedMotion) {
       setVisible(true);
     } else {
       requestAnimationFrame(() => setVisible(true));
     }
-
     requestAnimationFrame(() => {
       if (panelRef.current) {
         const focusable = getFocusableElements(panelRef.current);
         if (focusable.length > 0) focusable[0].focus();
       }
     });
-
-    return () => {
-      document.body.style.overflow = "";
-    };
+    return () => { document.body.style.overflow = ""; };
   }, [isOpen]);
 
   // Restore focus on close
@@ -100,34 +101,20 @@ export function CalculatorModal() {
   // Escape + focus trap
   useEffect(() => {
     if (!isOpen) return;
-
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        closeCalculator();
-        return;
-      }
-
+      if (e.key === "Escape") { e.preventDefault(); closeCalculator(); return; }
       if (e.key === "Tab" && panelRef.current) {
         const focusable = getFocusableElements(panelRef.current);
         if (focusable.length === 0) return;
         const first = focusable[0];
         const last  = focusable[focusable.length - 1];
-
         if (e.shiftKey) {
-          if (document.activeElement === first) {
-            e.preventDefault();
-            last.focus();
-          }
+          if (document.activeElement === first) { e.preventDefault(); last.focus(); }
         } else {
-          if (document.activeElement === last) {
-            e.preventDefault();
-            first.focus();
-          }
+          if (document.activeElement === last) { e.preventDefault(); first.focus(); }
         }
       }
     };
-
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, closeCalculator]);
@@ -140,16 +127,11 @@ export function CalculatorModal() {
   );
 
   const handleConfirm = useCallback(() => {
-    // Merge lightingDraft into snapshot
     if (snapshot) {
-      setSnapshot({
-        ...snapshot,
-        lighting: lightingDraft ?? undefined,
-      });
+      setSnapshot({ ...snapshot, lighting: lightingDraft ?? undefined });
     }
     setHasInteracted(true);
     closeCalculator();
-
     requestAnimationFrame(() => {
       scrollToAnchorTarget("#action", { focus: true, highlight: true });
     });
@@ -157,7 +139,6 @@ export function CalculatorModal() {
 
   if (!mounted || !isOpen) return null;
 
-  const stepTitle = STEP_TITLES[currentStep];
   const reducedMotion =
     typeof window !== "undefined" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -175,7 +156,7 @@ export function CalculatorModal() {
         aria-hidden="true"
       />
 
-      {/* Panel container */}
+      {/* Panel */}
       <div className="fixed inset-0 z-50 flex items-end md:items-center md:justify-center pointer-events-none">
         <div
           ref={panelRef}
@@ -216,23 +197,19 @@ export function CalculatorModal() {
             </button>
           </div>
 
-          {/* PriceStrip — desktop: between header and body */}
+          {/* PriceStrip — desktop */}
           <div className="hidden md:block">
             <PriceStrip />
           </div>
 
           {/* Body */}
           <div className="flex-1 overflow-y-auto px-5 py-5">
-            {currentStep === 0 ? (
-              <WizardStep0Calculator preset={activePreset} />
-            ) : null}
+            {currentStep === 0 ? <WizardStep0Calculator preset={activePreset} /> : null}
             {currentStep === 1 ? <WizardStep1Lighting /> : null}
-            {currentStep === 2 ? (
-              <WizardStep2Summary onConfirm={handleConfirm} />
-            ) : null}
+            {currentStep === 2 ? <WizardStep2Summary onConfirm={handleConfirm} /> : null}
           </div>
 
-          {/* PriceStrip — mobile: sticky above footer */}
+          {/* PriceStrip — mobile */}
           <div className="block md:hidden">
             <PriceStrip />
           </div>
@@ -252,11 +229,12 @@ export function CalculatorModal() {
               <div />
             )}
 
+            {/* P0.2: кнопка «Зафиксировать смету» теперь видна на всех экранах */}
             {currentStep < 2 ? (
               <button
                 type="button"
                 onClick={() => goToStep((currentStep + 1) as WizardStep)}
-                className="h-12 px-6 rounded-2xl bg-slate-950 text-white text-sm font-semibold hover:bg-slate-800 transition-colors"
+                className="flex h-12 px-6 rounded-2xl bg-slate-950 text-white text-sm font-semibold hover:bg-slate-800 transition-colors items-center"
                 style={{ minHeight: 48 }}
               >
                 Далее →
@@ -265,7 +243,7 @@ export function CalculatorModal() {
               <button
                 type="button"
                 onClick={handleConfirm}
-                className="hidden md:flex h-12 px-6 rounded-2xl bg-slate-950 text-white text-sm font-semibold hover:bg-slate-800 transition-colors items-center"
+                className="flex h-12 px-6 rounded-2xl bg-slate-950 text-white text-sm font-semibold hover:bg-slate-800 transition-colors items-center"
                 style={{ minHeight: 48 }}
               >
                 Зафиксировать смету →
