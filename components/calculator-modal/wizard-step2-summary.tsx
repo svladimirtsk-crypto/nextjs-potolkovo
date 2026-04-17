@@ -35,7 +35,9 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
       {/* Hero totals */}
       <div className="rounded-2xl bg-slate-950 p-6 text-white">
         <p className="text-sm text-white/60 mb-1">Потолок (работы)</p>
-        <p className="text-3xl font-bold tracking-tight">{fmt(ceilingTotal)} ₽</p>
+        <p className="text-3xl font-bold tracking-tight">
+          {fmt(ceilingTotal)} ₽
+        </p>
 
         {hasLighting && lightingDiscountedTotal > 0 ? (
           <>
@@ -74,7 +76,9 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
               </p>
               <ul className="space-y-1.5">
                 {calcLines.map((line) => (
-                  <li key={line} className="text-sm text-slate-600">{line}</li>
+                  <li key={line} className="text-sm text-slate-600">
+                    {line}
+                  </li>
                 ))}
               </ul>
             </div>
@@ -100,7 +104,9 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
                     key={item.sku}
                     className="flex items-center justify-between gap-2 text-sm text-slate-600"
                   >
-                    <span>{item.name} × {item.qty}</span>
+                    <span>
+                      {item.name} × {item.qty}
+                    </span>
                     <span className="shrink-0 text-slate-400">
                       {fmt(item.qty * item.priceRub)} ₽
                     </span>
@@ -122,17 +128,14 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
         </div>
       </details>
 
-      {/* Note */}
+      {/* ← ИЗМЕНЕНО: note переформулирован, убрано "фиксируется" до замера */}
       <p className="text-xs text-slate-500 leading-5">
-        Точная смета фиксируется после бесплатного замера. Скидка 15% на
-        оборудование при заказе натяжного потолка.
+        Это ориентировочный расчёт. Точную стоимость определим на бесплатном
+        замере — приеду, посмотрю помещение и дам конкретные цифры.
+        {hasLighting
+          ? " Скидка 15% на оборудование сохраняется при заказе потолка."
+          : null}
       </p>
-
-      {/* 
-        P0.2: мобильная кнопка убрана отсюда — 
-        теперь она в footer модалки (calculator-modal.tsx) на всех экранах.
-        Оставляем onConfirm prop для совместимости.
-      */}
     </div>
   );
 }
