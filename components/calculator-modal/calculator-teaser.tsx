@@ -43,8 +43,9 @@ export function CalculatorTeaser({
         <CalculatorTeaserButton preset={preset} source={source} />
       </div>
 
+      {/* ← ИЗМЕНЕНО: убрано "фиксируется", формулировка унифицирована */}
       <p className="mt-4 text-sm text-slate-500">
-        Точная цена фиксируется после бесплатного замера
+        Точную стоимость определим на бесплатном замере
       </p>
     </div>
   );
