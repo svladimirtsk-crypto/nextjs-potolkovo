@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import type { WizardStep } from "@/lib/calculator-modal-types";
+import { isSnapshotValid } from "@/lib/calculator-snapshot-guard";
 import { useCalculatorModal } from "./calculator-modal-context";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 import { scrollToAnchorTarget } from "@/lib/scroll-to-anchor";
@@ -47,6 +48,12 @@ export function CalculatorModal() {
   const shouldApplyPreset =
     options?.preset && (!snapshot || options.forcePreset === true);
   const activePreset = shouldApplyPreset ? options?.preset : undefined;
+
+  // Валидность snapshot — единая проверка для всего модала
+  const snapshotValid = isSnapshotValid(snapshot);
+
+  // Кнопка «Далее» заблокирована на шагах 0 и 1 если snapshot невалиден
+  const isNextDisabled = currentStep < 2 && !snapshotValid;
 
   // Динамический заголовок шага 1
   const stepTitle = useMemo(() => {
@@ -204,7 +211,9 @@ export function CalculatorModal() {
 
           {/* Body */}
           <div className="flex-1 overflow-y-auto px-5 py-5">
-            {currentStep === 0 ? <WizardStep0Calculator preset={activePreset} /> : null}
+            {currentStep === 0 ? (
+              <WizardStep0Calculator preset={activePreset} />
+            ) : null}
             {currentStep === 1 ? <WizardStep1Lighting /> : null}
             {currentStep === 2 ? (
               <WizardStep2Summary onConfirm={handleConfirm} />
@@ -217,40 +226,59 @@ export function CalculatorModal() {
           </div>
 
           {/* Footer */}
-          <div className="shrink-0 border-t border-slate-200 px-5 py-4 flex items-center justify-between gap-3">
-            {currentStep > 0 ? (
-              <button
-                type="button"
-                onClick={() => goToStep((currentStep - 1) as WizardStep)}
-                className="h-12 px-5 rounded-2xl text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-                style={{ minHeight: 48 }}
-              >
-                ← Назад
-              </button>
-            ) : (
-              <div />
-            )}
+          <div className="shrink-0 border-t border-slate-200 px-5 py-4">
+            <div className="flex items-center justify-between gap-3">
+              {currentStep > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => goToStep((currentStep - 1) as WizardStep)}
+                  className="h-12 px-5 rounded-2xl text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                  style={{ minHeight: 48 }}
+                >
+                  ← Назад
+                </button>
+              ) : (
+                <div />
+              )}
 
-            {currentStep < 2 ? (
-              <button
-                type="button"
-                onClick={() => goToStep((currentStep + 1) as WizardStep)}
-                className="flex h-12 px-6 rounded-2xl bg-slate-950 text-white text-sm font-semibold hover:bg-slate-800 transition-colors items-center"
-                style={{ minHeight: 48 }}
-              >
-                Далее →
-              </button>
-            ) : (
-              // ← ИЗМЕНЕНО: было "Зафиксировать смету →"
-              <button
-                type="button"
-                onClick={handleConfirm}
-                className="flex h-12 px-6 rounded-2xl bg-slate-950 text-white text-sm font-semibold hover:bg-slate-800 transition-colors items-center"
-                style={{ minHeight: 48 }}
-              >
-                Записаться на бесплатный замер →
-              </button>
-            )}
+              <div className="flex flex-col items-end gap-1">
+                {currentStep < 2 ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        goToStep((currentStep + 1) as WizardStep)
+                      }
+                      disabled={isNextDisabled}
+                      aria-disabled={isNextDisabled}
+                      className="flex h-12 px-6 rounded-2xl bg-slate-950 text-white text-sm font-semibold hover:bg-slate-800 transition-colors items-center disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-slate-950"
+                      style={{ minHeight: 48 }}
+                    >
+                      Далее →
+                    </button>
+                    {/* Подсказка появляется только пока snapshot невалиден */}
+                    {isNextDisabled ? (
+                      <p
+                        className="text-xs text-slate-400 text-right"
+                        role="status"
+                        aria-live="polite"
+                      >
+                        Подвигайте слайдер площади — расчёт появится автоматически
+                      </p>
+                    ) : null}
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleConfirm}
+                    className="flex h-12 px-6 rounded-2xl bg-slate-950 text-white text-sm font-semibold hover:bg-slate-800 transition-colors items-center"
+                    style={{ minHeight: 48 }}
+                  >
+                    Записаться на бесплатный замер →
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
