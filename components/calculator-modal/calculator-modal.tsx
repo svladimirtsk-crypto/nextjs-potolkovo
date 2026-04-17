@@ -39,8 +39,8 @@ export function CalculatorModal() {
   const panelRef         = useRef<HTMLDivElement>(null);
   const overlayRef       = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
-  const [mounted, setMounted]   = useState(false);
-  const [visible, setVisible]   = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -48,7 +48,7 @@ export function CalculatorModal() {
     options?.preset && (!snapshot || options.forcePreset === true);
   const activePreset = shouldApplyPreset ? options?.preset : undefined;
 
-  // ── Динамический заголовок шага (P0.1) ───────────────────────────────
+  // Динамический заголовок шага 1
   const stepTitle = useMemo(() => {
     if (currentStep === 1) {
       const hasLight =
@@ -206,7 +206,9 @@ export function CalculatorModal() {
           <div className="flex-1 overflow-y-auto px-5 py-5">
             {currentStep === 0 ? <WizardStep0Calculator preset={activePreset} /> : null}
             {currentStep === 1 ? <WizardStep1Lighting /> : null}
-            {currentStep === 2 ? <WizardStep2Summary onConfirm={handleConfirm} /> : null}
+            {currentStep === 2 ? (
+              <WizardStep2Summary onConfirm={handleConfirm} />
+            ) : null}
           </div>
 
           {/* PriceStrip — mobile */}
@@ -229,7 +231,6 @@ export function CalculatorModal() {
               <div />
             )}
 
-            {/* P0.2: кнопка «Зафиксировать смету» теперь видна на всех экранах */}
             {currentStep < 2 ? (
               <button
                 type="button"
@@ -240,13 +241,14 @@ export function CalculatorModal() {
                 Далее →
               </button>
             ) : (
+              // ← ИЗМЕНЕНО: было "Зафиксировать смету →"
               <button
                 type="button"
                 onClick={handleConfirm}
                 className="flex h-12 px-6 rounded-2xl bg-slate-950 text-white text-sm font-semibold hover:bg-slate-800 transition-colors items-center"
                 style={{ minHeight: 48 }}
               >
-                Зафиксировать смету →
+                Записаться на бесплатный замер →
               </button>
             )}
           </div>
