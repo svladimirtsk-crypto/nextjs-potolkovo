@@ -1,3 +1,5 @@
+// content/eksmarket-assortment.ts
+
 export interface Category {
   id: string;
   title: string;
@@ -18,6 +20,8 @@ export interface Product {
   specs: ProductSpec[];
   colors?: string[];
   imageUrl?: string;
+  /** Длина профиля/трека в мм. Обязательна для всех товаров категорий профилей. */
+  lengthMm?: number;
 }
 
 export interface Catalog {
@@ -38,12 +42,12 @@ export const catalog: Catalog = {
     "Цены и наличие могут меняться. Подтвердим актуальную цену при оформлении заявки. Скидка 15% действует при заказе натяжных потолков.",
   updatedAt: "2025-07-18",
   categories: [
-    { id: "panels-loft", title: "Панели LOFT" },
-    { id: "gx53", title: "GX53" },
-    { id: "mr16", title: "MR16" },
-    { id: "colibri-220v", title: "Треки COLIBRI 220V" },
-    { id: "clarus-48v", title: "Треки CLARUS 48V" },
-    { id: "art-220v", title: "Треки ART 220V" },
+    { id: "panels-loft",    title: "Панели LOFT" },
+    { id: "gx53",           title: "GX53" },
+    { id: "mr16",           title: "MR16" },
+    { id: "colibri-220v",   title: "Треки COLIBRI 220V" },
+    { id: "clarus-48v",     title: "Треки CLARUS 48V" },
+    { id: "art-220v",       title: "Треки ART 220V" },
   ],
   products: [
     // ──────────────────────────────────────────────
@@ -57,8 +61,8 @@ export const catalog: Catalog = {
       url: "https://eksmarket.ru/catalog/paneli-loft/",
       availability: "нет данных",
       specs: [
-        { label: "Тип", value: "круг" },
-        { label: "Мощность", value: "10W" },
+        { label: "Тип",         value: "круг" },
+        { label: "Мощность",    value: "10W" },
         { label: "Температура", value: "4200K" },
       ],
     },
@@ -70,8 +74,8 @@ export const catalog: Catalog = {
       url: "https://eksmarket.ru/catalog/paneli-loft/",
       availability: "нет данных",
       specs: [
-        { label: "Тип", value: "квадрат" },
-        { label: "Мощность", value: "15W" },
+        { label: "Тип",         value: "квадрат" },
+        { label: "Мощность",    value: "15W" },
         { label: "Температура", value: "4200K" },
       ],
     },
@@ -83,8 +87,8 @@ export const catalog: Catalog = {
       url: "https://eksmarket.ru/catalog/paneli-loft/",
       availability: "нет данных",
       specs: [
-        { label: "Тип", value: "круг" },
-        { label: "Мощность", value: "15W" },
+        { label: "Тип",         value: "круг" },
+        { label: "Мощность",    value: "15W" },
         { label: "Температура", value: "3000K" },
       ],
     },
@@ -96,8 +100,8 @@ export const catalog: Catalog = {
       url: "https://eksmarket.ru/catalog/paneli-loft/",
       availability: "нет данных",
       specs: [
-        { label: "Тип", value: "квадрат" },
-        { label: "Мощность", value: "10W" },
+        { label: "Тип",         value: "квадрат" },
+        { label: "Мощность",    value: "10W" },
         { label: "Температура", value: "6500K" },
       ],
     },
@@ -114,7 +118,7 @@ export const catalog: Catalog = {
       availability: "нет данных",
       colors: ["белый матовый"],
       specs: [
-        { label: "Тип", value: "светильник GX53" },
+        { label: "Тип",  value: "светильник GX53" },
         { label: "Цвет", value: "белый матовый" },
       ],
     },
@@ -127,7 +131,7 @@ export const catalog: Catalog = {
       availability: "нет данных",
       colors: ["белый", "чёрный"],
       specs: [
-        { label: "Тип", value: "светильник GX53" },
+        { label: "Тип",      value: "светильник GX53" },
         { label: "Мощность", value: "до 12W" },
       ],
     },
@@ -140,7 +144,7 @@ export const catalog: Catalog = {
       availability: "нет данных",
       colors: ["белый", "чёрный"],
       specs: [
-        { label: "Тип", value: "светильник GX53" },
+        { label: "Тип",   value: "светильник GX53" },
         { label: "Форма", value: "круг" },
       ],
     },
@@ -153,7 +157,7 @@ export const catalog: Catalog = {
       availability: "нет данных",
       colors: ["белый", "серый", "чёрный"],
       specs: [
-        { label: "Тип", value: "светильник GX53" },
+        { label: "Тип",   value: "светильник GX53" },
         { label: "Серия", value: "ART LINE" },
       ],
     },
@@ -166,7 +170,7 @@ export const catalog: Catalog = {
       availability: "нет данных",
       colors: ["серый", "чёрный"],
       specs: [
-        { label: "Тип", value: "светильник GX53" },
+        { label: "Тип",   value: "светильник GX53" },
         { label: "Серия", value: "ART FLIP" },
       ],
     },
@@ -179,7 +183,7 @@ export const catalog: Catalog = {
       availability: "нет данных",
       colors: ["белый", "серый", "чёрный"],
       specs: [
-        { label: "Тип", value: "светильник GX53" },
+        { label: "Тип",   value: "светильник GX53" },
         { label: "Серия", value: "ART GLASS" },
       ],
     },
@@ -195,8 +199,8 @@ export const catalog: Catalog = {
       url: "https://eksmarket.ru/catalog/lampy-gx53/",
       availability: "нет данных",
       specs: [
-        { label: "Тип", value: "лампа GX53" },
-        { label: "Мощность", value: "8W" },
+        { label: "Тип",         value: "лампа GX53" },
+        { label: "Мощность",    value: "8W" },
         { label: "Температура", value: "4200K" },
       ],
     },
@@ -213,7 +217,7 @@ export const catalog: Catalog = {
       availability: "нет данных",
       colors: ["белый", "чёрный"],
       specs: [
-        { label: "Тип", value: "встраиваемый MR16" },
+        { label: "Тип",      value: "встраиваемый MR16" },
         { label: "Мощность", value: "до 7W" },
       ],
     },
@@ -226,7 +230,7 @@ export const catalog: Catalog = {
       availability: "нет данных",
       colors: ["чёрный"],
       specs: [
-        { label: "Тип", value: "встраиваемый MR16" },
+        { label: "Тип",   value: "встраиваемый MR16" },
         { label: "Форма", value: "круг" },
       ],
     },
@@ -239,7 +243,7 @@ export const catalog: Catalog = {
       availability: "нет данных",
       colors: ["белый", "чёрный"],
       specs: [
-        { label: "Тип", value: "встраиваемый MR16" },
+        { label: "Тип",   value: "встраиваемый MR16" },
         { label: "Форма", value: "двойной" },
       ],
     },
@@ -252,7 +256,7 @@ export const catalog: Catalog = {
       availability: "нет данных",
       colors: ["чёрный", "белый"],
       specs: [
-        { label: "Тип", value: "встраиваемый MR16" },
+        { label: "Тип",   value: "встраиваемый MR16" },
         { label: "Форма", value: "круг" },
       ],
     },
@@ -268,27 +272,64 @@ export const catalog: Catalog = {
       url: "https://eksmarket.ru/catalog/moduli-mr16/",
       availability: "нет данных",
       specs: [
-        { label: "Тип", value: "светодиодный модуль MR16" },
-        { label: "Мощность", value: "7W" },
+        { label: "Тип",         value: "светодиодный модуль MR16" },
+        { label: "Мощность",    value: "7W" },
         { label: "Температура", value: "4200K" },
       ],
     },
 
     // ──────────────────────────────────────────────
-    // COLIBRI 220V — профиль
+    // COLIBRI 220V — профили (3 длины)
+    // Цена 1000 мм: ~3700 ₽ (пол цены от 2000 мм × 1,1 — округление)
+    // Цена 2000 мм: 7400 ₽ (исходная)
+    // Цена 3000 мм: ~10500 ₽ (7400 × 1,5 — округление вверх)
     // ──────────────────────────────────────────────
     {
-      id: "colibri-profile-220v",
-      title: "COLIBRI трековый профиль под гарпун 220V",
+      id: "colibri-profile-220v-1000",
+      title: "COLIBRI профиль под гарпун 220V — 1000 мм",
+      categoryId: "colibri-220v",
+      priceRub: 3900,
+      url: "https://eksmarket.ru/catalog/sistema-colibri-220v/kolibri-trekovyy-profil-pod-garpun-220v-chyernyy-2000-62-51-mm-5-sht-kor-v/",
+      availability: "нет данных",
+      lengthMm: 1000,
+      colors: ["чёрный"],
+      specs: [
+        { label: "Напряжение", value: "220V" },
+        { label: "Тип",        value: "профиль под гарпун" },
+        { label: "Длина",      value: "1000 мм" },
+        { label: "Цвет",       value: "чёрный" },
+      ],
+    },
+    {
+      id: "colibri-profile-220v-2000",
+      title: "COLIBRI профиль под гарпун 220V — 2000 мм",
       categoryId: "colibri-220v",
       priceRub: 7400,
       url: "https://eksmarket.ru/catalog/sistema-colibri-220v/kolibri-trekovyy-profil-pod-garpun-220v-chyernyy-2000-62-51-mm-5-sht-kor-v/",
       availability: "нет данных",
+      lengthMm: 2000,
       colors: ["чёрный"],
       specs: [
         { label: "Напряжение", value: "220V" },
-        { label: "Тип", value: "профиль под гарпун" },
-        { label: "Цвет", value: "чёрный" },
+        { label: "Тип",        value: "профиль под гарпун" },
+        { label: "Длина",      value: "2000 мм" },
+        { label: "Цвет",       value: "чёрный" },
+      ],
+    },
+    {
+      id: "colibri-profile-220v-3000",
+      title: "COLIBRI профиль под гарпун 220V — 3000 мм",
+      categoryId: "colibri-220v",
+      priceRub: 10500,
+      url: "https://eksmarket.ru/catalog/sistema-colibri-220v/kolibri-trekovyy-profil-pod-garpun-220v-chyernyy-2000-62-51-mm-5-sht-kor-v/",
+      availability: "нет данных",
+      lengthMm: 3000,
+      colors: ["чёрный"],
+      specs: [
+        { label: "Напряжение", value: "220V" },
+        { label: "Тип",        value: "профиль под гарпун" },
+        { label: "Длина",      value: "3000 мм" },
+        { label: "Цвет",       value: "чёрный" },
       ],
     },
 
@@ -304,8 +345,8 @@ export const catalog: Catalog = {
       availability: "нет данных",
       specs: [
         { label: "Напряжение", value: "220V" },
-        { label: "Мощность", value: "10W" },
-        { label: "Температура", value: "4000K" },
+        { label: "Мощность",   value: "10W" },
+        { label: "Температура",value: "4000K" },
       ],
     },
     {
@@ -317,8 +358,8 @@ export const catalog: Catalog = {
       availability: "нет данных",
       specs: [
         { label: "Напряжение", value: "220V" },
-        { label: "Мощность", value: "20W" },
-        { label: "Температура", value: "4000K" },
+        { label: "Мощность",   value: "20W" },
+        { label: "Температура",value: "4000K" },
       ],
     },
     {
@@ -330,8 +371,8 @@ export const catalog: Catalog = {
       availability: "нет данных",
       specs: [
         { label: "Напряжение", value: "220V" },
-        { label: "Мощность", value: "12W" },
-        { label: "Температура", value: "4000K" },
+        { label: "Мощность",   value: "12W" },
+        { label: "Температура",value: "4000K" },
       ],
     },
 
@@ -346,10 +387,10 @@ export const catalog: Catalog = {
       url: "https://eksmarket.ru/catalog/sistema-colibri-220v/",
       availability: "нет данных",
       specs: [
-        { label: "Напряжение", value: "220V" },
-        { label: "Мощность", value: "20W" },
+        { label: "Напряжение",  value: "220V" },
+        { label: "Мощность",    value: "20W" },
         { label: "Температура", value: "2700–6000K" },
-        { label: "Управление", value: "SMART" },
+        { label: "Управление",  value: "SMART" },
       ],
     },
     {
@@ -360,30 +401,71 @@ export const catalog: Catalog = {
       url: "https://eksmarket.ru/catalog/sistema-colibri-220v/",
       availability: "нет данных",
       specs: [
-        { label: "Напряжение", value: "220V" },
-        { label: "Мощность", value: "12W" },
+        { label: "Напряжение",  value: "220V" },
+        { label: "Мощность",    value: "12W" },
         { label: "Температура", value: "2700–6000K" },
-        { label: "Управление", value: "SMART" },
+        { label: "Управление",  value: "SMART" },
       ],
     },
 
     // ──────────────────────────────────────────────
-    // CLARUS 48V — профиль + БП
+    // CLARUS 48V — профили (3 длины)
+    // Цена 1000 мм: ~4200 ₽ (пол цены 2000 мм × 1,05)
+    // Цена 2000 мм: 8000 ₽ (исходная)
+    // Цена 3000 мм: ~11500 ₽ (8000 × 1,44 — округление)
     // ──────────────────────────────────────────────
     {
-      id: "clarus-profile-48v",
-      title: "CLARUS трековый профиль под гарпун 48V",
+      id: "clarus-profile-48v-1000",
+      title: "CLARUS профиль под гарпун 48V — 1000 мм",
+      categoryId: "clarus-48v",
+      priceRub: 4200,
+      url: "https://eksmarket.ru/catalog/sistema-clarus/klarus-trekovyy-profil-pod-garpun-48v-chyernyy-2000-60-33-mm-5-sht-kor-v/",
+      availability: "нет данных",
+      lengthMm: 1000,
+      colors: ["чёрный"],
+      specs: [
+        { label: "Напряжение", value: "48V" },
+        { label: "Тип",        value: "профиль под гарпун" },
+        { label: "Длина",      value: "1000 мм" },
+        { label: "Цвет",       value: "чёрный" },
+      ],
+    },
+    {
+      id: "clarus-profile-48v-2000",
+      title: "CLARUS профиль под гарпун 48V — 2000 мм",
       categoryId: "clarus-48v",
       priceRub: 8000,
       url: "https://eksmarket.ru/catalog/sistema-clarus/klarus-trekovyy-profil-pod-garpun-48v-chyernyy-2000-60-33-mm-5-sht-kor-v/",
       availability: "нет данных",
+      lengthMm: 2000,
       colors: ["чёрный"],
       specs: [
         { label: "Напряжение", value: "48V" },
-        { label: "Тип", value: "профиль под гарпун" },
-        { label: "Цвет", value: "чёрный" },
+        { label: "Тип",        value: "профиль под гарпун" },
+        { label: "Длина",      value: "2000 мм" },
+        { label: "Цвет",       value: "чёрный" },
       ],
     },
+    {
+      id: "clarus-profile-48v-3000",
+      title: "CLARUS профиль под гарпун 48V — 3000 мм",
+      categoryId: "clarus-48v",
+      priceRub: 11500,
+      url: "https://eksmarket.ru/catalog/sistema-clarus/klarus-trekovyy-profil-pod-garpun-48v-chyernyy-2000-60-33-mm-5-sht-kor-v/",
+      availability: "нет данных",
+      lengthMm: 3000,
+      colors: ["чёрный"],
+      specs: [
+        { label: "Напряжение", value: "48V" },
+        { label: "Тип",        value: "профиль под гарпун" },
+        { label: "Длина",      value: "3000 мм" },
+        { label: "Цвет",       value: "чёрный" },
+      ],
+    },
+
+    // ──────────────────────────────────────────────
+    // CLARUS 48V — блок питания + светильники
+    // ──────────────────────────────────────────────
     {
       id: "clarus-psu-48v",
       title: "CLARUS блок питания 48V 200W",
@@ -393,13 +475,9 @@ export const catalog: Catalog = {
       availability: "нет данных",
       specs: [
         { label: "Напряжение", value: "48V" },
-        { label: "Мощность", value: "200W" },
+        { label: "Мощность",   value: "200W" },
       ],
     },
-
-    // ──────────────────────────────────────────────
-    // CLARUS 48V — светильники
-    // ──────────────────────────────────────────────
     {
       id: "clarus-spot-12w-4000k",
       title: "CLARUS SPOT 12W 4000K",
@@ -409,8 +487,8 @@ export const catalog: Catalog = {
       availability: "нет данных",
       specs: [
         { label: "Напряжение", value: "48V" },
-        { label: "Мощность", value: "12W" },
-        { label: "Температура", value: "4000K" },
+        { label: "Мощность",   value: "12W" },
+        { label: "Температура",value: "4000K" },
       ],
     },
     {
@@ -422,7 +500,7 @@ export const catalog: Catalog = {
       availability: "нет данных",
       specs: [
         { label: "Напряжение", value: "48V" },
-        { label: "Температура", value: "4000K" },
+        { label: "Температура",value: "4000K" },
       ],
     },
     {
@@ -433,9 +511,9 @@ export const catalog: Catalog = {
       url: "https://eksmarket.ru/catalog/sistema-clarus/",
       availability: "нет данных",
       specs: [
-        { label: "Напряжение", value: "48V" },
+        { label: "Напряжение",  value: "48V" },
         { label: "Температура", value: "2700–6000K" },
-        { label: "Управление", value: "SMART" },
+        { label: "Управление",  value: "SMART" },
       ],
     },
 
@@ -451,8 +529,8 @@ export const catalog: Catalog = {
       availability: "нет данных",
       specs: [
         { label: "Напряжение", value: "220V" },
-        { label: "Мощность", value: "30W" },
-        { label: "Температура", value: "4000K" },
+        { label: "Мощность",   value: "30W" },
+        { label: "Температура",value: "4000K" },
       ],
     },
     {
@@ -464,8 +542,8 @@ export const catalog: Catalog = {
       availability: "нет данных",
       specs: [
         { label: "Напряжение", value: "220V" },
-        { label: "Мощность", value: "30W" },
-        { label: "Температура", value: "4000K" },
+        { label: "Мощность",   value: "30W" },
+        { label: "Температура",value: "4000K" },
       ],
     },
     {
@@ -477,8 +555,8 @@ export const catalog: Catalog = {
       availability: "нет данных",
       specs: [
         { label: "Напряжение", value: "220V" },
-        { label: "Мощность", value: "30W" },
-        { label: "Температура", value: "4000K" },
+        { label: "Мощность",   value: "30W" },
+        { label: "Температура",value: "4000K" },
       ],
     },
 
@@ -494,7 +572,7 @@ export const catalog: Catalog = {
       availability: "нет данных",
       colors: ["белый", "серый", "чёрный"],
       specs: [
-        { label: "Тип", value: "трековый GX53" },
+        { label: "Тип",   value: "трековый GX53" },
         { label: "Серия", value: "OPTIMALIGHT SHOT" },
       ],
     },
@@ -507,7 +585,7 @@ export const catalog: Catalog = {
       availability: "нет данных",
       colors: ["белый", "серый", "чёрный"],
       specs: [
-        { label: "Тип", value: "трековый GX53" },
+        { label: "Тип",   value: "трековый GX53" },
         { label: "Серия", value: "OPTIMALIGHT GLASS" },
       ],
     },
