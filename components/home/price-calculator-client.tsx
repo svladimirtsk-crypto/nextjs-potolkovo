@@ -1,3 +1,4 @@
+// components/home/price-calculator-client.tsx
 "use client";
 
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
@@ -198,6 +199,8 @@ function CollapsibleSection({
   );
 }
 
+// ── OptionCard — ИЗМЕНЕНО: line-clamp + фиксированная высота ─────────────────
+
 function OptionCard({
   active,
   title,
@@ -214,27 +217,36 @@ function OptionCard({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`rounded-2xl border p-4 text-left transition-all ${
+      className={[
+        // Базовая геометрия
+        "rounded-2xl border p-4 text-left transition-all",
+        // Выравниваем высоту всех карточек в строке
+        "flex flex-col h-full",
+        // Активное/неактивное состояние
         active
           ? "border-slate-950 bg-slate-950 text-white shadow-lg shadow-slate-950/10"
-          : "border-slate-200 bg-white text-slate-950 hover:border-slate-400 hover:bg-slate-50"
-      }`}
+          : "border-slate-200 bg-white text-slate-950 hover:border-slate-400 hover:bg-slate-50",
+      ].join(" ")}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold">{title}</p>
+      <div className="flex items-start justify-between gap-3 flex-1">
+        <div className="min-w-0 flex-1">
+          {/* line-clamp-2: заголовок не растягивает карточку */}
+          <p className="text-sm font-semibold line-clamp-2 leading-5">{title}</p>
+          {/* line-clamp-2: мета тоже ограничена */}
           <p
-            className={`mt-1 text-xs leading-5 ${
-              active ? "text-white/75" : "text-slate-500"
-            }`}
+            className={[
+              "mt-1 text-xs leading-5 line-clamp-2",
+              active ? "text-white/75" : "text-slate-500",
+            ].join(" ")}
           >
             {meta}
           </p>
         </div>
         <span
-          className={`mt-0.5 h-4 w-4 rounded-full border ${
-            active ? "border-white bg-white" : "border-slate-300 bg-transparent"
-          }`}
+          className={[
+            "mt-0.5 h-4 w-4 shrink-0 rounded-full border",
+            active ? "border-white bg-white" : "border-slate-300 bg-transparent",
+          ].join(" ")}
         />
       </div>
     </button>
@@ -421,7 +433,6 @@ export function PriceCalculatorClient({
     return () => mq.removeEventListener("change", update);
   }, [compactSections]);
 
-  // ── Resolved defaults from preset ──────────────────────────────────────
   const resolvedAreaDefault   = preset?.areaDefault  ?? calculator.areaDefault;
   const resolvedCeilingType   = preset?.ceilingType  ?? "standard";
   const resolvedCorniceType   = preset?.corniceType  ?? "none";
@@ -429,7 +440,6 @@ export function PriceCalculatorClient({
   const resolvedLightsEnabled = preset?.lightsEnabled ?? false;
   const resolvedLightsCount   = preset?.lightsCount  ?? calculator.lights.countDefault;
 
-    // ── State ──────────────────────────────────────────────────────────────
   const [area, setArea]               = useState<number>(resolvedAreaDefault);
   const [ceilingType, setCeilingType] = useState<CeilingType>(resolvedCeilingType);
   const [ceilingLength, setCeilingLength] = useState<number>(
@@ -488,7 +498,7 @@ export function PriceCalculatorClient({
     setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // ── Calculations ───────────────────────────────────────────────────────
+  // ── Calculations ───────────────────────────────────────────────────────────
   const ceilingBaseRate  = selectedCeiling.baseRatePerSqm;
   const ceilingBaseTotal = area * ceilingBaseRate;
   const ceilingExtraTotal = hasSpecialCeiling
@@ -509,7 +519,6 @@ export function PriceCalculatorClient({
   const total =
     ceilingBaseTotal + ceilingExtraTotal + lightLinesTotal + corniceTotal + trackTotal + lightsTotal;
 
-  // ── DerivedInputs ──────────────────────────────────────────────────────
   const derivedTrackMountType: DerivedInputs["trackMountType"] =
     trackType === "built-in" ? "built-in"
     : trackType === "surface" ? "surface"
@@ -527,7 +536,6 @@ export function PriceCalculatorClient({
     [lightsEnabled, lightsCount, derivedTrackMountType, derivedTrackLength]
   );
 
-  // ── Snapshot ───────────────────────────────────────────────────────────
   const snapshot = useMemo<CalculatorLeadSnapshot>(
     () => ({
       area,
@@ -535,14 +543,14 @@ export function PriceCalculatorClient({
       ceilingBaseRate,
       ceilingBaseTotal,
 
-      ceilingExtraLabel:      hasSpecialCeiling ? selectedCeiling.extraLabel ?? null : null,
-      ceilingLength:          hasSpecialCeiling ? ceilingLength : null,
+      ceilingExtraLabel:        hasSpecialCeiling ? selectedCeiling.extraLabel ?? null : null,
+      ceilingLength:            hasSpecialCeiling ? ceilingLength : null,
       ceilingExtraRatePerMeter: hasSpecialCeiling ? selectedCeiling.extraRatePerMeter : null,
       ceilingExtraTotal,
 
       lightLinesEnabled,
-      lightLinesLabel:      lightLinesEnabled ? calculator.lightLines.label : null,
-      lightLinesLength:     lightLinesEnabled ? lightLinesLength : null,
+      lightLinesLabel:        lightLinesEnabled ? calculator.lightLines.label : null,
+      lightLinesLength:       lightLinesEnabled ? lightLinesLength : null,
       lightLinesRatePerMeter: lightLinesEnabled ? calculator.lightLines.ratePerMeter : null,
       lightLinesTotal,
 
@@ -581,7 +589,6 @@ export function PriceCalculatorClient({
 
   const markInteracted = () => setHasInteracted(true);
 
-  // ── Handlers ───────────────────────────────────────────────────────────
   const handleAreaChange = (v: number) => { markInteracted(); setArea(v); };
 
   const handleCeilingTypeChange = (slug: CeilingType) => {
@@ -617,11 +624,12 @@ export function PriceCalculatorClient({
     setCeilingLength(perimeterSuggestion.recommended);
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:p-8">
       <div className="min-w-0 space-y-5">
-        {/* Area */}
+
+        {/* ── Area ── */}
         <SectionCard title="Площадь помещения">
           <RangeField
             id="area-range"
@@ -635,12 +643,20 @@ export function PriceCalculatorClient({
           />
         </SectionCard>
 
-        {/* Ceiling type */}
+        {/* ── Ceiling type — 3 варианта → grid-cols-3 в модалке ── */}
         <SectionCard
           title="Тип потолка"
           description="Для теневого и парящего потолка цена полотна считается по новой ставке за м², а профиль считается отдельно в погонных метрах."
         >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {/*
+            ИЗМЕНЕНО:
+            - Было: grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3
+            - Стало: grid-cols-1 gap-3 sm:grid-cols-3
+            Причина: xl:grid-cols-3 не срабатывал в модалке md:max-w-3xl (768px).
+            sm:grid-cols-3 (≥640px) — все 3 варианта в строку, нет хвоста.
+            В мобилке (< 640px) — 1 колонка, ОК.
+          */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {calculator.ceilingTypes.map((option) => {
               const meta =
                 option.slug === "standard"
@@ -659,7 +675,7 @@ export function PriceCalculatorClient({
           </div>
         </SectionCard>
 
-        {/* Ceiling profile length */}
+        {/* ── Ceiling profile length ── */}
         {hasSpecialCeiling ? (
           <CollapsibleSection
             id="ceiling-profile"
@@ -688,7 +704,7 @@ export function PriceCalculatorClient({
           </CollapsibleSection>
         ) : null}
 
-        {/* Light lines */}
+        {/* ── Light lines ── */}
         <CollapsibleSection
           id="light-lines"
           title="Световые линии"
@@ -697,6 +713,9 @@ export function PriceCalculatorClient({
           onToggle={toggleSection}
           lastToggledId={lastToggledSection}
         >
+          {/*
+            2 варианта → grid-cols-2 везде. Без изменений — уже ОК.
+          */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <OptionCard
               active={!lightLinesEnabled}
@@ -727,7 +746,7 @@ export function PriceCalculatorClient({
           ) : null}
         </CollapsibleSection>
 
-        {/* Cornices */}
+        {/* ── Cornices — 4 варианта → grid-cols-2, нет хвоста ── */}
         <CollapsibleSection
           id="cornices"
           title="Карнизы"
@@ -736,7 +755,11 @@ export function PriceCalculatorClient({
           onToggle={toggleSection}
           lastToggledId={lastToggledSection}
         >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {/*
+            4 варианта → grid-cols-2 = 2+2. Без изменений — уже ОК.
+            items-stretch добавляем чтобы карточки выравнивались по высоте.
+          */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 items-stretch">
             {calculator.cornices.map((option) => (
               <OptionCard
                 key={option.slug}
@@ -767,7 +790,7 @@ export function PriceCalculatorClient({
           ) : null}
         </CollapsibleSection>
 
-        {/* Tracks — тип + длина, без выбора модели */}
+        {/* ── Tracks — 3 варианта → grid-cols-3 в модалке ── */}
         <CollapsibleSection
           id="tracks"
           title="Трековое освещение"
@@ -776,7 +799,14 @@ export function PriceCalculatorClient({
           onToggle={toggleSection}
           lastToggledId={lastToggledSection}
         >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {/*
+            ИЗМЕНЕНО:
+            - Было: grid-cols-1 gap-3 sm:grid-cols-2
+            - Стало: grid-cols-1 gap-3 sm:grid-cols-3
+            Причина: 3 варианта (Без/Встроенный/Накладной) → 2+1 хвост.
+            sm:grid-cols-3 убирает хвост, все 3 в строке ≥640px.
+          */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {calculator.tracks.map((option) => (
               <OptionCard
                 key={option.slug}
@@ -811,7 +841,7 @@ export function PriceCalculatorClient({
           ) : null}
         </CollapsibleSection>
 
-        {/* Lights — единый счётчик точечных светильников */}
+        {/* ── Lights — 2 варианта → grid-cols-2 ── */}
         <CollapsibleSection
           id="lights"
           title="Точечные светильники"
@@ -820,6 +850,9 @@ export function PriceCalculatorClient({
           onToggle={toggleSection}
           lastToggledId={lastToggledSection}
         >
+          {/*
+            2 варианта → grid-cols-2. Без изменений — уже ОК.
+          */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <OptionCard
               active={!lightsEnabled}
@@ -850,7 +883,7 @@ export function PriceCalculatorClient({
           ) : null}
         </CollapsibleSection>
 
-        {/* Breakdown */}
+        {/* ── Breakdown ── */}
         <SectionCard title="Состав расчёта">
           <div className="space-y-3">
             <PriceRow
@@ -898,7 +931,7 @@ export function PriceCalculatorClient({
         </SectionCard>
       </div>
 
-      {/* Desktop sidebar */}
+      {/* ── Desktop sidebar ── */}
       <div className="hidden lg:block lg:sticky lg:top-24 lg:self-start">
         <div className="rounded-[1.75rem] bg-slate-950 p-6 text-white shadow-2xl shadow-slate-950/10">
           <p className="text-sm text-white/60">Ориентировочная стоимость от</p>
