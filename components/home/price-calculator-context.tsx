@@ -1,5 +1,7 @@
 "use client";
 
+import { getKitDisplayName } from "@/lib/calculator-modal-types";
+
 import {
   createContext,
   Dispatch,
@@ -199,11 +201,18 @@ export function getLightingSummaryLines(
   const lines: string[] = [];
 
   if ((lighting.mode === "kit" || lighting.mode === "catalog") && lighting.items?.length) {
-    if (lighting.kitName) {
-      lines.push(`Освещение — ${lighting.kitName}:`);
+    // ← Используем getKitDisplayName для кита, иначе "из каталога"
+    const displayName =
+      lighting.mode === "kit"
+        ? getKitDisplayName(lighting)
+        : null;
+
+    if (displayName) {
+      lines.push(`Освещение — ${displayName}:`);
     } else {
       lines.push("Освещение (из каталога):");
     }
+
     for (const item of lighting.items) {
       lines.push(
         `  — ${item.name} × ${item.qty} шт. × ${formatCurrency(item.priceRub)} ₽`
@@ -221,7 +230,6 @@ export function getLightingSummaryLines(
 
   return lines;
 }
-
 /**
  * Итоговые строки для заявки — структурированный блок.
  * Используется в action-form.tsx и buildLeadMessage.
