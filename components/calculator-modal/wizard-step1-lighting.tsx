@@ -10,6 +10,7 @@ import {
   LIGHTING_KITS,
   COLIBRI_PROFILES,
   CLARUS_PROFILES,
+  scaleKit, 
 } from "@/lib/lighting-kits";
 import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
 import {
@@ -65,29 +66,6 @@ function getRecommendedKits(
     seen.add(k.kitId);
     return true;
   });
-}
-
-// ── scaleKit ─────────────────────────────────────────────────────────────────
-
-function scaleKit(
-  kit: typeof LIGHTING_KITS[number],
-  targetQty: number
-): { items: LightingItem[]; totalRub: number; scaledSpotsQty: number } {
-  const effectiveTarget =
-    targetQty > 0 ? targetQty : kit.defaultSpotsQty;
-
-  const items: LightingItem[] = kit.items.map((i) => {
-    const qty =
-      i.sku === kit.spotsItemSku
-        ? scaleKitItemQty(i.qty, kit.defaultSpotsQty, effectiveTarget)
-        : i.qty;
-    return { ...i, qty };
-  });
-
-  const totalRub = items.reduce((sum, i) => sum + i.qty * i.priceRub, 0);
-  const scaledSpotsQty = items.find((i) => i.sku === kit.spotsItemSku)?.qty ?? effectiveTarget;
-
-  return { items, totalRub, scaledSpotsQty };
 }
 
 // ── Subcomponents ─────────────────────────────────────────────────────────────
