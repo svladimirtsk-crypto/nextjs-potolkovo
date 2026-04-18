@@ -8,59 +8,52 @@ export type LightingKit = {
   kitCategory: "track-built-in" | "track-surface" | "point";
   defaultSpotsQty: number;
   spotsItemSku: string;
+  /**
+   * Все SKU, qty которых масштабируется пропорционально числу спотов.
+   * Для точечных наборов: [корпус, лампа/модуль].
+   * Для трековых: только [spotsItemSku] — профиль и БП не масштабируются.
+   */
+  scaleGroup: readonly string[];
   items: readonly LightingItem[];
   totalRub: number;
 };
 
-// ─── Профили: таблица SKU → длина (мм) и цена ────────────────────────────────
+// ─── Profile tables ───────────────────────────────────────────────────────────
 
 export type ProfileLength = 1000 | 2000 | 3000;
 
 export type ProfileEntry = {
   sku: string;
   lengthMm: ProfileLength;
-  priceRub: number;
+  /** null = цена не подтверждена у поставщика, показываем "по запросу" */
+  priceRub: number | null;
 };
 
-/**
- * Все доступные профили COLIBRI 220V по длине.
- * Используется для подбора набора профилей под заданную длину трека.
- */
 export const COLIBRI_PROFILES: readonly ProfileEntry[] = [
-  { sku: "colibri-profile-220v-1000", lengthMm: 1000, priceRub: 3900 },
+  { sku: "colibri-profile-220v-1000", lengthMm: 1000, priceRub: null },
   { sku: "colibri-profile-220v-2000", lengthMm: 2000, priceRub: 7400 },
-  { sku: "colibri-profile-220v-3000", lengthMm: 3000, priceRub: 10500 },
+  { sku: "colibri-profile-220v-3000", lengthMm: 3000, priceRub: null },
 ];
 
-/**
- * Все доступные профили CLARUS 48V по длине.
- */
 export const CLARUS_PROFILES: readonly ProfileEntry[] = [
-  { sku: "clarus-profile-48v-1000", lengthMm: 1000, priceRub: 4200 },
+  { sku: "clarus-profile-48v-1000", lengthMm: 1000, priceRub: null },
   { sku: "clarus-profile-48v-2000", lengthMm: 2000, priceRub: 8000 },
-  { sku: "clarus-profile-48v-3000", lengthMm: 3000, priceRub: 11500 },
+  { sku: "clarus-profile-48v-3000", lengthMm: 3000, priceRub: null },
 ];
 
-// ─── Утилиты для набора профилей ─────────────────────────────────────────────
+// ─── Profile utilities ────────────────────────────────────────────────────────
 
 export type ProfilePiece = {
   sku: string;
   lengthMm: ProfileLength;
-  priceRub: number;
+  priceRub: number | null;
   qty: number;
-  /** Отображаемое название для итога */
   name: string;
 };
 
 /**
- * Подбирает минимальный набор профилей для заданной длины трека (в мм).
- *
- * Алгоритм: жадный подбор от большего к меньшему.
- * Пример: 5000 мм → [3000×1, 2000×1] = 5000 мм (точно).
- * Если точного набора нет — округляем вверх до ближайшего перекрытия.
- *
- * @param trackLengthMm - длина трека в мм
- * @param profiles - доступные профили (отсортированы по убыванию длины)
+ * Жадный подбор профилей под длину трека (в мм).
+ * Если хотя бы одна длина без цены — totalRub будет null (неизвестна).
  */
 export function calcProfilesForTrackLength(
   trackLengthMm: number,
@@ -68,10 +61,8 @@ export function calcProfilesForTrackLength(
 ): ProfilePiece[] {
   if (trackLengthMm <= 0 || profiles.length === 0) return [];
 
-  // Сортируем по убыванию длины для жадного алгоритма
   const sorted = [...profiles].sort((a, b) => b.lengthMm - a.lengthMm);
-
-  const result: Map<string, ProfilePiece> = new Map();
+  const result = new Map<string, ProfilePiece>();
   let remaining = trackLengthMm;
 
   for (const profile of sorted) {
@@ -89,7 +80,7 @@ export function calcProfilesForTrackLength(
     }
   }
 
-  // Если остаток > 0 — добавляем наименьший профиль чтобы перекрыть
+  // Остаток > 0 — добавляем наименьший профиль
   if (remaining > 0) {
     const smallest = sorted[sorted.length - 1];
     const existing = result.get(smallest.sku);
@@ -109,29 +100,24 @@ export function calcProfilesForTrackLength(
   return Array.from(result.values());
 }
 
-/**
- * Конвертирует метры трека (из Step 0 калькулятора) в миллиметры
- * и возвращает набор профилей для отображения пользователю.
- */
 export function calcProfilesForTrackMeters(
   trackLengthMeters: number,
   profiles: readonly ProfileEntry[]
 ): ProfilePiece[] {
-  const mm = Math.round(trackLengthMeters * 1000);
-  return calcProfilesForTrackLength(mm, profiles);
+  return calcProfilesForTrackLength(Math.round(trackLengthMeters * 1000), profiles);
 }
 
 /**
  * Суммарная стоимость набора профилей.
+ * Возвращает null если хотя бы один профиль без подтверждённой цены.
  */
-export function calcProfilesTotalRub(pieces: ProfilePiece[]): number {
-  return pieces.reduce((sum, p) => sum + p.qty * p.priceRub, 0);
+export function calcProfilesTotalRub(pieces: ProfilePiece[]): number | null {
+  for (const p of pieces) {
+    if (p.priceRub === null) return null;
+  }
+  return pieces.reduce((sum, p) => sum + p.qty * (p.priceRub as number), 0);
 }
 
-/**
- * Возвращает человекочитаемое описание набора профилей.
- * Пример: "2 × 2000 мм + 1 × 1000 мм = 5000 мм"
- */
 export function formatProfilePieces(pieces: ProfilePiece[]): string {
   if (pieces.length === 0) return "";
   const parts = pieces.map((p) => `${p.qty} × ${p.lengthMm} мм`);
@@ -139,16 +125,51 @@ export function formatProfilePieces(pieces: ProfilePiece[]): string {
   return `${parts.join(" + ")} = ${totalMm} мм`;
 }
 
+// ─── Kit scale utility ────────────────────────────────────────────────────────
+
+import { scaleKitItemQty } from "@/lib/lighting-formulas";
+
+/**
+ * Масштабирует кит под targetSpotsQty.
+ * Все SKU из scaleGroup масштабируются пропорционально.
+ * Остальные (профили, БП) остаются с оригинальным qty.
+ */
+export function scaleKit(
+  kit: LightingKit,
+  targetQty: number
+): { items: LightingItem[]; totalRub: number; scaledSpotsQty: number } {
+  const effectiveTarget = targetQty > 0 ? targetQty : kit.defaultSpotsQty;
+  const scaleSet = new Set(kit.scaleGroup);
+
+  const items: LightingItem[] = kit.items.map((item) => {
+    if (scaleSet.has(item.sku)) {
+      return {
+        ...item,
+        qty: scaleKitItemQty(item.qty, kit.defaultSpotsQty, effectiveTarget),
+      };
+    }
+    return { ...item };
+  });
+
+  const totalRub = items.reduce((sum, i) => sum + i.qty * i.priceRub, 0);
+  const scaledSpotsQty =
+    items.find((i) => i.sku === kit.spotsItemSku)?.qty ?? effectiveTarget;
+
+  return { items, totalRub, scaledSpotsQty };
+}
+
 // ─── Lighting Kits ────────────────────────────────────────────────────────────
 
 export const LIGHTING_KITS: readonly LightingKit[] = [
-  // ── Встроенные треки (COLIBRI / CLARUS) — используем 2000 мм как дефолт ──
+  // ── Встроенные треки ─────────────────────────────────────────────────────
   {
     kitId: "colibri-start-5",
     kitBaseName: "Старт COLIBRI 220V",
     kitCategory: "track-built-in",
     defaultSpotsQty: 5,
     spotsItemSku: "colibri-london-10w",
+    // Только споты масштабируются; профиль остаётся ×1
+    scaleGroup: ["colibri-london-10w"],
     items: [
       {
         sku: "colibri-profile-220v-2000",
@@ -158,7 +179,7 @@ export const LIGHTING_KITS: readonly LightingKit[] = [
       },
       {
         sku: "colibri-london-10w",
-        name: "COLIBRI LONDON 10W",
+        name: "COLIBRI LONDON 10W 4000K",
         qty: 5,
         priceRub: 1540,
       },
@@ -171,6 +192,7 @@ export const LIGHTING_KITS: readonly LightingKit[] = [
     kitCategory: "track-built-in",
     defaultSpotsQty: 5,
     spotsItemSku: "clarus-spot-12w-4000k",
+    scaleGroup: ["clarus-spot-12w-4000k"],
     items: [
       {
         sku: "clarus-profile-48v-2000",
@@ -180,13 +202,13 @@ export const LIGHTING_KITS: readonly LightingKit[] = [
       },
       {
         sku: "clarus-psu-48v",
-        name: "Блок питания CLARUS",
+        name: "Блок питания CLARUS 48V",
         qty: 1,
         priceRub: 1530,
       },
       {
         sku: "clarus-spot-12w-4000k",
-        name: "CLARUS SPOT 12W",
+        name: "CLARUS SPOT 12W 4000K",
         qty: 5,
         priceRub: 3520,
       },
@@ -199,6 +221,7 @@ export const LIGHTING_KITS: readonly LightingKit[] = [
     kitCategory: "track-built-in",
     defaultSpotsQty: 8,
     spotsItemSku: "colibri-rio-12w",
+    scaleGroup: ["colibri-rio-12w"],
     items: [
       {
         sku: "colibri-profile-220v-2000",
@@ -208,7 +231,7 @@ export const LIGHTING_KITS: readonly LightingKit[] = [
       },
       {
         sku: "colibri-rio-12w",
-        name: "COLIBRI RIO 12W",
+        name: "COLIBRI RIO 12W 4000K",
         qty: 8,
         priceRub: 3080,
       },
@@ -216,13 +239,14 @@ export const LIGHTING_KITS: readonly LightingKit[] = [
     totalRub: 2 * 7400 + 8 * 3080,
   },
 
-  // ── Накладные треки (ART 220V) ────────────────────────────────────────────
+  // ── Накладные треки ───────────────────────────────────────────────────────
   {
     kitId: "art-start-surface-4",
     kitBaseName: "Накладной ART START",
     kitCategory: "track-surface",
     defaultSpotsQty: 4,
     spotsItemSku: "art-start-30w",
+    scaleGroup: ["art-start-30w"],
     items: [
       {
         sku: "art-start-30w",
@@ -239,6 +263,7 @@ export const LIGHTING_KITS: readonly LightingKit[] = [
     kitCategory: "track-surface",
     defaultSpotsQty: 4,
     spotsItemSku: "art-monolit-30w",
+    scaleGroup: ["art-monolit-30w"],
     items: [
       {
         sku: "art-monolit-30w",
@@ -250,17 +275,19 @@ export const LIGHTING_KITS: readonly LightingKit[] = [
     totalRub: 4 * 2530,
   },
 
-  // ── Точечные светильники (GX53 / MR16) ───────────────────────────────────
+  // ── Точечные светильники ──────────────────────────────────────────────────
   {
     kitId: "gx53-optima-6",
     kitBaseName: "Точечный GX53 OPTIMA",
     kitCategory: "point",
     defaultSpotsQty: 6,
     spotsItemSku: "gx53-optima",
+    // ИСПРАВЛЕНО: лампа масштабируется вместе с корпусом
+    scaleGroup: ["gx53-optima", "gx53-lamp-8w-4200k"],
     items: [
       {
         sku: "gx53-optima",
-        name: "GX53 OPTIMA",
+        name: "GX53 OPTIMA (корпус)",
         qty: 6,
         priceRub: 130,
       },
@@ -279,10 +306,12 @@ export const LIGHTING_KITS: readonly LightingKit[] = [
     kitCategory: "point",
     defaultSpotsQty: 6,
     spotsItemSku: "mr16-zoom-circle",
+    // ИСПРАВЛЕНО: модуль масштабируется вместе с корпусом
+    scaleGroup: ["mr16-zoom-circle", "mr16-module-7w-4200k"],
     items: [
       {
         sku: "mr16-zoom-circle",
-        name: "MR16 ZOOM круг",
+        name: "MR16 ZOOM круг (корпус)",
         qty: 6,
         priceRub: 260,
       },
