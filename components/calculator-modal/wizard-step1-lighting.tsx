@@ -1,3 +1,4 @@
+// components/calculator-modal/wizard-step1-lighting.tsx
 "use client";
 
 import { useMemo, useRef, useState, useEffect } from "react";
@@ -51,22 +52,30 @@ function getRecommendedKits(
   });
 }
 
+// ── scaleKit: теперь возвращает scaledSpotsQty ───────────────────────────────
+
 function scaleKit(
   kit: typeof LIGHTING_KITS[number],
   targetQty: number
-): { items: LightingItem[]; totalRub: number } {
-  if (targetQty <= 0 || kit.defaultSpotsQty <= 0) {
-    return { items: kit.items.map((i) => ({ ...i })), totalRub: kit.totalRub };
-  }
+): { items: LightingItem[]; totalRub: number; scaledSpotsQty: number } {
+  // Если targetQty не задан — используем defaultSpotsQty
+  const effectiveTarget =
+    targetQty > 0 ? targetQty : kit.defaultSpotsQty;
+
   const items: LightingItem[] = kit.items.map((i) => {
     const qty =
       i.sku === kit.spotsItemSku
-        ? scaleKitItemQty(i.qty, kit.defaultSpotsQty, targetQty)
+        ? scaleKitItemQty(i.qty, kit.defaultSpotsQty, effectiveTarget)
         : i.qty;
     return { ...i, qty };
   });
+
   const totalRub = items.reduce((sum, i) => sum + i.qty * i.priceRub, 0);
-  return { items, totalRub };
+
+  // scaledSpotsQty — фактическое кол-во спотов после масштабирования
+  const scaledSpotsQty = items.find((i) => i.sku === kit.spotsItemSku)?.qty ?? effectiveTarget;
+
+  return { items, totalRub, scaledSpotsQty };
 }
 
 // ── Subcomponents ─────────────────────────────────────────────────────────────
@@ -106,9 +115,11 @@ function KitCard({
   scaledQty: number;
   onSelect: () => void;
 }) {
-  const { items, totalRub } = scaleKit(kit, scaledQty);
+  const { items, totalRub, scaledSpotsQty } = scaleKit(kit, scaledQty);
   const discounted = applyLightingDiscount(totalRub);
-  const isScaled = scaledQty > 0 && scaledQty !== kit.defaultSpotsQty;
+
+  // ── Отображаемое имя: baseName + фактическое кол-во спотов ────────────────
+  const displayName = `${kit.kitBaseName} · ${scaledSpotsQty} шт.`;
 
   return (
     <button
@@ -121,14 +132,10 @@ function KitCard({
           : "border-slate-200 bg-white hover:border-slate-400"
       }`}
     >
-      <p className="text-sm font-semibold text-slate-950">{kit.kitName}</p>
+      {/* Имя всегда актуальное */}
+      <p className="text-sm font-semibold text-slate-950">{displayName}</p>
 
-      {isScaled ? (
-        <p className="mt-1 text-xs text-blue-600 font-medium">
-          Подобрано под {scaledQty} шт.
-        </p>
-      ) : null}
-
+      {/* Состав — без "подобрано под N шт.", просто список */}
       <div className="mt-2 space-y-1">
         {items.map((item) => (
           <p key={item.sku} className="text-xs text-slate-500">
@@ -150,7 +157,7 @@ function KitCard({
   );
 }
 
-// ── Catalog tab ───────────────────────────────────────────────────────────────
+// ── Catalog tab (без изменений) ───────────────────────────────────────────────
 
 type CartItems = Record<string, number>;
 
@@ -317,28 +324,24 @@ export function WizardStep1Lighting() {
   const initialTab: Tab =
     options?.initialLightingTab === "catalog" ? "catalog" : "recommendations";
 
-  const [activeTab, setActiveTab]           = useState<Tab>(initialTab);
-  const [selectedKitId, setSelectedKitId]   = useState<string | null>(
+  const [activeTab, setActiveTab]         = useState<Tab>(initialTab);
+  const [selectedKitId, setSelectedKitId] = useState<string | null>(
     lightingDraft?.mode === "kit" ? (lightingDraft.kitId ?? null) : null
   );
-  const [cartItems, setCartItems]           = useState<CartItems>(() => {
+  const [cartItems, setCartItems] = useState<CartItems>(() => {
     if (lightingDraft?.mode === "catalog" && lightingDraft.items?.length) {
       return Object.fromEntries(lightingDraft.items.map((i) => [i.sku, i.qty]));
     }
     return {};
   });
 
-  // P0.4: синхронизация при изменении initialLighting извне
   const prevInitialLightingRef = useRef<LightingSnapshot | null | undefined>(undefined);
 
   useEffect(() => {
     const incoming = options?.initialLighting;
-    // undefined → ещё не инициализировано, пропускаем
     if (incoming === undefined) return;
-    // не перезаписываем, если значение то же самое (по ссылке)
     if (incoming === prevInitialLightingRef.current) return;
     prevInitialLightingRef.current = incoming;
-
     if (!incoming) return;
 
     if (incoming.mode === "catalog" && incoming.items?.length) {
@@ -366,6 +369,7 @@ export function WizardStep1Lighting() {
       lightingDraft.derivedInputsSnapshot.trackMountType !== derivedInputs.trackMountType ||
       lightingDraft.derivedInputsSnapshot.trackLengthMeters !== derivedInputs.trackLengthMeters);
 
+  // ── handleKitSelect: пишет kitBaseName + scaledSpotsQty вместо kitName ────
   const handleKitSelect = (kit: typeof LIGHTING_KITS[number]) => {
     setSelectedKitId(kit.kitId);
 
@@ -374,13 +378,14 @@ export function WizardStep1Lighting() {
         ? derivedInputs.pointSpotsQty || kit.defaultSpotsQty
         : derivedInputs.recommendedTrackSpotsQty || kit.defaultSpotsQty;
 
-    const { items, totalRub } = scaleKit(kit, targetQty);
-    const discountedTotalRub  = applyLightingDiscount(totalRub);
+    const { items, totalRub, scaledSpotsQty } = scaleKit(kit, targetQty);
+    const discountedTotalRub = applyLightingDiscount(totalRub);
 
     const draft: LightingSnapshot = {
       mode: "kit",
       kitId: kit.kitId,
-      kitName: kit.kitName,
+      kitBaseName: kit.kitBaseName,      // ← базовое имя без qty
+      scaledSpotsQty,                    // ← фактическое кол-во спотов
       items,
       totalRub,
       discountedTotalRub,
@@ -497,8 +502,12 @@ export function WizardStep1Lighting() {
           {derivedInputs.trackMountType !== "none" || derivedInputs.pointSpotsQty > 0 ? (
             <p className="text-xs text-slate-500">
               Подобрано по параметрам:{" "}
-              {derivedInputs.pointSpotsQty > 0 ? `${derivedInputs.pointSpotsQty} точечных` : null}
-              {derivedInputs.pointSpotsQty > 0 && derivedInputs.trackMountType !== "none" ? ", " : null}
+              {derivedInputs.pointSpotsQty > 0
+                ? `${derivedInputs.pointSpotsQty} точечных`
+                : null}
+              {derivedInputs.pointSpotsQty > 0 && derivedInputs.trackMountType !== "none"
+                ? ", "
+                : null}
               {derivedInputs.trackMountType !== "none"
                 ? `трек ${derivedInputs.trackLengthMeters} м.п.`
                 : null}
