@@ -1,3 +1,4 @@
+// components/calculator-modal/calculator-modal-context.tsx
 "use client";
 
 import {
@@ -29,23 +30,35 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   const [lightingDraft, setLightingDraftState] =
     useState<LightingSnapshot | null>(null);
 
-  const { snapshot } = usePriceCalculatorBridge();
+  const { snapshot, setSnapshot } = usePriceCalculatorBridge();
 
   const setLightingDraft = useCallback((draft: LightingSnapshot | null) => {
     setLightingDraftState(draft);
   }, []);
 
-  const openCalculator = useCallback((opts?: OpenCalculatorOptions) => {
-    const resolvedOpts = opts ?? {};
-    setOptions(resolvedOpts);
-    setCurrentStep(resolvedOpts.initialStep ?? 0);
+  const openCalculator = useCallback(
+    (opts?: OpenCalculatorOptions) => {
+      const resolvedOpts = opts ?? {};
+      setOptions(resolvedOpts);
+      setCurrentStep(resolvedOpts.initialStep ?? 0);
 
-    if (resolvedOpts.initialLighting) {
-      setLightingDraftState(resolvedOpts.initialLighting);
-    }
+      if (resolvedOpts.initialLighting) {
+        setLightingDraftState(resolvedOpts.initialLighting);
+      }
 
-    setIsOpen(true);
-  }, []);
+      // ── Записываем source в snapshot немедленно ──────────────────────
+      if (resolvedOpts.source) {
+        setSnapshot((prev) =>
+          prev
+            ? { ...prev, leadSource: resolvedOpts.source }
+            : prev
+        );
+      }
+
+      setIsOpen(true);
+    },
+    [setSnapshot]
+  );
 
   const closeCalculator = useCallback(() => {
     setIsOpen(false);
@@ -55,7 +68,6 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
     setCurrentStep(step);
   }, []);
 
-  // ── Derived totals для PriceStrip и Step 2 ──────────────────────────
   const ceilingTotal = snapshot?.total ?? 0;
 
   const lightingDiscountedTotal = useMemo(() => {
