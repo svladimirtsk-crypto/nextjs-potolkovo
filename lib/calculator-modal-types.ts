@@ -74,17 +74,18 @@ export type CalculatorModalContextValue = {
  * Возвращает отображаемое имя кита с актуальным количеством спотов.
  * Если snapshot создан старым кодом (kitName без kitBaseName) — возвращает kitName как есть.
  */
-export function getKitDisplayName(lighting: LightingSnapshot): string | null {
+export function getKitDisplayName(
+  lighting: LightingSnapshot | null | undefined
+): string | null {
+  if (!lighting) return null;
   if (lighting.mode !== "kit") return null;
 
-  // Новый формат: kitBaseName + scaledSpotsQty
+  // Новый формат (kitBaseName + scaledSpotsQty)
   if (lighting.kitBaseName) {
     const qty = lighting.scaledSpotsQty;
-    return qty != null
-      ? `${lighting.kitBaseName} · ${qty} шт.`
-      : lighting.kitBaseName;
+    return qty != null ? `${lighting.kitBaseName} · ${qty} шт.` : lighting.kitBaseName;
   }
 
-  // Старый формат (обратная совместимость)
+  // Старый формат (backward compatibility)
   return lighting.kitName ?? null;
 }
