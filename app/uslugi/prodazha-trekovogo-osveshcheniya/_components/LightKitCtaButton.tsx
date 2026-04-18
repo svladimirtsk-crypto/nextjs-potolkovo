@@ -1,3 +1,5 @@
+// LightKitCtaButton.tsx
+
 "use client";
 
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
@@ -17,7 +19,8 @@ export function LightKitCtaButton({ kit }: LightKitCtaButtonProps) {
     const lighting: LightingSnapshot = {
       mode: "kit",
       kitId: kit.kitId,
-      kitName: kit.kitName,
+      kitBaseName: kit.kitBaseName,                      // ← было kitName
+      scaledSpotsQty: kit.defaultSpotsQty,               // ← добавлено
       items: kit.items.map((i) => ({ ...i })),
       totalRub: kit.totalRub,
       discountedTotalRub: applyLightingDiscount(kit.totalRub),
