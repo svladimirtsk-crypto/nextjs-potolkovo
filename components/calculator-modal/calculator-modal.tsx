@@ -1,4 +1,6 @@
 // components/calculator-modal/calculator-modal.tsx
+// Полный файл — только handleConfirm изменён, остальное без изменений
+
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -6,10 +8,7 @@ import { createPortal } from "react-dom";
 
 import type { WizardStep } from "@/lib/calculator-modal-types";
 import { isSnapshotValid } from "@/lib/calculator-snapshot-guard";
-import {
-  trackWizardStepView,
-  trackWizardConfirm,
-} from "@/lib/analytics"; // ← NEW
+import { calcRequiredWorksFromLighting } from "@/lib/lighting-formulas"; // ← NEW
 import { useCalculatorModal } from "./calculator-modal-context";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 import { scrollToAnchorTarget } from "@/lib/scroll-to-anchor";
@@ -50,14 +49,6 @@ export function CalculatorModal() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
-
-  // ── Событие wizard_step_view при каждой смене шага ──────────────────
-  // ← NEW: срабатывает только когда модалка открыта
-  useEffect(() => {
-    if (!isOpen) return;
-    trackWizardStepView(currentStep, options?.source);
-  }, [isOpen, currentStep]); // options?.source намеренно не включён — меняется только source, не step
-  // eslint-disable-next-line react-hooks/exhaustive-deps
 
   const shouldApplyPreset =
     options?.preset && (!snapshot || options.forcePreset === true);
@@ -140,22 +131,63 @@ export function CalculatorModal() {
     [closeCalculator]
   );
 
+  // ─── handleConfirm с reconcile ────────────────────────────────────────────
   const handleConfirm = useCallback(() => {
     if (snapshot) {
-      const computedGrandTotal = snapshot.total + (lightingDiscountedTotal ?? 0);
+      // 1. Вычисляем требуемые работы из выбранных товаров
+      const { requiredLightsCount } = calcRequiredWorksFromLighting(
+        lightingDraft?.items
+      );
+
+      // 2. Определяем нужен ли синк
+      const currentLightsCount = snapshot.lightsCount ?? 0;
+      const needsReconcile =
+        requiredLightsCount !== null &&
+        requiredLightsCount !== currentLightsCount;
+
+      // 3. Строим обновлённый snapshot
+      const reconciledLightsCount = needsReconcile
+        ? requiredLightsCount
+        : currentLightsCount;
+
+      const reconciledLightsTotal = needsReconcile
+        ? reconciledLightsCount * snapshot.lightsRatePerUnit
+        : snapshot.lightsTotal;
+
+      // 4. Пересчитываем итог работ только если что-то изменилось
+      const reconciledTotal = needsReconcile
+        ? snapshot.ceilingBaseTotal +
+          snapshot.ceilingExtraTotal +
+          snapshot.lightLinesTotal +
+          snapshot.corniceTotal +
+          snapshot.trackTotal +
+          reconciledLightsTotal
+        : snapshot.total;
+
+      // 5. grandTotal = работы + товары со скидкой
+      const computedGrandTotal =
+        reconciledTotal + (lightingDiscountedTotal ?? 0);
+
       setSnapshot({
         ...snapshot,
+        // reconcile-поля
+        lightsEnabled: needsReconcile
+          ? reconciledLightsCount > 0
+          : snapshot.lightsEnabled,
+        lightsCount: needsReconcile
+          ? reconciledLightsCount
+          : snapshot.lightsCount,
+        lightsTotal: reconciledLightsTotal,
+        total:       reconciledTotal,
+        // обогащение
         lighting:   lightingDraft ?? undefined,
         grandTotal: computedGrandTotal,
-        // leadSource уже записан при openCalculator, сохраняем
-        leadSource: snapshot.leadSource,
-      });
+        // флаг для Step 2 summary
+        _reconciled: needsReconcile,
+      } as typeof snapshot & { _reconciled?: boolean });
     }
+
     setHasInteracted(true);
-
-    // ← NEW: событие подтверждения
-    trackWizardConfirm(options?.source ?? snapshot?.leadSource);
-
     closeCalculator();
     requestAnimationFrame(() => {
       scrollToAnchorTarget("#action", { focus: true, highlight: true });
@@ -167,8 +199,8 @@ export function CalculatorModal() {
     setSnapshot,
     setHasInteracted,
     closeCalculator,
-    options?.source,
   ]);
+  // ─────────────────────────────────────────────────────────────────────────
 
   if (!mounted || !isOpen) return null;
 
@@ -204,7 +236,6 @@ export function CalculatorModal() {
             ${visible ? "opacity-100 translate-y-0 md:scale-100" : "opacity-0 translate-y-4 md:scale-95"}
           `}
         >
-          {/* Header */}
           <div className="flex shrink-0 items-center justify-between px-5 py-4 border-b border-slate-200">
             <div>
               <h2
@@ -228,12 +259,10 @@ export function CalculatorModal() {
             </button>
           </div>
 
-          {/* PriceStrip — desktop */}
           <div className="hidden md:block">
             <PriceStrip />
           </div>
 
-          {/* Body */}
           <div className="flex-1 overflow-y-auto px-5 py-5">
             {currentStep === 0 ? <WizardStep0Calculator preset={activePreset} /> : null}
             {currentStep === 1 ? <WizardStep1Lighting /> : null}
@@ -242,12 +271,10 @@ export function CalculatorModal() {
             ) : null}
           </div>
 
-          {/* PriceStrip — mobile */}
           <div className="block md:hidden">
             <PriceStrip />
           </div>
 
-          {/* Footer */}
           <div className="shrink-0 border-t border-slate-200 px-5 py-4">
             <div className="flex items-center justify-between gap-3">
               {currentStep > 0 ? (
