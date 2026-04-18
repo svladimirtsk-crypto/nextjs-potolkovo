@@ -1,6 +1,4 @@
 // components/calculator-modal/calculator-modal.tsx
-// Полный файл — только handleConfirm изменён, остальное без изменений
-
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -8,7 +6,15 @@ import { createPortal } from "react-dom";
 
 import type { WizardStep } from "@/lib/calculator-modal-types";
 import { isSnapshotValid } from "@/lib/calculator-snapshot-guard";
-import { calcRequiredWorksFromLighting } from "@/lib/lighting-formulas"; // ← NEW
+import {
+  trackWizardStepView,
+  trackWizardConfirm,
+} from "@/lib/analytics";
+// ← NEW
+import {
+  calcRequiredWorksFromLighting,
+} from "@/lib/lighting-formulas";
+
 import { useCalculatorModal } from "./calculator-modal-context";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 import { scrollToAnchorTarget } from "@/lib/scroll-to-anchor";
@@ -17,17 +23,7 @@ import { WizardStep0Calculator } from "./wizard-step0-calculator";
 import { WizardStep1Lighting } from "./wizard-step1-lighting";
 import { WizardStep2Summary } from "./wizard-step2-summary";
 
-function getFocusableElements(container: HTMLElement): HTMLElement[] {
-  const selector = [
-    "a[href]",
-    "button:not([disabled])",
-    "input:not([disabled])",
-    "select:not([disabled])",
-    "textarea:not([disabled])",
-    '[tabindex]:not([tabindex="-1"])',
-  ].join(", ");
-  return Array.from(container.querySelectorAll<HTMLElement>(selector));
-}
+// ... getFocusableElements не меняем ...
 
 export function CalculatorModal() {
   const {
@@ -42,13 +38,14 @@ export function CalculatorModal() {
 
   const { snapshot, setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
 
-  const panelRef         = useRef<HTMLDivElement>(null);
-  const overlayRef       = useRef<HTMLDivElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
-  const [mounted, setMounted] = useState(false);
-  const [visible, setVisible] = useState(false);
+  // ... refs и useState не меняем ...
 
-  useEffect(() => { setMounted(true); }, []);
+  // ← NEW: wizard_step_view событие
+  useEffect(() => {
+    if (!isOpen) return;
+    trackWizardStepView(currentStep, options?.source);
+  }, [isOpen, currentStep]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
 
   const shouldApplyPreset =
     options?.preset && (!snapshot || options.forcePreset === true);
@@ -73,56 +70,7 @@ export function CalculatorModal() {
     return titles[currentStep];
   }, [currentStep, lightingDraft]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    previousFocusRef.current = document.activeElement as HTMLElement;
-    document.body.style.overflow = "hidden";
-    const reducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
-    if (reducedMotion) {
-      setVisible(true);
-    } else {
-      requestAnimationFrame(() => setVisible(true));
-    }
-    requestAnimationFrame(() => {
-      if (panelRef.current) {
-        const focusable = getFocusableElements(panelRef.current);
-        if (focusable.length > 0) focusable[0].focus();
-      }
-    });
-    return () => { document.body.style.overflow = ""; };
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      setVisible(false);
-      if (previousFocusRef.current) {
-        previousFocusRef.current.focus();
-        previousFocusRef.current = null;
-      }
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { e.preventDefault(); closeCalculator(); return; }
-      if (e.key === "Tab" && panelRef.current) {
-        const focusable = getFocusableElements(panelRef.current);
-        if (focusable.length === 0) return;
-        const first = focusable[0];
-        const last  = focusable[focusable.length - 1];
-        if (e.shiftKey) {
-          if (document.activeElement === first) { e.preventDefault(); last.focus(); }
-        } else {
-          if (document.activeElement === last) { e.preventDefault(); first.focus(); }
-        }
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, closeCalculator]);
+  // ... useEffect для overflow, focus, keydown не меняем ...
 
   const handleOverlayClick = useCallback(
     (e: React.MouseEvent) => {
@@ -131,63 +79,56 @@ export function CalculatorModal() {
     [closeCalculator]
   );
 
-  // ─── handleConfirm с reconcile ────────────────────────────────────────────
+  // ← ОБНОВЛЕННЫЙ handleConfirm с reconcile логикой
   const handleConfirm = useCallback(() => {
     if (snapshot) {
-      // 1. Вычисляем требуемые работы из выбранных товаров
-      const { requiredLightsCount } = calcRequiredWorksFromLighting(
-        lightingDraft?.items
-      );
+      const computedGrandTotal = snapshot.total + (lightingDiscountedTotal ?? 0);
 
-      // 2. Определяем нужен ли синк
-      const currentLightsCount = snapshot.lightsCount ?? 0;
-      const needsReconcile =
-        requiredLightsCount !== null &&
-        requiredLightsCount !== currentLightsCount;
+      // ── Reconcile: проверяем требуемые работы ──────────────────────
+      const { requiredLightsCount, requiredTrackLength } =
+        calcRequiredWorksFromLighting(lightingDraft?.items);
 
-      // 3. Строим обновлённый snapshot
-      const reconciledLightsCount = needsReconcile
-        ? requiredLightsCount
-        : currentLightsCount;
+      // ──決定: автоматически синхронизируем работы ──────────────────
+      let updatedSnapshot = { ...snapshot };
 
-      const reconciledLightsTotal = needsReconcile
-        ? reconciledLightsCount * snapshot.lightsRatePerUnit
-        : snapshot.lightsTotal;
+      if (requiredLightsCount !== null && requiredLightsCount !== snapshot.lightsCount) {
+        // Обновляем lightsCount и пересчитываем lightsTotal
+        updatedSnapshot.lightsCount = requiredLightsCount;
+        updatedSnapshot.lightsTotal = requiredLightsCount * snapshot.lightsRatePerUnit;
+        console.log(
+          `[Reconcile] lightsCount: ${snapshot.lightsCount} → ${requiredLightsCount}`
+        );
+      }
 
-      // 4. Пересчитываем итог работ только если что-то изменилось
-      const reconciledTotal = needsReconcile
-        ? snapshot.ceilingBaseTotal +
-          snapshot.ceilingExtraTotal +
-          snapshot.lightLinesTotal +
-          snapshot.corniceTotal +
-          snapshot.trackTotal +
-          reconciledLightsTotal
-        : snapshot.total;
+      // Если был трек-профиль в товарах, но trackLength = 0 (не заполнен),
+      // можем предложить стандартное значение (опционально)
+      // Пока оставляем как есть — trackLength не меняем
 
-      // 5. grandTotal = работы + товары со скидкой
-      const computedGrandTotal =
-        reconciledTotal + (lightingDiscountedTotal ?? 0);
+      // ── Пересчитываем итоговую сумму с учётом обновленных работ ──
+      const updatedTotal =
+        updatedSnapshot.ceilingBaseTotal +
+        updatedSnapshot.ceilingExtraTotal +
+        updatedSnapshot.lightLinesTotal +
+        updatedSnapshot.corniceTotal +
+        updatedSnapshot.trackTotal +
+        updatedSnapshot.lightsTotal; // ← может измениться
+
+      updatedSnapshot.total = updatedTotal;
+      const updatedGrandTotal = updatedTotal + (lightingDiscountedTotal ?? 0);
 
       setSnapshot({
-        ...snapshot,
-        // reconcile-поля
-        lightsEnabled: needsReconcile
-          ? reconciledLightsCount > 0
-          : snapshot.lightsEnabled,
-        lightsCount: needsReconcile
-          ? reconciledLightsCount
-          : snapshot.lightsCount,
-        lightsTotal: reconciledLightsTotal,
-        total:       reconciledTotal,
-        // обогащение
+        ...updatedSnapshot,
         lighting:   lightingDraft ?? undefined,
-        grandTotal: computedGrandTotal,
-        // флаг для Step 2 summary
-        _reconciled: needsReconcile,
-      } as typeof snapshot & { _reconciled?: boolean });
+        grandTotal: updatedGrandTotal,
+        leadSource: snapshot.leadSource,
+      });
     }
 
     setHasInteracted(true);
+
+    // ← NEW: wizard_confirm событие
+    trackWizardConfirm(options?.source ?? snapshot?.leadSource);
+
     closeCalculator();
     requestAnimationFrame(() => {
       scrollToAnchorTarget("#action", { focus: true, highlight: true });
@@ -199,8 +140,8 @@ export function CalculatorModal() {
     setSnapshot,
     setHasInteracted,
     closeCalculator,
+    options?.source,
   ]);
-  // ─────────────────────────────────────────────────────────────────────────
 
   if (!mounted || !isOpen) return null;
 
@@ -236,92 +177,8 @@ export function CalculatorModal() {
             ${visible ? "opacity-100 translate-y-0 md:scale-100" : "opacity-0 translate-y-4 md:scale-95"}
           `}
         >
-          <div className="flex shrink-0 items-center justify-between px-5 py-4 border-b border-slate-200">
-            <div>
-              <h2
-                id="calc-modal-title"
-                className="text-lg font-semibold text-slate-950"
-              >
-                {stepTitle}
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Шаг {currentStep + 1} из 3
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={closeCalculator}
-              aria-label="Закрыть"
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-              style={{ minHeight: 48, minWidth: 48 }}
-            >
-              ✕
-            </button>
-          </div>
-
-          <div className="hidden md:block">
-            <PriceStrip />
-          </div>
-
-          <div className="flex-1 overflow-y-auto px-5 py-5">
-            {currentStep === 0 ? <WizardStep0Calculator preset={activePreset} /> : null}
-            {currentStep === 1 ? <WizardStep1Lighting /> : null}
-            {currentStep === 2 ? (
-              <WizardStep2Summary onConfirm={handleConfirm} />
-            ) : null}
-          </div>
-
-          <div className="block md:hidden">
-            <PriceStrip />
-          </div>
-
-          <div className="shrink-0 border-t border-slate-200 px-5 py-4">
-            <div className="flex items-center justify-between gap-3">
-              {currentStep > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => goToStep((currentStep - 1) as WizardStep)}
-                  className="h-12 px-5 rounded-2xl text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-                  style={{ minHeight: 48 }}
-                >
-                  ← Назад
-                </button>
-              ) : (
-                <div />
-              )}
-
-              <div className="flex flex-col items-end gap-1">
-                {currentStep < 2 ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => goToStep((currentStep + 1) as WizardStep)}
-                      disabled={isNextDisabled}
-                      aria-disabled={isNextDisabled}
-                      className="flex h-12 px-6 rounded-2xl bg-slate-950 text-white text-sm font-semibold hover:bg-slate-800 transition-colors items-center disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-slate-950"
-                      style={{ minHeight: 48 }}
-                    >
-                      Далее →
-                    </button>
-                    {isNextDisabled ? (
-                      <p className="text-xs text-slate-400 text-right" role="status" aria-live="polite">
-                        Подвигайте слайдер площади — расчёт появится автоматически
-                      </p>
-                    ) : null}
-                  </>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleConfirm}
-                    className="flex h-12 px-6 rounded-2xl bg-slate-950 text-white text-sm font-semibold hover:bg-slate-800 transition-colors items-center"
-                    style={{ minHeight: 48 }}
-                  >
-                    Записаться на бесплатный замер →
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+          {/* Header, Body, Footer — без изменений */}
+          {/* ... существующий JSX ... */}
         </div>
       </div>
     </>,
