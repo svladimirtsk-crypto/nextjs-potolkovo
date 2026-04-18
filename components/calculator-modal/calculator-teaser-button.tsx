@@ -1,7 +1,9 @@
+// components/calculator-modal/calculator-teaser-button.tsx
 "use client";
 
 import type { ServiceCalculatorPreset } from "@/content/services";
 import { Button } from "@/components/ui/button";
+import { trackCalculatorOpen } from "@/lib/analytics"; // ← NEW
 import { useCalculatorModal } from "./calculator-modal-context";
 
 type CalculatorTeaserButtonProps = {
@@ -21,7 +23,10 @@ export function CalculatorTeaserButton({
     <Button
       type="button"
       className="w-full justify-center py-6 text-base"
-      onClick={() => openCalculator({ preset, source })}
+      onClick={() => {
+        trackCalculatorOpen(source); // ← NEW
+        openCalculator({ preset, source });
+      }}
     >
       {label}
     </Button>
