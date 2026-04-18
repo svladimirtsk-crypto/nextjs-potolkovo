@@ -1,3 +1,4 @@
+// components/calculator-modal/calculator-modal.tsx
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -5,6 +6,10 @@ import { createPortal } from "react-dom";
 
 import type { WizardStep } from "@/lib/calculator-modal-types";
 import { isSnapshotValid } from "@/lib/calculator-snapshot-guard";
+import {
+  trackWizardStepView,
+  trackWizardConfirm,
+} from "@/lib/analytics"; // ← NEW
 import { useCalculatorModal } from "./calculator-modal-context";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 import { scrollToAnchorTarget } from "@/lib/scroll-to-anchor";
@@ -46,6 +51,14 @@ export function CalculatorModal() {
 
   useEffect(() => { setMounted(true); }, []);
 
+  // ── Событие wizard_step_view при каждой смене шага ──────────────────
+  // ← NEW: срабатывает только когда модалка открыта
+  useEffect(() => {
+    if (!isOpen) return;
+    trackWizardStepView(currentStep, options?.source);
+  }, [isOpen, currentStep]); // options?.source намеренно не включён — меняется только source, не step
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   const shouldApplyPreset =
     options?.preset && (!snapshot || options.forcePreset === true);
   const activePreset = shouldApplyPreset ? options?.preset : undefined;
@@ -53,7 +66,6 @@ export function CalculatorModal() {
   const snapshotValid  = isSnapshotValid(snapshot);
   const isNextDisabled = currentStep < 2 && !snapshotValid;
 
-  // Динамический заголовок шага 1
   const stepTitle = useMemo(() => {
     if (currentStep === 1) {
       const hasLight =
@@ -130,20 +142,33 @@ export function CalculatorModal() {
 
   const handleConfirm = useCallback(() => {
     if (snapshot) {
-      // grandTotal = единая "главная" цифра, пишется в snapshot при подтверждении
       const computedGrandTotal = snapshot.total + (lightingDiscountedTotal ?? 0);
       setSnapshot({
         ...snapshot,
         lighting:   lightingDraft ?? undefined,
         grandTotal: computedGrandTotal,
+        // leadSource уже записан при openCalculator, сохраняем
+        leadSource: snapshot.leadSource,
       });
     }
     setHasInteracted(true);
+
+    // ← NEW: событие подтверждения
+    trackWizardConfirm(options?.source ?? snapshot?.leadSource);
+
     closeCalculator();
     requestAnimationFrame(() => {
       scrollToAnchorTarget("#action", { focus: true, highlight: true });
     });
-  }, [snapshot, lightingDraft, lightingDiscountedTotal, setSnapshot, setHasInteracted, closeCalculator]);
+  }, [
+    snapshot,
+    lightingDraft,
+    lightingDiscountedTotal,
+    setSnapshot,
+    setHasInteracted,
+    closeCalculator,
+    options?.source,
+  ]);
 
   if (!mounted || !isOpen) return null;
 
