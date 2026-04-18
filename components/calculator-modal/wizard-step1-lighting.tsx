@@ -1,10 +1,16 @@
 // components/calculator-modal/wizard-step1-lighting.tsx
+// ИЗМЕНЕНИЯ: импорт COLIBRI_PROFILES + CLARUS_PROFILES, отображение длины в KitCard
+
 "use client";
 
 import { useMemo, useRef, useState, useEffect } from "react";
 
 import { catalog } from "@/content/eksmarket-assortment";
-import { LIGHTING_KITS } from "@/lib/lighting-kits";
+import {
+  LIGHTING_KITS,
+  COLIBRI_PROFILES,
+  CLARUS_PROFILES,
+} from "@/lib/lighting-kits";
 import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
 import {
   applyLightingDiscount,
@@ -17,6 +23,15 @@ type Tab = "recommendations" | "catalog";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("ru-RU").format(n);
+}
+
+// ── Все профили в одном справочнике ──────────────────────────────────────────
+const ALL_PROFILES = [...COLIBRI_PROFILES, ...CLARUS_PROFILES];
+
+/** Возвращает длину профиля (мм) по SKU, если это профиль */
+function getProfileLengthMm(sku: string): number | null {
+  const entry = ALL_PROFILES.find((p) => p.sku === sku);
+  return entry ? entry.lengthMm : null;
 }
 
 // ── Kit recommendation logic ──────────────────────────────────────────────────
@@ -52,13 +67,12 @@ function getRecommendedKits(
   });
 }
 
-// ── scaleKit: теперь возвращает scaledSpotsQty ───────────────────────────────
+// ── scaleKit ─────────────────────────────────────────────────────────────────
 
 function scaleKit(
   kit: typeof LIGHTING_KITS[number],
   targetQty: number
 ): { items: LightingItem[]; totalRub: number; scaledSpotsQty: number } {
-  // Если targetQty не задан — используем defaultSpotsQty
   const effectiveTarget =
     targetQty > 0 ? targetQty : kit.defaultSpotsQty;
 
@@ -71,8 +85,6 @@ function scaleKit(
   });
 
   const totalRub = items.reduce((sum, i) => sum + i.qty * i.priceRub, 0);
-
-  // scaledSpotsQty — фактическое кол-во спотов после масштабирования
   const scaledSpotsQty = items.find((i) => i.sku === kit.spotsItemSku)?.qty ?? effectiveTarget;
 
   return { items, totalRub, scaledSpotsQty };
@@ -117,8 +129,6 @@ function KitCard({
 }) {
   const { items, totalRub, scaledSpotsQty } = scaleKit(kit, scaledQty);
   const discounted = applyLightingDiscount(totalRub);
-
-  // ── Отображаемое имя: baseName + фактическое кол-во спотов ────────────────
   const displayName = `${kit.kitBaseName} · ${scaledSpotsQty} шт.`;
 
   return (
@@ -132,16 +142,25 @@ function KitCard({
           : "border-slate-200 bg-white hover:border-slate-400"
       }`}
     >
-      {/* Имя всегда актуальное */}
       <p className="text-sm font-semibold text-slate-950">{displayName}</p>
 
-      {/* Состав — без "подобрано под N шт.", просто список */}
       <div className="mt-2 space-y-1">
-        {items.map((item) => (
-          <p key={item.sku} className="text-xs text-slate-500">
-            {item.name} × {item.qty} — {fmt(item.priceRub)} ₽/шт.
-          </p>
-        ))}
+        {items.map((item) => {
+          // Показываем длину профиля явно
+          const profileLengthMm = getProfileLengthMm(item.sku);
+
+          return (
+            <p key={item.sku} className="text-xs text-slate-500">
+              {item.name}
+              {profileLengthMm != null ? (
+                <span className="ml-1 font-medium text-slate-700">
+                  {profileLengthMm} мм
+                </span>
+              ) : null}
+              {" "}&times; {item.qty} — {fmt(item.priceRub)} ₽/шт.
+            </p>
+          );
+        })}
       </div>
 
       <div className="mt-3 flex items-baseline gap-2">
@@ -157,7 +176,7 @@ function KitCard({
   );
 }
 
-// ── Catalog tab (без изменений) ───────────────────────────────────────────────
+// ── Catalog tab ───────────────────────────────────────────────────────────────
 
 type CartItems = Record<string, number>;
 
@@ -230,8 +249,10 @@ function CatalogTab({
         ) : null}
 
         {visibleProducts.map((product) => {
-          const qty      = cartItems[product.id] ?? 0;
+          const qty = cartItems[product.id] ?? 0;
           const hasPrice = product.priceRub !== null;
+          // Для профилей всегда показываем длину явно
+          const profileLengthMm = product.lengthMm ?? null;
 
           return (
             <div
@@ -242,13 +263,21 @@ function CatalogTab({
                 <p className="text-sm font-medium text-slate-950 leading-5">
                   {product.title}
                 </p>
-                {hasPrice ? (
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {fmt(product.priceRub!)} ₽ / шт.
-                  </p>
-                ) : (
-                  <p className="text-xs text-slate-400 mt-0.5">Цена по запросу</p>
-                )}
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  {/* Длина профиля — всегда первой, выделена */}
+                  {profileLengthMm != null ? (
+                    <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                      {profileLengthMm} мм
+                    </span>
+                  ) : null}
+                  {hasPrice ? (
+                    <span className="text-xs text-slate-500">
+                      {fmt(product.priceRub!)} ₽ / шт.
+                    </span>
+                  ) : (
+                    <span className="text-xs text-slate-400">Цена по запросу</span>
+                  )}
+                </div>
               </div>
 
               {hasPrice ? (
@@ -324,7 +353,7 @@ export function WizardStep1Lighting() {
   const initialTab: Tab =
     options?.initialLightingTab === "catalog" ? "catalog" : "recommendations";
 
-  const [activeTab, setActiveTab]         = useState<Tab>(initialTab);
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [selectedKitId, setSelectedKitId] = useState<string | null>(
     lightingDraft?.mode === "kit" ? (lightingDraft.kitId ?? null) : null
   );
@@ -369,7 +398,6 @@ export function WizardStep1Lighting() {
       lightingDraft.derivedInputsSnapshot.trackMountType !== derivedInputs.trackMountType ||
       lightingDraft.derivedInputsSnapshot.trackLengthMeters !== derivedInputs.trackLengthMeters);
 
-  // ── handleKitSelect: пишет kitBaseName + scaledSpotsQty вместо kitName ────
   const handleKitSelect = (kit: typeof LIGHTING_KITS[number]) => {
     setSelectedKitId(kit.kitId);
 
@@ -384,8 +412,8 @@ export function WizardStep1Lighting() {
     const draft: LightingSnapshot = {
       mode: "kit",
       kitId: kit.kitId,
-      kitBaseName: kit.kitBaseName,      // ← базовое имя без qty
-      scaledSpotsQty,                    // ← фактическое кол-во спотов
+      kitBaseName: kit.kitBaseName,
+      scaledSpotsQty,
       items,
       totalRub,
       discountedTotalRub,
@@ -411,7 +439,7 @@ export function WizardStep1Lighting() {
         };
       });
 
-    const totalRub         = items.reduce((sum, i) => sum + i.qty * i.priceRub, 0);
+    const totalRub = items.reduce((sum, i) => sum + i.qty * i.priceRub, 0);
     const discountedTotalRub = applyLightingDiscount(totalRub);
 
     if (items.length === 0) {
