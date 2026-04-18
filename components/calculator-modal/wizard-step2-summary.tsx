@@ -157,42 +157,46 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
           </div>
 
           {hasLighting && lightingDraft.items && lightingDraft.items.length > 0 ? (
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
-                Освещение (товары)
-              </p>
-              {lightingDraft.kitName ? (
-                <p className="text-sm font-medium text-slate-700 mb-1">
-                  {lightingDraft.kitName}
-                </p>
-              ) : null}
-              <ul className="space-y-1.5">
-                {lightingDraft.items.map((item) => (
-                  <li
-                    key={item.sku}
-                    className="flex items-center justify-between gap-2 text-sm text-slate-600"
-                  >
-                    <span>
-                      {item.name} × {item.qty}
-                    </span>
-                    <span className="shrink-0 text-slate-400">
-                      {fmt(item.qty * item.priceRub)} ₽
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              {lightingDraft.totalRub != null ? (
-                <p className="mt-2 text-sm font-semibold text-slate-950">
-                  Свет итого: {fmt(lightingDraft.totalRub)} ₽
-                  {lightingDiscountedTotal > 0 ? (
-                    <span className="ml-2 text-emerald-600">
-                      → {fmt(lightingDiscountedTotal)} ₽ (−15%)
-                    </span>
-                  ) : null}
-                </p>
-              ) : null}
-            </div>
-          ) : null}
+  <div>
+    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
+      Освещение (товары)
+    </p>
+    {/* ← Динамическое имя кита */}
+    {(() => {
+      const displayName = getKitDisplayName(lightingDraft);
+      return displayName ? (
+        <p className="text-sm font-medium text-slate-700 mb-1">
+          {displayName}
+        </p>
+      ) : null;
+    })()}
+    <ul className="space-y-1.5">
+      {lightingDraft.items.map((item) => (
+        <li
+          key={item.sku}
+          className="flex items-center justify-between gap-2 text-sm text-slate-600"
+        >
+          <span>
+            {item.name} × {item.qty}
+          </span>
+          <span className="shrink-0 text-slate-400">
+            {fmt(item.qty * item.priceRub)} ₽
+          </span>
+        </li>
+      ))}
+    </ul>
+    {lightingDraft.totalRub != null ? (
+      <p className="mt-2 text-sm font-semibold text-slate-950">
+        Свет итого: {fmt(lightingDraft.totalRub)} ₽
+        {lightingDiscountedTotal > 0 ? (
+          <span className="ml-2 text-emerald-600">
+            → {fmt(lightingDiscountedTotal)} ₽ (−15%)
+          </span>
+        ) : null}
+      </p>
+    ) : null}
+  </div>
+) : null}
         </div>
       </details>
 
