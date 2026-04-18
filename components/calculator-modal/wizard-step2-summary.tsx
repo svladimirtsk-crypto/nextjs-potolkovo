@@ -11,6 +11,7 @@ import { useCalculatorModal } from "./calculator-modal-context";
 import { isSnapshotValid } from "@/lib/calculator-snapshot-guard";
 import { calcRequiredWorksFromLighting } from "@/lib/lighting-formulas"; // ← NEW
 import type { WizardStep } from "@/lib/calculator-modal-types";
+import { getKitDisplayName } from "@/lib/calculator-modal-types";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("ru-RU").format(n);
