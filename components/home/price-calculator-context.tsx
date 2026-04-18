@@ -61,7 +61,6 @@ export type CalculatorLeadSnapshot = {
 
   /** Выбранное освещение (заполняется из модалки) */
   lighting?: LightingSnapshot;
-  leadSource?: string;
   _reconciled?: boolean;
 };
 
