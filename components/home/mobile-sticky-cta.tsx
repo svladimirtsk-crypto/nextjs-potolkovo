@@ -1,3 +1,4 @@
+// components/home/mobile-sticky-cta.tsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -5,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 import { scrollToAnchorTarget } from "@/lib/scroll-to-anchor";
+import { trackCalculatorOpen } from "@/lib/analytics"; // ← NEW
 import { Button } from "@/components/ui/button";
 
 function formatCurrency(value: number) {
@@ -60,8 +62,6 @@ export function MobileStickyCta() {
 
   const showCalculatedState = isPriceVisible || (hasInteracted && !!snapshot);
 
-  // Единая логика "главной цифры":
-  // grandTotal (если записан при подтверждении wizard) → snapshot.total
   const hasLightingInSnapshot =
     snapshot?.lighting &&
     snapshot.lighting.mode !== "none" &&
@@ -78,7 +78,12 @@ export function MobileStickyCta() {
 
   const hasLightingDisplay = displayTotal > (snapshot?.total ?? 0);
 
-  const handleCalculatorClick = () => openCalculator({ source: "mobile-sticky" });
+  // ← NEW: добавляем trackCalculatorOpen
+  const handleCalculatorClick = () => {
+    trackCalculatorOpen("mobile-sticky");
+    openCalculator({ source: "mobile-sticky" });
+  };
+
   const handleActionClick = () => {
     closeCalculator();
     scrollToAnchorTarget("#action", { focus: true, highlight: true });
