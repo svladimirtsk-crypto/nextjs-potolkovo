@@ -20,8 +20,14 @@ export interface Product {
   specs: ProductSpec[];
   colors?: string[];
   imageUrl?: string;
-  /** Длина профиля/трека в мм. Обязательна для всех товаров категорий профилей. */
+  /** Длина профиля/трека в мм. Обязательна для профилей. */
   lengthMm?: number;
+  /**
+   * Атрибуты, которые ВСЕГДА отображаются в карточке.
+   * Если не задано — используется specs.slice(0, 4).
+   * Максимум 4 элемента. Обязательно включает длину/SMART/мощность.
+   */
+  keyAttributes?: ProductSpec[];
 }
 
 export interface Catalog {
@@ -50,6 +56,195 @@ export const catalog: Catalog = {
     { id: "art-220v",       title: "Треки ART 220V" },
   ],
   products: [
+    // Вставить вместо соответствующих объектов в массиве products:
+
+// ── COLIBRI SMART — keyAttributes с явным SMART первым ──────────────────────
+{
+  id: "colibri-london-smart-20w",
+  title: "COLIBRI LONDON SMART 20W 2700–6000K",
+  categoryId: "colibri-220v",
+  priceRub: 5676,
+  url: "https://eksmarket.ru/catalog/sistema-colibri-220v/",
+  availability: "нет данных",
+  specs: [
+    { label: "Напряжение",  value: "220V" },
+    { label: "Мощность",    value: "20W" },
+    { label: "Температура", value: "2700–6000K" },
+    { label: "Управление",  value: "SMART" },
+  ],
+  keyAttributes: [
+    { label: "Управление",  value: "SMART" },
+    { label: "Мощность",    value: "20W" },
+    { label: "Температура", value: "2700–6000K" },
+    { label: "Напряжение",  value: "220V" },
+  ],
+},
+{
+  id: "colibri-rio-smart-12w",
+  title: "COLIBRI RIO SMART 12W 2700–6000K",
+  categoryId: "colibri-220v",
+  priceRub: 5170,
+  url: "https://eksmarket.ru/catalog/sistema-colibri-220v/",
+  availability: "нет данных",
+  specs: [
+    { label: "Напряжение",  value: "220V" },
+    { label: "Мощность",    value: "12W" },
+    { label: "Температура", value: "2700–6000K" },
+    { label: "Управление",  value: "SMART" },
+  ],
+  keyAttributes: [
+    { label: "Управление",  value: "SMART" },
+    { label: "Мощность",    value: "12W" },
+    { label: "Температура", value: "2700–6000K" },
+    { label: "Напряжение",  value: "220V" },
+  ],
+},
+{
+  id: "clarus-nord-smart",
+  title: "CLARUS NORD SMART 2700–6000K",
+  categoryId: "clarus-48v",
+  priceRub: null,
+  url: "https://eksmarket.ru/catalog/sistema-clarus/",
+  availability: "нет данных",
+  specs: [
+    { label: "Напряжение",  value: "48V" },
+    { label: "Температура", value: "2700–6000K" },
+    { label: "Управление",  value: "SMART" },
+  ],
+  keyAttributes: [
+    { label: "Управление",  value: "SMART" },
+    { label: "Температура", value: "2700–6000K" },
+    { label: "Напряжение",  value: "48V" },
+  ],
+},
+
+// ── Профили: priceRub: null для неподтверждённых цен ────────────────────────
+{
+  id: "colibri-profile-220v-1000",
+  title: "COLIBRI профиль под гарпун 220V — 1000 мм",
+  categoryId: "colibri-220v",
+  priceRub: null,           // цена не подтверждена у поставщика
+  url: "https://eksmarket.ru/catalog/sistema-colibri-220v/kolibri-trekovyy-profil-pod-garpun-220v-chyernyy-2000-62-51-mm-5-sht-kor-v/",
+  availability: "нет данных",
+  lengthMm: 1000,
+  colors: ["чёрный"],
+  specs: [
+    { label: "Напряжение", value: "220V" },
+    { label: "Длина",      value: "1000 мм" },
+    { label: "Тип",        value: "профиль под гарпун" },
+    { label: "Цвет",       value: "чёрный" },
+  ],
+  keyAttributes: [
+    { label: "Длина",      value: "1000 мм" },
+    { label: "Напряжение", value: "220V" },
+    { label: "Тип",        value: "профиль под гарпун" },
+  ],
+},
+{
+  id: "colibri-profile-220v-2000",
+  title: "COLIBRI профиль под гарпун 220V — 2000 мм",
+  categoryId: "colibri-220v",
+  priceRub: 7400,
+  url: "https://eksmarket.ru/catalog/sistema-colibri-220v/kolibri-trekovyy-profil-pod-garpun-220v-chyernyy-2000-62-51-mm-5-sht-kor-v/",
+  availability: "нет данных",
+  lengthMm: 2000,
+  colors: ["чёрный"],
+  specs: [
+    { label: "Напряжение", value: "220V" },
+    { label: "Длина",      value: "2000 мм" },
+    { label: "Тип",        value: "профиль под гарпун" },
+    { label: "Цвет",       value: "чёрный" },
+  ],
+  keyAttributes: [
+    { label: "Длина",      value: "2000 мм" },
+    { label: "Напряжение", value: "220V" },
+    { label: "Тип",        value: "профиль под гарпун" },
+  ],
+},
+{
+  id: "colibri-profile-220v-3000",
+  title: "COLIBRI профиль под гарпун 220V — 3000 мм",
+  categoryId: "colibri-220v",
+  priceRub: null,           // цена не подтверждена у поставщика
+  url: "https://eksmarket.ru/catalog/sistema-colibri-220v/kolibri-trekovyy-profil-pod-garpun-220v-chyernyy-2000-62-51-mm-5-sht-kor-v/",
+  availability: "нет данных",
+  lengthMm: 3000,
+  colors: ["чёрный"],
+  specs: [
+    { label: "Напряжение", value: "220V" },
+    { label: "Длина",      value: "3000 мм" },
+    { label: "Тип",        value: "профиль под гарпун" },
+    { label: "Цвет",       value: "чёрный" },
+  ],
+  keyAttributes: [
+    { label: "Длина",      value: "3000 мм" },
+    { label: "Напряжение", value: "220V" },
+    { label: "Тип",        value: "профиль под гарпун" },
+  ],
+},
+{
+  id: "clarus-profile-48v-1000",
+  title: "CLARUS профиль под гарпун 48V — 1000 мм",
+  categoryId: "clarus-48v",
+  priceRub: null,
+  url: "https://eksmarket.ru/catalog/sistema-clarus/klarus-trekovyy-profil-pod-garpun-48v-chyernyy-2000-60-33-mm-5-sht-kor-v/",
+  availability: "нет данных",
+  lengthMm: 1000,
+  colors: ["чёрный"],
+  specs: [
+    { label: "Напряжение", value: "48V" },
+    { label: "Длина",      value: "1000 мм" },
+    { label: "Тип",        value: "профиль под гарпун" },
+    { label: "Цвет",       value: "чёрный" },
+  ],
+  keyAttributes: [
+    { label: "Длина",      value: "1000 мм" },
+    { label: "Напряжение", value: "48V" },
+    { label: "Тип",        value: "профиль под гарпун" },
+  ],
+},
+{
+  id: "clarus-profile-48v-2000",
+  title: "CLARUS профиль под гарпун 48V — 2000 мм",
+  categoryId: "clarus-48v",
+  priceRub: 8000,
+  url: "https://eksmarket.ru/catalog/sistema-clarus/klarus-trekovyy-profil-pod-garpun-48v-chyernyy-2000-60-33-mm-5-sht-kor-v/",
+  availability: "нет данных",
+  lengthMm: 2000,
+  colors: ["чёрный"],
+  specs: [
+    { label: "Напряжение", value: "48V" },
+    { label: "Длина",      value: "2000 мм" },
+    { label: "Тип",        value: "профиль под гарпун" },
+    { label: "Цвет",       value: "чёрный" },
+  ],
+  keyAttributes: [
+    { label: "Длина",      value: "2000 мм" },
+    { label: "Напряжение", value: "48V" },
+    { label: "Тип",        value: "профиль под гарпун" },
+  ],
+},
+{
+  id: "clarus-profile-48v-3000",
+  title: "CLARUS профиль под гарпун 48V — 3000 мм",
+  categoryId: "clarus-48v",
+  priceRub: null,
+  url: "https://eksmarket.ru/catalog/sistema-clarus/klarus-trekovyy-profil-pod-garpun-48v-chyernyy-2000-60-33-mm-5-sht-kor-v/",
+  availability: "нет данных",
+  lengthMm: 3000,
+  colors: ["чёрный"],
+  specs: [
+    { label: "Напряжение", value: "48V" },
+    { label: "Длина",      value: "3000 мм" },
+    { label: "Тип",        value: "профиль под гарпун" },
+    { label: "Цвет",       value: "чёрный" },
+  ],
+  keyAttributes: [
+    { label: "Длина",      value: "3000 мм" },
+    { label: "Напряжение", value: "48V" },
+    { label: "Тип",        value: "профиль под гарпун" },
+  ],
+},
     // ──────────────────────────────────────────────
     // Панели LOFT
     // ──────────────────────────────────────────────
