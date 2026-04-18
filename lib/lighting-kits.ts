@@ -1,8 +1,14 @@
+// lib/lighting-kits.ts
+
 import type { LightingItem } from "@/lib/calculator-modal-types";
 
 export type LightingKit = {
   kitId: string;
-  kitName: string;
+  /**
+   * Базовое название без количества спотов.
+   * Количество добавляется динамически в UI: `${kitBaseName} · ${scaledQty} шт.`
+   */
+  kitBaseName: string;
   kitCategory: "track-built-in" | "track-surface" | "point";
   defaultSpotsQty: number;
   spotsItemSku: string;
@@ -14,7 +20,7 @@ export const LIGHTING_KITS: readonly LightingKit[] = [
   // ── Встроенные треки (COLIBRI / CLARUS) ──────────────────────────────
   {
     kitId: "colibri-start-5",
-    kitName: "Старт COLIBRI 220V · 5 спотов",
+    kitBaseName: "Старт COLIBRI 220V",
     kitCategory: "track-built-in",
     defaultSpotsQty: 5,
     spotsItemSku: "colibri-london-10w",
@@ -26,20 +32,20 @@ export const LIGHTING_KITS: readonly LightingKit[] = [
   },
   {
     kitId: "clarus-start-5",
-    kitName: "Старт CLARUS 48V · 5 спотов",
+    kitBaseName: "Старт CLARUS 48V",
     kitCategory: "track-built-in",
     defaultSpotsQty: 5,
     spotsItemSku: "clarus-spot-12w-4000k",
     items: [
-      { sku: "clarus-profile-48v",      name: "Профиль CLARUS 48V",  qty: 1, priceRub: 8000 },
-      { sku: "clarus-psu-48v",          name: "Блок питания CLARUS", qty: 1, priceRub: 1530 },
-      { sku: "clarus-spot-12w-4000k",   name: "CLARUS SPOT 12W",     qty: 5, priceRub: 3520 },
+      { sku: "clarus-profile-48v",    name: "Профиль CLARUS 48V",  qty: 1, priceRub: 8000 },
+      { sku: "clarus-psu-48v",        name: "Блок питания CLARUS", qty: 1, priceRub: 1530 },
+      { sku: "clarus-spot-12w-4000k", name: "CLARUS SPOT 12W",     qty: 5, priceRub: 3520 },
     ],
     totalRub: 8000 + 1530 + 5 * 3520,
   },
   {
     kitId: "colibri-rio-8",
-    kitName: "Комфорт COLIBRI RIO · 8 спотов",
+    kitBaseName: "Комфорт COLIBRI RIO",
     kitCategory: "track-built-in",
     defaultSpotsQty: 8,
     spotsItemSku: "colibri-rio-12w",
@@ -53,7 +59,7 @@ export const LIGHTING_KITS: readonly LightingKit[] = [
   // ── Накладные треки (ART 220V) ────────────────────────────────────────
   {
     kitId: "art-start-surface-4",
-    kitName: "Накладной ART START · 4 спота",
+    kitBaseName: "Накладной ART START",
     kitCategory: "track-surface",
     defaultSpotsQty: 4,
     spotsItemSku: "art-start-30w",
@@ -64,7 +70,7 @@ export const LIGHTING_KITS: readonly LightingKit[] = [
   },
   {
     kitId: "art-monolit-surface-4",
-    kitName: "Накладной ART MONOLIT · 4 спота",
+    kitBaseName: "Накладной ART MONOLIT",
     kitCategory: "track-surface",
     defaultSpotsQty: 4,
     spotsItemSku: "art-monolit-30w",
@@ -77,7 +83,7 @@ export const LIGHTING_KITS: readonly LightingKit[] = [
   // ── Точечные светильники (GX53 / MR16) ───────────────────────────────
   {
     kitId: "gx53-optima-6",
-    kitName: "Точечный GX53 OPTIMA · 6 шт.",
+    kitBaseName: "Точечный GX53 OPTIMA",
     kitCategory: "point",
     defaultSpotsQty: 6,
     spotsItemSku: "gx53-optima",
@@ -89,7 +95,7 @@ export const LIGHTING_KITS: readonly LightingKit[] = [
   },
   {
     kitId: "mr16-zoom-6",
-    kitName: "Точечный MR16 ZOOM · 6 шт.",
+    kitBaseName: "Точечный MR16 ZOOM",
     kitCategory: "point",
     defaultSpotsQty: 6,
     spotsItemSku: "mr16-zoom-circle",
