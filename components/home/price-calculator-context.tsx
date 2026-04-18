@@ -46,7 +46,15 @@ export type CalculatorLeadSnapshot = {
   lightsRatePerUnit: number;
   lightsTotal: number;
 
+  /** Итог только по потолку (работы) */
   total: number;
+
+  /**
+   * Итог с освещением (потолок + оборудование со скидкой).
+   * Записывается при подтверждении wizard.
+   * Если освещение не выбрано — равно total.
+   */
+  grandTotal?: number;
 
   /** Производные параметры для рекомендаций освещения */
   derivedInputs: DerivedInputs;
@@ -172,7 +180,8 @@ export function getCalculatorSummaryLines(
     );
   }
 
-  lines.push(`Итого (потолок): ${formatCurrency(snapshot.total)} ₽`);
+  // Потолок итого — всегда
+  lines.push(`Потолок (работы): ${formatCurrency(snapshot.total)} ₽`);
 
   return lines;
 }
@@ -185,11 +194,13 @@ export function getLightingSummaryLines(
   const lighting = snapshot?.lighting;
   if (!lighting || lighting.mode === "none") return [];
 
-  const lines: string[] = ["Освещение:"];
+  const lines: string[] = [];
 
   if ((lighting.mode === "kit" || lighting.mode === "catalog") && lighting.items?.length) {
     if (lighting.kitName) {
-      lines.push(`  Комплект: ${lighting.kitName}`);
+      lines.push(`Освещение — ${lighting.kitName}:`);
+    } else {
+      lines.push("Освещение (из каталога):");
     }
     for (const item of lighting.items) {
       lines.push(
@@ -197,13 +208,45 @@ export function getLightingSummaryLines(
       );
     }
     if (lighting.totalRub != null) {
-      lines.push(`  Итого (освещение): ${formatCurrency(lighting.totalRub)} ₽`);
+      lines.push(`  Оборудование: ${formatCurrency(lighting.totalRub)} ₽`);
     }
     if (lighting.discountedTotalRub != null) {
       lines.push(
         `  Со скидкой 15%: ${formatCurrency(lighting.discountedTotalRub)} ₽`
       );
     }
+  }
+
+  return lines;
+}
+
+/**
+ * Итоговые строки для заявки — структурированный блок.
+ * Используется в action-form.tsx и buildLeadMessage.
+ * Всегда выводит: Потолок / Освещение (если есть) / Итого.
+ */
+export function getTotalSummaryLines(
+  snapshot: CalculatorLeadSnapshot | null
+): string[] {
+  if (!snapshot) return [];
+
+  const lighting   = snapshot.lighting;
+  const hasLighting =
+    lighting &&
+    lighting.mode !== "none" &&
+    (lighting.items?.length ?? 0) > 0 &&
+    (lighting.discountedTotalRub ?? 0) > 0;
+
+  const lines: string[] = [];
+
+  lines.push(`Потолок: ${formatCurrency(snapshot.total)} ₽`);
+
+  if (hasLighting && lighting!.discountedTotalRub != null) {
+    lines.push(
+      `Освещение (со скидкой 15%): ${formatCurrency(lighting!.discountedTotalRub)} ₽`
+    );
+    const grand = snapshot.grandTotal ?? (snapshot.total + lighting!.discountedTotalRub);
+    lines.push(`Итого: ~${formatCurrency(grand)} ₽`);
   }
 
   return lines;
