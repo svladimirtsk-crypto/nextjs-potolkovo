@@ -249,32 +249,61 @@ export function CatalogSection() {
         </div>
 
         {/* Sticky cart summary */}
-        {cartCount > 0 ? (
-          <div className="mt-8 rounded-[1.5rem] border border-slate-950 bg-slate-950 p-6 text-white">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm text-white/70">
-                  Выбрано позиций: {cartCount}
-                </p>
-                <p className="mt-1 text-2xl font-bold">
-                  {fmt(cartTotal)} ₽
-                </p>
-                <p className="text-xs text-emerald-400 mt-0.5">
-                  → {fmt(applyLightingDiscount(cartTotal))} ₽ со скидкой 15%
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={handleOpenModal}
-                className="justify-center sm:shrink-0"
-              >
-                Перейти к итогу →
-              </Button>
+       {cartCount > 0 ? (
+        <div className="mt-8 hidden sm:block rounded-[1.5rem] border border-slate-950 bg-slate-950 p-6 text-white">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm text-white/70">
+                Выбрано позиций: {cartCount}
+              </p>
+              <p className="mt-1 text-2xl font-bold">
+                {fmt(cartTotal)} ₽
+              </p>
+              <p className="text-xs text-emerald-400 mt-0.5">
+                → {fmt(applyLightingDiscount(cartTotal))} ₽ со скидкой 15%
+              </p>
             </div>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleOpenModal}
+              className="justify-center sm:shrink-0"
+            >
+              Перейти к итогу →
+            </Button>
           </div>
-        ) : null}
+        </div>
+      ) : null}
       </Container>
+            {/* Mobile sticky cart bar */}
+      {cartCount > 0 ? (
+        <div
+          className="sm:hidden fixed bottom-0 inset-x-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}
+        >
+          <div className="flex items-center gap-3 max-w-6xl mx-auto">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-slate-500">
+                {cartCount}{" "}
+                {cartCount === 1 ? "позиция" : cartCount < 5 ? "позиции" : "позиций"} в расчёте
+              </p>
+              <p className="text-lg font-bold text-slate-950 truncate">
+                {fmt(cartTotal)} ₽ →{" "}
+                <span className="text-emerald-600">
+                  {fmt(applyLightingDiscount(cartTotal))} ₽
+                </span>
+              </p>
+            </div>
+            <Button
+              type="button"
+              onClick={handleOpenModal}
+              className="shrink-0 justify-center"
+            >
+              К итогу →
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </Section>
   );
 }
