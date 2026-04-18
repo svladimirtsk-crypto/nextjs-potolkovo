@@ -26,8 +26,8 @@ export function LightKitShowcase() {
             >
               <div className="mb-4 flex-grow">
                 <h3 className="text-lg font-semibold text-slate-950 mb-3">
-                  {kit.kitName}
-                </h3>
+  {kit.kitBaseName} · {kit.defaultSpotsQty} шт.
+</h3>
 
                 <ul className="space-y-1.5">
                   {kit.items.map((item) => (
