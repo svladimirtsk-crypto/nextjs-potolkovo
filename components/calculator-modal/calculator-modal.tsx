@@ -33,6 +33,7 @@ export function CalculatorModal() {
     goToStep,
     options,
     lightingDraft,
+    lightingDiscountedTotal,
   } = useCalculatorModal();
 
   const { snapshot, setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
@@ -49,10 +50,7 @@ export function CalculatorModal() {
     options?.preset && (!snapshot || options.forcePreset === true);
   const activePreset = shouldApplyPreset ? options?.preset : undefined;
 
-  // Валидность snapshot — единая проверка для всего модала
-  const snapshotValid = isSnapshotValid(snapshot);
-
-  // Кнопка «Далее» заблокирована на шагах 0 и 1 если snapshot невалиден
+  const snapshotValid  = isSnapshotValid(snapshot);
   const isNextDisabled = currentStep < 2 && !snapshotValid;
 
   // Динамический заголовок шага 1
@@ -72,7 +70,6 @@ export function CalculatorModal() {
     return titles[currentStep];
   }, [currentStep, lightingDraft]);
 
-  // Enter animation + scroll lock + focus
   useEffect(() => {
     if (!isOpen) return;
     previousFocusRef.current = document.activeElement as HTMLElement;
@@ -94,7 +91,6 @@ export function CalculatorModal() {
     return () => { document.body.style.overflow = ""; };
   }, [isOpen]);
 
-  // Restore focus on close
   useEffect(() => {
     if (!isOpen) {
       setVisible(false);
@@ -105,7 +101,6 @@ export function CalculatorModal() {
     }
   }, [isOpen]);
 
-  // Escape + focus trap
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -135,14 +130,20 @@ export function CalculatorModal() {
 
   const handleConfirm = useCallback(() => {
     if (snapshot) {
-      setSnapshot({ ...snapshot, lighting: lightingDraft ?? undefined });
+      // grandTotal = единая "главная" цифра, пишется в snapshot при подтверждении
+      const computedGrandTotal = snapshot.total + (lightingDiscountedTotal ?? 0);
+      setSnapshot({
+        ...snapshot,
+        lighting:   lightingDraft ?? undefined,
+        grandTotal: computedGrandTotal,
+      });
     }
     setHasInteracted(true);
     closeCalculator();
     requestAnimationFrame(() => {
       scrollToAnchorTarget("#action", { focus: true, highlight: true });
     });
-  }, [snapshot, lightingDraft, setSnapshot, setHasInteracted, closeCalculator]);
+  }, [snapshot, lightingDraft, lightingDiscountedTotal, setSnapshot, setHasInteracted, closeCalculator]);
 
   if (!mounted || !isOpen) return null;
 
@@ -153,7 +154,6 @@ export function CalculatorModal() {
 
   return createPortal(
     <>
-      {/* Overlay */}
       <div
         ref={overlayRef}
         onClick={handleOverlayClick}
@@ -163,7 +163,6 @@ export function CalculatorModal() {
         aria-hidden="true"
       />
 
-      {/* Panel */}
       <div className="fixed inset-0 z-50 flex items-end md:items-center md:justify-center pointer-events-none">
         <div
           ref={panelRef}
@@ -211,9 +210,7 @@ export function CalculatorModal() {
 
           {/* Body */}
           <div className="flex-1 overflow-y-auto px-5 py-5">
-            {currentStep === 0 ? (
-              <WizardStep0Calculator preset={activePreset} />
-            ) : null}
+            {currentStep === 0 ? <WizardStep0Calculator preset={activePreset} /> : null}
             {currentStep === 1 ? <WizardStep1Lighting /> : null}
             {currentStep === 2 ? (
               <WizardStep2Summary onConfirm={handleConfirm} />
@@ -246,9 +243,7 @@ export function CalculatorModal() {
                   <>
                     <button
                       type="button"
-                      onClick={() =>
-                        goToStep((currentStep + 1) as WizardStep)
-                      }
+                      onClick={() => goToStep((currentStep + 1) as WizardStep)}
                       disabled={isNextDisabled}
                       aria-disabled={isNextDisabled}
                       className="flex h-12 px-6 rounded-2xl bg-slate-950 text-white text-sm font-semibold hover:bg-slate-800 transition-colors items-center disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-slate-950"
@@ -256,13 +251,8 @@ export function CalculatorModal() {
                     >
                       Далее →
                     </button>
-                    {/* Подсказка появляется только пока snapshot невалиден */}
                     {isNextDisabled ? (
-                      <p
-                        className="text-xs text-slate-400 text-right"
-                        role="status"
-                        aria-live="polite"
-                      >
+                      <p className="text-xs text-slate-400 text-right" role="status" aria-live="polite">
                         Подвигайте слайдер площади — расчёт появится автоматически
                       </p>
                     ) : null}
