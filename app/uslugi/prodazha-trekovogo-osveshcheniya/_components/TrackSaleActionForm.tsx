@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 
+import { trackFormSubmitSuccess } from "@/lib/analytics";
 import { homepage } from "@/content/homepage";
 import { legal } from "@/content/legal";
 import { Button } from "@/components/ui/button";
@@ -77,6 +78,8 @@ function buildLeadMessage(
 export function TrackSaleActionForm() {
   const { snapshot, hasInteracted } = usePriceCalculatorBridge();
   const { selectedProducts, mode } = useTrackSaleIntent();
+  const effectiveSource =
+  snapshot?.leadSource ?? (mode === "install" ? "track-sale-install" : "track-sale-buy");
 
   const calculatorSummaryLines = useMemo(
     () => (hasInteracted ? getCalculatorSummaryLines(snapshot) : []),
@@ -97,85 +100,87 @@ export function TrackSaleActionForm() {
       : "Проверить наличие / получить счёт";
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setStatus("idle");
-    setMessage("");
-    setFieldErrors({});
+  event.preventDefault();
+  setStatus("idle");
+  setMessage("");
+  setFieldErrors({});
 
-    const trimmedName = name.trim();
-    const trimmedAddress = address.trim();
-    const normalizedPhoneValue = normalizePhone(phone);
+  const trimmedName = name.trim();
+  const trimmedAddress = address.trim();
+  const normalizedPhoneValue = normalizePhone(phone);
 
-    const nextErrors: FieldErrors = {};
-    if (!trimmedName) nextErrors.name = "Укажите имя.";
-    else if (trimmedName.length > 80) nextErrors.name = "Слишком длинное имя.";
-    if (!normalizedPhoneValue || !isValidPhone(normalizedPhoneValue))
-      nextErrors.phone = "Укажите корректный телефон.";
-    if (trimmedAddress.length > 160)
-      nextErrors.address = "Слишком длинный адрес или район.";
+  const nextErrors: FieldErrors = {};
+  if (!trimmedName) nextErrors.name = "Укажите имя.";
+  else if (trimmedName.length > 80) nextErrors.name = "Слишком длинное имя.";
+  if (!normalizedPhoneValue || !isValidPhone(normalizedPhoneValue))
+    nextErrors.phone = "Укажите корректный телефон.";
+  if (trimmedAddress.length > 160)
+    nextErrors.address = "Слишком длинный адрес или район.";
 
-    if (Object.keys(nextErrors).length > 0) {
-      setFieldErrors(nextErrors);
-      setStatus("error");
-      setMessage("Пожалуйста, заполните имя и телефон корректно.");
-      return;
-    }
-
-    const accessKey = process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY;
-    if (!accessKey) {
-      setStatus("error");
-      setMessage("На клиенте не настроен NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY.");
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("access_key", accessKey);
-    formData.append("subject", "Новая заявка с сайта ПОТОЛКОВО");
-    formData.append("from_name", "ПОТОЛКОВО Сайт");
-    formData.append("name", trimmedName);
-    formData.append("phone", normalizedPhoneValue);
-    formData.append("address", trimmedAddress);
-    formData.append(
-      "message",
-      buildLeadMessage(calculatorSummaryLines, trimmedAddress, selectedProducts, mode)
-    );
-    formData.append("botcheck", "");
-    formData.append("company", "");
-
-    setIsPending(true);
-
-    try {
-      const response = await fetch("https://api.web3forms.com/submit", {
-        method: "POST",
-        body: formData,
-      });
-      const result = await response.json().catch(() => null);
-
-      if (!response.ok || !result?.success) {
-        const errorText = result?.message || result?.error || `HTTP ${response.status}`;
-        setStatus("error");
-        setMessage(`Ошибка отправки: ${errorText}`);
-        return;
-      }
-
-      setStatus("success");
-      setMessage(
-        "Спасибо. Я свяжусь с вами, чтобы уточнить задачу и договориться о замере."
-      );
-      setName("");
-      setPhone("");
-      setAddress("");
-      setFieldErrors({});
-    } catch {
-      setStatus("error");
-      setMessage(
-        "Не удалось отправить заявку. Проверьте соединение и попробуйте ещё раз."
-      );
-    } finally {
-      setIsPending(false);
-    }
+  if (Object.keys(nextErrors).length > 0) {
+    setFieldErrors(nextErrors);
+    setStatus("error");
+    setMessage("Пожалуйста, заполните имя и телефон корректно.");
+    return;
   }
 
+  const accessKey = process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY;
+  if (!accessKey) {
+    setStatus("error");
+    setMessage("На клиенте не настроен NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY.");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("access_key", accessKey);
+  formData.append("subject", "Новая заявка с сайта ПОТОЛКОВО");
+  formData.append("from_name", "ПОТОЛКОВО Сайт");
+  formData.append("name", trimmedName);
+  formData.append("phone", normalizedPhoneValue);
+  formData.append("address", trimmedAddress);
+  formData.append(
+    "message",
+    buildLeadMessage(calculatorSummaryLines, trimmedAddress, selectedProducts, mode)
+  );
+  formData.append("botcheck", "");
+  formData.append("company", "");
+  formData.append("calculator_source", effectiveSource); // ← NEW
+
+  setIsPending(true);
+
+  try {
+    const response = await fetch("https://api.web3forms.com/submit", {
+      method: "POST",
+      body: formData,
+    });
+    const result = await response.json().catch(() => null);
+
+    if (!response.ok || !result?.success) {
+      const errorText = result?.message || result?.error || `HTTP ${response.status}`;
+      setStatus("error");
+      setMessage(`Ошибка отправки: ${errorText}`);
+      return;
+    }
+
+    trackFormSubmitSuccess(effectiveSource); // ← NEW
+
+    setStatus("success");
+    setMessage(
+      "Спасибо. Я свяжусь с вами, чтобы уточнить задачу и договориться о замере."
+    );
+    setName("");
+    setPhone("");
+    setAddress("");
+    setFieldErrors({});
+  } catch {
+    setStatus("error");
+    setMessage(
+      "Не удалось отправить заявку. Проверьте соединение и попробуйте ещё раз."
+    );
+  } finally {
+    setIsPending(false);
+  }
+}
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {status === "success" ? (
