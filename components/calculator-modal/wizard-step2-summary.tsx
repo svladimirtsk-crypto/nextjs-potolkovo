@@ -1,4 +1,5 @@
 // components/calculator-modal/wizard-step2-summary.tsx
+
 "use client";
 
 import {
@@ -39,12 +40,25 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
     lightingDraft.mode !== "none" &&
     (lightingDraft.items?.length ?? 0) > 0;
 
-  // ← NEW: проверяем нужна ли синхронизация
-  const { requiredLightsCount } = calcRequiredWorksFromLighting(lightingDraft?.items);
-  const willBeReconciled =
+  // ─── Reconcile preview ─────────────────────────────────────────────────────
+  // Считаем несоответствие ДО подтверждения — чтобы показать пояснение
+  const { requiredLightsCount } = calcRequiredWorksFromLighting(
+    lightingDraft?.items
+  );
+
+  const currentLightsCount = snapshot?.lightsCount ?? 0;
+
+  // Нужна ли синхронизация?
+  const willReconcileLights =
     hasLighting &&
     requiredLightsCount !== null &&
-    requiredLightsCount !== (snapshot?.lightsCount ?? 0);
+    requiredLightsCount !== currentLightsCount;
+
+  // Текст пояснения: что именно изменится
+  const reconcileNote = willReconcileLights
+    ? `Монтаж светильников автоматически скорректирован: ${currentLightsCount} → ${requiredLightsCount} шт. (${fmt(requiredLightsCount * (snapshot?.lightsRatePerUnit ?? 750))} ₽)`
+    : null;
+  // ─────────────────────────────────────────────────────────────────────────
 
   if (!isSnapshotValid(snapshot)) {
     return (
@@ -94,18 +108,21 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
         ) : null}
       </div>
 
-      {/* ← NEW: Reconcile banner */}
-      {willBeReconciled ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm font-medium text-amber-900">
-            ✓ Параметры работ обновлены
+      {/* ─── Reconcile banner ──────────────────────────────────────────────── */}
+      {reconcileNote ? (
+        <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3">
+          <p className="text-sm font-semibold text-blue-900">
+            Параметры монтажа обновятся автоматически
           </p>
-          <p className="mt-1 text-sm text-amber-800">
-            На основе выбранного оборудования автоматически обновлены параметры монтажа.
-            Все согласовано.
+          <p className="mt-1 text-sm text-blue-800 leading-5">
+            {reconcileNote}
+          </p>
+          <p className="mt-1.5 text-xs text-blue-700">
+            Точное количество уточним на замере — эта цифра войдёт в предварительный расчёт.
           </p>
         </div>
       ) : null}
+      {/* ─────────────────────────────────────────────────────────────────── */}
 
       {/* Details */}
       <details className="group rounded-2xl border border-slate-200 bg-slate-50">
@@ -120,7 +137,6 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
         </summary>
 
         <div className="border-t border-slate-200 px-4 py-4 space-y-4">
-          {/* Ceiling lines */}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
               Потолок
@@ -132,12 +148,18 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
                 </li>
               ))}
             </ul>
+            {/* ─── inline-подсказка о reconcile внутри деталей ─────────── */}
+            {reconcileNote ? (
+              <p className="mt-2 text-xs text-blue-600">
+                ↑ Монтаж светильников будет скорректирован при подтверждении
+              </p>
+            ) : null}
           </div>
 
           {hasLighting && lightingDraft.items && lightingDraft.items.length > 0 ? (
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
-                Освещение
+                Освещение (товары)
               </p>
               {lightingDraft.kitName ? (
                 <p className="text-sm font-medium text-slate-700 mb-1">
