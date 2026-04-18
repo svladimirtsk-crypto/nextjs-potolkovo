@@ -1,3 +1,4 @@
+// components/home/action-form.tsx
 "use client";
 
 import { useMemo, useState } from "react";
@@ -7,6 +8,7 @@ import { legal } from "@/content/legal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TextLink } from "@/components/ui/text-link";
+import { trackFormSubmitSuccess } from "@/lib/analytics"; // ← NEW
 import {
   getCalculatorSummaryLines,
   getLightingSummaryLines,
@@ -63,6 +65,9 @@ type ActionFormProps = {
 
 export function ActionForm({ source }: ActionFormProps) {
   const { snapshot, hasInteracted } = usePriceCalculatorBridge();
+
+  // ← NEW: leadSource из snapshot имеет приоритет над prop
+  const effectiveSource = snapshot?.leadSource ?? source ?? "";
 
   const ceilingLines = useMemo(
     () => (hasInteracted ? getCalculatorSummaryLines(snapshot) : []),
@@ -130,12 +135,12 @@ export function ActionForm({ source }: ActionFormProps) {
     formData.append("address",     trimmedAddress);
     formData.append(
       "message",
-      buildLeadMessage(ceilingLines, lightingLines, trimmedAddress, source ?? "")
+      // ← NEW: effectiveSource вместо source
+      buildLeadMessage(ceilingLines, lightingLines, trimmedAddress, effectiveSource)
     );
     formData.append("botcheck", "");
     formData.append("company",  "");
 
-    // Lighting metadata
     formData.append("lighting_mode", snapshot?.lighting?.mode ?? "none");
     formData.append("lighting_kit",  snapshot?.lighting?.kitName ?? "");
     formData.append("lighting_items_count",
@@ -147,7 +152,7 @@ export function ActionForm({ source }: ActionFormProps) {
     formData.append("lighting_discounted_total",
       String(snapshot?.lighting?.discountedTotalRub ?? 0)
     );
-    formData.append("calculator_source", source ?? "");
+    formData.append("calculator_source", effectiveSource); // ← NEW: effectiveSource
 
     setIsPending(true);
 
@@ -167,6 +172,9 @@ export function ActionForm({ source }: ActionFormProps) {
         return;
       }
 
+      // ← NEW: событие успешной отправки
+      trackFormSubmitSuccess(effectiveSource);
+
       setStatus("success");
       setMessage(
         "Спасибо. Я свяжусь с вами, чтобы уточнить задачу и договориться о замере."
@@ -185,9 +193,9 @@ export function ActionForm({ source }: ActionFormProps) {
     }
   }
 
+  // JSX — без изменений относительно оригинала
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Status messages */}
       {status === "success" ? (
         <div
           className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
@@ -207,7 +215,6 @@ export function ActionForm({ source }: ActionFormProps) {
         </div>
       ) : null}
 
-      {/* Ceiling summary */}
       {ceilingLines.length > 0 ? (
         <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
           <p className="text-sm font-semibold text-slate-950">
@@ -224,7 +231,6 @@ export function ActionForm({ source }: ActionFormProps) {
         </div>
       ) : null}
 
-      {/* Lighting summary */}
       {lightingLines.length > 0 ? (
         <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
           <p className="text-sm font-semibold text-slate-950">Освещение</p>
@@ -239,7 +245,6 @@ export function ActionForm({ source }: ActionFormProps) {
         </div>
       ) : null}
 
-      {/* Fields */}
       <div>
         <Input
           label={actionContent.nameFieldLabel}
@@ -301,7 +306,6 @@ export function ActionForm({ source }: ActionFormProps) {
         ) : null}
       </div>
 
-      {/* Honeypot */}
       <input
         type="text"
         name="company"
