@@ -1,23 +1,11 @@
 // lib/lighting-formulas.ts
 
-import type { LightingItem } from "@/lib/calculator-modal-types";
-
-// ─── Конфигурация ─────────────────────────────────────────────────────────────
-
 export const LIGHTING_FORMULA_CONFIG = {
-  /** Среднее кол-во трековых спотов на 1 м.п. трека */
   spotsPerMeterTrack: 2,
-  /** Минимальное кол-во спотов если трек есть */
   minSpotsPerTrack: 2,
-  /** Скидка на освещение при заказе потолка */
   lightingDiscount: 0.15,
 } as const;
 
-// ─── Базовые формулы ──────────────────────────────────────────────────────────
-
-/**
- * Рассчитывает рекомендованное кол-во трековых спотов.
- */
 export function calcRecommendedTrackSpots(
   trackLengthMeters: number,
   trackMountType: "built-in" | "surface" | "none"
@@ -29,19 +17,12 @@ export function calcRecommendedTrackSpots(
   return Math.max(raw, LIGHTING_FORMULA_CONFIG.minSpotsPerTrack);
 }
 
-/**
- * Применяет скидку к сумме освещения.
- */
 export function applyLightingDiscount(totalRub: number): number {
   return Math.round(
     totalRub * (1 - LIGHTING_FORMULA_CONFIG.lightingDiscount)
   );
 }
 
-/**
- * Пересчитывает qty для конкретного sku в items кита
- * под фактическое количество спотов.
- */
 export function scaleKitItemQty(
   defaultQty: number,
   defaultSpotsQty: number,
@@ -54,13 +35,14 @@ export function scaleKitItemQty(
   );
 }
 
-// ─── Reconcile ────────────────────────────────────────────────────────────────
+// ─── Новая функция ────────────────────────────────────────────────────────────
+
+import type { LightingItem } from "@/lib/calculator-modal-types";
 
 /**
  * SKU, которые являются светильниками (корпуса / головы / споты).
- * Лампы (*-lamp-*), модули (*-module-*), профили (*-profile-*)
- * и блоки питания (*-psu-*) НЕ считаются — они не требуют
- * отдельного монтажного слота в Step 0.
+ * Лампы, модули, профили и блоки питания ИСКЛЮЧЕНЫ —
+ * они не требуют отдельного монтажного слота в Step 0.
  */
 const FIXTURE_SKU_PATTERNS: RegExp[] = [
   // GX53 корпуса
