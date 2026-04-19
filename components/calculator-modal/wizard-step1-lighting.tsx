@@ -19,68 +19,39 @@ import { usePriceCalculatorBridge } from "@/components/home/price-calculator-con
 
 type Tab = "recommendations" | "catalog";
 type CartItems = Record<string, number>;
+type BuiltInTrackSystem = "colibri" | "clarus";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("ru-RU").format(n);
 }
 
-function getProfileTableForKit(kitId: string): readonly ProfileEntry[] {
-  if (kitId.includes("clarus")) return CLARUS_PROFILES;
-  if (kitId.includes("colibri")) return COLIBRI_PROFILES;
+function getBuiltInProfileTable(
+  system: BuiltInTrackSystem | null
+): readonly ProfileEntry[] {
+  if (system === "clarus") return CLARUS_PROFILES;
+  if (system === "colibri") return COLIBRI_PROFILES;
   return [];
 }
 
-function withTrackProfilesByLength(
-  kitItems: LightingItem[],
-  kitId: string,
-  trackLengthMeters: number
-): LightingItem[] {
-  const profileTable = getProfileTableForKit(kitId);
-  if (profileTable.length === 0) return kitItems;
-
-  const profileSkuSet = new Set(profileTable.map((p) => p.sku));
-  const withoutFixedProfiles = kitItems.filter((item) => !profileSkuSet.has(item.sku));
-
-  const profilePieces = calcProfilesForTrackMeters(trackLengthMeters, profileTable);
-  const profileItems: LightingItem[] = profilePieces.map((piece) => ({
-    sku: piece.sku,
-    name: `Профиль ${piece.lengthMm} мм`,
-    qty: piece.qty,
-    priceRub: piece.priceRub ?? 0,
-  }));
-
-  return [...profileItems, ...withoutFixedProfiles];
-}
-
 function mergeItems(groups: LightingItem[][]): LightingItem[] {
-  const map = new Map<string, LightingItem>();
+  const bySku = new Map<string, LightingItem>();
 
-  for (const items of groups) {
-    for (const item of items) {
-      const existing = map.get(item.sku);
-      if (existing) {
-        map.set(item.sku, { ...existing, qty: existing.qty + item.qty });
+  for (const group of groups) {
+    for (const item of group) {
+      const prev = bySku.get(item.sku);
+      if (prev) {
+        bySku.set(item.sku, { ...prev, qty: prev.qty + item.qty });
       } else {
-        map.set(item.sku, { ...item });
+        bySku.set(item.sku, { ...item });
       }
     }
   }
 
-  return Array.from(map.values()).filter((item) => item.qty > 0);
+  return Array.from(bySku.values()).filter((item) => item.qty > 0);
 }
 
-function getPointRecommendations() {
+function getPointKits() {
   return LIGHTING_KITS.filter((k) => k.kitCategory === "point").slice(0, 3);
-}
-
-function getTrackRecommendations(trackMountType: "built-in" | "surface" | "none") {
-  if (trackMountType === "built-in") {
-    return LIGHTING_KITS.filter((k) => k.kitCategory === "track-built-in").slice(0, 3);
-  }
-  if (trackMountType === "surface") {
-    return LIGHTING_KITS.filter((k) => k.kitCategory === "track-surface").slice(0, 3);
-  }
-  return [];
 }
 
 function TabButton({
@@ -149,7 +120,9 @@ function KitCard({
         <span className="text-xs text-emerald-600 font-medium">−15%</span>
       </div>
 
-      {selected ? <p className="mt-1 text-xs text-emerald-600 font-medium">✓ Выбран</p> : null}
+      {selected ? (
+        <p className="mt-1 text-xs text-emerald-600 font-medium">✓ Выбран</p>
+      ) : null}
     </button>
   );
 }
@@ -157,15 +130,25 @@ function KitCard({
 function CatalogTab({
   cartItems,
   onCartChange,
+  forcedCategoryId,
 }: {
   cartItems: CartItems;
   onCartChange: (next: CartItems) => void;
+  forcedCategoryId: string | null;
 }) {
   const [activeCategoryId, setActiveCategoryId] = useState(
-    catalog.categories[0]?.id ?? ""
+    forcedCategoryId ?? catalog.categories[0]?.id ?? ""
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    new Set()
+  );
+
+  useEffect(() => {
+    if (!forcedCategoryId) return;
+    setActiveCategoryId(forcedCategoryId);
+    setSearchQuery("");
+  }, [forcedCategoryId]);
 
   const HITS_COUNT = 4;
 
@@ -234,13 +217,16 @@ function CatalogTab({
               className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3"
             >
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-slate-950 leading-5">{product.title}</p>
+                <p className="text-sm font-medium text-slate-950 leading-5">
+                  {product.title}
+                </p>
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   {profileLengthMm != null ? (
                     <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
                       {profileLengthMm} мм
                     </span>
                   ) : null}
+
                   {hasPrice ? (
                     <span className="text-xs text-slate-500">
                       {fmt(product.priceRub!)} ₽ / шт.
@@ -325,20 +311,16 @@ export function WizardStep1Lighting() {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
   const [selectedPointKitId, setSelectedPointKitId] = useState<string | null>(() => {
-    if (lightingDraft?.mode !== "kit" || !lightingDraft.kitId) return null;
-    if (!lightingDraft.kitId.startsWith("combo:")) return lightingDraft.kitId;
-    const pair = lightingDraft.kitId.replace("combo:", "");
-    const [pointId] = pair.split("|");
-    return pointId || null;
+    if (lightingDraft?.mode === "kit" && lightingDraft.kitId?.startsWith("combo:")) {
+      const pair = lightingDraft.kitId.replace("combo:", "");
+      const [pointId] = pair.split("|");
+      return pointId || null;
+    }
+    return lightingDraft?.mode === "kit" ? (lightingDraft.kitId ?? null) : null;
   });
 
-  const [selectedTrackKitId, setSelectedTrackKitId] = useState<string | null>(() => {
-    if (lightingDraft?.mode !== "kit" || !lightingDraft.kitId) return null;
-    if (!lightingDraft.kitId.startsWith("combo:")) return null;
-    const pair = lightingDraft.kitId.replace("combo:", "");
-    const [, trackId] = pair.split("|");
-    return trackId || null;
-  });
+  const [selectedBuiltInSystem, setSelectedBuiltInSystem] =
+    useState<BuiltInTrackSystem>("colibri");
 
   const [cartItems, setCartItems] = useState<CartItems>(() => {
     if (lightingDraft?.mode === "catalog" && lightingDraft.items?.length) {
@@ -347,87 +329,80 @@ export function WizardStep1Lighting() {
     return {};
   });
 
+  const [forcedCatalogCategoryId, setForcedCatalogCategoryId] = useState<string | null>(
+    null
+  );
+
   const prevInitialLightingRef = useRef<LightingSnapshot | null | undefined>(undefined);
 
   useEffect(() => {
     const incoming = options?.initialLighting;
     if (incoming === undefined) return;
     if (incoming === prevInitialLightingRef.current) return;
+
     prevInitialLightingRef.current = incoming;
     if (!incoming) return;
 
     if (incoming.mode === "catalog" && incoming.items?.length) {
       const next: CartItems = {};
-      for (const item of incoming.items) {
-        next[item.sku] = item.qty;
-      }
+      for (const item of incoming.items) next[item.sku] = item.qty;
       setCartItems(next);
       setSelectedPointKitId(null);
-      setSelectedTrackKitId(null);
-    } else if (incoming.mode === "kit" && incoming.kitId) {
+      return;
+    }
+
+    if (incoming.mode === "kit" && incoming.kitId) {
       if (incoming.kitId.startsWith("combo:")) {
         const pair = incoming.kitId.replace("combo:", "");
-        const [pointId, trackId] = pair.split("|");
+        const [pointId, systemId] = pair.split("|");
         setSelectedPointKitId(pointId || null);
-        setSelectedTrackKitId(trackId || null);
+        if (systemId === "clarus" || systemId === "colibri") {
+          setSelectedBuiltInSystem(systemId);
+        }
       } else {
         const found = LIGHTING_KITS.find((k) => k.kitId === incoming.kitId);
-        if (found?.kitCategory === "point") setSelectedPointKitId(incoming.kitId);
-        if (
-          found?.kitCategory === "track-built-in" ||
-          found?.kitCategory === "track-surface"
-        ) {
-          setSelectedTrackKitId(incoming.kitId);
+        if (found?.kitCategory === "point") {
+          setSelectedPointKitId(incoming.kitId);
         }
       }
     }
   }, [options?.initialLighting]);
 
-  const pointKits = useMemo(() => getPointRecommendations(), []);
-  const trackKits = useMemo(
-    () => getTrackRecommendations(derivedInputs.trackMountType),
-    [derivedInputs.trackMountType]
-  );
+  useEffect(() => {
+    if (derivedInputs.trackMountType !== "built-in") return;
+    if (!selectedBuiltInSystem) setSelectedBuiltInSystem("colibri");
+  }, [derivedInputs.trackMountType, selectedBuiltInSystem]);
+
+  const pointKits = useMemo(() => getPointKits(), []);
 
   const selectedPointKit = useMemo(
     () => LIGHTING_KITS.find((k) => k.kitId === selectedPointKitId) ?? null,
     [selectedPointKitId]
   );
-  const selectedTrackKit = useMemo(
-    () => LIGHTING_KITS.find((k) => k.kitId === selectedTrackKitId) ?? null,
-    [selectedTrackKitId]
-  );
 
-  const pointKitData = useMemo(() => {
-    if (!selectedPointKit) return null;
+  const pointKitItems = useMemo(() => {
+    if (!selectedPointKit) return [] as LightingItem[];
     const targetQty = derivedInputs.pointSpotsQty || selectedPointKit.defaultSpotsQty;
-    const scaled = scaleKit(selectedPointKit, targetQty);
-    const displayName = `${selectedPointKit.kitBaseName} · ${scaled.scaledSpotsQty} шт.`;
-    return { ...scaled, displayName };
+    return scaleKit(selectedPointKit, targetQty).items;
   }, [selectedPointKit, derivedInputs.pointSpotsQty]);
 
-  const trackKitData = useMemo(() => {
-    if (!selectedTrackKit) return null;
-    const targetQty =
-      derivedInputs.recommendedTrackSpotsQty || selectedTrackKit.defaultSpotsQty;
-    const scaled = scaleKit(selectedTrackKit, targetQty);
-    const normalizedItems = withTrackProfilesByLength(
-      scaled.items,
-      selectedTrackKit.kitId,
-      derivedInputs.trackLengthMeters
-    );
-    const totalRub = normalizedItems.reduce((sum, item) => sum + item.qty * item.priceRub, 0);
-    const displayName = `${selectedTrackKit.kitBaseName} · ${scaled.scaledSpotsQty} шт.`;
-    return {
-      items: normalizedItems,
-      totalRub,
-      scaledSpotsQty: scaled.scaledSpotsQty,
-      displayName,
-    };
+  const trackProfileItems = useMemo(() => {
+    if (derivedInputs.trackMountType !== "built-in") return [] as LightingItem[];
+    if (derivedInputs.trackLengthMeters <= 0) return [] as LightingItem[];
+
+    const table = getBuiltInProfileTable(selectedBuiltInSystem);
+    const pieces = calcProfilesForTrackMeters(derivedInputs.trackLengthMeters, table);
+
+    return pieces.map((piece) => ({
+      sku: piece.sku,
+      name: `Профиль ${piece.lengthMm} мм`,
+      qty: piece.qty,
+      priceRub: piece.priceRub ?? 0,
+    }));
   }, [
-    selectedTrackKit,
-    derivedInputs.recommendedTrackSpotsQty,
+    derivedInputs.trackMountType,
     derivedInputs.trackLengthMeters,
+    selectedBuiltInSystem,
   ]);
 
   const catalogExtrasItems = useMemo<LightingItem[]>(() => {
@@ -444,52 +419,59 @@ export function WizardStep1Lighting() {
       });
   }, [cartItems]);
 
-  const mergedItems = useMemo(() => {
-    return mergeItems([
-      pointKitData?.items ?? [],
-      trackKitData?.items ?? [],
-      catalogExtrasItems,
-    ]);
-  }, [pointKitData, trackKitData, catalogExtrasItems]);
+  const mergedItems = useMemo(
+    () => mergeItems([pointKitItems, trackProfileItems, catalogExtrasItems]),
+    [pointKitItems, trackProfileItems, catalogExtrasItems]
+  );
 
   useEffect(() => {
     const hasPointKit = selectedPointKit !== null;
-    const hasTrackKit = selectedTrackKit !== null;
-    const hasAnyKit = hasPointKit || hasTrackKit;
+    const hasTrackInfrastructure = trackProfileItems.length > 0;
     const hasCatalogExtras = catalogExtrasItems.length > 0;
 
-    if (!hasAnyKit && !hasCatalogExtras) {
+    if (!hasPointKit && !hasTrackInfrastructure && !hasCatalogExtras) {
       setLightingDraft({ mode: "none", userCustomizedLighting: false });
       return;
     }
 
-    const totalRub = mergedItems.reduce((sum, item) => sum + item.qty * item.priceRub, 0);
+    const totalRub = mergedItems.reduce((sum, i) => sum + i.qty * i.priceRub, 0);
     const discountedTotalRub = applyLightingDiscount(totalRub);
 
-    if (hasAnyKit) {
-      const parts: string[] = [];
-      if (pointKitData) parts.push(`Точечные: ${pointKitData.displayName}`);
-      if (trackKitData) parts.push(`Трек: ${trackKitData.displayName}`);
+    if (hasPointKit || hasTrackInfrastructure) {
+      const kitParts: string[] = [];
 
-      const kitBaseName: string = parts.join(" + ");
-      const kitId: string = `combo:${selectedPointKitId ?? ""}|${selectedTrackKitId ?? ""}`;
+      if (selectedPointKit) {
+        const targetQty = derivedInputs.pointSpotsQty || selectedPointKit.defaultSpotsQty;
+        kitParts.push(`Точечные: ${selectedPointKit.kitBaseName} · ${targetQty} шт.`);
+      }
 
-      const nextDraft: LightingSnapshot = {
+      if (hasTrackInfrastructure && derivedInputs.trackMountType === "built-in") {
+        const sys = selectedBuiltInSystem === "clarus" ? "CLARUS" : "COLIBRI";
+        const mm = Math.round(derivedInputs.trackLengthMeters * 1000);
+        kitParts.push(`Трек: ${sys} профили ${mm} мм`);
+      }
+
+      const kitBaseName: string = kitParts.join(" + ");
+      const kitId: string = `combo:${selectedPointKitId ?? ""}|${
+        hasTrackInfrastructure ? selectedBuiltInSystem : ""
+      }`;
+
+      const draft: LightingSnapshot = {
         mode: "kit",
         kitId,
         kitBaseName,
-        scaledSpotsQty: (pointKitData?.scaledSpotsQty ?? 0) + (trackKitData?.scaledSpotsQty ?? 0),
         items: mergedItems,
         totalRub,
         discountedTotalRub,
         userCustomizedLighting: hasCatalogExtras,
         derivedInputsSnapshot: { ...derivedInputs },
       };
-      setLightingDraft(nextDraft);
+
+      setLightingDraft(draft);
       return;
     }
 
-    const nextDraft: LightingSnapshot = {
+    const draft: LightingSnapshot = {
       mode: "catalog",
       items: mergedItems,
       totalRub,
@@ -497,17 +479,16 @@ export function WizardStep1Lighting() {
       userCustomizedLighting: true,
       derivedInputsSnapshot: { ...derivedInputs },
     };
-    setLightingDraft(nextDraft);
+
+    setLightingDraft(draft);
   }, [
     selectedPointKit,
-    selectedTrackKit,
     selectedPointKitId,
-    selectedTrackKitId,
-    pointKitData,
-    trackKitData,
+    selectedBuiltInSystem,
+    derivedInputs,
+    trackProfileItems,
     catalogExtrasItems,
     mergedItems,
-    derivedInputs,
     setLightingDraft,
   ]);
 
@@ -517,10 +498,17 @@ export function WizardStep1Lighting() {
 
   const handleNoLighting = () => {
     setSelectedPointKitId(null);
-    setSelectedTrackKitId(null);
     setCartItems({});
     setLightingDraft({ mode: "none", userCustomizedLighting: false });
   };
+
+  const recommendedPowerW = Math.ceil((derivedInputs.trackLengthMeters ?? 0) * 20);
+  const trackCatalogCategoryId: string =
+    derivedInputs.trackMountType === "surface"
+      ? "art-220v"
+      : selectedBuiltInSystem === "clarus"
+      ? "clarus-48v"
+      : "colibri-220v";
 
   return (
     <div className="space-y-4">
@@ -571,29 +559,54 @@ export function WizardStep1Lighting() {
           ) : null}
 
           {derivedInputs.trackMountType !== "none" && derivedInputs.trackLengthMeters > 0 ? (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-slate-950">Трековое освещение</p>
-                <button
-                  type="button"
-                  onClick={() => setSelectedTrackKitId(null)}
-                  className="text-xs text-slate-500 hover:text-slate-900 transition-colors"
-                >
-                  Без трека
-                </button>
-              </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+              <p className="text-sm font-semibold text-slate-950">Трековая инфраструктура</p>
 
-              {trackKits.map((kit) => (
-                <KitCard
-                  key={kit.kitId}
-                  kit={kit}
-                  selected={selectedTrackKitId === kit.kitId}
-                  scaledQty={derivedInputs.recommendedTrackSpotsQty || kit.defaultSpotsQty}
-                  onSelect={() =>
-                    setSelectedTrackKitId((prev) => (prev === kit.kitId ? null : kit.kitId))
-                  }
-                />
-              ))}
+              {derivedInputs.trackMountType === "built-in" ? (
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBuiltInSystem("colibri")}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                      selectedBuiltInSystem === "colibri"
+                        ? "border-slate-950 bg-slate-950 text-white"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"
+                    }`}
+                  >
+                    COLIBRI 220V
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBuiltInSystem("clarus")}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                      selectedBuiltInSystem === "clarus"
+                        ? "border-slate-950 bg-slate-950 text-white"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"
+                    }`}
+                  >
+                    CLARUS 48V
+                  </button>
+                </div>
+              ) : null}
+
+              <p className="text-xs text-slate-600">
+                Профили подобраны по длине трека: {Math.round(derivedInputs.trackLengthMeters * 1000)} мм.
+              </p>
+              <p className="text-xs text-slate-600">
+                Рекомендуемая суммарная мощность трековых светильников: не меньше{" "}
+                <span className="font-semibold">{recommendedPowerW} Вт</span>.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setForcedCatalogCategoryId(trackCatalogCategoryId);
+                  setActiveTab("catalog");
+                }}
+                className="rounded-full border border-slate-950 bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 transition-colors"
+              >
+                Выбрать трековые светильники в каталоге
+              </button>
             </div>
           ) : null}
 
@@ -616,7 +629,11 @@ export function WizardStep1Lighting() {
       ) : null}
 
       {activeTab === "catalog" ? (
-        <CatalogTab cartItems={cartItems} onCartChange={handleCartChange} />
+        <CatalogTab
+          cartItems={cartItems}
+          onCartChange={handleCartChange}
+          forcedCategoryId={forcedCatalogCategoryId}
+        />
       ) : null}
     </div>
   );
