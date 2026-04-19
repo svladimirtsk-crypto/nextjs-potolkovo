@@ -99,12 +99,13 @@ export function CatalogSectionClient({ data }: Props) {
   const [searchQuery, setSearchQuery] = useState("");
   const [cartItems, setCartItems] = useState<CartItems>({});
 
-  const baseProducts = useMemo(() => {
-    return data.products.filter((p) => Number.isFinite(p.priceRub) && p.priceRub > 0);
-  }, [data.products]);
+  const baseProducts = useMemo(
+  () => data.products.filter((p) => Number.isFinite(p.priceRub) && p.priceRub > 0),
+  [data.products]
+);
 
-  const baseIsEmpty = baseProducts.length === 0;
-
+const baseIsEmpty = baseProducts.length === 0;
+const showCatalogError = !data.ok || baseIsEmpty;
   const systems = useMemo(
     () => Array.from(new Set(baseProducts.map((p) => p.system))),
     [baseProducts]
