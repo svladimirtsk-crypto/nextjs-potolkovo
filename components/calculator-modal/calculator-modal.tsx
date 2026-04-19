@@ -216,7 +216,10 @@ export function CalculatorModal() {
   const transitionClass = reducedMotion ? "" : "transition-all duration-200";
 
   return createPortal(
-    <div aria-hidden={!isOpen} className="fixed inset-0 z-50">
+   <div
+  aria-hidden={!isOpen}
+  className={`fixed inset-0 z-50 ${isOpen ? "pointer-events-auto" : "pointer-events-none"}`}
+>
       <div
         ref={overlayRef}
         onClick={handleOverlayClick}
