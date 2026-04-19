@@ -1,6 +1,4 @@
 // components/calculator-modal/calculator-modal.tsx
-// Полный файл — только handleConfirm изменён, остальное без изменений
-
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -8,7 +6,7 @@ import { createPortal } from "react-dom";
 
 import type { WizardStep } from "@/lib/calculator-modal-types";
 import { isSnapshotValid } from "@/lib/calculator-snapshot-guard";
-import { calcRequiredWorksFromLighting } from "@/lib/lighting-formulas"; // ← NEW
+import { calcRequiredWorksFromLighting } from "@/lib/lighting-formulas";
 import { useCalculatorModal } from "./calculator-modal-context";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 import { scrollToAnchorTarget } from "@/lib/scroll-to-anchor";
@@ -42,19 +40,20 @@ export function CalculatorModal() {
 
   const { snapshot, setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
 
-  const panelRef         = useRef<HTMLDivElement>(null);
-  const overlayRef       = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  const shouldApplyPreset =
-    options?.preset && (!snapshot || options.forcePreset === true);
+  const shouldApplyPreset = options?.preset && (!snapshot || options.forcePreset === true);
   const activePreset = shouldApplyPreset ? options?.preset : undefined;
 
-  const snapshotValid  = isSnapshotValid(snapshot);
+  const snapshotValid = isSnapshotValid(snapshot);
   const isNextDisabled = currentStep < 2 && !snapshotValid;
 
   const stepTitle = useMemo(() => {
@@ -77,9 +76,7 @@ export function CalculatorModal() {
     if (!isOpen) return;
     previousFocusRef.current = document.activeElement as HTMLElement;
     document.body.style.overflow = "hidden";
-    const reducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)"
-    ).matches;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reducedMotion) {
       setVisible(true);
     } else {
@@ -91,7 +88,9 @@ export function CalculatorModal() {
         if (focusable.length > 0) focusable[0].focus();
       }
     });
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [isOpen]);
 
   useEffect(() => {
@@ -107,16 +106,26 @@ export function CalculatorModal() {
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { e.preventDefault(); closeCalculator(); return; }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeCalculator();
+        return;
+      }
       if (e.key === "Tab" && panelRef.current) {
         const focusable = getFocusableElements(panelRef.current);
         if (focusable.length === 0) return;
         const first = focusable[0];
-        const last  = focusable[focusable.length - 1];
+        const last = focusable[focusable.length - 1];
         if (e.shiftKey) {
-          if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
         } else {
-          if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
         }
       }
     };
@@ -131,21 +140,14 @@ export function CalculatorModal() {
     [closeCalculator]
   );
 
-  // ─── handleConfirm с reconcile ────────────────────────────────────────────
   const handleConfirm = useCallback(() => {
     if (snapshot) {
-      // 1. Вычисляем требуемые работы из выбранных товаров
-      const { requiredLightsCount } = calcRequiredWorksFromLighting(
-        lightingDraft?.items
-      );
+      const { requiredLightsCount } = calcRequiredWorksFromLighting(lightingDraft?.items);
 
-      // 2. Определяем нужен ли синк
       const currentLightsCount = snapshot.lightsCount ?? 0;
       const needsReconcile =
-        requiredLightsCount !== null &&
-        requiredLightsCount !== currentLightsCount;
+        requiredLightsCount !== null && requiredLightsCount !== currentLightsCount;
 
-      // 3. Строим обновлённый snapshot
       const reconciledLightsCount = needsReconcile
         ? requiredLightsCount
         : currentLightsCount;
@@ -154,7 +156,6 @@ export function CalculatorModal() {
         ? reconciledLightsCount * snapshot.lightsRatePerUnit
         : snapshot.lightsTotal;
 
-      // 4. Пересчитываем итог работ только если что-то изменилось
       const reconciledTotal = needsReconcile
         ? snapshot.ceilingBaseTotal +
           snapshot.ceilingExtraTotal +
@@ -164,24 +165,21 @@ export function CalculatorModal() {
           reconciledLightsTotal
         : snapshot.total;
 
-      // 5. grandTotal = работы + товары со скидкой
-      const computedGrandTotal =
-        reconciledTotal + (lightingDiscountedTotal ?? 0);
+      const computedGrandTotal = reconciledTotal + (lightingDiscountedTotal ?? 0);
 
       setSnapshot({
-  ...snapshot,
-  lightsEnabled: needsReconcile ? reconciledLightsCount > 0 : snapshot.lightsEnabled,
-  lightsCount: needsReconcile ? reconciledLightsCount : snapshot.lightsCount,
-  lightsTotal: reconciledLightsTotal,
-  total: reconciledTotal,
-
-  lighting: lightingDraft ?? undefined,
-  grandTotal: computedGrandTotal,
-
-  leadSource: snapshot.leadSource ?? options?.source ?? "",
-
-  _reconciled: needsReconcile,
-} as typeof snapshot & { _reconciled?: boolean });
+        ...snapshot,
+        lightsEnabled: needsReconcile
+          ? reconciledLightsCount > 0
+          : snapshot.lightsEnabled,
+        lightsCount: needsReconcile ? reconciledLightsCount : snapshot.lightsCount,
+        lightsTotal: reconciledLightsTotal,
+        total: reconciledTotal,
+        lighting: lightingDraft ?? undefined,
+        grandTotal: computedGrandTotal,
+        leadSource: snapshot.leadSource ?? options?.source ?? "",
+        _reconciled: needsReconcile,
+      } as typeof snapshot & { _reconciled?: boolean });
     }
 
     setHasInteracted(true);
@@ -196,8 +194,8 @@ export function CalculatorModal() {
     setSnapshot,
     setHasInteracted,
     closeCalculator,
+    options,
   ]);
-  // ─────────────────────────────────────────────────────────────────────────
 
   if (!mounted || !isOpen) return null;
 
@@ -235,15 +233,10 @@ export function CalculatorModal() {
         >
           <div className="flex shrink-0 items-center justify-between px-5 py-4 border-b border-slate-200">
             <div>
-              <h2
-                id="calc-modal-title"
-                className="text-lg font-semibold text-slate-950"
-              >
+              <h2 id="calc-modal-title" className="text-lg font-semibold text-slate-950">
                 {stepTitle}
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Шаг {currentStep + 1} из 3
-              </p>
+              <p className="text-xs text-slate-500 mt-0.5">Шаг {currentStep + 1} из 3</p>
             </div>
             <button
               type="button"
@@ -261,11 +254,15 @@ export function CalculatorModal() {
           </div>
 
           <div className="flex-1 overflow-y-auto px-5 py-5">
-            {currentStep === 0 ? <WizardStep0Calculator preset={activePreset} /> : null}
-            {currentStep === 1 ? <WizardStep1Lighting /> : null}
-            {currentStep === 2 ? (
+            <div className={currentStep === 0 ? "" : "hidden"} aria-hidden={currentStep !== 0}>
+              <WizardStep0Calculator preset={activePreset} />
+            </div>
+            <div className={currentStep === 1 ? "" : "hidden"} aria-hidden={currentStep !== 1}>
+              <WizardStep1Lighting />
+            </div>
+            <div className={currentStep === 2 ? "" : "hidden"} aria-hidden={currentStep !== 2}>
               <WizardStep2Summary onConfirm={handleConfirm} />
-            ) : null}
+            </div>
           </div>
 
           <div className="block md:hidden">
@@ -301,7 +298,11 @@ export function CalculatorModal() {
                       Далее →
                     </button>
                     {isNextDisabled ? (
-                      <p className="text-xs text-slate-400 text-right" role="status" aria-live="polite">
+                      <p
+                        className="text-xs text-slate-400 text-right"
+                        role="status"
+                        aria-live="polite"
+                      >
                         Подвигайте слайдер площади — расчёт появится автоматически
                       </p>
                     ) : null}
