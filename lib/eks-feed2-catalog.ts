@@ -370,35 +370,40 @@ function toBoolAvailable(raw: string | null): boolean {
   const v = toSafeString(raw).toLowerCase();
   return v === "true" || v === "1" || v === "yes" || v === "да";
 }
-
+function normalizeUnit(unit: unknown): FeedCatalogUnit {
+  return String(unit ?? "") === "m" ? "m" : "pcs";
+}
 function normalizeSnapshot(input: unknown): FeedCatalogResult {
   const s = input as FeedCatalogResult;
   const categories = Array.isArray(s?.categories) ? s.categories : [];
   const products = Array.isArray(s?.products) ? s.products : [];
 
-  const normalizedProducts = products
-    .filter((p) => Number.isFinite(p.priceRub) && p.priceRub > 0)
-    .filter((p) => WHITELIST_BY_ID.has(String(p.categoryId)))
-    .map((p) => ({
-      ...p,
-      productId: toSafeString(p.productId),
-      vendorCode: toSafeString(p.vendorCode),
-      offerId: toSafeString(p.offerId),
-      name: toSafeString(p.name),
-      url: toSafeString(p.url),
-      categoryId: toSafeString(p.categoryId),
-      categoryPath: toSafeString(p.categoryPath),
-      images: Array.isArray(p.images) ? p.images.map((x) => toSafeString(x)).filter(Boolean) : [],
-      coverImage: toSafeString(p.coverImage),
-      params: Array.isArray(p.params) ? p.params.filter((x) => !BANNED_PARAMS.has(toSafeString(x.label).toLowerCase())) : [],
-      keyAttributes: Array.isArray(p.keyAttributes) ? p.keyAttributes : [],
-      priceRub: Math.round(p.priceRub),
-      available: Boolean(p.available),
-      unit: p.unit === "m" ? "m" : "pcs",
-      lengthMeters: p.lengthMeters ?? null,
-      pieceLengthMeters: p.pieceLengthMeters ?? null
-    }));
-
+  const normalizedProducts: FeedCatalogProduct[] = products
+  .filter((p) => Number.isFinite(p.priceRub) && p.priceRub > 0)
+  .filter((p) => WHITELIST_BY_ID.has(String(p.categoryId)))
+  .map((p): FeedCatalogProduct => ({
+    ...p,
+    productId: toSafeString(p.productId),
+    vendorCode: toSafeString(p.vendorCode),
+    offerId: toSafeString(p.offerId),
+    name: toSafeString(p.name),
+    url: toSafeString(p.url),
+    categoryId: toSafeString(p.categoryId),
+    categoryPath: toSafeString(p.categoryPath),
+    images: Array.isArray(p.images)
+      ? p.images.map((x) => toSafeString(x)).filter(Boolean)
+      : [],
+    coverImage: toSafeString(p.coverImage),
+    params: Array.isArray(p.params)
+      ? p.params.filter((x) => !BANNED_PARAMS.has(toSafeString(x.label).toLowerCase()))
+      : [],
+    keyAttributes: Array.isArray(p.keyAttributes) ? p.keyAttributes : [],
+    priceRub: Math.round(p.priceRub),
+    available: Boolean(p.available),
+    unit: normalizeUnit(p.unit),
+    lengthMeters: p.lengthMeters ?? null,
+    pieceLengthMeters: p.pieceLengthMeters ?? null
+  }));
   return {
     ok: normalizedProducts.length > 0,
     updatedAt: toSafeString(s?.updatedAt) || new Date().toISOString(),
