@@ -56,14 +56,14 @@ function getPerimeterSuggestion(area: number): PerimeterSuggestion {
   const max = clamp(
     roundToStep(maxRaw, calculator.specialMeters.step),
     calculator.specialMeters.min,
-    calculator.specialMeters.max
+    calculator.specialMeters.max      
   );
   const normalizedMax = Math.max(min, max);
   const recommended = clamp(
     roundToStep((min + normalizedMax) / 2, calculator.specialMeters.step),
     min,
     normalizedMax
-  );
+  );                      
 
   return { min, max: normalizedMax, recommended };
 }
@@ -583,9 +583,21 @@ export function PriceCalculatorClient({
     ]
   );
 
-  useEffect(() => {
-    setSnapshot(snapshot);
-  }, [setSnapshot, snapshot]);
+ useEffect(() => {
+  const computedSnapshot = snapshot;
+
+  setSnapshot((prev) => {
+    if (prev == null) return computedSnapshot;
+
+    return {
+      ...computedSnapshot,
+      leadSource: prev.leadSource ?? computedSnapshot.leadSource,
+      lighting: prev.lighting,
+      grandTotal: prev.grandTotal,
+      _reconciled: prev._reconciled,
+    };
+  });
+}, [setSnapshot, snapshot]);
 
   const markInteracted = () => setHasInteracted(true);
 
