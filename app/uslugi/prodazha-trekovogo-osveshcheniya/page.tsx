@@ -13,6 +13,10 @@ import { TrackSaleOrderingSection } from "./_components/TrackSaleOrderingSection
 
 const service = getRequiredServicePageBySlug("prodazha-trekovogo-osveshcheniya");
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title:       service.metadata.title,
   description: service.metadata.description,
