@@ -29,8 +29,13 @@ type WizardStep2SummaryProps = {
 
 export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
   const { snapshot } = usePriceCalculatorBridge();
-  const { lightingDraft, ceilingTotal, lightingDiscountedTotal, grandTotal, goToStep } =
-    useCalculatorModal();
+  const {
+    lightingDraft,
+    ceilingTotal,
+    lightingDiscountedTotal,
+    grandTotal,
+    goToStep,
+  } = useCalculatorModal();
 
   const calcLines = getCalculatorSummaryLines(snapshot);
 
@@ -47,7 +52,7 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
     requiredLightsCount !== currentLightsCount;
 
   const reconcileNote = willReconcileLights
-    ? `Монтаж светильников скорректирован: ${currentLightsCount} → ${requiredLightsCount} шт. (${fmt(requiredLightsCount * (snapshot?.lightsRatePerUnit ?? 750))} ₽)`
+    ? `Монтаж точечных светильников скорректирован: ${currentLightsCount} → ${requiredLightsCount} шт. (${fmt(requiredLightsCount * (snapshot?.lightsRatePerUnit ?? 750))} ₽)`
     : null;
 
   if (!isSnapshotValid(snapshot)) {
@@ -130,7 +135,7 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
             </ul>
             {reconcileNote ? (
               <p className="mt-2 text-xs text-blue-600">
-                ↑ Монтаж светильников будет скорректирован при подтверждении
+                ↑ Монтаж точечных светильников будет скорректирован при подтверждении
               </p>
             ) : null}
           </div>
@@ -149,8 +154,7 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
               <ul className="space-y-1.5">
                 {lightingDraft.items.map((item) => {
                   const lengthLabel = getProfileLengthLabel(item.sku);
-                  const shouldShowLen =
-                    !!lengthLabel && !item.name.includes(lengthLabel);
+                  const showLen = !!lengthLabel && !item.name.includes(lengthLabel);
 
                   return (
                     <li
@@ -159,7 +163,7 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
                     >
                       <span className="min-w-0">
                         {item.name}
-                        {shouldShowLen ? (
+                        {showLen ? (
                           <span className="ml-1 text-xs text-slate-400">({lengthLabel})</span>
                         ) : null}{" "}
                         &times; {item.qty}
