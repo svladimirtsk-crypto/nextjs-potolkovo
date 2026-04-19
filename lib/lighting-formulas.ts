@@ -76,7 +76,12 @@ export function calcRequiredWorksFromLighting(items?: LightingItem[] | null): {
  * Оставляем API для совместимости, но UI больше не должен
  * опираться на это значение для автоподбора количества трековых светильников.
  */
-export function calcRecommendedTrackSpots(trackLengthMeters: number): number {
+export function calcRecommendedTrackSpots(
+  trackLengthMeters: number,
+  _trackMountType?: "built-in" | "surface" | "none"
+): number {
+  // Оставлено для совместимости со старыми вызовами UI.
+  // UI в Step1 больше не должен использовать это значение для автоподбора.
   if (!Number.isFinite(trackLengthMeters) || trackLengthMeters <= 0) return 0;
   return Math.max(1, Math.ceil(trackLengthMeters * 2));
 }
