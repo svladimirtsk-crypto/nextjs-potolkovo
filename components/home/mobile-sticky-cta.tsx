@@ -25,34 +25,40 @@ export function MobileStickyCta() {
   const actionObserverRef = useRef<IntersectionObserver | null>(null);
 
   useEffect(() => {
-    const priceSection  = document.getElementById("price");
-    const actionSection = document.getElementById("action");
+  const priceSection = document.getElementById("price");
+  const actionSection = document.getElementById("action");
 
-    const observerOptions: IntersectionObserverInit = {
-      root:       null,
-      rootMargin: "0px 0px -10% 0px",
-      threshold:  0,
-    };
+  const priceObserverOptions: IntersectionObserverInit = {
+    root: null,
+    rootMargin: "0px 0px -10% 0px",
+    threshold: 0,
+  };
 
-    if (priceSection) {
-      priceObserverRef.current = new IntersectionObserver(([entry]) => {
-        setIsPriceVisible(entry.isIntersecting);
-      }, observerOptions);
-      priceObserverRef.current.observe(priceSection);
-    }
+  const actionObserverOptions: IntersectionObserverInit = {
+    root: null,
+    rootMargin: "0px 0px 0px 0px",
+    threshold: 0,
+  };
 
-    if (actionSection) {
-      actionObserverRef.current = new IntersectionObserver(([entry]) => {
-        setIsActionVisible(entry.isIntersecting);
-      }, observerOptions);
-      actionObserverRef.current.observe(actionSection);
-    }
+  if (priceSection) {
+    priceObserverRef.current = new IntersectionObserver(([entry]) => {
+      setIsPriceVisible(entry.isIntersecting);
+    }, priceObserverOptions);
+    priceObserverRef.current.observe(priceSection);
+  }
 
-    return () => {
-      priceObserverRef.current?.disconnect();
-      actionObserverRef.current?.disconnect();
-    };
-  }, []);
+  if (actionSection) {
+    actionObserverRef.current = new IntersectionObserver(([entry]) => {
+      setIsActionVisible(entry.isIntersecting);
+    }, actionObserverOptions);
+    actionObserverRef.current.observe(actionSection);
+  }
+
+  return () => {
+    priceObserverRef.current?.disconnect();
+    actionObserverRef.current?.disconnect();
+  };
+}, []);
 
   useEffect(() => {
     if (isActionVisible) { setIsVisible(false); return; }
