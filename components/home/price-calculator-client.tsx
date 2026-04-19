@@ -531,7 +531,7 @@ export function PriceCalculatorClient({
       pointSpotsQty:            lightsEnabled ? lightsCount : 0,
       trackMountType:           derivedTrackMountType,
       trackLengthMeters:        derivedTrackLength,
-      recommendedTrackSpotsQty: calcRecommendedTrackSpots(derivedTrackLength, derivedTrackMountType),
+      recommendedTrackSpotsQty: calcRecommendedTrackSpots(derivedTrackLength),
     }),
     [lightsEnabled, lightsCount, derivedTrackMountType, derivedTrackLength]
   );
