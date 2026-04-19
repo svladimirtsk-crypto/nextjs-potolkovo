@@ -1,0 +1,193 @@
+// data/eks-feed2-snapshot.json
+{
+  "updatedAt": "2026-04-19T00:00:00.000Z",
+  "source": "snapshot",
+  "discountPercentForCeilingOrder": 15,
+  "categories": [
+    { "id": "130", "title": "Трековые системы", "parentId": null },
+    { "id": "135", "title": "Система КОЛИБРИ 220V", "parentId": "130" },
+    { "id": "146", "title": "Система КЛАРУС 48V", "parentId": "130" },
+    { "id": "134", "title": "Однофазная трековая система 220V", "parentId": "130" },
+    { "id": "131", "title": "Светильники", "parentId": null },
+    { "id": "50", "title": "Светильники GX53", "parentId": "131" },
+    { "id": "61", "title": "Светильники MR16", "parentId": "131" },
+    { "id": "41", "title": "Лампы GX53", "parentId": "40" },
+    { "id": "42", "title": "Лампы MR16", "parentId": "40" },
+    { "id": "46", "title": "Блоки питания", "parentId": "21" },
+    { "id": "177", "title": "Wi‑Fi конвертеры", "parentId": "21" },
+    { "id": "185", "title": "Пульты управления светом", "parentId": "21" },
+    { "id": "213", "title": "Светодиодная лента", "parentId": null },
+    { "id": "133", "title": "Комплектующие для натяжных потолков", "parentId": null },
+    { "id": "190", "title": "Платформы для светильников", "parentId": "186" }
+  ],
+  "products": [
+    {
+      "productId": "eks-colibri-profile-220v-2000",
+      "vendorCode": "colibri-profile-220v-2000",
+      "offerId": "100001",
+      "name": "Профиль COLIBRI 220V 2000 мм",
+      "url": "https://eksmarket.ru/catalog/trekovye-sistemy/profil-colibri-220v-2000/",
+      "categoryId": "135",
+      "categoryPath": "Трековые системы / Система КОЛИБРИ 220V",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/colibri-profile-2000.jpg"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/colibri-profile-2000.jpg",
+      "priceRub": 7400,
+      "available": true,
+      "params": [
+        { "label": "Длина", "value": "2000 мм" },
+        { "label": "Цвет", "value": "Черный" }
+      ],
+      "keyAttributes": [
+        { "label": "Длина", "value": "2000 мм" },
+        { "label": "Цвет", "value": "Черный" }
+      ],
+      "system": "COLIBRI_220",
+      "kind": "TRACK_PROFILE",
+      "unit": "pcs",
+      "lengthMeters": 2,
+      "pieceLengthMeters": 2
+    },
+    {
+      "productId": "eks-clarus-profile-48v-3000",
+      "vendorCode": "clarus-profile-48v-3000",
+      "offerId": "100002",
+      "name": "Профиль CLARUS 48V 3000 мм",
+      "url": "https://eksmarket.ru/catalog/trekovye-sistemy/profil-clarus-48v-3000/",
+      "categoryId": "146",
+      "categoryPath": "Трековые системы / Система КЛАРУС 48V",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/clarus-profile-3000.jpg"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/clarus-profile-3000.jpg",
+      "priceRub": 11500,
+      "available": true,
+      "params": [
+        { "label": "Длина", "value": "3000 мм" },
+        { "label": "Цвет", "value": "Черный" }
+      ],
+      "keyAttributes": [
+        { "label": "Длина", "value": "3000 мм" },
+        { "label": "Цвет", "value": "Черный" }
+      ],
+      "system": "CLARUS_48",
+      "kind": "TRACK_PROFILE",
+      "unit": "pcs",
+      "lengthMeters": 3,
+      "pieceLengthMeters": 3
+    },
+    {
+      "productId": "eks-clarus-spot-12w-4000k",
+      "vendorCode": "clarus-spot-12w-4000k",
+      "offerId": "100003",
+      "name": "CLARUS SPOT 12W 4000K",
+      "url": "https://eksmarket.ru/catalog/trekovye-sistemy/clarus-spot-12w-4000k/",
+      "categoryId": "208",
+      "categoryPath": "Светильники / Светильники MR16 / Трековые светильники",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/clarus-spot-12w.jpg"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/clarus-spot-12w.jpg",
+      "priceRub": 3520,
+      "available": true,
+      "params": [
+        { "label": "Мощность", "value": "12W" },
+        { "label": "Температура", "value": "4000K" }
+      ],
+      "keyAttributes": [
+        { "label": "Мощность", "value": "12W" },
+        { "label": "Температура", "value": "4000K" }
+      ],
+      "system": "CLARUS_48",
+      "kind": "TRACK_FIXTURE",
+      "unit": "pcs",
+      "lengthMeters": null,
+      "pieceLengthMeters": null
+    },
+    {
+      "productId": "eks-gx53-optima",
+      "vendorCode": "gx53-optima",
+      "offerId": "100004",
+      "name": "GX53 OPTIMA корпус",
+      "url": "https://eksmarket.ru/catalog/svetilniki/gx53-optima/",
+      "categoryId": "211",
+      "categoryPath": "Светильники / Светильники GX53 / Встраиваемые светильники GX53",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/gx53-optima.jpg"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/gx53-optima.jpg",
+      "priceRub": 130,
+      "available": true,
+      "params": [
+        { "label": "Тип", "value": "Встраиваемый" },
+        { "label": "Цвет", "value": "Белый" }
+      ],
+      "keyAttributes": [
+        { "label": "Тип", "value": "Встраиваемый" },
+        { "label": "Цвет", "value": "Белый" }
+      ],
+      "system": "UNKNOWN",
+      "kind": "SPOT_FIXTURE",
+      "unit": "pcs",
+      "lengthMeters": null,
+      "pieceLengthMeters": null
+    },
+    {
+      "productId": "eks-gx53-lamp-8w-4200k",
+      "vendorCode": "gx53-lamp-8w-4200k",
+      "offerId": "100005",
+      "name": "Лампа GX53 8W 4200K",
+      "url": "https://eksmarket.ru/catalog/lampy/lampa-gx53-8w-4200k/",
+      "categoryId": "41",
+      "categoryPath": "Лампы / Лампы GX53",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/gx53-lamp-8w.jpg"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/gx53-lamp-8w.jpg",
+      "priceRub": 114,
+      "available": true,
+      "params": [
+        { "label": "Мощность", "value": "8W" },
+        { "label": "Температура", "value": "4200K" }
+      ],
+      "keyAttributes": [
+        { "label": "Мощность", "value": "8W" },
+        { "label": "Температура", "value": "4200K" }
+      ],
+      "system": "UNKNOWN",
+      "kind": "LAMP",
+      "unit": "pcs",
+      "lengthMeters": null,
+      "pieceLengthMeters": null
+    },
+    {
+      "productId": "eks-led-strip-24v-4000k",
+      "vendorCode": "led-strip-24v-4000k",
+      "offerId": "100006",
+      "name": "Светодиодная лента 24V 4000K цена за пог м",
+      "url": "https://eksmarket.ru/catalog/svetodiodnaya-lenta/24v-4000k/",
+      "categoryId": "213",
+      "categoryPath": "Светодиодная лента",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/led-strip-24v-4000k.jpg"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/led-strip-24v-4000k.jpg",
+      "priceRub": 290,
+      "available": true,
+      "params": [
+        { "label": "Мощность", "value": "14.4W/м" },
+        { "label": "Температура", "value": "4000K" }
+      ],
+      "keyAttributes": [
+        { "label": "Мощность", "value": "14.4W/м" },
+        { "label": "Температура", "value": "4000K" }
+      ],
+      "system": "UNKNOWN",
+      "kind": "LED_STRIP",
+      "unit": "m",
+      "lengthMeters": null,
+      "pieceLengthMeters": null
+    }
+  ]
+}
