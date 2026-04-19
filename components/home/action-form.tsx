@@ -143,7 +143,7 @@ export function ActionForm({ source }: ActionFormProps) {
 
     formData.append("lighting_mode", snapshot?.lighting?.mode ?? "none");
     const lightingKitDisplay = snapshot?.lighting
-  ? getKitDisplayName(snapshot.lighting);
+  ? getKitDisplayName(snapshot.lighting): "";
     formData.append("lighting_kit", lightingKitDisplay);
     formData.append("lighting_items_count",
       String(snapshot?.lighting?.items?.length ?? 0)
