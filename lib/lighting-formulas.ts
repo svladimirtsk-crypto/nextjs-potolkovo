@@ -17,29 +17,56 @@ export function scaleKitItemQty(
   return Math.round((baseQty / baseSpotsQty) * targetSpotsQty);
 }
 
-export const POINT_FIXTURE_SKU_PATTERNS: readonly RegExp[] = [
-  /^gx53/i,
-  /^mr16/i,
-  /^panels-loft/i,
-];
+/**
+ * Совместимость со старым API.
+ * UI в Step1 не должен использовать это для автоподбора трековых голов.
+ */
+export function calcRecommendedTrackSpots(
+  trackLengthMeters: number,
+  _trackMountType?: "built-in" | "surface" | "none"
+): number {
+  if (!Number.isFinite(trackLengthMeters) || trackLengthMeters <= 0) return 0;
+  return Math.max(1, Math.ceil(trackLengthMeters * 2));
+}
 
-export const TRACK_FIXTURE_SKU_PATTERNS: readonly RegExp[] = [
-  /^colibri/i,
-  /^clarus/i,
-  /^art-/i,
-];
-
-function countByPatterns(items: LightingItem[], patterns: readonly RegExp[]): number {
-  return items.reduce((sum, item) => {
-    const matched = patterns.some((re) => re.test(item.sku));
-    return matched ? sum + item.qty : sum;
-  }, 0);
+function isAccessorySku(sku: string): boolean {
+  const s = sku.toLowerCase();
+  return (
+    s.includes("-lamp-") ||
+    s.includes("-module-") ||
+    s.includes("-profile-") ||
+    s.includes("-psu-")
+  );
 }
 
 /**
- * Синхронизация работ в калькуляторе:
- * считаем только точечные светильники (Step0 lightsCount).
- * Трековые товары в reconcile не участвуют.
+ * Только точечные КОРПУСА/панели как монтажные работы.
+ * Лампы/модули/профили/БП исключены через isAccessorySku.
+ */
+export function isPointFixtureSku(sku: string): boolean {
+  const s = sku.toLowerCase();
+  if (isAccessorySku(s)) return false;
+
+  return (
+    s.startsWith("gx53-") ||
+    s.startsWith("mr16-") ||
+    s.startsWith("panels-loft")
+  );
+}
+
+/**
+ * Трековые головы (не используются в reconcile).
+ */
+export function isTrackFixtureSku(sku: string): boolean {
+  const s = sku.toLowerCase();
+  if (isAccessorySku(s)) return false;
+
+  return s.startsWith("colibri-") || s.startsWith("clarus-") || s.startsWith("art-");
+}
+
+/**
+ * Внешний API сохранён.
+ * requiredLightsCount считается только по точечным корпусам/панелям.
  */
 export function calcRequiredWorksFromLighting(items?: LightingItem[] | null): {
   requiredLightsCount: number | null;
@@ -54,34 +81,17 @@ export function calcRequiredWorksFromLighting(items?: LightingItem[] | null): {
     };
   }
 
-  const pointFixturesCount = countByPatterns(items, POINT_FIXTURE_SKU_PATTERNS);
-  const trackFixturesCount = countByPatterns(items, TRACK_FIXTURE_SKU_PATTERNS);
+  const pointFixturesCount = items.reduce((sum, item) => {
+    return isPointFixtureSku(item.sku) ? sum + item.qty : sum;
+  }, 0);
 
-  if (pointFixturesCount <= 0) {
-    return {
-      requiredLightsCount: null,
-      pointFixturesCount,
-      trackFixturesCount,
-    };
-  }
+  const trackFixturesCount = items.reduce((sum, item) => {
+    return isTrackFixtureSku(item.sku) ? sum + item.qty : sum;
+  }, 0);
 
   return {
-    requiredLightsCount: pointFixturesCount,
+    requiredLightsCount: pointFixturesCount > 0 ? pointFixturesCount : null,
     pointFixturesCount,
     trackFixturesCount,
   };
-}
-
-/**
- * Оставляем API для совместимости, но UI больше не должен
- * опираться на это значение для автоподбора количества трековых светильников.
- */
-export function calcRecommendedTrackSpots(
-  trackLengthMeters: number,
-  _trackMountType?: "built-in" | "surface" | "none"
-): number {
-  // Оставлено для совместимости со старыми вызовами UI.
-  // UI в Step1 больше не должен использовать это значение для автоподбора.
-  if (!Number.isFinite(trackLengthMeters) || trackLengthMeters <= 0) return 0;
-  return Math.max(1, Math.ceil(trackLengthMeters * 2));
 }
