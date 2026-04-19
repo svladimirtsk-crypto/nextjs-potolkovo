@@ -17,36 +17,28 @@ function fmt(n: number) {
 }
 
 type CartItems = Record<string, number>;
-type CatalogGroup = "track" | "lights";
 
-const GROUPS: Record<CatalogGroup, { title: string; categoryIds: string[] }> = {
-  track: {
-    title: "Трековое",
-    categoryIds: ["colibri-220v", "clarus-48v", "art-220v"],
-  },
-  lights: {
-    title: "Светильники",
-    categoryIds: ["panels-loft", "gx53", "mr16"],
-  },
-};
+const FALLBACK_IMAGE = `data:image/svg+xml;utf8,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
+    <rect width="100%" height="100%" fill="#f1f5f9"/>
+    <g fill="#64748b" font-family="Arial, sans-serif">
+      <text x="50%" y="48%" dominant-baseline="middle" text-anchor="middle" font-size="24">Фото товара</text>
+      <text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" font-size="16">изображение недоступно</text>
+    </g>
+  </svg>`
+)}`;
 
 export function CatalogSection() {
   const { openCalculator } = useCalculatorModal();
 
-  const [activeGroup, setActiveGroup] = useState<CatalogGroup>("track");
   const [activeCategoryId, setActiveCategoryId] = useState(
-    GROUPS.track.categoryIds[0] ?? catalog.categories[0]?.id ?? ""
+    catalog.categories[0]?.id ?? ""
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [cartItems, setCartItems] = useState<CartItems>({});
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   const HITS_COUNT = 4;
-
-  const groupCategories = useMemo(() => {
-    const ids = new Set(GROUPS[activeGroup].categoryIds);
-    return catalog.categories.filter((cat) => ids.has(cat.id));
-  }, [activeGroup]);
 
   const filteredProducts = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
@@ -131,32 +123,7 @@ export function CatalogSection() {
           />
 
           <div className="flex flex-wrap gap-2">
-            {(Object.keys(GROUPS) as CatalogGroup[]).map((groupKey) => {
-              const group = GROUPS[groupKey];
-              const isActive = activeGroup === groupKey;
-              return (
-                <button
-                  key={groupKey}
-                  type="button"
-                  onClick={() => {
-                    setActiveGroup(groupKey);
-                    setActiveCategoryId(group.categoryIds[0] ?? "");
-                    setSearchQuery("");
-                  }}
-                  className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
-                    isActive
-                      ? "border-slate-950 bg-slate-950 text-white"
-                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"
-                  }`}
-                >
-                  {group.title}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {groupCategories.map((cat) => (
+            {catalog.categories.map((cat) => (
               <button
                 key={cat.id}
                 type="button"
@@ -185,13 +152,15 @@ export function CatalogSection() {
             {visibleProducts.map((product) => {
               const qty = cartItems[product.id] ?? 0;
               const hasPrice = product.priceRub !== null;
-              const specsToShow = product.keyAttributes ?? product.specs.slice(0, 4);
 
+              const specsToShow = product.keyAttributes ?? product.specs.slice(0, 4);
               const hasSmart = [...specsToShow, ...product.specs].some(
                 (spec) =>
                   spec.label === "Управление" &&
                   spec.value.toUpperCase().includes("SMART")
               );
+
+              const imageSrc: string = String(product.imageUrl ?? FALLBACK_IMAGE);
 
               return (
                 <div
@@ -199,12 +168,26 @@ export function CatalogSection() {
                   className="flex flex-col justify-between rounded-[1.5rem] border border-slate-200 bg-white p-5"
                 >
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="mb-3 overflow-hidden rounded-xl border border-slate-100 bg-slate-50 aspect-[4/3]">
+                      <img
+                        src={imageSrc}
+                        alt={product.title}
+                        loading="lazy"
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          const img = e.currentTarget;
+                          img.onerror = null;
+                          img.src = FALLBACK_IMAGE;
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex items-start gap-2">
                       <p className="text-sm font-semibold text-slate-950 leading-6">
                         {product.title}
                       </p>
                       {hasSmart ? (
-                        <span className="inline-flex items-center rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                        <span className="mt-0.5 inline-flex items-center rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
                           SMART
                         </span>
                       ) : null}
@@ -328,10 +311,16 @@ export function CatalogSection() {
               </p>
               <p className="text-lg font-bold text-slate-950 truncate">
                 {fmt(cartTotal)} ₽ →{" "}
-                <span className="text-emerald-600">{fmt(applyLightingDiscount(cartTotal))} ₽</span>
+                <span className="text-emerald-600">
+                  {fmt(applyLightingDiscount(cartTotal))} ₽
+                </span>
               </p>
             </div>
-            <Button type="button" onClick={handleOpenModal} className="shrink-0 justify-center">
+            <Button
+              type="button"
+              onClick={handleOpenModal}
+              className="shrink-0 justify-center"
+            >
               К итогу →
             </Button>
           </div>
