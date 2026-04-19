@@ -50,7 +50,8 @@ export function CalculatorModal() {
     setMounted(true);
   }, []);
 
-  const shouldApplyPreset = options?.preset && (!snapshot || options.forcePreset === true);
+  const shouldApplyPreset =
+    options?.preset && (!snapshot || options.forcePreset === true);
   const activePreset = shouldApplyPreset ? options?.preset : undefined;
 
   const snapshotValid = isSnapshotValid(snapshot);
@@ -64,36 +65,30 @@ export function CalculatorModal() {
         (lightingDraft.items?.length ?? 0) > 0;
       return hasLight ? "Освещение ✓" : "Освещение";
     }
-
     const titles: Record<WizardStep, string> = {
       0: "Параметры потолка",
       1: "Освещение",
       2: "Итог расчёта",
     };
-
     return titles[currentStep];
   }, [currentStep, lightingDraft]);
 
   useEffect(() => {
     if (!isOpen) return;
-
     previousFocusRef.current = document.activeElement as HTMLElement;
     document.body.style.overflow = "hidden";
-
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reducedMotion) {
       setVisible(true);
     } else {
       requestAnimationFrame(() => setVisible(true));
     }
-
     requestAnimationFrame(() => {
       if (panelRef.current) {
         const focusable = getFocusableElements(panelRef.current);
         if (focusable.length > 0) focusable[0].focus();
       }
     });
-
     return () => {
       document.body.style.overflow = "";
     };
@@ -111,21 +106,17 @@ export function CalculatorModal() {
 
   useEffect(() => {
     if (!isOpen) return;
-
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
         closeCalculator();
         return;
       }
-
       if (e.key === "Tab" && panelRef.current) {
         const focusable = getFocusableElements(panelRef.current);
         if (focusable.length === 0) return;
-
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
-
         if (e.shiftKey) {
           if (document.activeElement === first) {
             e.preventDefault();
@@ -137,7 +128,6 @@ export function CalculatorModal() {
         }
       }
     };
-
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, closeCalculator]);
@@ -179,9 +169,7 @@ export function CalculatorModal() {
 
       setSnapshot({
         ...snapshot,
-        lightsEnabled: needsReconcile
-          ? reconciledLightsCount > 0
-          : snapshot.lightsEnabled,
+        lightsEnabled: needsReconcile ? reconciledLightsCount > 0 : snapshot.lightsEnabled,
         lightsCount: needsReconcile ? reconciledLightsCount : snapshot.lightsCount,
         lightsTotal: reconciledLightsTotal,
         total: reconciledTotal,
@@ -194,7 +182,6 @@ export function CalculatorModal() {
 
     setHasInteracted(true);
     closeCalculator();
-
     requestAnimationFrame(() => {
       scrollToAnchorTarget("#action", { focus: true, highlight: true });
     });
@@ -216,10 +203,12 @@ export function CalculatorModal() {
   const transitionClass = reducedMotion ? "" : "transition-all duration-200";
 
   return createPortal(
-   <div
-  aria-hidden={!isOpen}
-  className={`fixed inset-0 z-[120] ${isOpen ? "pointer-events-auto" : "pointer-events-none"}`}
->
+    <div
+      aria-hidden={!isOpen}
+      className={`fixed inset-0 z-[120] ${
+        isOpen ? "pointer-events-auto" : "pointer-events-none"
+      }`}
+    >
       <div
         ref={overlayRef}
         onClick={handleOverlayClick}
@@ -229,7 +218,7 @@ export function CalculatorModal() {
       />
 
       <div
-        className={`fixed inset-0 z-[121] flex items-end md:items-center md:justify-center ${
+        className={`fixed inset-0 z-[121] flex items-end lg:items-center lg:justify-center ${
           isOpen ? "pointer-events-auto" : "pointer-events-none"
         }`}
       >
@@ -240,15 +229,15 @@ export function CalculatorModal() {
           aria-labelledby="calc-modal-title"
           className={`
             w-full
-            md:max-w-3xl
-            bg-white md:rounded-2xl rounded-t-2xl shadow-2xl
-            max-h-[90dvh] md:max-h-[88dvh]
+            lg:max-w-5xl xl:max-w-6xl
+            bg-white lg:rounded-2xl rounded-t-2xl shadow-2xl
+            max-h-[92dvh] lg:max-h-[90dvh]
             flex flex-col
             ${transitionClass}
             ${
               visible && isOpen
-                ? "opacity-100 translate-y-0 md:scale-100"
-                : "opacity-0 translate-y-4 md:scale-95"
+                ? "opacity-100 translate-y-0 lg:scale-100"
+                : "opacity-0 translate-y-4 lg:scale-95"
             }
             ${isOpen ? "pointer-events-auto" : "pointer-events-none"}
           `}
@@ -258,11 +247,8 @@ export function CalculatorModal() {
               <h2 id="calc-modal-title" className="text-lg font-semibold text-slate-950">
                 {stepTitle}
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Шаг {currentStep + 1} из 3
-              </p>
+              <p className="text-xs text-slate-500 mt-0.5">Шаг {currentStep + 1} из 3</p>
             </div>
-
             <button
               type="button"
               onClick={closeCalculator}
@@ -274,7 +260,7 @@ export function CalculatorModal() {
             </button>
           </div>
 
-          <div className="hidden md:block">
+          <div className="sticky top-0 z-10 bg-white border-b border-slate-200">
             <PriceStrip />
           </div>
 
@@ -282,18 +268,12 @@ export function CalculatorModal() {
             <div className={currentStep === 0 ? "" : "hidden"} aria-hidden={currentStep !== 0}>
               <WizardStep0Calculator preset={activePreset} />
             </div>
-
             <div className={currentStep === 1 ? "" : "hidden"} aria-hidden={currentStep !== 1}>
               <WizardStep1Lighting />
             </div>
-
             <div className={currentStep === 2 ? "" : "hidden"} aria-hidden={currentStep !== 2}>
               <WizardStep2Summary onConfirm={handleConfirm} />
             </div>
-          </div>
-
-          <div className="block md:hidden">
-            <PriceStrip />
           </div>
 
           <div className="shrink-0 border-t border-slate-200 px-5 py-4">
@@ -324,7 +304,6 @@ export function CalculatorModal() {
                     >
                       Далее →
                     </button>
-
                     {isNextDisabled ? (
                       <p
                         className="text-xs text-slate-400 text-right"
