@@ -14,21 +14,21 @@ import type {
   FeedCatalogKind,
   FeedCatalogProduct,
   FeedCatalogResult,
-  FeedCatalogSystem,
+  FeedCatalogSystem
 } from "@/lib/eks-feed2-catalog";
 
 type Props = {
   data: FeedCatalogResult;
 };
 
-type CartMap = Record<string, number>;
+type CartItems = Record<string, number>;
 
 const IMG_FALLBACK =
   "data:image/svg+xml;utf8," +
   encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600">
       <rect width="100%" height="100%" fill="#f1f5f9"/>
-      <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial,sans-serif" font-size="26" fill="#64748b">Изображение товара</text>
+      <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" fill="#64748b">Фото товара</text>
     </svg>`
   );
 
@@ -60,7 +60,7 @@ function getKindLabel(kind: FeedCatalogKind): string {
     case "TRACK_FIXTURE":
       return "Трековые светильники";
     case "SPOT_FIXTURE":
-      return "Точечные светильники";
+      return "Точечные";
     case "LAMP":
       return "Лампы";
     case "PSU":
@@ -76,12 +76,19 @@ function getKindLabel(kind: FeedCatalogKind): string {
   }
 }
 
-function stepForUnit(unit: "pcs" | "m"): number {
+function stepByUnit(unit: "pcs" | "m"): number {
   return unit === "m" ? 0.5 : 1;
 }
 
-function minForUnit(unit: "pcs" | "m"): number {
+function minByUnit(unit: "pcs" | "m"): number {
   return unit === "m" ? 0.5 : 1;
+}
+
+function pickDisplayAttributes(product: FeedCatalogProduct) {
+  if (product.keyAttributes && product.keyAttributes.length > 0) {
+    return product.keyAttributes.slice(0, 4);
+  }
+  return product.params.slice(0, 4);
 }
 
 export function CatalogSectionClient({ data }: Props) {
@@ -90,59 +97,63 @@ export function CatalogSectionClient({ data }: Props) {
   const [systemFilter, setSystemFilter] = useState<FeedCatalogSystem | "all">("all");
   const [kindFilter, setKindFilter] = useState<FeedCatalogKind | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [cart, setCart] = useState<CartMap>({});
+  const [cartItems, setCartItems] = useState<CartItems>({});
 
-  const products = data.products;
+  const baseProducts = useMemo(() => {
+    return data.products.filter((p) => Number.isFinite(p.priceRub) && p.priceRub > 0);
+  }, [data.products]);
 
-  const systemOptions = useMemo(() => {
-    const unique = Array.from(new Set(products.map((p) => p.system)));
-    return unique;
-  }, [products]);
+  const baseIsEmpty = baseProducts.length === 0;
 
-  const kindOptions = useMemo(() => {
-    const unique = Array.from(new Set(products.map((p) => p.kind)));
-    return unique;
-  }, [products]);
+  const systems = useMemo(
+    () => Array.from(new Set(baseProducts.map((p) => p.system))),
+    [baseProducts]
+  );
 
-  const productMap = useMemo(() => {
-    return new Map(products.map((p) => [p.productId, p]));
-  }, [products]);
+  const kinds = useMemo(
+    () => Array.from(new Set(baseProducts.map((p) => p.kind))),
+    [baseProducts]
+  );
+
+  const productsById = useMemo(
+    () => new Map(baseProducts.map((p) => [p.productId, p])),
+    [baseProducts]
+  );
 
   const filteredProducts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
 
-    return products.filter((p) => {
+    return baseProducts.filter((p) => {
       if (systemFilter !== "all" && p.system !== systemFilter) return false;
       if (kindFilter !== "all" && p.kind !== kindFilter) return false;
       if (!q) return true;
-
       const hay = `${p.name} ${p.vendorCode}`.toLowerCase();
       return hay.includes(q);
     });
-  }, [products, searchQuery, systemFilter, kindFilter]);
+  }, [baseProducts, systemFilter, kindFilter, searchQuery]);
 
   const selectedLines = useMemo(() => {
-    return Object.entries(cart)
-      .map(([productId, qty]) => {
-        const product = productMap.get(productId);
+    return Object.entries(cartItems)
+      .map(([id, qty]) => {
+        const product = productsById.get(id);
         if (!product || qty <= 0) return null;
         return { product, qty };
       })
       .filter((x): x is { product: FeedCatalogProduct; qty: number } => x !== null);
-  }, [cart, productMap]);
+  }, [cartItems, productsById]);
 
   const cartTotal = useMemo(() => {
-    return selectedLines.reduce((sum, line) => sum + line.qty * line.product.priceRub, 0);
+    return selectedLines.reduce((sum, x) => sum + x.qty * x.product.priceRub, 0);
   }, [selectedLines]);
 
-  const cartDiscountedTotal = useMemo(() => applyLightingDiscount(cartTotal), [cartTotal]);
-  const cartBenefit = Math.max(0, cartTotal - cartDiscountedTotal);
+  const cartDiscounted = useMemo(() => applyLightingDiscount(cartTotal), [cartTotal]);
+  const cartBenefit = Math.max(0, cartTotal - cartDiscounted);
 
-  const setQty = (product: FeedCatalogProduct, nextQty: number) => {
-    const step = stepForUnit(product.unit);
-    const normalized = Math.max(0, Math.round(nextQty / step) * step);
+  const setQty = (product: FeedCatalogProduct, qty: number) => {
+    const step = stepByUnit(product.unit);
+    const normalized = Math.max(0, Math.round(qty / step) * step);
 
-    setCart((prev) => {
+    setCartItems((prev) => {
       if (normalized <= 0) {
         const clone = { ...prev };
         delete clone[product.productId];
@@ -152,20 +163,18 @@ export function CatalogSectionClient({ data }: Props) {
     });
   };
 
-  const handleAdd = (product: FeedCatalogProduct) => {
-    const current = cart[product.productId] ?? 0;
-    const step = stepForUnit(product.unit);
-    const min = minForUnit(product.unit);
-    setQty(product, current > 0 ? current + step : min);
-  };
-
   const handleTransferToCalculator = () => {
-    const items: LightingItem[] = selectedLines.map((line) => ({
-      sku: line.product.productId,
-      name: line.product.name,
-      qty: line.qty,
-      priceRub: line.product.priceRub,
+    const items: LightingItem[] = selectedLines.map(({ product, qty }) => ({
+      sku: product.productId,
+      name: product.name,
+      qty,
+      priceRub: product.priceRub
     }));
+
+    if (items.length === 0) {
+      openCalculator({ initialStep: 1, source: "catalog_trek_page_empty" });
+      return;
+    }
 
     const totalRub = items.reduce((sum, i) => sum + i.qty * i.priceRub, 0);
     const discountedTotalRub = applyLightingDiscount(totalRub);
@@ -175,26 +184,24 @@ export function CatalogSectionClient({ data }: Props) {
       items,
       totalRub,
       discountedTotalRub,
-      userCustomizedLighting: true,
+      userCustomizedLighting: true
     };
 
     openCalculator({
       initialStep: 1,
       initialLightingTab: "catalog",
       initialLighting,
-      source: "catalog_trek_page",
+      source: "catalog_trek_page"
     });
   };
-
-  const selectedCount = selectedLines.length;
 
   return (
     <Section id="catalog" className="scroll-mt-24 bg-white">
       <Container>
         <Heading
           eyebrow="Каталог"
-          title="Каталог трекового освещения и комплектующих"
-          description="Актуальные товары из feed2: добавьте в подборку и передайте в калькулятор."
+          title="Каталог трекового освещения"
+          description="Стабильный каталог из snapshot. Добавьте товары и передайте в калькулятор."
         />
 
         <div className="mt-6">
@@ -202,23 +209,18 @@ export function CatalogSectionClient({ data }: Props) {
             type="button"
             onClick={() => openCalculator({ initialStep: 0, source: "catalog_trek_page_cta" })}
           >
-            Открыть калькулятор потолка
+            Открыть калькулятор
           </Button>
         </div>
 
-        {!data.ok ? (
+        {baseIsEmpty ? (
           <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-5">
             <p className="text-sm font-semibold text-amber-900">Каталог временно недоступен</p>
             <p className="mt-1 text-sm text-amber-800">
-              Не удалось загрузить feed2. Попробуйте обновить страницу позже.
+              База товаров пуста. Попробуйте позже.
             </p>
-            {data.errorMessage ? (
-              <p className="mt-2 text-xs text-amber-700">Тех.деталь: {data.errorMessage}</p>
-            ) : null}
           </div>
-        ) : null}
-
-        {data.ok ? (
+        ) : (
           <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_320px]">
             <div>
               <div className="space-y-4">
@@ -242,7 +244,7 @@ export function CatalogSectionClient({ data }: Props) {
                   >
                     Все системы
                   </button>
-                  {systemOptions.map((system) => (
+                  {systems.map((system) => (
                     <button
                       key={system}
                       type="button"
@@ -270,7 +272,7 @@ export function CatalogSectionClient({ data }: Props) {
                   >
                     Все типы
                   </button>
-                  {kindOptions.map((kind) => (
+                  {kinds.map((kind) => (
                     <button
                       key={kind}
                       type="button"
@@ -295,10 +297,10 @@ export function CatalogSectionClient({ data }: Props) {
                 ) : null}
 
                 {filteredProducts.map((product) => {
-                  const qty = cart[product.productId] ?? 0;
+                  const qty = cartItems[product.productId] ?? 0;
                   const regular = product.priceRub;
-                  const discounted = applyLightingDiscount(regular);
-                  const benefit = Math.max(0, regular - discounted);
+                  const discount = applyLightingDiscount(regular);
+                  const benefit = Math.max(0, regular - discount);
                   const src: string = String(product.coverImage || IMG_FALLBACK);
 
                   return (
@@ -307,7 +309,7 @@ export function CatalogSectionClient({ data }: Props) {
                       className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4"
                     >
                       <div>
-                        <div className="mb-3 overflow-hidden rounded-xl border border-slate-100 bg-slate-50 aspect-[4/3]">
+                        <div className="mb-3 aspect-[4/3] overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
                           <img
                             src={src}
                             alt={product.name}
@@ -321,11 +323,11 @@ export function CatalogSectionClient({ data }: Props) {
                           />
                         </div>
 
-                        <p className="text-sm font-semibold text-slate-950 leading-5">{product.name}</p>
+                        <p className="text-sm font-semibold text-slate-950">{product.name}</p>
                         <p className="mt-1 text-xs text-slate-500">Артикул: {product.vendorCode}</p>
 
                         <ul className="mt-2 space-y-1">
-                          {product.keyAttributes.slice(0, 4).map((a) => (
+                          {pickDisplayAttributes(product).map((a) => (
                             <li key={`${a.label}-${a.value}`} className="text-xs text-slate-500">
                               {a.label}: {a.value}
                             </li>
@@ -338,7 +340,7 @@ export function CatalogSectionClient({ data }: Props) {
                           Цена: {fmt(regular)} ₽{product.unit === "m" ? " / м" : ""}
                         </p>
                         <p className="text-sm font-semibold text-emerald-700">
-                          Со скидкой: {fmt(discounted)} ₽{product.unit === "m" ? " / м" : ""}
+                          Со скидкой: {fmt(discount)} ₽{product.unit === "m" ? " / м" : ""}
                         </p>
                         <p className="text-xs text-emerald-600">Выгода: {fmt(benefit)} ₽</p>
 
@@ -346,7 +348,7 @@ export function CatalogSectionClient({ data }: Props) {
                           {qty <= 0 ? (
                             <button
                               type="button"
-                              onClick={() => handleAdd(product)}
+                              onClick={() => setQty(product, minByUnit(product.unit))}
                               className="rounded-full border border-slate-950 bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 transition-colors"
                             >
                               Добавить
@@ -355,23 +357,19 @@ export function CatalogSectionClient({ data }: Props) {
                             <div className="flex items-center gap-2">
                               <button
                                 type="button"
-                                onClick={() =>
-                                  setQty(product, qty - stepForUnit(product.unit))
-                                }
+                                onClick={() => setQty(product, qty - stepByUnit(product.unit))}
                                 className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 hover:bg-slate-50 transition-colors"
                                 aria-label="Уменьшить"
                               >
                                 −
                               </button>
-                              <span className="min-w-[48px] text-center text-sm font-semibold text-slate-950">
+                              <span className="min-w-[64px] text-center text-sm font-semibold text-slate-950">
                                 {qty}
                                 {product.unit === "m" ? " м" : " шт"}
                               </span>
                               <button
                                 type="button"
-                                onClick={() =>
-                                  setQty(product, qty + stepForUnit(product.unit))
-                                }
+                                onClick={() => setQty(product, qty + stepByUnit(product.unit))}
                                 className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 hover:bg-slate-50 transition-colors"
                                 aria-label="Увеличить"
                               >
@@ -396,43 +394,40 @@ export function CatalogSectionClient({ data }: Props) {
               </div>
             </div>
 
-            <aside className="lg:sticky lg:top-24 h-fit rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <aside className="h-fit rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:sticky lg:top-24">
               <p className="text-sm font-semibold text-slate-950">Мини-корзина</p>
-              <p className="mt-1 text-xs text-slate-500">Выбрано позиций: {selectedCount}</p>
+              <p className="mt-1 text-xs text-slate-500">Выбрано позиций: {selectedLines.length}</p>
 
-              <div className="mt-3 max-h-[320px] overflow-auto space-y-2">
+              <div className="mt-3 max-h-[320px] space-y-2 overflow-auto">
                 {selectedLines.length === 0 ? (
                   <p className="text-sm text-slate-500">Пока пусто</p>
                 ) : null}
 
-                {selectedLines.map((line) => {
-                  const lineTotal = line.qty * line.product.priceRub;
-                  const unitLabel = line.product.unit === "m" ? "м" : "шт";
-
-                  return (
-                    <div
-                      key={line.product.productId}
-                      className="rounded-xl border border-slate-200 bg-white px-3 py-2"
-                    >
-                      <p className="text-xs font-semibold text-slate-900">{line.product.name}</p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {line.qty} {unitLabel} × {fmt(line.product.priceRub)} ₽
-                      </p>
-                      <p className="text-xs text-slate-700">Итого: {fmt(lineTotal)} ₽</p>
-                    </div>
-                  );
-                })}
+                {selectedLines.map(({ product, qty }) => (
+                  <div
+                    key={product.productId}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2"
+                  >
+                    <p className="text-xs font-semibold text-slate-900">{product.name}</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {qty} {product.unit === "m" ? "м" : "шт"} × {fmt(product.priceRub)} ₽
+                    </p>
+                    <p className="text-xs text-slate-700">
+                      Итого: {fmt(qty * product.priceRub)} ₽
+                    </p>
+                  </div>
+                ))}
               </div>
 
               <div className="mt-4 border-t border-slate-200 pt-3">
                 <p className="text-sm text-slate-700">Цена: {fmt(cartTotal)} ₽</p>
                 <p className="text-sm font-semibold text-emerald-700">
-                  Со скидкой: {fmt(cartDiscountedTotal)} ₽
+                  Со скидкой: {fmt(cartDiscounted)} ₽
                 </p>
                 <p className="text-xs text-emerald-600">Выгода: {fmt(cartBenefit)} ₽</p>
               </div>
 
-              <div className="mt-4 space-y-2">
+              <div className="mt-4">
                 <Button
                   type="button"
                   onClick={handleTransferToCalculator}
@@ -441,19 +436,10 @@ export function CatalogSectionClient({ data }: Props) {
                 >
                   Передать в калькулятор
                 </Button>
-
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => openCalculator({ initialStep: 0, source: "catalog_trek_page" })}
-                  className="w-full justify-center"
-                >
-                  Только калькулятор потолка
-                </Button>
               </div>
             </aside>
           </div>
-        ) : null}
+        )}
       </Container>
     </Section>
   );
