@@ -2,20 +2,21 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
+import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { Heading } from "@/components/ui/heading";
 import { Section } from "@/components/ui/section";
-import { Button } from "@/components/ui/button";
 import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
-import { applyLightingDiscount } from "@/lib/lighting-formulas";
 import type {
   FeedCatalogKind,
   FeedCatalogProduct,
   FeedCatalogResult,
-  FeedCatalogSystem
+  FeedCatalogSystem,
 } from "@/lib/eks-feed2-catalog";
+import { applyLightingDiscount } from "@/lib/lighting-formulas";
 
 type Props = {
   data: FeedCatalogResult;
@@ -93,19 +94,21 @@ function pickDisplayAttributes(product: FeedCatalogProduct) {
 
 export function CatalogSectionClient({ data }: Props) {
   const { openCalculator } = useCalculatorModal();
+  const searchParams = useSearchParams();
+  const debugEnabled = searchParams.get("catalogDebug") === "1";
 
   const [systemFilter, setSystemFilter] = useState<FeedCatalogSystem | "all">("all");
   const [kindFilter, setKindFilter] = useState<FeedCatalogKind | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [cartItems, setCartItems] = useState<CartItems>({});
 
-  const baseProducts = useMemo(
-  () => data.products.filter((p) => Number.isFinite(p.priceRub) && p.priceRub > 0),
-  [data.products]
-);
+  const baseProducts = useMemo(() => {
+    return data.products.filter((p) => Number.isFinite(p.priceRub) && p.priceRub > 0);
+  }, [data.products]);
 
-const baseIsEmpty = baseProducts.length === 0;
-const showCatalogError = !data.ok || baseIsEmpty;
+  const baseIsEmpty = baseProducts.length === 0;
+  const showCatalogError = !data.ok || baseIsEmpty;
+
   const systems = useMemo(
     () => Array.from(new Set(baseProducts.map((p) => p.system))),
     [baseProducts]
@@ -128,6 +131,7 @@ const showCatalogError = !data.ok || baseIsEmpty;
       if (systemFilter !== "all" && p.system !== systemFilter) return false;
       if (kindFilter !== "all" && p.kind !== kindFilter) return false;
       if (!q) return true;
+
       const hay = `${p.name} ${p.vendorCode}`.toLowerCase();
       return hay.includes(q);
     });
@@ -169,7 +173,7 @@ const showCatalogError = !data.ok || baseIsEmpty;
       sku: product.productId,
       name: product.name,
       qty,
-      priceRub: product.priceRub
+      priceRub: product.priceRub,
     }));
 
     if (items.length === 0) {
@@ -185,14 +189,14 @@ const showCatalogError = !data.ok || baseIsEmpty;
       items,
       totalRub,
       discountedTotalRub,
-      userCustomizedLighting: true
+      userCustomizedLighting: true,
     };
 
     openCalculator({
       initialStep: 1,
       initialLightingTab: "catalog",
       initialLighting,
-      source: "catalog_trek_page"
+      source: "catalog_trek_page",
     });
   };
 
@@ -202,7 +206,7 @@ const showCatalogError = !data.ok || baseIsEmpty;
         <Heading
           eyebrow="Каталог"
           title="Каталог трекового освещения"
-          description="Стабильный каталог из snapshot. Добавьте товары и передайте в калькулятор."
+          description="Добавьте товары и передайте в калькулятор без потери данных."
         />
 
         <div className="mt-6">
@@ -214,12 +218,15 @@ const showCatalogError = !data.ok || baseIsEmpty;
           </Button>
         </div>
 
-        {baseIsEmpty ? (
+        {showCatalogError ? (
           <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-5">
             <p className="text-sm font-semibold text-amber-900">Каталог временно недоступен</p>
             <p className="mt-1 text-sm text-amber-800">
-              База товаров пуста. Попробуйте позже.
+              Не удалось получить валидную базу товаров.
             </p>
+            {data.errorMessage ? (
+              <p className="mt-2 text-xs text-amber-700">Причина: {data.errorMessage}</p>
+            ) : null}
           </div>
         ) : (
           <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_320px]">
@@ -413,9 +420,7 @@ const showCatalogError = !data.ok || baseIsEmpty;
                     <p className="mt-1 text-xs text-slate-500">
                       {qty} {product.unit === "m" ? "м" : "шт"} × {fmt(product.priceRub)} ₽
                     </p>
-                    <p className="text-xs text-slate-700">
-                      Итого: {fmt(qty * product.priceRub)} ₽
-                    </p>
+                    <p className="text-xs text-slate-700">Итого: {fmt(qty * product.priceRub)} ₽</p>
                   </div>
                 ))}
               </div>
@@ -441,6 +446,28 @@ const showCatalogError = !data.ok || baseIsEmpty;
             </aside>
           </div>
         )}
+
+        {debugEnabled && data.debug ? (
+          <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+            <p>enabled: {String(data.debug.enabled ?? "")}</p>
+            <p>strict: {String(data.debug.strict ?? "")}</p>
+            <p>selectedSource: {String(data.debug.selectedSource ?? "")}</p>
+            <p>status: {String(data.debug.status ?? "")}</p>
+            <p>contentType: {String(data.debug.contentType ?? "")}</p>
+            <p>bodyLength: {String(data.debug.bodyLength ?? "")}</p>
+            <p>categoriesCount: {String(data.debug.categoriesCount ?? "")}</p>
+            <p>offerBlocksCount: {String(data.debug.offerBlocksCount ?? "")}</p>
+            <p>productsParsed: {String(data.debug.productsParsed ?? "")}</p>
+            <p>productsKept: {String(data.debug.productsKept ?? "")}</p>
+            <p>skippedNoCategoryId: {String(data.debug.skippedNoCategoryId ?? "")}</p>
+            <p>skippedUnknownCategory: {String(data.debug.skippedUnknownCategory ?? "")}</p>
+            <p>skippedNotWhitelisted: {String(data.debug.skippedNotWhitelisted ?? "")}</p>
+            <p>skippedNoPrice: {String(data.debug.skippedNoPrice ?? "")}</p>
+            <p>skippedNoVendorCode: {String(data.debug.skippedNoVendorCode ?? "")}</p>
+            <p>errorMessage: {String(data.debug.errorMessage ?? "")}</p>
+            <p>fetchedAt: {String(data.debug.fetchedAt ?? "")}</p>
+          </div>
+        ) : null}
       </Container>
     </Section>
   );
