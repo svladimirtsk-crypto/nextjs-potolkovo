@@ -2,7 +2,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-
+import { getKitDisplayName } from "@/lib/calculator-modal-types";
 import { homepage } from "@/content/homepage";
 import { legal } from "@/content/legal";
 import { Button } from "@/components/ui/button";
@@ -125,7 +125,9 @@ export function ActionForm({ source }: ActionFormProps) {
       setMessage("На клиенте не настроен NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY.");
       return;
     }
-
+const lightingKitDisplay = snapshot?.lighting
+  ? getKitDisplayName(snapshot.lighting)
+  : "";
     const formData = new FormData();
     formData.append("access_key",  accessKey);
     formData.append("subject",     "Новая заявка с сайта ПОТОЛКОВО");
@@ -142,7 +144,7 @@ export function ActionForm({ source }: ActionFormProps) {
     formData.append("company",  "");
 
     formData.append("lighting_mode", snapshot?.lighting?.mode ?? "none");
-    formData.append("lighting_kit",  snapshot?.lighting?.kitName ?? "");
+    formData.append("lighting_kit", lightingKitDisplay);
     formData.append("lighting_items_count",
       String(snapshot?.lighting?.items?.length ?? 0)
     );
