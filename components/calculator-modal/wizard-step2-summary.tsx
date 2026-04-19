@@ -10,10 +10,38 @@ import { isSnapshotValid } from "@/lib/calculator-snapshot-guard";
 import { calcRequiredWorksFromLighting } from "@/lib/lighting-formulas";
 import type { WizardStep } from "@/lib/calculator-modal-types";
 import { getKitDisplayName } from "@/lib/calculator-modal-types";
-import { COLIBRI_PROFILES, CLARUS_PROFILES } from "@/lib/lighting-kits";
+import {
+  COLIBRI_PROFILES,
+  CLARUS_PROFILES,
+  calcProfilesForTrackMeters,
+  formatProfilePieces,
+  type ProfilePiece,
+} from "@/lib/lighting-kits";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("ru-RU").format(n);
+}
+
+function formatMeters(value: number): string {
+  const rounded = Math.round(value * 10) / 10;
+  return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+}
+
+type TrackProfileHint = {
+  pieces: ProfilePiece[];
+  description: string;
+};
+
+function getTrackProfileHint(
+  trackLengthMeters: number | null,
+  kitId: string | undefined
+): TrackProfileHint | null {
+  if (!trackLengthMeters || trackLengthMeters <= 0) return null;
+  const isClarus = kitId?.includes("clarus");
+  const profiles = isClarus ? CLARUS_PROFILES : COLIBRI_PROFILES;
+  const pieces = calcProfilesForTrackMeters(trackLengthMeters, profiles);
+  if (pieces.length === 0) return null;
+  return { pieces, description: formatProfilePieces(pieces) };
 }
 
 const ALL_PROFILES = [...COLIBRI_PROFILES, ...CLARUS_PROFILES];
@@ -27,7 +55,7 @@ type WizardStep2SummaryProps = {
   onConfirm: () => void;
 };
 
-export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
+export function WizardStep2Summary({ onConfirm: _onConfirm }: WizardStep2SummaryProps) {
   const { snapshot } = usePriceCalculatorBridge();
   const {
     lightingDraft,
@@ -54,6 +82,13 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
   const reconcileNote = willReconcileLights
     ? `Монтаж точечных светильников скорректирован: ${currentLightsCount} → ${requiredLightsCount} шт. (${fmt(requiredLightsCount * (snapshot?.lightsRatePerUnit ?? 750))} ₽)`
     : null;
+
+  const trackLengthMeters = snapshot?.trackLength ?? null;
+  const trackProfileHint = getTrackProfileHint(trackLengthMeters, lightingDraft?.kitId);
+  const showProfileHint =
+    trackProfileHint !== null &&
+    hasLighting &&
+    (lightingDraft?.kitId?.includes("colibri") || lightingDraft?.kitId?.includes("clarus"));
 
   if (!isSnapshotValid(snapshot)) {
     return (
@@ -106,6 +141,21 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
           <p className="mt-1 text-sm text-blue-800 leading-5">{reconcileNote}</p>
           <p className="mt-1.5 text-xs text-blue-700">
             Точное количество уточним на замере — эта цифра войдёт в предварительный расчёт.
+          </p>
+        </div>
+      ) : null}
+
+      {showProfileHint && trackProfileHint ? (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <p className="text-sm font-semibold text-slate-950">
+            Ориентир по набору профилей
+          </p>
+          <p className="mt-1 text-sm text-slate-600 leading-5">
+            Для трека {formatMeters(trackLengthMeters ?? 0)} м рекомендуется:{" "}
+            <span className="font-medium">{trackProfileHint.description}</span>
+          </p>
+          <p className="mt-1.5 text-xs text-slate-400">
+            Точный набор и стоимость профилей уточним на замере.
           </p>
         </div>
       ) : null}
