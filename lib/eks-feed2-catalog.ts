@@ -53,6 +53,27 @@ export type FeedCatalogCategory = {
   parentId: string | null;
 };
 
+export type FeedCatalogDebug = {
+  enabled: string;
+  strict: string;
+  selectedSource: "snapshot" | "live" | "live-strict-error" | "snapshot-fallback";
+  status?: number;
+  contentType?: string;
+  bodyLength?: number;
+  responseHead?: string;
+  categoriesCount?: number;
+  offerBlocksCount?: number;
+  productsParsed?: number;
+  productsKept?: number;
+  skippedNoCategoryId?: number;
+  skippedUnknownCategory?: number;
+  skippedNotWhitelisted?: number;
+  skippedNoPrice?: number;
+  skippedNoVendorCode?: number;
+  fetchedAt: string;
+  errorMessage?: string;
+};
+
 export type FeedCatalogResult = {
   ok: boolean;
   updatedAt: string;
@@ -61,6 +82,7 @@ export type FeedCatalogResult = {
   categories: FeedCatalogCategory[];
   products: FeedCatalogProduct[];
   errorMessage?: string;
+  debug?: FeedCatalogDebug;
 };
 
 type RawCategory = {
@@ -134,12 +156,12 @@ const BANNED_PARAMS = new Set([
   "класс защиты",
 ]);
 
-function toSafeString(x: unknown): string {
+function s(x: unknown): string {
   return String(x ?? "").trim();
 }
 
-function normalizeUnit(unit: unknown): FeedCatalogUnit {
-  return String(unit ?? "") === "m" ? "m" : "pcs";
+function toUnit(x: unknown): FeedCatalogUnit {
+  return s(x) === "m" ? "m" : "pcs";
 }
 
 function decodeXml(str: string): string {
@@ -155,7 +177,7 @@ function decodeXml(str: string): string {
     .trim();
 }
 
-function normalizeSpace(str: string): string {
+function norm(str: string): string {
   return str.replace(/\s+/g, " ").trim();
 }
 
@@ -168,38 +190,35 @@ function slugSafe(str: string): string {
 
 function extractTag(block: string, tag: string): string | null {
   const re = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i");
-  const match = block.match(re);
-  if (!match) return null;
-  return normalizeSpace(decodeXml(match[1]));
+  const m = block.match(re);
+  if (!m) return null;
+  return norm(decodeXml(m[1]));
 }
 
 function extractTagList(block: string, tag: string): string[] {
   const re = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "gi");
   const out: string[] = [];
-  let match: RegExpExecArray | null = re.exec(block);
-
-  while (match) {
-    const value = normalizeSpace(decodeXml(match[1]));
-    if (value) out.push(value);
-    match = re.exec(block);
+  let m: RegExpExecArray | null = re.exec(block);
+  while (m) {
+    const v = norm(decodeXml(m[1]));
+    if (v) out.push(v);
+    m = re.exec(block);
   }
-
   return out;
 }
 
 function extractCategories(xml: string): RawCategory[] {
   const re = /<category\b([^>]*)>([\s\S]*?)<\/category>/gi;
   const out: RawCategory[] = [];
-  let match: RegExpExecArray | null = re.exec(xml);
+  let m: RegExpExecArray | null = re.exec(xml);
 
-  while (match) {
-    const attrs = match[1] ?? "";
-    const title = normalizeSpace(decodeXml(match[2] ?? ""));
+  while (m) {
+    const attrs = m[1] ?? "";
+    const title = norm(decodeXml(m[2] ?? ""));
     const id = attrs.match(/\bid="([^"]+)"/i)?.[1] ?? "";
     const parentId = attrs.match(/\bparentId="([^"]+)"/i)?.[1] ?? null;
-
     if (id && title) out.push({ id, title, parentId });
-    match = re.exec(xml);
+    m = re.exec(xml);
   }
 
   return out;
@@ -208,46 +227,40 @@ function extractCategories(xml: string): RawCategory[] {
 function extractParams(offerBlock: string): FeedCatalogParam[] {
   const re = /<param\b([^>]*)>([\s\S]*?)<\/param>/gi;
   const out: FeedCatalogParam[] = [];
-  let match: RegExpExecArray | null = re.exec(offerBlock);
+  let m: RegExpExecArray | null = re.exec(offerBlock);
 
-  while (match) {
-    const attrs = match[1] ?? "";
+  while (m) {
+    const attrs = m[1] ?? "";
     const rawLabel = attrs.match(/\bname="([^"]+)"/i)?.[1] ?? "";
-    const rawValue = match[2] ?? "";
-    const label = normalizeSpace(decodeXml(rawLabel));
-    const value = normalizeSpace(decodeXml(rawValue));
-
+    const label = norm(decodeXml(rawLabel));
+    const value = norm(decodeXml(m[2] ?? ""));
     if (!label || !value) {
-      match = re.exec(offerBlock);
+      m = re.exec(offerBlock);
       continue;
     }
-
     if (BANNED_PARAMS.has(label.toLowerCase())) {
-      match = re.exec(offerBlock);
+      m = re.exec(offerBlock);
       continue;
     }
-
     out.push({ label, value });
-    match = re.exec(offerBlock);
+    m = re.exec(offerBlock);
   }
 
   return out;
 }
 
-function buildCategoryPath(categoryId: string, categoriesById: Map<string, RawCategory>): string {
+function buildCategoryPath(categoryId: string, byId: Map<string, RawCategory>): string {
   const parts: string[] = [];
-  let currentId: string | null = categoryId;
+  let current: string | null = categoryId;
   const guard = new Set<string>();
 
-  while (currentId) {
-    if (guard.has(currentId)) break;
-    guard.add(currentId);
-
-    const cat = categoriesById.get(currentId);
+  while (current) {
+    if (guard.has(current)) break;
+    guard.add(current);
+    const cat = byId.get(current);
     if (!cat) break;
-
     parts.unshift(cat.title);
-    currentId = cat.parentId;
+    current = cat.parentId;
   }
 
   return parts.join(" / ");
@@ -257,7 +270,7 @@ function isWhitelistedCategory(categoryId: string, parentId: string | null): boo
   const rule = WHITELIST_BY_ID.get(categoryId);
   if (!rule) return false;
   if (!rule.parentId) return true;
-  return rule.parentId === toSafeString(parentId);
+  return rule.parentId === s(parentId);
 }
 
 function deriveUnit(name: string): FeedCatalogUnit {
@@ -266,29 +279,23 @@ function deriveUnit(name: string): FeedCatalogUnit {
 
 function deriveLengthMeters(name: string): number | null {
   const normalized = name.toLowerCase().replace(",", ".");
-  const mMatch = normalized.match(/(\d+(?:\.\d+)?)\s*м(?!м)/i);
-  if (!mMatch) return null;
-  const v = Number(mMatch[1]);
-  if (!Number.isFinite(v) || v <= 0) return null;
-  return v;
+  const m = normalized.match(/(\d+(?:\.\d+)?)\s*м(?!м)/i);
+  if (!m) return null;
+  const v = Number(m[1]);
+  return Number.isFinite(v) && v > 0 ? v : null;
 }
 
 function derivePieceLengthMeters(name: string): number | null {
   const normalized = name.toLowerCase().replace(",", ".");
-  const mmMatch = normalized.match(/(\d{3,4})\s*мм/i);
-  if (mmMatch) {
-    const mm = Number(mmMatch[1]);
-    if (Number.isFinite(mm) && mm > 0) return mm / 1000;
+  const mm = normalized.match(/(\d{3,4})\s*мм/i);
+  if (mm) {
+    const v = Number(mm[1]);
+    if (Number.isFinite(v) && v > 0) return v / 1000;
   }
   return deriveLengthMeters(name);
 }
 
-function deriveSystem(
-  categoryId: string,
-  categoryPath: string,
-  name: string,
-  url: string
-): FeedCatalogSystem {
+function deriveSystem(categoryId: string, categoryPath: string, name: string, url: string): FeedCatalogSystem {
   const joined = `${categoryPath} ${name} ${url}`.toLowerCase();
 
   if (joined.includes("clarus") || categoryId === "146") return "CLARUS_48";
@@ -356,20 +363,19 @@ function pickKeyAttributes(params: FeedCatalogParam[]): FeedCatalogParam[] {
     "Тип",
     "Световой поток",
   ];
+
   const byLabel = new Map<string, FeedCatalogParam>();
-  for (const p of params) {
-    if (!byLabel.has(p.label)) byLabel.set(p.label, p);
-  }
+  for (const p of params) if (!byLabel.has(p.label)) byLabel.set(p.label, p);
 
   const picked: FeedCatalogParam[] = [];
   for (const label of priorities) {
-    const x = byLabel.get(label);
-    if (x && picked.length < 4) picked.push(x);
+    const found = byLabel.get(label);
+    if (found && picked.length < 4) picked.push(found);
   }
 
   if (picked.length < 4) {
     for (const p of params) {
-      if (picked.some((k) => k.label === p.label && k.value === p.value)) continue;
+      if (picked.some((x) => x.label === p.label && x.value === p.value)) continue;
       picked.push(p);
       if (picked.length >= 4) break;
     }
@@ -379,67 +385,73 @@ function pickKeyAttributes(params: FeedCatalogParam[]): FeedCatalogParam[] {
 }
 
 function parsePrice(raw: string | null): number | null {
-  const cleaned = toSafeString(raw).replace(",", ".").replace(/\s+/g, "");
+  const cleaned = s(raw).replace(",", ".").replace(/\s+/g, "");
   const n = Number(cleaned);
   if (!Number.isFinite(n) || n <= 0) return null;
   return Math.round(n);
 }
 
 function toBoolAvailable(raw: string | null): boolean {
-  const v = toSafeString(raw).toLowerCase();
+  const v = s(raw).toLowerCase();
   return v === "true" || v === "1" || v === "yes" || v === "да";
 }
 
 function normalizeSnapshot(input: unknown): FeedCatalogResult {
-  const s = input as Partial<FeedCatalogResult>;
-  const categories = Array.isArray(s?.categories) ? s.categories : [];
-  const products = Array.isArray(s?.products) ? s.products : [];
+  const src = input as Partial<FeedCatalogResult>;
+  const categories = Array.isArray(src.categories) ? src.categories : [];
+  const products = Array.isArray(src.products) ? src.products : [];
 
   const normalizedProducts: FeedCatalogProduct[] = products
     .filter((p) => Number.isFinite(p.priceRub) && p.priceRub > 0)
     .filter((p) => WHITELIST_BY_ID.has(String(p.categoryId)))
     .map((p): FeedCatalogProduct => ({
       ...p,
-      productId: toSafeString(p.productId),
-      vendorCode: toSafeString(p.vendorCode),
-      offerId: toSafeString(p.offerId),
-      name: toSafeString(p.name),
-      url: toSafeString(p.url),
-      categoryId: toSafeString(p.categoryId),
-      categoryPath: toSafeString(p.categoryPath),
-      images: Array.isArray(p.images) ? p.images.map((x) => toSafeString(x)).filter(Boolean) : [],
-      coverImage: toSafeString(p.coverImage),
+      productId: s(p.productId),
+      vendorCode: s(p.vendorCode),
+      offerId: s(p.offerId),
+      name: s(p.name),
+      url: s(p.url),
+      categoryId: s(p.categoryId),
+      categoryPath: s(p.categoryPath),
+      images: Array.isArray(p.images) ? p.images.map((x) => s(x)).filter(Boolean) : [],
+      coverImage: s(p.coverImage),
       params: Array.isArray(p.params)
-        ? p.params.filter((x) => !BANNED_PARAMS.has(toSafeString(x.label).toLowerCase()))
+        ? p.params.filter((x) => !BANNED_PARAMS.has(s(x.label).toLowerCase()))
         : [],
       keyAttributes: Array.isArray(p.keyAttributes) ? p.keyAttributes : [],
       priceRub: Math.round(p.priceRub),
       available: Boolean(p.available),
-      unit: normalizeUnit(p.unit),
-      lengthMeters: p.lengthMeters ?? null,
-      pieceLengthMeters: p.pieceLengthMeters ?? null,
       system: (p.system as FeedCatalogSystem) ?? "UNKNOWN",
       kind: (p.kind as FeedCatalogKind) ?? "OTHER",
+      unit: toUnit(p.unit),
+      lengthMeters: p.lengthMeters ?? null,
+      pieceLengthMeters: p.pieceLengthMeters ?? null,
     }));
 
   return {
     ok: normalizedProducts.length > 0,
-    updatedAt: toSafeString(s?.updatedAt) || new Date().toISOString(),
+    updatedAt: s(src.updatedAt) || new Date().toISOString(),
     source: "snapshot:file",
-    discountPercentForCeilingOrder: Number.isFinite(s?.discountPercentForCeilingOrder)
-      ? Number(s?.discountPercentForCeilingOrder)
+    discountPercentForCeilingOrder: Number.isFinite(src.discountPercentForCeilingOrder)
+      ? Number(src.discountPercentForCeilingOrder)
       : DISCOUNT_PERCENT,
     categories: categories.map((c) => ({
-      id: toSafeString(c.id),
-      title: toSafeString(c.title),
-      parentId: c.parentId ? toSafeString(c.parentId) : null,
+      id: s(c.id),
+      title: s(c.title),
+      parentId: c.parentId ? s(c.parentId) : null,
     })),
     products: normalizedProducts,
     errorMessage: normalizedProducts.length > 0 ? undefined : "Snapshot has zero products",
+    debug: {
+      enabled: "0",
+      strict: "0",
+      selectedSource: "snapshot",
+      fetchedAt: new Date().toISOString(),
+    },
   };
 }
 
-async function fetchLiveFeedText(): Promise<{
+async function fetchLive(): Promise<{
   ok: boolean;
   status: number;
   contentType: string;
@@ -447,10 +459,10 @@ async function fetchLiveFeedText(): Promise<{
   errorMessage?: string;
 }> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 12000);
+  const timeout = setTimeout(() => controller.abort(), 12_000);
 
   try {
-    const response = await fetch(FEED_URL, {
+    const res = await fetch(FEED_URL, {
       cache: "no-store",
       signal: controller.signal,
       headers: {
@@ -458,24 +470,22 @@ async function fetchLiveFeedText(): Promise<{
         "User-Agent": "nextjs-potolkovo-catalog/1.0 (+vercel)",
       },
     });
-
-    const contentType = String(response.headers.get("content-type") ?? "");
-    const body = await response.text();
-
+    const contentType = String(res.headers.get("content-type") ?? "");
+    const body = await res.text();
     return {
-      ok: response.ok,
-      status: response.status,
+      ok: res.ok,
+      status: res.status,
       contentType,
       body,
-      errorMessage: response.ok ? undefined : `HTTP ${response.status}`,
+      errorMessage: res.ok ? undefined : `HTTP ${res.status}`,
     };
-  } catch (error) {
+  } catch (e) {
     return {
       ok: false,
       status: 0,
       contentType: "",
       body: "",
-      errorMessage: error instanceof Error ? error.message : "live fetch failed",
+      errorMessage: e instanceof Error ? e.message : "live fetch failed",
     };
   } finally {
     clearTimeout(timeout);
@@ -484,14 +494,12 @@ async function fetchLiveFeedText(): Promise<{
 
 function parseLiveFeed(xml: string): { result: FeedCatalogResult; counters: ParseCounters } {
   const categories = extractCategories(xml);
-  const categoriesById = new Map(categories.map((c) => [c.id, c]));
-  const offerBlocks = xml.match(/<offer\b[\s\S]*?<\/offer>/gi) ?? [];
-  const usedIds = new Set<string>();
-  const products: FeedCatalogProduct[] = [];
+  const byId = new Map(categories.map((c) => [c.id, c]));
+  const offers = xml.match(/<offer\b[\s\S]*?<\/offer>/gi) ?? [];
 
   const counters: ParseCounters = {
     categoriesCount: categories.length,
-    offerBlocksCount: offerBlocks.length,
+    offerBlocksCount: offers.length,
     productsParsed: 0,
     productsKept: 0,
     skippedNoCategoryId: 0,
@@ -501,7 +509,10 @@ function parseLiveFeed(xml: string): { result: FeedCatalogResult; counters: Pars
     skippedNoVendorCode: 0,
   };
 
-  for (const block of offerBlocks) {
+  const products: FeedCatalogProduct[] = [];
+  const used = new Set<string>();
+
+  for (const block of offers) {
     counters.productsParsed += 1;
 
     const offerId = block.match(/<offer\b[^>]*\bid="([^"]+)"/i)?.[1] ?? "";
@@ -513,7 +524,7 @@ function parseLiveFeed(xml: string): { result: FeedCatalogResult; counters: Pars
       continue;
     }
 
-    const cat = categoriesById.get(categoryId);
+    const cat = byId.get(categoryId);
     if (!cat) {
       counters.skippedUnknownCategory += 1;
       continue;
@@ -530,21 +541,21 @@ function parseLiveFeed(xml: string): { result: FeedCatalogResult; counters: Pars
       continue;
     }
 
-    const vendorCode = toSafeString(extractTag(block, "vendorCode") ?? offerId);
+    const vendorCode = s(extractTag(block, "vendorCode") ?? offerId);
     if (!vendorCode) {
       counters.skippedNoVendorCode += 1;
       continue;
     }
 
-    const name = toSafeString(extractTag(block, "name") ?? `Товар ${vendorCode}`);
-    const url = toSafeString(extractTag(block, "url") ?? "https://eksmarket.ru/");
+    const name = s(extractTag(block, "name") ?? `Товар ${vendorCode}`);
+    const url = s(extractTag(block, "url") ?? "https://eksmarket.ru/");
     const images = extractTagList(block, "picture");
     const params = extractParams(block);
-    const categoryPath = buildCategoryPath(categoryId, categoriesById);
+    const categoryPath = buildCategoryPath(categoryId, byId);
 
     let productId = `eks-${slugSafe(vendorCode) || slugSafe(offerId)}`;
-    if (usedIds.has(productId)) productId = `${productId}-${slugSafe(offerId)}`;
-    usedIds.add(productId);
+    if (used.has(productId)) productId = `${productId}-${slugSafe(offerId)}`;
+    used.add(productId);
 
     products.push({
       productId,
@@ -570,12 +581,21 @@ function parseLiveFeed(xml: string): { result: FeedCatalogResult; counters: Pars
 
   counters.productsKept = products.length;
 
-  const categoryUsed = new Set(products.map((p) => p.categoryId));
+  const usedCategoryIds = new Set(products.map((p) => p.categoryId));
   const normalizedCategories: FeedCatalogCategory[] = categories
-    .filter((c) => categoryUsed.has(c.id))
+    .filter((c) => usedCategoryIds.has(c.id))
     .map((c) => ({ id: c.id, title: c.title, parentId: c.parentId }));
 
-  if (products.length === 0) {
+  const xmlLike =
+    xml.includes("<offer") || xml.includes("<categories") || xml.includes("<yml_catalog");
+
+  const invalid =
+    !xmlLike ||
+    counters.categoriesCount === 0 ||
+    counters.offerBlocksCount === 0 ||
+    products.length === 0;
+
+  if (invalid) {
     return {
       counters,
       result: {
@@ -585,7 +605,7 @@ function parseLiveFeed(xml: string): { result: FeedCatalogResult; counters: Pars
         discountPercentForCeilingOrder: DISCOUNT_PERCENT,
         categories: normalizedCategories,
         products: [],
-        errorMessage: "0 products after parse/whitelist",
+        errorMessage: "Live feed invalid: xml/offer/category/products validation failed",
       },
     };
   }
@@ -604,54 +624,137 @@ function parseLiveFeed(xml: string): { result: FeedCatalogResult; counters: Pars
 }
 
 export async function getCatalogData(): Promise<FeedCatalogResult> {
-  const liveEnabled = toSafeString(process.env.CATALOG_LIVE_FEED2_ENABLED) === "1";
-  const strictLive = toSafeString(process.env.CATALOG_LIVE_FEED2_STRICT) === "1";
+  const enabled = s(process.env.CATALOG_LIVE_FEED2_ENABLED);
+  const strict = s(process.env.CATALOG_LIVE_FEED2_STRICT);
+
+  const liveEnabled = enabled === "1";
+  const liveStrict = strict === "1";
+  const fetchedAt = new Date().toISOString();
 
   const snapshot = normalizeSnapshot(snapshotData);
 
   if (!liveEnabled) {
-    if (!snapshot.ok) {
-      console.error("[catalog] snapshot invalid:", snapshot.errorMessage);
-    }
-    return snapshot;
+    return {
+      ...snapshot,
+      debug: {
+        ...(snapshot.debug ?? {
+          enabled: "0",
+          strict: "0",
+          selectedSource: "snapshot",
+          fetchedAt,
+        }),
+        enabled,
+        strict,
+        selectedSource: "snapshot",
+        fetchedAt,
+      },
+    };
   }
 
-  console.info("[catalog] live mode enabled", {
-    CATALOG_LIVE_FEED2_ENABLED: process.env.CATALOG_LIVE_FEED2_ENABLED,
-    CATALOG_LIVE_FEED2_STRICT: process.env.CATALOG_LIVE_FEED2_STRICT,
-    url: FEED_URL,
-  });
+  console.info("[catalog] env", { enabled, strict, url: FEED_URL });
 
-  const liveFetch = await fetchLiveFeedText();
-  const head = String((liveFetch.body ?? "").slice(0, 350));
+  const live = await fetchLive();
+  const head = String((live.body ?? "").slice(0, 350));
 
   console.info("[catalog] live response", {
-    status: liveFetch.status,
-    contentType: liveFetch.contentType,
-    bodyLength: liveFetch.body.length,
+    status: live.status,
+    contentType: live.contentType,
+    bodyLength: live.body.length,
     head,
   });
 
-  if (!liveFetch.ok) {
-    const errorResult: FeedCatalogResult = {
+  if (!live.ok) {
+    const failResult: FeedCatalogResult = {
       ok: false,
-      updatedAt: new Date().toISOString(),
+      updatedAt: fetchedAt,
       source: "live-feed2",
       discountPercentForCeilingOrder: DISCOUNT_PERCENT,
       categories: [],
       products: [],
-      errorMessage: liveFetch.errorMessage ?? "Live fetch failed",
+      errorMessage: live.errorMessage ?? "Live fetch failed",
+      debug: {
+        enabled,
+        strict,
+        selectedSource: "live-strict-error",
+        fetchedAt,
+        status: live.status,
+        contentType: live.contentType,
+        bodyLength: live.body.length,
+        responseHead: head,
+        errorMessage: live.errorMessage ?? "Live fetch failed",
+      },
     };
 
-    if (strictLive) return errorResult;
-    return snapshot.ok ? snapshot : errorResult;
+    if (liveStrict) return failResult;
+
+    return {
+      ...snapshot,
+      debug: {
+        enabled,
+        strict,
+        selectedSource: "snapshot-fallback",
+        fetchedAt,
+        status: live.status,
+        contentType: live.contentType,
+        bodyLength: live.body.length,
+        responseHead: head,
+        errorMessage: failResult.errorMessage,
+      },
+    };
   }
 
-  const parsed = parseLiveFeed(liveFetch.body);
+  const parsed = parseLiveFeed(live.body);
 
   console.info("[catalog] live parse counters", parsed.counters);
 
-  if (parsed.result.ok) return parsed.result;
-  if (strictLive) return parsed.result;
-  return snapshot.ok ? snapshot : parsed.result;
+  if (parsed.result.ok) {
+    return {
+      ...parsed.result,
+      debug: {
+        enabled,
+        strict,
+        selectedSource: "live",
+        fetchedAt,
+        status: live.status,
+        contentType: live.contentType,
+        bodyLength: live.body.length,
+        responseHead: head,
+        ...parsed.counters,
+      },
+    };
+  }
+
+  if (liveStrict) {
+    return {
+      ...parsed.result,
+      debug: {
+        enabled,
+        strict,
+        selectedSource: "live-strict-error",
+        fetchedAt,
+        status: live.status,
+        contentType: live.contentType,
+        bodyLength: live.body.length,
+        responseHead: head,
+        ...parsed.counters,
+        errorMessage: parsed.result.errorMessage,
+      },
+    };
+  }
+
+  return {
+    ...snapshot,
+    debug: {
+      enabled,
+      strict,
+      selectedSource: "snapshot-fallback",
+      fetchedAt,
+      status: live.status,
+      contentType: live.contentType,
+      bodyLength: live.body.length,
+      responseHead: head,
+      ...parsed.counters,
+      errorMessage: parsed.result.errorMessage,
+    },
+  };
 }
