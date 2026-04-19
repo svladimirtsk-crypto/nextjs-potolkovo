@@ -1,6 +1,4 @@
 // components/calculator-modal/wizard-step1-lighting.tsx
-// ИЗМЕНЕНИЯ: импорт COLIBRI_PROFILES + CLARUS_PROFILES, отображение длины в KitCard
-
 "use client";
 
 import { useMemo, useRef, useState, useEffect } from "react";
@@ -10,65 +8,80 @@ import {
   LIGHTING_KITS,
   COLIBRI_PROFILES,
   CLARUS_PROFILES,
-  scaleKit, 
+  calcProfilesForTrackMeters,
+  scaleKit,
+  type ProfileEntry,
 } from "@/lib/lighting-kits";
 import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
-import {
-  applyLightingDiscount,
-  scaleKitItemQty,
-} from "@/lib/lighting-formulas";
+import { applyLightingDiscount } from "@/lib/lighting-formulas";
 import { useCalculatorModal } from "./calculator-modal-context";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 
 type Tab = "recommendations" | "catalog";
+type CartItems = Record<string, number>;
 
 function fmt(n: number) {
   return new Intl.NumberFormat("ru-RU").format(n);
 }
 
-// ── Все профили в одном справочнике ──────────────────────────────────────────
-const ALL_PROFILES = [...COLIBRI_PROFILES, ...CLARUS_PROFILES];
-
-/** Возвращает длину профиля (мм) по SKU, если это профиль */
-function getProfileLengthMm(sku: string): number | null {
-  const entry = ALL_PROFILES.find((p) => p.sku === sku);
-  return entry ? entry.lengthMm : null;
+function getProfileTableForKit(kitId: string): readonly ProfileEntry[] {
+  if (kitId.includes("clarus")) return CLARUS_PROFILES;
+  if (kitId.includes("colibri")) return COLIBRI_PROFILES;
+  return [];
 }
 
-// ── Kit recommendation logic ──────────────────────────────────────────────────
+function withTrackProfilesByLength(
+  kitItems: LightingItem[],
+  kitId: string,
+  trackLengthMeters: number
+): LightingItem[] {
+  const profileTable = getProfileTableForKit(kitId);
+  if (profileTable.length === 0) return kitItems;
 
-function getRecommendedKits(
-  pointSpotsQty: number,
-  trackMountType: "built-in" | "surface" | "none"
-) {
-  const results: typeof LIGHTING_KITS[number][] = [];
+  const profileSkuSet = new Set(profileTable.map((p) => p.sku));
+  const withoutFixedProfiles = kitItems.filter((item) => !profileSkuSet.has(item.sku));
 
-  if (pointSpotsQty > 0) {
-    const pointKits = LIGHTING_KITS.filter((k) => k.kitCategory === "point");
-    results.push(...pointKits.slice(0, 2));
+  const profilePieces = calcProfilesForTrackMeters(trackLengthMeters, profileTable);
+  const profileItems: LightingItem[] = profilePieces.map((piece) => ({
+    sku: piece.sku,
+    name: `Профиль ${piece.lengthMm} мм`,
+    qty: piece.qty,
+    priceRub: piece.priceRub ?? 0,
+  }));
+
+  return [...profileItems, ...withoutFixedProfiles];
+}
+
+function mergeItems(groups: LightingItem[][]): LightingItem[] {
+  const map = new Map<string, LightingItem>();
+
+  for (const items of groups) {
+    for (const item of items) {
+      const existing = map.get(item.sku);
+      if (existing) {
+        map.set(item.sku, { ...existing, qty: existing.qty + item.qty });
+      } else {
+        map.set(item.sku, { ...item });
+      }
+    }
   }
 
+  return Array.from(map.values()).filter((item) => item.qty > 0);
+}
+
+function getPointRecommendations() {
+  return LIGHTING_KITS.filter((k) => k.kitCategory === "point").slice(0, 3);
+}
+
+function getTrackRecommendations(trackMountType: "built-in" | "surface" | "none") {
   if (trackMountType === "built-in") {
-    const builtInKits = LIGHTING_KITS.filter((k) => k.kitCategory === "track-built-in");
-    results.push(...builtInKits.slice(0, 2));
+    return LIGHTING_KITS.filter((k) => k.kitCategory === "track-built-in").slice(0, 3);
   }
-
   if (trackMountType === "surface") {
-    const surfaceKits = LIGHTING_KITS.filter((k) => k.kitCategory === "track-surface");
-    results.push(...surfaceKits.slice(0, 2));
+    return LIGHTING_KITS.filter((k) => k.kitCategory === "track-surface").slice(0, 3);
   }
-
-  if (results.length === 0) return LIGHTING_KITS.slice(0, 3);
-
-  const seen = new Set<string>();
-  return results.filter((k) => {
-    if (seen.has(k.kitId)) return false;
-    seen.add(k.kitId);
-    return true;
-  });
+  return [];
 }
-
-// ── Subcomponents ─────────────────────────────────────────────────────────────
 
 function TabButton({
   active,
@@ -123,22 +136,11 @@ function KitCard({
       <p className="text-sm font-semibold text-slate-950">{displayName}</p>
 
       <div className="mt-2 space-y-1">
-        {items.map((item) => {
-          // Показываем длину профиля явно
-          const profileLengthMm = getProfileLengthMm(item.sku);
-
-          return (
-            <p key={item.sku} className="text-xs text-slate-500">
-              {item.name}
-              {profileLengthMm != null ? (
-                <span className="ml-1 font-medium text-slate-700">
-                  {profileLengthMm} мм
-                </span>
-              ) : null}
-              {" "}&times; {item.qty} — {fmt(item.priceRub)} ₽/шт.
-            </p>
-          );
-        })}
+        {items.map((item) => (
+          <p key={item.sku} className="text-xs text-slate-500">
+            {item.name} &times; {item.qty} — {fmt(item.priceRub)} ₽/шт.
+          </p>
+        ))}
       </div>
 
       <div className="mt-3 flex items-baseline gap-2">
@@ -147,16 +149,10 @@ function KitCard({
         <span className="text-xs text-emerald-600 font-medium">−15%</span>
       </div>
 
-      {selected ? (
-        <p className="mt-1 text-xs text-emerald-600 font-medium">✓ Выбран</p>
-      ) : null}
+      {selected ? <p className="mt-1 text-xs text-emerald-600 font-medium">✓ Выбран</p> : null}
     </button>
   );
 }
-
-// ── Catalog tab ───────────────────────────────────────────────────────────────
-
-type CartItems = Record<string, number>;
 
 function CatalogTab({
   cartItems,
@@ -169,9 +165,7 @@ function CatalogTab({
     catalog.categories[0]?.id ?? ""
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set()
-  );
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   const HITS_COUNT = 4;
 
@@ -209,7 +203,10 @@ function CatalogTab({
           <button
             key={cat.id}
             type="button"
-            onClick={() => { setActiveCategoryId(cat.id); setSearchQuery(""); }}
+            onClick={() => {
+              setActiveCategoryId(cat.id);
+              setSearchQuery("");
+            }}
             className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
               activeCategoryId === cat.id
                 ? "border-slate-950 bg-slate-950 text-white"
@@ -229,7 +226,6 @@ function CatalogTab({
         {visibleProducts.map((product) => {
           const qty = cartItems[product.id] ?? 0;
           const hasPrice = product.priceRub !== null;
-          // Для профилей всегда показываем длину явно
           const profileLengthMm = product.lengthMm ?? null;
 
           return (
@@ -238,11 +234,8 @@ function CatalogTab({
               className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3"
             >
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-slate-950 leading-5">
-                  {product.title}
-                </p>
+                <p className="text-sm font-medium text-slate-950 leading-5">{product.title}</p>
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                  {/* Длина профиля — всегда первой, выделена */}
                   {profileLengthMm != null ? (
                     <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
                       {profileLengthMm} мм
@@ -315,8 +308,6 @@ function CatalogTab({
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
-
 export function WizardStep1Lighting() {
   const { lightingDraft, setLightingDraft, options } = useCalculatorModal();
   const { snapshot } = usePriceCalculatorBridge();
@@ -332,9 +323,23 @@ export function WizardStep1Lighting() {
     options?.initialLightingTab === "catalog" ? "catalog" : "recommendations";
 
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
-  const [selectedKitId, setSelectedKitId] = useState<string | null>(
-    lightingDraft?.mode === "kit" ? (lightingDraft.kitId ?? null) : null
-  );
+
+  const [selectedPointKitId, setSelectedPointKitId] = useState<string | null>(() => {
+    if (lightingDraft?.mode !== "kit" || !lightingDraft.kitId) return null;
+    if (!lightingDraft.kitId.startsWith("combo:")) return lightingDraft.kitId;
+    const pair = lightingDraft.kitId.replace("combo:", "");
+    const [pointId] = pair.split("|");
+    return pointId || null;
+  });
+
+  const [selectedTrackKitId, setSelectedTrackKitId] = useState<string | null>(() => {
+    if (lightingDraft?.mode !== "kit" || !lightingDraft.kitId) return null;
+    if (!lightingDraft.kitId.startsWith("combo:")) return null;
+    const pair = lightingDraft.kitId.replace("combo:", "");
+    const [, trackId] = pair.split("|");
+    return trackId || null;
+  });
+
   const [cartItems, setCartItems] = useState<CartItems>(() => {
     if (lightingDraft?.mode === "catalog" && lightingDraft.items?.length) {
       return Object.fromEntries(lightingDraft.items.map((i) => [i.sku, i.qty]));
@@ -357,55 +362,76 @@ export function WizardStep1Lighting() {
         next[item.sku] = item.qty;
       }
       setCartItems(next);
-      setSelectedKitId(null);
+      setSelectedPointKitId(null);
+      setSelectedTrackKitId(null);
     } else if (incoming.mode === "kit" && incoming.kitId) {
-      setSelectedKitId(incoming.kitId);
-      setCartItems({});
+      if (incoming.kitId.startsWith("combo:")) {
+        const pair = incoming.kitId.replace("combo:", "");
+        const [pointId, trackId] = pair.split("|");
+        setSelectedPointKitId(pointId || null);
+        setSelectedTrackKitId(trackId || null);
+      } else {
+        const found = LIGHTING_KITS.find((k) => k.kitId === incoming.kitId);
+        if (found?.kitCategory === "point") setSelectedPointKitId(incoming.kitId);
+        if (
+          found?.kitCategory === "track-built-in" ||
+          found?.kitCategory === "track-surface"
+        ) {
+          setSelectedTrackKitId(incoming.kitId);
+        }
+      }
     }
   }, [options?.initialLighting]);
 
-  const recommendedKits = useMemo(
-    () => getRecommendedKits(derivedInputs.pointSpotsQty, derivedInputs.trackMountType),
-    [derivedInputs.pointSpotsQty, derivedInputs.trackMountType]
+  const pointKits = useMemo(() => getPointRecommendations(), []);
+  const trackKits = useMemo(
+    () => getTrackRecommendations(derivedInputs.trackMountType),
+    [derivedInputs.trackMountType]
   );
 
-  const inputsChanged =
-    lightingDraft?.userCustomizedLighting === true &&
-    lightingDraft.derivedInputsSnapshot !== undefined &&
-    (lightingDraft.derivedInputsSnapshot.pointSpotsQty !== derivedInputs.pointSpotsQty ||
-      lightingDraft.derivedInputsSnapshot.trackMountType !== derivedInputs.trackMountType ||
-      lightingDraft.derivedInputsSnapshot.trackLengthMeters !== derivedInputs.trackLengthMeters);
+  const selectedPointKit = useMemo(
+    () => LIGHTING_KITS.find((k) => k.kitId === selectedPointKitId) ?? null,
+    [selectedPointKitId]
+  );
+  const selectedTrackKit = useMemo(
+    () => LIGHTING_KITS.find((k) => k.kitId === selectedTrackKitId) ?? null,
+    [selectedTrackKitId]
+  );
 
-  const handleKitSelect = (kit: typeof LIGHTING_KITS[number]) => {
-    setSelectedKitId(kit.kitId);
+  const pointKitData = useMemo(() => {
+    if (!selectedPointKit) return null;
+    const targetQty = derivedInputs.pointSpotsQty || selectedPointKit.defaultSpotsQty;
+    const scaled = scaleKit(selectedPointKit, targetQty);
+    const displayName = `${selectedPointKit.kitBaseName} · ${scaled.scaledSpotsQty} шт.`;
+    return { ...scaled, displayName };
+  }, [selectedPointKit, derivedInputs.pointSpotsQty]);
 
+  const trackKitData = useMemo(() => {
+    if (!selectedTrackKit) return null;
     const targetQty =
-      kit.kitCategory === "point"
-        ? derivedInputs.pointSpotsQty || kit.defaultSpotsQty
-        : derivedInputs.recommendedTrackSpotsQty || kit.defaultSpotsQty;
-
-    const { items, totalRub, scaledSpotsQty } = scaleKit(kit, targetQty);
-    const discountedTotalRub = applyLightingDiscount(totalRub);
-
-    const draft: LightingSnapshot = {
-      mode: "kit",
-      kitId: kit.kitId,
-      kitBaseName: kit.kitBaseName,
-      scaledSpotsQty,
-      items,
+      derivedInputs.recommendedTrackSpotsQty || selectedTrackKit.defaultSpotsQty;
+    const scaled = scaleKit(selectedTrackKit, targetQty);
+    const normalizedItems = withTrackProfilesByLength(
+      scaled.items,
+      selectedTrackKit.kitId,
+      derivedInputs.trackLengthMeters
+    );
+    const totalRub = normalizedItems.reduce((sum, item) => sum + item.qty * item.priceRub, 0);
+    const displayName = `${selectedTrackKit.kitBaseName} · ${scaled.scaledSpotsQty} шт.`;
+    return {
+      items: normalizedItems,
       totalRub,
-      discountedTotalRub,
-      userCustomizedLighting: false,
-      derivedInputsSnapshot: { ...derivedInputs },
+      scaledSpotsQty: scaled.scaledSpotsQty,
+      displayName,
     };
-    setLightingDraft(draft);
-  };
+  }, [
+    selectedTrackKit,
+    derivedInputs.recommendedTrackSpotsQty,
+    derivedInputs.trackLengthMeters,
+  ]);
 
-  const handleCartChange = (next: CartItems) => {
-    setCartItems(next);
-    setSelectedKitId(null);
-
-    const items: LightingItem[] = Object.entries(next)
+  const catalogExtrasItems = useMemo<LightingItem[]>(() => {
+    return Object.entries(cartItems)
       .filter(([, qty]) => qty > 0)
       .map(([sku, qty]) => {
         const product = catalog.products.find((p) => p.id === sku);
@@ -416,42 +442,88 @@ export function WizardStep1Lighting() {
           priceRub: product?.priceRub ?? 0,
         };
       });
+  }, [cartItems]);
 
-    const totalRub = items.reduce((sum, i) => sum + i.qty * i.priceRub, 0);
-    const discountedTotalRub = applyLightingDiscount(totalRub);
+  const mergedItems = useMemo(() => {
+    return mergeItems([
+      pointKitData?.items ?? [],
+      trackKitData?.items ?? [],
+      catalogExtrasItems,
+    ]);
+  }, [pointKitData, trackKitData, catalogExtrasItems]);
 
-    if (items.length === 0) {
+  useEffect(() => {
+    const hasPointKit = selectedPointKit !== null;
+    const hasTrackKit = selectedTrackKit !== null;
+    const hasAnyKit = hasPointKit || hasTrackKit;
+    const hasCatalogExtras = catalogExtrasItems.length > 0;
+
+    if (!hasAnyKit && !hasCatalogExtras) {
       setLightingDraft({ mode: "none", userCustomizedLighting: false });
       return;
     }
 
-    const draft: LightingSnapshot = {
+    const totalRub = mergedItems.reduce((sum, item) => sum + item.qty * item.priceRub, 0);
+    const discountedTotalRub = applyLightingDiscount(totalRub);
+
+    if (hasAnyKit) {
+      const parts: string[] = [];
+      if (pointKitData) parts.push(`Точечные: ${pointKitData.displayName}`);
+      if (trackKitData) parts.push(`Трек: ${trackKitData.displayName}`);
+
+      const kitBaseName: string = parts.join(" + ");
+      const kitId: string = `combo:${selectedPointKitId ?? ""}|${selectedTrackKitId ?? ""}`;
+
+      const nextDraft: LightingSnapshot = {
+        mode: "kit",
+        kitId,
+        kitBaseName,
+        scaledSpotsQty: (pointKitData?.scaledSpotsQty ?? 0) + (trackKitData?.scaledSpotsQty ?? 0),
+        items: mergedItems,
+        totalRub,
+        discountedTotalRub,
+        userCustomizedLighting: hasCatalogExtras,
+        derivedInputsSnapshot: { ...derivedInputs },
+      };
+      setLightingDraft(nextDraft);
+      return;
+    }
+
+    const nextDraft: LightingSnapshot = {
       mode: "catalog",
-      items,
+      items: mergedItems,
       totalRub,
       discountedTotalRub,
       userCustomizedLighting: true,
       derivedInputsSnapshot: { ...derivedInputs },
     };
-    setLightingDraft(draft);
-  };
+    setLightingDraft(nextDraft);
+  }, [
+    selectedPointKit,
+    selectedTrackKit,
+    selectedPointKitId,
+    selectedTrackKitId,
+    pointKitData,
+    trackKitData,
+    catalogExtrasItems,
+    mergedItems,
+    derivedInputs,
+    setLightingDraft,
+  ]);
 
-  const handleResetCustomization = () => {
-    setSelectedKitId(null);
-    if (lightingDraft) {
-      setLightingDraft({ ...lightingDraft, userCustomizedLighting: false });
-    }
+  const handleCartChange = (next: CartItems) => {
+    setCartItems(next);
   };
 
   const handleNoLighting = () => {
-    setSelectedKitId(null);
+    setSelectedPointKitId(null);
+    setSelectedTrackKitId(null);
     setCartItems({});
     setLightingDraft({ mode: "none", userCustomizedLighting: false });
   };
 
   return (
     <div className="space-y-4">
-      {/* Tabs */}
       <div className="flex gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
         <TabButton
           active={activeTab === "recommendations"}
@@ -459,87 +531,71 @@ export function WizardStep1Lighting() {
         >
           Рекомендации
         </TabButton>
-        <TabButton
-          active={activeTab === "catalog"}
-          onClick={() => setActiveTab("catalog")}
-        >
+        <TabButton active={activeTab === "catalog"} onClick={() => setActiveTab("catalog")}>
           Каталог
         </TabButton>
       </div>
 
-      {/* Inputs changed banner */}
-      {inputsChanged && activeTab === "recommendations" ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm text-amber-800 font-medium">
-            Параметры потолка изменились
-          </p>
-          <p className="text-xs text-amber-700 mt-1">
-            Обновить подбор под новые параметры?
-          </p>
-          <div className="mt-3 flex gap-2">
-            <button
-              type="button"
-              onClick={handleResetCustomization}
-              className="rounded-full border border-amber-800 px-3 py-1 text-xs font-semibold text-amber-800 hover:bg-amber-100 transition-colors"
-            >
-              Обновить
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (lightingDraft) {
-                  setLightingDraft({
-                    ...lightingDraft,
-                    derivedInputsSnapshot: { ...derivedInputs },
-                  });
-                }
-              }}
-              className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
-            >
-              Оставить
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {/* Recommendations tab */}
       {activeTab === "recommendations" ? (
-        <div className="space-y-3">
-          {derivedInputs.trackMountType !== "none" || derivedInputs.pointSpotsQty > 0 ? (
-            <p className="text-xs text-slate-500">
-              Подобрано по параметрам:{" "}
-              {derivedInputs.pointSpotsQty > 0
-                ? `${derivedInputs.pointSpotsQty} точечных`
-                : null}
-              {derivedInputs.pointSpotsQty > 0 && derivedInputs.trackMountType !== "none"
-                ? ", "
-                : null}
-              {derivedInputs.trackMountType !== "none"
-                ? `трек ${derivedInputs.trackLengthMeters} м.п.`
-                : null}
-            </p>
-          ) : (
-            <p className="text-xs text-slate-500">
-              Укажите треки или светильники на шаге потолка — подберём точнее.
-            </p>
-          )}
+        <div className="space-y-5">
+          <p className="text-xs text-slate-500">
+            Подбор по параметрам: {derivedInputs.pointSpotsQty} точечных, трек{" "}
+            {derivedInputs.trackLengthMeters} м.п.
+          </p>
 
-          {recommendedKits.map((kit) => {
-            const targetQty =
-              kit.kitCategory === "point"
-                ? derivedInputs.pointSpotsQty || kit.defaultSpotsQty
-                : derivedInputs.recommendedTrackSpotsQty || kit.defaultSpotsQty;
+          {derivedInputs.pointSpotsQty > 0 ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-slate-950">Точечные светильники</p>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPointKitId(null)}
+                  className="text-xs text-slate-500 hover:text-slate-900 transition-colors"
+                >
+                  Без точечных
+                </button>
+              </div>
 
-            return (
-              <KitCard
-                key={kit.kitId}
-                kit={kit}
-                selected={selectedKitId === kit.kitId}
-                scaledQty={targetQty}
-                onSelect={() => handleKitSelect(kit)}
-              />
-            );
-          })}
+              {pointKits.map((kit) => (
+                <KitCard
+                  key={kit.kitId}
+                  kit={kit}
+                  selected={selectedPointKitId === kit.kitId}
+                  scaledQty={derivedInputs.pointSpotsQty || kit.defaultSpotsQty}
+                  onSelect={() =>
+                    setSelectedPointKitId((prev) => (prev === kit.kitId ? null : kit.kitId))
+                  }
+                />
+              ))}
+            </div>
+          ) : null}
+
+          {derivedInputs.trackMountType !== "none" && derivedInputs.trackLengthMeters > 0 ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-slate-950">Трековое освещение</p>
+                <button
+                  type="button"
+                  onClick={() => setSelectedTrackKitId(null)}
+                  className="text-xs text-slate-500 hover:text-slate-900 transition-colors"
+                >
+                  Без трека
+                </button>
+              </div>
+
+              {trackKits.map((kit) => (
+                <KitCard
+                  key={kit.kitId}
+                  kit={kit}
+                  selected={selectedTrackKitId === kit.kitId}
+                  scaledQty={derivedInputs.recommendedTrackSpotsQty || kit.defaultSpotsQty}
+                  onSelect={() =>
+                    setSelectedTrackKitId((prev) => (prev === kit.kitId ? null : kit.kitId))
+                  }
+                />
+              ))}
+            </div>
+          ) : null}
 
           <button
             type="button"
@@ -559,7 +615,6 @@ export function WizardStep1Lighting() {
         </div>
       ) : null}
 
-      {/* Catalog tab */}
       {activeTab === "catalog" ? (
         <CatalogTab cartItems={cartItems} onCartChange={handleCartChange} />
       ) : null}
