@@ -3,7 +3,6 @@
 
 import {
   getCalculatorSummaryLines,
-  getLightingSummaryLines,
   usePriceCalculatorBridge,
 } from "@/components/home/price-calculator-context";
 import { useCalculatorModal } from "./calculator-modal-context";
@@ -11,39 +10,11 @@ import { isSnapshotValid } from "@/lib/calculator-snapshot-guard";
 import { calcRequiredWorksFromLighting } from "@/lib/lighting-formulas";
 import type { WizardStep } from "@/lib/calculator-modal-types";
 import { getKitDisplayName } from "@/lib/calculator-modal-types";
-import {
-  COLIBRI_PROFILES,
-  CLARUS_PROFILES,
-  calcProfilesForTrackMeters,
-  formatProfilePieces,
-  type ProfilePiece,
-} from "@/lib/lighting-kits";
+import { COLIBRI_PROFILES, CLARUS_PROFILES } from "@/lib/lighting-kits";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("ru-RU").format(n);
 }
-
-// ─── Profile hint: только описание набора, без сумм ──────────────────────────
-
-type TrackProfileHint = {
-  pieces: ProfilePiece[];
-  /** null = есть профили без подтверждённой цены */
-  description: string;
-};
-
-function getTrackProfileHint(
-  trackLengthMeters: number | null,
-  kitId: string | undefined
-): TrackProfileHint | null {
-  if (!trackLengthMeters || trackLengthMeters <= 0) return null;
-  const isClarus = kitId?.includes("clarus");
-  const profiles = isClarus ? CLARUS_PROFILES : COLIBRI_PROFILES;
-  const pieces = calcProfilesForTrackMeters(trackLengthMeters, profiles);
-  if (pieces.length === 0) return null;
-  return { pieces, description: formatProfilePieces(pieces) };
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const ALL_PROFILES = [...COLIBRI_PROFILES, ...CLARUS_PROFILES];
 
@@ -52,33 +23,22 @@ function getProfileLengthLabel(sku: string): string | null {
   return entry ? `${entry.lengthMm} мм` : null;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 type WizardStep2SummaryProps = {
   onConfirm: () => void;
 };
 
 export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
   const { snapshot } = usePriceCalculatorBridge();
-  const {
-    lightingDraft,
-    ceilingTotal,
-    lightingDiscountedTotal,
-    grandTotal,
-    goToStep,
-  } = useCalculatorModal();
+  const { lightingDraft, ceilingTotal, lightingDiscountedTotal, grandTotal, goToStep } =
+    useCalculatorModal();
 
   const calcLines = getCalculatorSummaryLines(snapshot);
-  const lightingLines = getLightingSummaryLines(
-    snapshot ? { ...snapshot, lighting: lightingDraft ?? undefined } : null
-  );
 
   const hasLighting =
     lightingDraft !== null &&
     lightingDraft.mode !== "none" &&
     (lightingDraft.items?.length ?? 0) > 0;
 
-  // ── Reconcile ───────────────────────────────────────────────────────────────
   const { requiredLightsCount } = calcRequiredWorksFromLighting(lightingDraft?.items);
   const currentLightsCount = snapshot?.lightsCount ?? 0;
   const willReconcileLights =
@@ -90,19 +50,12 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
     ? `Монтаж светильников скорректирован: ${currentLightsCount} → ${requiredLightsCount} шт. (${fmt(requiredLightsCount * (snapshot?.lightsRatePerUnit ?? 750))} ₽)`
     : null;
 
-  // ── Track profile hint — только описание набора, БЕЗ сумм ──────────────────
-  const trackLengthMeters = snapshot?.trackLength ?? null;
-  const trackProfileHint = getTrackProfileHint(trackLengthMeters, lightingDraft?.kitId);
-  // Показываем подсказку только если пользователь выбрал трековый кит
-  const showProfileHint =
-    trackProfileHint !== null &&
-    hasLighting &&
-    (lightingDraft?.kitId?.includes("colibri") || lightingDraft?.kitId?.includes("clarus"));
-
   if (!isSnapshotValid(snapshot)) {
     return (
       <div className="flex flex-col items-center justify-center py-10 text-center space-y-4">
-        <div className="text-4xl" aria-hidden="true">📐</div>
+        <div className="text-4xl" aria-hidden="true">
+          📐
+        </div>
         <p className="text-base font-semibold text-slate-950">
           Сначала укажите параметры потолка
         </p>
@@ -123,7 +76,6 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
 
   return (
     <div className="space-y-6">
-      {/* Hero totals */}
       <div className="rounded-2xl bg-slate-950 p-6 text-white">
         <p className="text-sm text-white/60 mb-1">Потолок (работы)</p>
         <p className="text-3xl font-bold tracking-tight">{fmt(ceilingTotal)} ₽</p>
@@ -132,20 +84,15 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
           <>
             <div className="my-4 border-t border-white/10" />
             <p className="text-sm text-white/60 mb-1">Итого с освещением</p>
-            <p className="text-4xl font-bold tracking-tight">
-              ~{fmt(grandTotal)} ₽
-            </p>
+            <p className="text-4xl font-bold tracking-tight">~{fmt(grandTotal)} ₽</p>
             <p className="mt-2 text-xs text-white/50">
               Свет: {fmt(lightingDiscountedTotal)} ₽ со скидкой 15%
-              {lightingDraft.totalRub != null ? (
-                <> (от {fmt(lightingDraft.totalRub)} ₽)</>
-              ) : null}
+              {lightingDraft.totalRub != null ? <> (от {fmt(lightingDraft.totalRub)} ₽)</> : null}
             </p>
           </>
         ) : null}
       </div>
 
-      {/* Reconcile banner */}
       {reconcileNote ? (
         <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3">
           <p className="text-sm font-semibold text-blue-900">
@@ -158,24 +105,6 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
         </div>
       ) : null}
 
-      {/* Profile length hint — только набор длин, без рублёвой суммы */}
-      {showProfileHint && trackProfileHint ? (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-          <p className="text-sm font-semibold text-slate-950">
-            Ориентир по набору профилей
-          </p>
-          <p className="mt-1 text-sm text-slate-600 leading-5">
-            Для трека {fmt(Math.round((trackLengthMeters ?? 0) * 1000))} мм
-            рекомендуется:{" "}
-            <span className="font-medium">{trackProfileHint.description}</span>
-          </p>
-          <p className="mt-1.5 text-xs text-slate-400">
-            Точный набор и стоимость профилей уточним на замере.
-          </p>
-        </div>
-      ) : null}
-
-      {/* Details */}
       <details className="group rounded-2xl border border-slate-200 bg-slate-50">
         <summary className="flex cursor-pointer select-none items-center justify-between px-4 py-3 text-sm font-semibold text-slate-950 list-none">
           <span>Состав расчёта</span>
@@ -188,14 +117,15 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
         </summary>
 
         <div className="border-t border-slate-200 px-4 py-4 space-y-4">
-          {/* Потолок */}
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
               Потолок
             </p>
             <ul className="space-y-1.5">
               {calcLines.map((line) => (
-                <li key={line} className="text-sm text-slate-600">{line}</li>
+                <li key={line} className="text-sm text-slate-600">
+                  {line}
+                </li>
               ))}
             </ul>
             {reconcileNote ? (
@@ -205,7 +135,6 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
             ) : null}
           </div>
 
-          {/* Освещение */}
           {hasLighting && lightingDraft.items && lightingDraft.items.length > 0 ? (
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
@@ -214,14 +143,15 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
               {(() => {
                 const displayName = getKitDisplayName(lightingDraft);
                 return displayName ? (
-                  <p className="text-sm font-medium text-slate-700 mb-1">
-                    {displayName}
-                  </p>
+                  <p className="text-sm font-medium text-slate-700 mb-1">{displayName}</p>
                 ) : null;
               })()}
               <ul className="space-y-1.5">
                 {lightingDraft.items.map((item) => {
                   const lengthLabel = getProfileLengthLabel(item.sku);
+                  const shouldShowLen =
+                    !!lengthLabel && !item.name.includes(lengthLabel);
+
                   return (
                     <li
                       key={item.sku}
@@ -229,12 +159,10 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
                     >
                       <span className="min-w-0">
                         {item.name}
-                        {lengthLabel ? (
-                          <span className="ml-1 text-xs text-slate-400">
-                            ({lengthLabel})
-                          </span>
-                        ) : null}
-                        {" "}&times; {item.qty}
+                        {shouldShowLen ? (
+                          <span className="ml-1 text-xs text-slate-400">({lengthLabel})</span>
+                        ) : null}{" "}
+                        &times; {item.qty}
                       </span>
                       <span className="shrink-0 text-slate-400">
                         {fmt(item.qty * item.priceRub)} ₽
@@ -258,13 +186,9 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
         </div>
       </details>
 
-      {/* Disclaimer */}
       <p className="text-xs text-slate-500 leading-5">
-        Это ориентировочный расчёт. Точную стоимость определим на бесплатном
-        замере.
-        {hasLighting
-          ? " Скидка 15% на оборудование сохраняется при заказе потолка."
-          : null}
+        Это ориентировочный расчёт. Точную стоимость определим на бесплатном замере.
+        {hasLighting ? " Скидка 15% на оборудование сохраняется при заказе потолка." : null}
       </p>
     </div>
   );
