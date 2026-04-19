@@ -218,18 +218,18 @@ export function CalculatorModal() {
   return createPortal(
    <div
   aria-hidden={!isOpen}
-  className={`fixed inset-0 z-50 ${isOpen ? "pointer-events-auto" : "pointer-events-none"}`}
+  className={`fixed inset-0 z-[120] ${isOpen ? "pointer-events-auto" : "pointer-events-none"}`}
 >
       <div
         ref={overlayRef}
         onClick={handleOverlayClick}
-        className={`fixed inset-0 bg-black/50 ${transitionClass} ${
+        className={`fixed inset-0 z-[120] bg-black/50 ${transitionClass} ${
           visible && isOpen ? "opacity-100" : "opacity-0"
         } ${isOpen ? "pointer-events-auto" : "pointer-events-none"}`}
       />
 
       <div
-        className={`fixed inset-0 flex items-end md:items-center md:justify-center ${
+        className={`fixed inset-0 z-[121] flex items-end md:items-center md:justify-center ${
           isOpen ? "pointer-events-auto" : "pointer-events-none"
         }`}
       >
