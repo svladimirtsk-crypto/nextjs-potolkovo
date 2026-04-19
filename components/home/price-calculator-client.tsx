@@ -846,7 +846,7 @@ export function PriceCalculatorClient({
                 onChange={handleTrackLengthChange}
               />
               <p className="mt-3 text-xs text-slate-500">
-                Ориентировочно: ~{calcRecommendedTrackSpots(trackLength, derivedTrackMountType)} спотов.
+               Ориентировочно: ~{calcRecommendedTrackSpots(trackLength)} спотов.
                 Точный подбор — на следующем шаге.
               </p>
             </div>
