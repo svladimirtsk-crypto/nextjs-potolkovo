@@ -125,9 +125,7 @@ export function ActionForm({ source }: ActionFormProps) {
       setMessage("На клиенте не настроен NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY.");
       return;
     }
-const lightingKitDisplay = snapshot?.lighting
-  ? getKitDisplayName(snapshot.lighting)
-  : "";
+
     const formData = new FormData();
     formData.append("access_key",  accessKey);
     formData.append("subject",     "Новая заявка с сайта ПОТОЛКОВО");
@@ -144,6 +142,9 @@ const lightingKitDisplay = snapshot?.lighting
     formData.append("company",  "");
 
     formData.append("lighting_mode", snapshot?.lighting?.mode ?? "none");
+    const lightingKitDisplay = snapshot?.lighting
+  ? getKitDisplayName(snapshot.lighting)
+  : "";
     formData.append("lighting_kit", lightingKitDisplay);
     formData.append("lighting_items_count",
       String(snapshot?.lighting?.items?.length ?? 0)
