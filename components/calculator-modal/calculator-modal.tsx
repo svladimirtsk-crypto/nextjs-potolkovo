@@ -169,22 +169,19 @@ export function CalculatorModal() {
         reconciledTotal + (lightingDiscountedTotal ?? 0);
 
       setSnapshot({
-        ...snapshot,
-        // reconcile-поля
-        lightsEnabled: needsReconcile
-          ? reconciledLightsCount > 0
-          : snapshot.lightsEnabled,
-        lightsCount: needsReconcile
-          ? reconciledLightsCount
-          : snapshot.lightsCount,
-        lightsTotal: reconciledLightsTotal,
-        total:       reconciledTotal,
-        // обогащение
-        lighting:   lightingDraft ?? undefined,
-        grandTotal: computedGrandTotal,
-        // флаг для Step 2 summary
-        _reconciled: needsReconcile,
-      } as typeof snapshot & { _reconciled?: boolean });
+  ...snapshot,
+  lightsEnabled: needsReconcile ? reconciledLightsCount > 0 : snapshot.lightsEnabled,
+  lightsCount: needsReconcile ? reconciledLightsCount : snapshot.lightsCount,
+  lightsTotal: reconciledLightsTotal,
+  total: reconciledTotal,
+
+  lighting: lightingDraft ?? undefined,
+  grandTotal: computedGrandTotal,
+
+  leadSource: snapshot.leadSource ?? options?.source ?? "",
+
+  _reconciled: needsReconcile,
+} as typeof snapshot & { _reconciled?: boolean });
     }
 
     setHasInteracted(true);
