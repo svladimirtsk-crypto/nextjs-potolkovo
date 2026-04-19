@@ -1,5 +1,6 @@
 // lib/eks-feed2-catalog.ts
 import { cache } from "react";
+import snapshotData from "@/data/eks-feed2-snapshot.json";
 
 export type FeedCatalogParam = {
   label: string;
@@ -45,6 +46,7 @@ export type FeedCatalogProduct = {
   kind: FeedCatalogKind;
   unit: FeedCatalogUnit;
   lengthMeters: number | null;
+  pieceLengthMeters: number | null;
 };
 
 export type FeedCatalogCategory = {
@@ -85,39 +87,31 @@ const WHITELIST: readonly WhitelistMeta[] = [
   { id: "131" },
   { id: "133" },
   { id: "213" },
-
   { id: "46", parentId: "21" },
   { id: "177", parentId: "21" },
   { id: "185", parentId: "21" },
-
   { id: "41", parentId: "40" },
   { id: "42", parentId: "40" },
   { id: "210", parentId: "40" },
-
   { id: "209", parentId: "50" },
   { id: "211", parentId: "50" },
   { id: "212", parentId: "50" },
-
   { id: "204", parentId: "61" },
   { id: "205", parentId: "61" },
   { id: "206", parentId: "61" },
   { id: "208", parentId: "61" },
-
   { id: "134", parentId: "130" },
   { id: "135", parentId: "130" },
   { id: "145", parentId: "130" },
   { id: "146", parentId: "130" },
-
   { id: "50", parentId: "131" },
   { id: "61", parentId: "131" },
   { id: "170", parentId: "131" },
-
   { id: "22", parentId: "133" },
   { id: "186", parentId: "133" },
   { id: "199", parentId: "133" },
-
   { id: "190", parentId: "186" },
-  { id: "191", parentId: "186" },
+  { id: "191", parentId: "186" }
 ];
 
 const WHITELIST_BY_ID = new Map(WHITELIST.map((w) => [w.id, w]));
@@ -127,8 +121,12 @@ const BANNED_PARAMS = new Set([
   "остатки мск",
   "кол-во в коробке",
   "рабочее напряжение",
-  "класс защиты",
+  "класс защиты"
 ]);
+
+function toSafeString(x: unknown): string {
+  return String(x ?? "").trim();
+}
 
 function decodeXml(str: string): string {
   return str
@@ -186,9 +184,7 @@ function extractCategories(xml: string): RawCategory[] {
     const id = attrs.match(/\bid="([^"]+)"/i)?.[1] ?? "";
     const parentId = attrs.match(/\bparentId="([^"]+)"/i)?.[1] ?? null;
 
-    if (id && title) {
-      out.push({ id, title, parentId });
-    }
+    if (id && title) out.push({ id, title, parentId });
     match = re.exec(xml);
   }
 
@@ -224,10 +220,7 @@ function extractParams(offerBlock: string): FeedCatalogParam[] {
   return out;
 }
 
-function buildCategoryPath(
-  categoryId: string,
-  categoriesById: Map<string, RawCategory>
-): string {
+function buildCategoryPath(categoryId: string, categoriesById: Map<string, RawCategory>): string {
   const parts: string[] = [];
   let currentId: string | null = categoryId;
   const guard = new Set<string>();
@@ -250,31 +243,33 @@ function isWhitelistedCategory(categoryId: string, parentId: string | null): boo
   const rule = WHITELIST_BY_ID.get(categoryId);
   if (!rule) return false;
   if (!rule.parentId) return true;
-  return rule.parentId === (parentId ?? "");
+  return rule.parentId === toSafeString(parentId);
 }
 
 function deriveUnit(name: string): FeedCatalogUnit {
-  const lower = name.toLowerCase();
-  if (lower.includes("цена за пог м")) return "m";
-  return "pcs";
+  return name.toLowerCase().includes("цена за пог м") ? "m" : "pcs";
 }
 
 function deriveLengthMeters(name: string): number | null {
   const normalized = name.toLowerCase().replace(",", ".");
   const mMatch = normalized.match(/(\d+(?:\.\d+)?)\s*м(?!м)/i);
   if (!mMatch) return null;
-
   const v = Number(mMatch[1]);
   if (!Number.isFinite(v) || v <= 0) return null;
   return v;
 }
 
-function deriveSystem(
-  categoryId: string,
-  categoryPath: string,
-  name: string,
-  url: string
-): FeedCatalogSystem {
+function derivePieceLengthMeters(name: string): number | null {
+  const normalized = name.toLowerCase().replace(",", ".");
+  const mmMatch = normalized.match(/(\d{3,4})\s*мм/i);
+  if (mmMatch) {
+    const mm = Number(mmMatch[1]);
+    if (Number.isFinite(mm) && mm > 0) return mm / 1000;
+  }
+  return deriveLengthMeters(name);
+}
+
+function deriveSystem(categoryId: string, categoryPath: string, name: string, url: string): FeedCatalogSystem {
   const joined = `${categoryPath} ${name} ${url}`.toLowerCase();
 
   if (joined.includes("clarus") || categoryId === "146") return "CLARUS_48";
@@ -289,15 +284,7 @@ function deriveSystem(
   ) {
     return "SMART_HOME";
   }
-  if (
-    categoryId === "130" ||
-    categoryId === "134" ||
-    categoryId === "208" ||
-    joined.includes("трек")
-  ) {
-    return "TRACK_220";
-  }
-
+  if (categoryId === "130" || categoryId === "134" || joined.includes("трек")) return "TRACK_220";
   return "UNKNOWN";
 }
 
@@ -347,26 +334,23 @@ function pickKeyAttributes(params: FeedCatalogParam[]): FeedCatalogParam[] {
     "Температура",
     "Цветовая температура",
     "Цвет",
-    "Напряжение",
-    "Световой поток",
     "Тип",
+    "Световой поток"
   ];
-
   const byLabel = new Map<string, FeedCatalogParam>();
   for (const p of params) {
     if (!byLabel.has(p.label)) byLabel.set(p.label, p);
   }
 
   const picked: FeedCatalogParam[] = [];
-
   for (const label of priorities) {
-    const exact = byLabel.get(label);
-    if (exact && picked.length < 4) picked.push(exact);
+    const x = byLabel.get(label);
+    if (x && picked.length < 4) picked.push(x);
   }
 
   if (picked.length < 4) {
     for (const p of params) {
-      if (picked.some((x) => x.label === p.label && x.value === p.value)) continue;
+      if (picked.some((k) => k.label === p.label && k.value === p.value)) continue;
       picked.push(p);
       if (picked.length >= 4) break;
     }
@@ -375,44 +359,91 @@ function pickKeyAttributes(params: FeedCatalogParam[]): FeedCatalogParam[] {
   return picked;
 }
 
-function toBoolAvailable(raw: string | null): boolean {
-  const v = String(raw ?? "").toLowerCase();
-  return v === "true" || v === "1" || v === "да" || v === "yes";
-}
-
 function parsePrice(raw: string | null): number | null {
-  const cleaned = String(raw ?? "").replace(",", ".").replace(/\s+/g, "");
+  const cleaned = toSafeString(raw).replace(",", ".").replace(/\s+/g, "");
   const n = Number(cleaned);
   if (!Number.isFinite(n) || n <= 0) return null;
   return Math.round(n);
 }
 
-const loadCatalogInternal = cache(async (): Promise<FeedCatalogResult> => {
+function toBoolAvailable(raw: string | null): boolean {
+  const v = toSafeString(raw).toLowerCase();
+  return v === "true" || v === "1" || v === "yes" || v === "да";
+}
+
+function normalizeSnapshot(input: unknown): FeedCatalogResult {
+  const s = input as FeedCatalogResult;
+  const categories = Array.isArray(s?.categories) ? s.categories : [];
+  const products = Array.isArray(s?.products) ? s.products : [];
+
+  const normalizedProducts = products
+    .filter((p) => Number.isFinite(p.priceRub) && p.priceRub > 0)
+    .filter((p) => WHITELIST_BY_ID.has(String(p.categoryId)))
+    .map((p) => ({
+      ...p,
+      productId: toSafeString(p.productId),
+      vendorCode: toSafeString(p.vendorCode),
+      offerId: toSafeString(p.offerId),
+      name: toSafeString(p.name),
+      url: toSafeString(p.url),
+      categoryId: toSafeString(p.categoryId),
+      categoryPath: toSafeString(p.categoryPath),
+      images: Array.isArray(p.images) ? p.images.map((x) => toSafeString(x)).filter(Boolean) : [],
+      coverImage: toSafeString(p.coverImage),
+      params: Array.isArray(p.params) ? p.params.filter((x) => !BANNED_PARAMS.has(toSafeString(x.label).toLowerCase())) : [],
+      keyAttributes: Array.isArray(p.keyAttributes) ? p.keyAttributes : [],
+      priceRub: Math.round(p.priceRub),
+      available: Boolean(p.available),
+      unit: p.unit === "m" ? "m" : "pcs",
+      lengthMeters: p.lengthMeters ?? null,
+      pieceLengthMeters: p.pieceLengthMeters ?? null
+    }));
+
+  return {
+    ok: normalizedProducts.length > 0,
+    updatedAt: toSafeString(s?.updatedAt) || new Date().toISOString(),
+    source: toSafeString(s?.source) || "snapshot",
+    discountPercentForCeilingOrder: Number.isFinite(s?.discountPercentForCeilingOrder)
+      ? s.discountPercentForCeilingOrder
+      : DISCOUNT_PERCENT,
+    categories: categories.map((c) => ({
+      id: toSafeString(c.id),
+      title: toSafeString(c.title),
+      parentId: c.parentId ? toSafeString(c.parentId) : null
+    })),
+    products: normalizedProducts,
+    errorMessage: normalizedProducts.length > 0 ? undefined : "Snapshot has zero products"
+  };
+}
+
+async function loadLiveFeed2(): Promise<FeedCatalogResult> {
   try {
-    const response = await fetch(FEED_URL, {
-      next: { revalidate: 60 * 30 },
-      cache: "force-cache",
-    });
+    const startedAt = Date.now();
+    const response = await fetch(FEED_URL, { cache: "no-store" });
+
+    const contentType: string = String(response.headers.get("content-type") ?? "");
+    const text = await response.text();
+    const head = String(text.slice(0, 350) ?? "");
+    console.info("[feed2] status=", response.status, "contentType=", contentType, "len=", text.length);
+    console.info("[feed2] head=", head);
 
     if (!response.ok) {
       return {
         ok: false,
         updatedAt: new Date().toISOString(),
-        source: FEED_URL,
+        source: "live-feed2",
         discountPercentForCeilingOrder: DISCOUNT_PERCENT,
         categories: [],
         products: [],
-        errorMessage: `Feed HTTP ${response.status}`,
+        errorMessage: `HTTP ${response.status}`
       };
     }
 
-    const xml = await response.text();
-    const categories = extractCategories(xml);
+    const categories = extractCategories(text);
     const categoriesById = new Map(categories.map((c) => [c.id, c]));
-    const offerBlocks = xml.match(/<offer\b[\s\S]*?<\/offer>/gi) ?? [];
-
+    const offerBlocks = text.match(/<offer\b[\s\S]*?<\/offer>/gi) ?? [];
+    const usedIds = new Set<string>();
     const products: FeedCatalogProduct[] = [];
-    const usedProductIds = new Set<string>();
 
     for (const block of offerBlocks) {
       const offerId = block.match(/<offer\b[^>]*\bid="([^"]+)"/i)?.[1] ?? "";
@@ -421,39 +452,27 @@ const loadCatalogInternal = cache(async (): Promise<FeedCatalogResult> => {
       const categoryId = extractTag(block, "categoryId") ?? "";
       if (!categoryId) continue;
 
-      const cat = categoriesById.get(categoryId);
-      if (!cat) continue;
-      if (!isWhitelistedCategory(categoryId, cat.parentId)) continue;
+      const categoryMeta = categoriesById.get(categoryId);
+      if (!categoryMeta) continue;
+      if (!isWhitelistedCategory(categoryId, categoryMeta.parentId)) continue;
 
       const priceRub = parsePrice(extractTag(block, "price"));
       if (priceRub === null) continue;
 
-      const vendorCodeRaw = extractTag(block, "vendorCode");
-      const vendorCode = normalizeSpace(String(vendorCodeRaw ?? offerId));
+      const vendorCode = toSafeString(extractTag(block, "vendorCode") ?? offerId);
       if (!vendorCode) continue;
 
-      const name = extractTag(block, "name") ?? `Товар ${vendorCode}`;
-      const url = extractTag(block, "url") ?? "https://eksmarket.ru/";
-      const pictures = extractTagList(block, "picture");
+      const name = toSafeString(extractTag(block, "name") ?? `Товар ${vendorCode}`);
+      const url = toSafeString(extractTag(block, "url") ?? "https://eksmarket.ru/");
+      const images = extractTagList(block, "picture");
       const params = extractParams(block);
       const categoryPath = buildCategoryPath(categoryId, categoriesById);
-      const available = toBoolAvailable(
-        block.match(/<offer\b[^>]*\bavailable="([^"]+)"/i)?.[1] ?? null
-      );
-
-      const system = deriveSystem(categoryId, categoryPath, name, url);
-      const kind = deriveKind(categoryId, name, categoryPath);
-      const unit = deriveUnit(name);
-      const lengthMeters = deriveLengthMeters(name);
-      const keyAttributes = pickKeyAttributes(params);
 
       let productId = `eks-${slugSafe(vendorCode) || slugSafe(offerId)}`;
-      if (usedProductIds.has(productId)) {
-        productId = `${productId}-${slugSafe(offerId)}`;
-      }
-      usedProductIds.add(productId);
+      if (usedIds.has(productId)) productId = `${productId}-${slugSafe(offerId)}`;
+      usedIds.add(productId);
 
-      products.push({
+      const product: FeedCatalogProduct = {
         productId,
         vendorCode,
         offerId,
@@ -461,45 +480,104 @@ const loadCatalogInternal = cache(async (): Promise<FeedCatalogResult> => {
         url,
         categoryId,
         categoryPath,
-        images: pictures,
-        coverImage: pictures[0] ?? "",
+        images,
+        coverImage: images[0] ?? "",
         priceRub,
-        available,
+        available: toBoolAvailable(
+          block.match(/<offer\b[^>]*\bavailable="([^"]+)"/i)?.[1] ?? null
+        ),
         params,
-        keyAttributes,
-        system,
-        kind,
-        unit,
-        lengthMeters,
-      });
+        keyAttributes: pickKeyAttributes(params),
+        system: deriveSystem(categoryId, categoryPath, name, url),
+        kind: deriveKind(categoryId, name, categoryPath),
+        unit: deriveUnit(name),
+        lengthMeters: deriveLengthMeters(name),
+        pieceLengthMeters: derivePieceLengthMeters(name)
+      };
+
+      products.push(product);
     }
 
-    const categoryUse = new Set(products.map((p) => p.categoryId));
-    const uiCategories = categories
-      .filter((c) => categoryUse.has(c.id))
+    const categoryUsed = new Set(products.map((p) => p.categoryId));
+    const normalizedCategories: FeedCatalogCategory[] = categories
+      .filter((c) => categoryUsed.has(c.id))
       .map((c) => ({ id: c.id, title: c.title, parentId: c.parentId }));
+
+    const elapsed = Date.now() - startedAt;
+    console.info(
+      "[feed2] parsed categories=",
+      categories.length,
+      "offers=",
+      offerBlocks.length,
+      "products=",
+      products.length,
+      "ms=",
+      elapsed
+    );
+
+    if (products.length === 0) {
+      return {
+        ok: false,
+        updatedAt: new Date().toISOString(),
+        source: "live-feed2",
+        discountPercentForCeilingOrder: DISCOUNT_PERCENT,
+        categories: normalizedCategories,
+        products: [],
+        errorMessage: "Live feed parsed but returned zero products"
+      };
+    }
 
     return {
       ok: true,
       updatedAt: new Date().toISOString(),
-      source: FEED_URL,
+      source: "live-feed2",
       discountPercentForCeilingOrder: DISCOUNT_PERCENT,
-      categories: uiCategories,
-      products,
+      categories: normalizedCategories,
+      products
     };
   } catch (error) {
+    console.error("[feed2] fetch failed:", error);
     return {
       ok: false,
       updatedAt: new Date().toISOString(),
-      source: FEED_URL,
+      source: "live-feed2",
       discountPercentForCeilingOrder: DISCOUNT_PERCENT,
       categories: [],
       products: [],
-      errorMessage: error instanceof Error ? error.message : "Unknown feed error",
+      errorMessage: error instanceof Error ? error.message : "Unknown live feed error"
     };
   }
+}
+
+const getCatalogDataCached = cache(async (): Promise<FeedCatalogResult> => {
+  const snapshot = normalizeSnapshot(snapshotData);
+
+  const liveEnabled = toSafeString(process.env.CATALOG_LIVE_FEED2_ENABLED) === "1";
+  if (!liveEnabled) {
+    if (!snapshot.ok) {
+      console.error("[catalog] snapshot invalid:", snapshot.errorMessage);
+    }
+    return snapshot;
+  }
+
+  const live = await loadLiveFeed2();
+  if (live.ok && live.products.length > 0) return live;
+
+  console.warn("[catalog] live feed unavailable, fallback to snapshot:", live.errorMessage);
+
+  if (snapshot.ok && snapshot.products.length > 0) return snapshot;
+
+  return {
+    ok: false,
+    updatedAt: new Date().toISOString(),
+    source: "fallback-error",
+    discountPercentForCeilingOrder: DISCOUNT_PERCENT,
+    categories: [],
+    products: [],
+    errorMessage: "Both live feed and snapshot are empty"
+  };
 });
 
-export async function getFeed2Catalog(): Promise<FeedCatalogResult> {
-  return loadCatalogInternal();
+export async function getCatalogData(): Promise<FeedCatalogResult> {
+  return getCatalogDataCached();
 }
