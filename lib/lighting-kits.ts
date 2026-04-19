@@ -1,6 +1,6 @@
 // lib/lighting-kits.ts
-
 import type { LightingItem } from "@/lib/calculator-modal-types";
+import { scaleKitItemQty } from "@/lib/lighting-formulas";
 
 export type LightingKit = {
   kitId: string;
@@ -8,40 +8,30 @@ export type LightingKit = {
   kitCategory: "track-built-in" | "track-surface" | "point";
   defaultSpotsQty: number;
   spotsItemSku: string;
-  /**
-   * Все SKU, qty которых масштабируется пропорционально числу спотов.
-   * Для точечных наборов: [корпус, лампа/модуль].
-   * Для трековых: только [spotsItemSku] — профиль и БП не масштабируются.
-   */
   scaleGroup: readonly string[];
   items: readonly LightingItem[];
   totalRub: number;
 };
-
-// ─── Profile tables ───────────────────────────────────────────────────────────
 
 export type ProfileLength = 1000 | 2000 | 3000;
 
 export type ProfileEntry = {
   sku: string;
   lengthMm: ProfileLength;
-  /** null = цена не подтверждена у поставщика, показываем "по запросу" */
   priceRub: number | null;
 };
 
 export const COLIBRI_PROFILES: readonly ProfileEntry[] = [
-  { sku: "colibri-profile-220v-1000", lengthMm: 1000, priceRub: null },
+  { sku: "colibri-profile-220v-1000", lengthMm: 1000, priceRub: 3900 },
   { sku: "colibri-profile-220v-2000", lengthMm: 2000, priceRub: 7400 },
-  { sku: "colibri-profile-220v-3000", lengthMm: 3000, priceRub: null },
+  { sku: "colibri-profile-220v-3000", lengthMm: 3000, priceRub: 10500 },
 ];
 
 export const CLARUS_PROFILES: readonly ProfileEntry[] = [
-  { sku: "clarus-profile-48v-1000", lengthMm: 1000, priceRub: null },
+  { sku: "clarus-profile-48v-1000", lengthMm: 1000, priceRub: 4200 },
   { sku: "clarus-profile-48v-2000", lengthMm: 2000, priceRub: 8000 },
-  { sku: "clarus-profile-48v-3000", lengthMm: 3000, priceRub: null },
+  { sku: "clarus-profile-48v-3000", lengthMm: 3000, priceRub: 11500 },
 ];
-
-// ─── Profile utilities ────────────────────────────────────────────────────────
 
 export type ProfilePiece = {
   sku: string;
@@ -51,10 +41,6 @@ export type ProfilePiece = {
   name: string;
 };
 
-/**
- * Жадный подбор профилей под длину трека (в мм).
- * Если хотя бы одна длина без цены — totalRub будет null (неизвестна).
- */
 export function calcProfilesForTrackLength(
   trackLengthMm: number,
   profiles: readonly ProfileEntry[]
@@ -80,7 +66,6 @@ export function calcProfilesForTrackLength(
     }
   }
 
-  // Остаток > 0 — добавляем наименьший профиль
   if (remaining > 0) {
     const smallest = sorted[sorted.length - 1];
     const existing = result.get(smallest.sku);
@@ -107,10 +92,6 @@ export function calcProfilesForTrackMeters(
   return calcProfilesForTrackLength(Math.round(trackLengthMeters * 1000), profiles);
 }
 
-/**
- * Суммарная стоимость набора профилей.
- * Возвращает null если хотя бы один профиль без подтверждённой цены.
- */
 export function calcProfilesTotalRub(pieces: ProfilePiece[]): number | null {
   for (const p of pieces) {
     if (p.priceRub === null) return null;
@@ -125,15 +106,6 @@ export function formatProfilePieces(pieces: ProfilePiece[]): string {
   return `${parts.join(" + ")} = ${totalMm} мм`;
 }
 
-// ─── Kit scale utility ────────────────────────────────────────────────────────
-
-import { scaleKitItemQty } from "@/lib/lighting-formulas";
-
-/**
- * Масштабирует кит под targetSpotsQty.
- * Все SKU из scaleGroup масштабируются пропорционально.
- * Остальные (профили, БП) остаются с оригинальным qty.
- */
 export function scaleKit(
   kit: LightingKit,
   targetQty: number
@@ -158,17 +130,13 @@ export function scaleKit(
   return { items, totalRub, scaledSpotsQty };
 }
 
-// ─── Lighting Kits ────────────────────────────────────────────────────────────
-
 export const LIGHTING_KITS: readonly LightingKit[] = [
-  // ── Встроенные треки ─────────────────────────────────────────────────────
   {
     kitId: "colibri-start-5",
     kitBaseName: "Старт COLIBRI 220V",
     kitCategory: "track-built-in",
     defaultSpotsQty: 5,
     spotsItemSku: "colibri-london-10w",
-    // Только споты масштабируются; профиль остаётся ×1
     scaleGroup: ["colibri-london-10w"],
     items: [
       {
@@ -238,8 +206,6 @@ export const LIGHTING_KITS: readonly LightingKit[] = [
     ],
     totalRub: 2 * 7400 + 8 * 3080,
   },
-
-  // ── Накладные треки ───────────────────────────────────────────────────────
   {
     kitId: "art-start-surface-4",
     kitBaseName: "Накладной ART START",
@@ -274,15 +240,12 @@ export const LIGHTING_KITS: readonly LightingKit[] = [
     ],
     totalRub: 4 * 2530,
   },
-
-  // ── Точечные светильники ──────────────────────────────────────────────────
   {
     kitId: "gx53-optima-6",
     kitBaseName: "Точечный GX53 OPTIMA",
     kitCategory: "point",
     defaultSpotsQty: 6,
     spotsItemSku: "gx53-optima",
-    // ИСПРАВЛЕНО: лампа масштабируется вместе с корпусом
     scaleGroup: ["gx53-optima", "gx53-lamp-8w-4200k"],
     items: [
       {
@@ -306,7 +269,6 @@ export const LIGHTING_KITS: readonly LightingKit[] = [
     kitCategory: "point",
     defaultSpotsQty: 6,
     spotsItemSku: "mr16-zoom-circle",
-    // ИСПРАВЛЕНО: модуль масштабируется вместе с корпусом
     scaleGroup: ["mr16-zoom-circle", "mr16-module-7w-4200k"],
     items: [
       {
