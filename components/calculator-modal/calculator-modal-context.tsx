@@ -42,17 +42,15 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       setOptions(resolvedOpts);
       setCurrentStep(resolvedOpts.initialStep ?? 0);
 
+      // Всегда синхронизируем драфт с входными опциями, чтобы не тянуть прошлый выбор.
       if (resolvedOpts.initialLighting) {
         setLightingDraftState(resolvedOpts.initialLighting);
+      } else {
+        setLightingDraftState(null);
       }
 
-      // ── Записываем source в snapshot немедленно ──────────────────────
       if (resolvedOpts.source) {
-        setSnapshot((prev) =>
-          prev
-            ? { ...prev, leadSource: resolvedOpts.source }
-            : prev
-        );
+        setSnapshot((prev) => (prev ? { ...prev, leadSource: resolvedOpts.source } : prev));
       }
 
       setIsOpen(true);
@@ -71,8 +69,17 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   const ceilingTotal = snapshot?.total ?? 0;
 
   const lightingDiscountedTotal = useMemo(() => {
-    if (!lightingDraft?.totalRub) return 0;
-    return applyLightingDiscount(lightingDraft.totalRub);
+    if (!lightingDraft) return 0;
+
+    if (Number.isFinite(lightingDraft.discountedTotalRub)) {
+      return lightingDraft.discountedTotalRub;
+    }
+
+    if (Number.isFinite(lightingDraft.totalRub)) {
+      return applyLightingDiscount(lightingDraft.totalRub);
+    }
+
+    return 0;
   }, [lightingDraft]);
 
   const grandTotal = ceilingTotal + lightingDiscountedTotal;
@@ -116,9 +123,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
 export function useCalculatorModal(): CalculatorModalContextValue {
   const context = useContext(CalculatorModalContext);
   if (!context) {
-    throw new Error(
-      "useCalculatorModal must be used inside CalculatorModalProvider."
-    );
+    throw new Error("useCalculatorModal must be used inside CalculatorModalProvider.");
   }
   return context;
 }
