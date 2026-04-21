@@ -140,8 +140,8 @@ export function ActionForm({ source }: ActionFormProps) {
       "message",
       String(buildLeadMessage(ceilingLines, lightingLines, trimmedAddress, effectiveSource) ?? "")
     );
-    formData.append("botcheck", String("" ?? ""));
-    formData.append("company", String("" ?? ""));
+    formData.append("botcheck", String(""));
+    formData.append("company", String(""));
 
     formData.append("lighting_mode", String(lightingMode ?? ""));
     formData.append("lighting_kit", String(lightingKitDisplay ?? ""));
