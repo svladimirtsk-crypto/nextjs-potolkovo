@@ -4,36 +4,29 @@ import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
+import { ProductImage } from "@/components/feed2/ProductImage";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { Heading } from "@/components/ui/heading";
 import { Section } from "@/components/ui/section";
 import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
-import type {
-  FeedCatalogKind,
-  FeedCatalogProduct,
-  FeedCatalogResult,
-  FeedCatalogSystem,
-} from "@/lib/eks-feed2-catalog";
+import type { FeedCatalogProduct, FeedCatalogResult } from "@/lib/eks-feed2-catalog";
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
+import {
+  buildProductsIndex,
+  computeBenefit,
+  detectSocket,
+  getDiscountedPrice,
+} from "@/lib/feed2-products";
 
 type Props = {
   data: FeedCatalogResult;
 };
 
 type CartItems = Record<string, number>;
-type CatalogSection = "track-systems" | "point-fixtures";
+type CatalogSectionMode = "track-systems" | "point-fixtures";
 type TrackSystemUi = "COLIBRI_220" | "CLARUS_48" | "TRACK_220";
 type TrackGroupUi = "TRACK_FIXTURE" | "TRACK_PROFILE" | "TRACK_ACCESSORY";
-
-const IMG_FALLBACK =
-  "data:image/svg+xml;utf8," +
-  encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600">
-      <rect width="100%" height="100%" fill="#f1f5f9"/>
-      <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" fill="#64748b">Фото товара</text>
-    </svg>`
-  );
 
 function fmt(n: number) {
   return new Intl.NumberFormat("ru-RU").format(Math.round(n));
@@ -54,18 +47,6 @@ function pickDisplayAttributes(product: FeedCatalogProduct) {
   return (product.params ?? []).slice(0, 4);
 }
 
-function detectSocket(product: FeedCatalogProduct): "GX53" | "MR16" | null {
-  const paramsText = (product.params ?? [])
-    .map((p) => `${p.label} ${p.value}`)
-    .join(" ")
-    .toLowerCase();
-  const text = `${product.name} ${product.vendorCode} ${paramsText}`.toLowerCase();
-
-  if (text.includes("gx53")) return "GX53";
-  if (text.includes("mr16") || text.includes("gu5.3")) return "MR16";
-  return null;
-}
-
 function isPointFixture(product: FeedCatalogProduct): boolean {
   return product.kind === "SPOT_FIXTURE";
 }
@@ -74,32 +55,12 @@ function isLamp(product: FeedCatalogProduct): boolean {
   return product.kind === "LAMP";
 }
 
-function ProductImage({ src, alt }: { src?: string; alt: string }) {
-  const imageSrc: string = String(src ?? IMG_FALLBACK);
-
-  return (
-    <div className="mb-3 h-44 w-full overflow-hidden rounded-xl border border-slate-100 bg-slate-50 p-3">
-      <img
-        src={imageSrc}
-        alt={alt}
-        loading="lazy"
-        className="h-full w-full object-contain"
-        onError={(e) => {
-          const img = e.currentTarget;
-          img.onerror = null;
-          img.src = IMG_FALLBACK;
-        }}
-      />
-    </div>
-  );
-}
-
 export function CatalogSectionClient({ data }: Props) {
   const { openCalculator } = useCalculatorModal();
   const searchParams = useSearchParams();
   const debugEnabled = searchParams.get("catalogDebug") === "1";
 
-  const [catalogSection, setCatalogSection] = useState<CatalogSection>("track-systems");
+  const [catalogSection, setCatalogSection] = useState<CatalogSectionMode>("track-systems");
   const [trackSystem, setTrackSystem] = useState<TrackSystemUi>("COLIBRI_220");
   const [trackGroup, setTrackGroup] = useState<TrackGroupUi>("TRACK_FIXTURE");
   const [searchQuery, setSearchQuery] = useState("");
@@ -113,10 +74,7 @@ export function CatalogSectionClient({ data }: Props) {
   const baseIsEmpty = baseProducts.length === 0;
   const showCatalogError = !data.ok || baseIsEmpty;
 
-  const productsById = useMemo(
-    () => new Map(baseProducts.map((p) => [p.productId, p])),
-    [baseProducts]
-  );
+  const productsById = useMemo(() => buildProductsIndex(baseProducts), [baseProducts]);
 
   const pointProducts = useMemo(() => {
     return baseProducts
@@ -142,19 +100,11 @@ export function CatalogSectionClient({ data }: Props) {
 
     const scoped =
       catalogSection === "track-systems"
-        ? baseProducts.filter(
-            (p) =>
-              p.system === (trackSystem as FeedCatalogSystem) &&
-              p.kind === (trackGroup as FeedCatalogKind)
-          )
+        ? baseProducts.filter((p) => p.system === trackSystem && p.kind === trackGroup)
         : pointProducts;
 
     if (!q) return scoped;
-
-    return scoped.filter((p) => {
-      const hay = `${p.name} ${p.vendorCode}`.toLowerCase();
-      return hay.includes(q);
-    });
+    return scoped.filter((p) => `${p.name} ${p.vendorCode}`.toLowerCase().includes(q));
   }, [baseProducts, catalogSection, pointProducts, searchQuery, trackGroup, trackSystem]);
 
   const selectedLines = useMemo(() => {
@@ -172,7 +122,7 @@ export function CatalogSectionClient({ data }: Props) {
   }, [selectedLines]);
 
   const cartDiscounted = useMemo(() => applyLightingDiscount(cartTotal), [cartTotal]);
-  const cartBenefit = Math.max(0, cartTotal - cartDiscounted);
+  const cartBenefit = computeBenefit(cartTotal, cartDiscounted);
 
   const setQty = (product: FeedCatalogProduct, qty: number) => {
     const step = stepByUnit(product.unit);
@@ -204,12 +154,8 @@ export function CatalogSectionClient({ data }: Props) {
       priceRub: product.priceRub,
     }));
 
-    const openWithExtendedOptions = (payload: Record<string, unknown>) => {
-      openCalculator(payload as Parameters<typeof openCalculator>[0]);
-    };
-
     if (items.length === 0) {
-      openWithExtendedOptions({
+      openCalculator({
         initialStep: 1,
         initialLightingTab: "catalog",
         initialLightingView: "browse",
@@ -230,7 +176,7 @@ export function CatalogSectionClient({ data }: Props) {
       userCustomizedLighting: true,
     };
 
-    openWithExtendedOptions({
+    openCalculator({
       initialStep: 1,
       initialLightingTab: "catalog",
       initialLightingView: "selected",
@@ -373,8 +319,8 @@ export function CatalogSectionClient({ data }: Props) {
                 {filteredProducts.map((product) => {
                   const qty = cartItems[product.productId] ?? 0;
                   const regular = product.priceRub;
-                  const discount = applyLightingDiscount(regular);
-                  const benefit = Math.max(0, regular - discount);
+                  const discount = getDiscountedPrice(regular);
+                  const benefit = computeBenefit(regular, discount);
                   const productUrl: string = String(product.url ?? "");
 
                   return (
@@ -383,7 +329,12 @@ export function CatalogSectionClient({ data }: Props) {
                       className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4"
                     >
                       <div>
-                        <ProductImage src={product.coverImage} alt={product.name} />
+                        <ProductImage
+                          src={product.coverImage}
+                          alt={product.name}
+                          containerClassName="mb-3 h-44 w-full overflow-hidden rounded-xl border border-slate-100 bg-slate-50 p-3"
+                          className="h-full w-full object-contain"
+                        />
 
                         <p className="text-sm font-semibold text-slate-950">{product.name}</p>
                         <p className="mt-1 text-xs text-slate-500">Артикул: {product.vendorCode}</p>
@@ -411,7 +362,7 @@ export function CatalogSectionClient({ data }: Props) {
                             <button
                               type="button"
                               onClick={() => setQty(product, minByUnit(product.unit))}
-                              className="rounded-full border border-slate-950 bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 transition-colors"
+                              className="rounded-full border border-slate-950 bg-slate-950 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-slate-800"
                             >
                               Добавить
                             </button>
@@ -420,7 +371,7 @@ export function CatalogSectionClient({ data }: Props) {
                               <button
                                 type="button"
                                 onClick={() => setQty(product, qty - stepByUnit(product.unit))}
-                                className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 hover:bg-slate-50 transition-colors"
+                                className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 transition-colors hover:bg-slate-50"
                                 aria-label="Уменьшить"
                               >
                                 −
@@ -432,7 +383,7 @@ export function CatalogSectionClient({ data }: Props) {
                               <button
                                 type="button"
                                 onClick={() => setQty(product, qty + stepByUnit(product.unit))}
-                                className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 hover:bg-slate-50 transition-colors"
+                                className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 transition-colors hover:bg-slate-50"
                                 aria-label="Увеличить"
                               >
                                 +
@@ -445,7 +396,7 @@ export function CatalogSectionClient({ data }: Props) {
                               href={productUrl}
                               target="_blank"
                               rel="nofollow noopener noreferrer"
-                              className="text-xs text-slate-500 hover:text-slate-900 underline"
+                              className="text-xs text-slate-500 underline hover:text-slate-900"
                             >
                               Открыть товар
                             </a>
