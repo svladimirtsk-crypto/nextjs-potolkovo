@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import snapshotData from "@/data/eks-feed2-snapshot.json";
-import type { FeedCatalogProduct, FeedCatalogResult, FeedCatalogSystem } from "@/lib/eks-feed2-catalog";
+import type { FeedCatalogProduct, FeedCatalogSystem } from "@/lib/eks-feed2-catalog";
 import {
   LIGHTING_KITS,
   COLIBRI_PROFILES,
@@ -421,14 +421,19 @@ export function WizardStep1Lighting() {
   const { lightingDraft, setLightingDraft, options } = useCalculatorModal();
   const { snapshot } = usePriceCalculatorBridge();
 
-  const snapshotCatalog = snapshotData as FeedCatalogResult;
-  const products = useMemo(
-    () =>
-      (snapshotCatalog.products ?? []).filter(
-        (p) => Number.isFinite(p.priceRub) && p.priceRub > 0
-      ) as FeedCatalogProduct[],
-    [snapshotCatalog.products]
-  );
+  type SnapshotCatalogShape = {
+  products?: FeedCatalogProduct[];
+};
+
+const snapshotCatalog = snapshotData as unknown as SnapshotCatalogShape;
+
+const products = useMemo(
+  () =>
+    (snapshotCatalog.products ?? []).filter(
+      (p) => Number.isFinite(p.priceRub) && p.priceRub > 0
+    ) as FeedCatalogProduct[],
+  [snapshotCatalog.products]
+);
 
   const productsById = useMemo(
     () => new Map(products.map((p) => [p.productId, p])),
