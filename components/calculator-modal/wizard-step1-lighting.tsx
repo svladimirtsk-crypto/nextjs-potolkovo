@@ -6,26 +6,23 @@ import snapshotData from "@/data/eks-feed2-snapshot.json";
 import type { FeedCatalogProduct, FeedCatalogSystem } from "@/lib/eks-feed2-catalog";
 import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
+import {
+  buildProductsIndex,
+  computeBenefit,
+  detectSocket,
+  getDiscountedPrice,
+} from "@/lib/feed2-products";
+import { ProductImage } from "@/components/feed2/ProductImage";
 import { useCalculatorModal } from "./calculator-modal-context";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 
 type Tab = "recommendations" | "catalog";
 type CatalogView = "selected" | "browse";
 type CartItems = Record<string, number>;
-type KindFilter = "all" | FeedCatalogProduct["kind"];
 
 type CatalogSection = "track-systems" | "point-fixtures";
 type TrackSystemUi = "COLIBRI_220" | "CLARUS_48" | "TRACK_220";
 type TrackGroupUi = "TRACK_FIXTURE" | "TRACK_PROFILE" | "TRACK_ACCESSORY";
-
-const IMG_FALLBACK =
-  "data:image/svg+xml;utf8," +
-  encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600">
-      <rect width="100%" height="100%" fill="#f1f5f9"/>
-      <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" fill="#64748b">Фото товара</text>
-    </svg>`
-  );
 
 function fmt(n: number) {
   return new Intl.NumberFormat("ru-RU").format(Math.round(n));
@@ -44,66 +41,11 @@ function normalizeQty(value: number, unit: "pcs" | "m"): number {
   return Math.max(0, Math.round(value / step) * step);
 }
 
-function getSystemLabel(system: FeedCatalogSystem): string {
-  switch (system) {
-    case "COLIBRI_220":
-      return "COLIBRI 220V";
-    case "CLARUS_48":
-      return "CLARUS 48V";
-    case "TRACK_220":
-      return "ART 220V";
-    case "SMART_HOME":
-      return "Умный дом";
-    default:
-      return "Прочее";
-  }
-}
-
-function getKindLabel(kind: FeedCatalogProduct["kind"]): string {
-  switch (kind) {
-    case "TRACK_PROFILE":
-      return "Профили";
-    case "TRACK_ACCESSORY":
-      return "Комплектующие";
-    case "TRACK_FIXTURE":
-      return "Трековые светильники";
-    case "SPOT_FIXTURE":
-      return "Точечные";
-    case "LAMP":
-      return "Лампы";
-    case "PSU":
-      return "Блоки питания";
-    case "CONTROL":
-      return "Управление";
-    case "LED_STRIP":
-      return "Лента";
-    case "CEILING_COMPONENT":
-      return "Закладные и комплектующие";
-    default:
-      return "Другое";
-  }
-}
-
 function pickDisplayAttributes(product: FeedCatalogProduct) {
   if (Array.isArray(product.keyAttributes) && product.keyAttributes.length > 0) {
     return product.keyAttributes.slice(0, 4);
   }
   return (product.params ?? []).slice(0, 4);
-}
-
-function productText(product: FeedCatalogProduct): string {
-  const params = (product.params ?? [])
-    .map((p) => `${p.label} ${p.value}`)
-    .join(" ")
-    .toLowerCase();
-  return `${product.name} ${product.vendorCode} ${params}`.toLowerCase();
-}
-
-function detectSocket(product: FeedCatalogProduct): "GX53" | "MR16" | null {
-  const text = productText(product);
-  if (text.includes("gx53")) return "GX53";
-  if (text.includes("mr16") || text.includes("gu5.3")) return "MR16";
-  return null;
 }
 
 function inferProfileLengthMm(product: FeedCatalogProduct): number {
@@ -114,19 +56,13 @@ function inferProfileLengthMm(product: FeedCatalogProduct): number {
   ].join(" ");
 
   const mmMatch = texts.match(/(\d{3,4})\s*мм/i);
-  if (mmMatch) {
-    return Number(mmMatch[1]);
-  }
+  if (mmMatch) return Number(mmMatch[1]);
 
   const meterMatch = texts.match(/([123])\s*м(?![а-я])/i);
-  if (meterMatch) {
-    return Number(meterMatch[1]) * 1000;
-  }
+  if (meterMatch) return Number(meterMatch[1]) * 1000;
 
   const hard = texts.match(/(?:^|\D)(1000|2000|3000)(?:\D|$)/);
-  if (hard) {
-    return Number(hard[1]);
-  }
+  if (hard) return Number(hard[1]);
 
   return 1000;
 }
@@ -157,6 +93,7 @@ function calcProfilesForTrackMeters(trackMeters: number, profiles: FeedCatalogPr
       qty,
       priceRub: candidate.product.priceRub,
     });
+
     left -= qty * candidate.lengthMm;
   }
 
@@ -199,10 +136,6 @@ function isPointFixture(product: FeedCatalogProduct): boolean {
   return product.kind === "SPOT_FIXTURE";
 }
 
-function isTrackFixture(product: FeedCatalogProduct): boolean {
-  return product.kind === "TRACK_FIXTURE";
-}
-
 function isLamp(product: FeedCatalogProduct): boolean {
   return product.kind === "LAMP";
 }
@@ -226,26 +159,6 @@ function pickRandomProducts<T>(items: T[], seed: number, min = 4, max = 6): T[] 
   return seededShuffle(items, seed).slice(0, count);
 }
 
-function ProductImage({ src, alt }: { src?: string; alt: string }) {
-  const imgSrc: string = String(src ?? IMG_FALLBACK);
-
-  return (
-    <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-2 sm:h-28 sm:w-28">
-      <img
-        src={imgSrc}
-        alt={alt}
-        className="h-full w-full object-contain"
-        loading="lazy"
-        onError={(e) => {
-          const img = e.currentTarget;
-          img.onerror = null;
-          img.src = IMG_FALLBACK;
-        }}
-      />
-    </div>
-  );
-}
-
 function TabButton({
   active,
   onClick,
@@ -260,9 +173,7 @@ function TabButton({
       type="button"
       onClick={onClick}
       className={`flex-1 rounded-xl py-2 text-sm font-medium transition-colors ${
-        active
-          ? "bg-slate-950 text-white"
-          : "bg-transparent text-slate-600 hover:text-slate-950"
+        active ? "bg-slate-950 text-white" : "bg-transparent text-slate-600 hover:text-slate-950"
       }`}
     >
       {children}
@@ -284,15 +195,20 @@ function ProductRow({
   children?: ReactNode;
 }) {
   const regular = product.priceRub;
-  const discounted = applyLightingDiscount(regular);
-  const benefit = Math.max(0, regular - discounted);
+  const discounted = getDiscountedPrice(regular);
+  const benefit = computeBenefit(regular, discounted);
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-3">
       <div className="flex gap-3">
-        <ProductImage src={product.coverImage} alt={product.name} />
+        <ProductImage
+          src={product.coverImage}
+          alt={product.name}
+          containerClassName="h-24 w-24 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-2 sm:h-28 sm:w-28"
+          className="h-full w-full object-contain"
+        />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-slate-950 leading-5">{product.name}</p>
+          <p className="text-sm font-medium leading-5 text-slate-950">{product.name}</p>
           <ul className="mt-1 space-y-0.5">
             {pickDisplayAttributes(product).map((attr) => (
               <li
@@ -321,7 +237,7 @@ function ProductRow({
           <button
             type="button"
             onClick={onInc}
-            className="shrink-0 rounded-full border border-slate-950 bg-slate-950 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800 transition-colors"
+            className="shrink-0 rounded-full border border-slate-950 bg-slate-950 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-slate-800"
           >
             + Добавить
           </button>
@@ -330,7 +246,7 @@ function ProductRow({
             <button
               type="button"
               onClick={onDec}
-              className="h-7 w-7 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-950 hover:bg-slate-50 transition-colors"
+              className="h-7 w-7 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-950 transition-colors hover:bg-slate-50"
               aria-label="Уменьшить количество"
             >
               −
@@ -342,7 +258,7 @@ function ProductRow({
             <button
               type="button"
               onClick={onInc}
-              className="h-7 w-7 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-950 hover:bg-slate-50 transition-colors"
+              className="h-7 w-7 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-950 transition-colors hover:bg-slate-50"
               aria-label="Увеличить количество"
             >
               +
@@ -357,7 +273,7 @@ function ProductRow({
 }
 
 export function WizardStep1Lighting() {
-  const { lightingDraft, setLightingDraft, options, setStep } = useCalculatorModal();
+  const { lightingDraft, setLightingDraft, options, goToStep } = useCalculatorModal();
   const { snapshot } = usePriceCalculatorBridge();
 
   type SnapshotCatalogShape = { products?: FeedCatalogProduct[] };
@@ -371,12 +287,7 @@ export function WizardStep1Lighting() {
     [snapshotCatalog.products]
   );
 
-  const productsById = useMemo(() => new Map(products.map((p) => [p.productId, p])), [products]);
-
-  const modalOptions = options as typeof options & {
-    initialLightingView?: "selected" | "browse";
-    source?: "catalog_trek_page" | string;
-  };
+  const productsById = useMemo(() => buildProductsIndex(products), [products]);
 
   const derivedInputs = snapshot?.derivedInputs ?? {
     pointSpotsQty: 0,
@@ -385,9 +296,9 @@ export function WizardStep1Lighting() {
     recommendedTrackSpotsQty: 0,
   };
 
-  const initialTab: Tab = modalOptions?.initialLightingTab === "catalog" ? "catalog" : "recommendations";
+  const initialTab: Tab = options?.initialLightingTab === "catalog" ? "catalog" : "recommendations";
   const initialCatalogView: CatalogView =
-    modalOptions?.initialLightingView === "selected" ? "selected" : "browse";
+    options?.initialLightingView === "selected" ? "selected" : "browse";
 
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [catalogView, setCatalogView] = useState<CatalogView>(initialCatalogView);
@@ -412,7 +323,7 @@ export function WizardStep1Lighting() {
   const prevInitialLightingRef = useRef<LightingSnapshot | null | undefined>(undefined);
 
   useEffect(() => {
-    const incoming = modalOptions?.initialLighting;
+    const incoming = options?.initialLighting;
     if (incoming === undefined) return;
     if (incoming === prevInitialLightingRef.current) return;
 
@@ -426,9 +337,9 @@ export function WizardStep1Lighting() {
       }
       setCartItems(next);
       setActiveTab("catalog");
-      setCatalogView(modalOptions?.initialLightingView === "selected" ? "selected" : "browse");
+      setCatalogView(options?.initialLightingView === "selected" ? "selected" : "browse");
     }
-  }, [modalOptions?.initialLighting, modalOptions?.initialLightingView]);
+  }, [options?.initialLighting, options?.initialLightingView]);
 
   const currentTrackSystemFromInputs: FeedCatalogSystem = useMemo(() => {
     if (derivedInputs.trackMountType === "surface") return "TRACK_220";
@@ -513,6 +424,7 @@ export function WizardStep1Lighting() {
 
   const setProductQty = (product: FeedCatalogProduct, nextQty: number) => {
     const normalized = normalizeQty(nextQty, product.unit);
+
     setCartItems((prev) => {
       if (normalized <= 0) {
         return Object.fromEntries(Object.entries(prev).filter(([k]) => k !== product.productId));
@@ -528,17 +440,14 @@ export function WizardStep1Lighting() {
   const selectedViewItems = useMemo(() => {
     return catalogExtrasItems.map((item) => {
       const product = productsById.get(item.sku);
-      return {
-        item,
-        product,
-      };
+      return { item, product };
     });
   }, [catalogExtrasItems, productsById]);
 
   const selectedTotals = useMemo(() => {
     const regular = selectedViewItems.reduce((sum, x) => sum + x.item.qty * x.item.priceRub, 0);
-    const discounted = applyLightingDiscount(regular);
-    return { regular, discounted, benefit: Math.max(0, regular - discounted) };
+    const discounted = getDiscountedPrice(regular);
+    return { regular, discounted, benefit: computeBenefit(regular, discounted) };
   }, [selectedViewItems]);
 
   const lampCandidatesBySocket = useMemo(() => {
@@ -562,27 +471,22 @@ export function WizardStep1Lighting() {
 
   const browseProducts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    let base: FeedCatalogProduct[] = [];
+    const scoped =
+      catalogSection === "track-systems"
+        ? products.filter(
+            (p) => p.system === trackSystem && p.kind === trackGroup && p.available !== false
+          )
+        : pointFixtures;
 
-    if (catalogSection === "track-systems") {
-      base = products.filter(
-        (p) => p.system === trackSystem && p.kind === trackGroup && p.available !== false
-      );
-    } else {
-      base = pointFixtures;
-    }
+    if (!q) return scoped;
 
-    if (!q) return base;
-
-    return base.filter((p) => {
-      const hay = `${p.name} ${p.vendorCode}`.toLowerCase();
-      return hay.includes(q);
-    });
+    return scoped.filter((p) => `${p.name} ${p.vendorCode}`.toLowerCase().includes(q));
   }, [catalogSection, pointFixtures, products, searchQuery, trackGroup, trackSystem]);
 
-  const recommendationsPoint = useMemo(() => {
-    return pickRandomProducts(pointFixtures, pointSeed, 4, 6);
-  }, [pointFixtures, pointSeed]);
+  const recommendationsPoint = useMemo(
+    () => pickRandomProducts(pointFixtures, pointSeed, 4, 6),
+    [pointFixtures, pointSeed]
+  );
 
   const recommendationsTrack = useMemo(() => {
     const inSystem = products.filter(
@@ -613,7 +517,7 @@ export function WizardStep1Lighting() {
   const showSelectedFirst =
     activeTab === "catalog" &&
     catalogView === "selected" &&
-    (modalOptions?.initialLightingView === "selected" || modalOptions?.source === "catalog_trek_page") &&
+    (options?.initialLightingView === "selected" || options?.source === "catalog_trek_page") &&
     selectedViewItems.length > 0;
 
   const recommendedPowerW = Math.ceil((derivedInputs.trackLengthMeters ?? 0) * 20);
@@ -640,14 +544,12 @@ export function WizardStep1Lighting() {
               <div className="min-w-0">
                 <p className="truncate text-xs font-medium text-slate-900">{lamp.name}</p>
                 <p className="text-xs text-slate-500">
-                  {fmt(lamp.priceRub)} ₽ / шт, со скидкой {fmt(applyLightingDiscount(lamp.priceRub))} ₽
+                  {fmt(lamp.priceRub)} ₽ / шт, со скидкой {fmt(getDiscountedPrice(lamp.priceRub))} ₽
                 </p>
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  setProductQty(lamp, fixtureQty);
-                }}
+                onClick={() => setProductQty(lamp, fixtureQty)}
                 className="shrink-0 rounded-full border border-slate-900 bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800"
               >
                 Добавить 1:1
@@ -677,7 +579,7 @@ export function WizardStep1Lighting() {
           </p>
 
           {derivedInputs.trackMountType !== "none" && derivedInputs.trackLengthMeters > 0 ? (
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+            <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-sm font-semibold text-slate-950">Трековая инфраструктура</p>
 
               {derivedInputs.trackMountType === "built-in" ? (
@@ -724,7 +626,7 @@ export function WizardStep1Lighting() {
               <button
                 type="button"
                 onClick={() => handleOpenCatalogTrackFixtures(currentTrackSystemFromInputs)}
-                className="rounded-full border border-slate-950 bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 transition-colors"
+                className="rounded-full border border-slate-950 bg-slate-950 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-slate-800"
               >
                 Выбрать трековые светильники в каталоге
               </button>
@@ -836,13 +738,13 @@ export function WizardStep1Lighting() {
           <button
             type="button"
             onClick={handleNoLighting}
-            className={`w-full text-left rounded-2xl border p-4 transition-all text-sm ${
+            className={`w-full rounded-2xl border p-4 text-left text-sm transition-all ${
               lightingDraft?.mode === "none" || !lightingDraft
                 ? "border-slate-950 bg-slate-950 text-white"
                 : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"
             }`}
           >
-            Без освещения — только потолок
+            Без освещения - только потолок
           </button>
 
           <p className="text-xs text-slate-400">
@@ -859,13 +761,18 @@ export function WizardStep1Lighting() {
 
               {selectedViewItems.map(({ item, product }) => {
                 const regular = item.priceRub;
-                const discounted = applyLightingDiscount(regular);
-                const benefit = Math.max(0, regular - discounted);
+                const discounted = getDiscountedPrice(regular);
+                const benefit = computeBenefit(regular, discounted);
 
                 return (
                   <div key={item.sku} className="rounded-xl border border-slate-200 bg-white p-3">
                     <div className="flex gap-3">
-                      <ProductImage src={product?.coverImage} alt={item.name} />
+                      <ProductImage
+                        src={product?.coverImage}
+                        alt={item.name}
+                        containerClassName="h-24 w-24 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-2 sm:h-28 sm:w-28"
+                        className="h-full w-full object-contain"
+                      />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-slate-950">{item.name}</p>
                         {product ? (
@@ -908,7 +815,7 @@ export function WizardStep1Lighting() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setStep(2)}
+                  onClick={() => goToStep(2)}
                   className="flex-1 rounded-full border border-slate-950 bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
                 >
                   Далее
@@ -1007,7 +914,7 @@ export function WizardStep1Lighting() {
 
               <div className="space-y-2">
                 {browseProducts.length === 0 ? (
-                  <p className="text-sm text-slate-500 py-4 text-center">Ничего не найдено</p>
+                  <p className="py-4 text-center text-sm text-slate-500">Ничего не найдено</p>
                 ) : null}
 
                 {browseProducts.map((product) => {
