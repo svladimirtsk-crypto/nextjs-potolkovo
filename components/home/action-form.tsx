@@ -8,7 +8,8 @@ import { legal } from "@/content/legal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TextLink } from "@/components/ui/text-link";
-import { trackFormSubmitSuccess } from "@/lib/analytics"; // ← NEW
+import { trackFormSubmitSuccess } from "@/lib/analytics";
+import { applyLightingDiscount } from "@/lib/lighting-formulas";
 import {
   getCalculatorSummaryLines,
   getLightingSummaryLines,
@@ -17,7 +18,7 @@ import {
 
 const actionContent = homepage.action;
 
-type FormStatus  = "idle" | "success" | "error";
+type FormStatus = "idle" | "success" | "error";
 type FieldErrors = { name?: string; phone?: string; address?: string };
 
 function normalizePhone(value: string): string {
@@ -45,11 +46,7 @@ function buildLeadMessage(
   if (address.trim()) parts.push("", `Адрес / район: ${address.trim()}`);
 
   if (ceilingLines.length) {
-    parts.push(
-      "",
-      "Параметры из калькулятора:",
-      ...ceilingLines.map((l) => `— ${l}`)
-    );
+    parts.push("", "Параметры из калькулятора:", ...ceilingLines.map((l) => `- ${l}`));
   }
 
   if (lightingLines.length) {
@@ -66,26 +63,22 @@ type ActionFormProps = {
 export function ActionForm({ source }: ActionFormProps) {
   const { snapshot, hasInteracted } = usePriceCalculatorBridge();
 
-  // ← NEW: leadSource из snapshot имеет приоритет над prop
-  const effectiveSource = snapshot?.leadSource ?? source ?? "";
+  const effectiveSource: string = String(snapshot?.leadSource ?? source ?? "");
 
   const ceilingLines = useMemo(
     () => (hasInteracted ? getCalculatorSummaryLines(snapshot) : []),
     [hasInteracted, snapshot]
   );
 
-  const lightingLines = useMemo(
-    () => getLightingSummaryLines(snapshot),
-    [snapshot]
-  );
+  const lightingLines = useMemo(() => getLightingSummaryLines(snapshot), [snapshot]);
 
-  const [name, setName]       = useState("");
-  const [phone, setPhone]     = useState("");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
-  const [status, setStatus]   = useState<FormStatus>("idle");
+  const [status, setStatus] = useState<FormStatus>("idle");
   const [message, setMessage] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [isPending, setIsPending]     = useState(false);
+  const [isPending, setIsPending] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -93,7 +86,7 @@ export function ActionForm({ source }: ActionFormProps) {
     setMessage("");
     setFieldErrors({});
 
-    const trimmedName    = name.trim();
+    const trimmedName = name.trim();
     const trimmedAddress = address.trim();
     const normalizedPhone = normalizePhone(phone);
     const nextErrors: FieldErrors = {};
@@ -126,36 +119,43 @@ export function ActionForm({ source }: ActionFormProps) {
       return;
     }
 
+    const lightingMode: string = String(snapshot?.lighting?.mode ?? "none");
+    const lightingKitDisplay: string = String(
+      snapshot?.lighting ? getKitDisplayName(snapshot.lighting) : ""
+    );
+    const lightingItemsCount = Number(snapshot?.lighting?.items?.length ?? 0);
+    const lightingTotalRub = Number(snapshot?.lighting?.totalRub ?? 0);
+    const lightingDiscountedRub = Number(
+      snapshot?.lighting?.discountedTotalRub ?? applyLightingDiscount(lightingTotalRub)
+    );
+
     const formData = new FormData();
-    formData.append("access_key",  accessKey);
-    formData.append("subject",     "Новая заявка с сайта ПОТОЛКОВО");
-    formData.append("from_name",   "ПОТОЛКОВО Сайт");
-    formData.append("name",        trimmedName);
-    formData.append("phone",       normalizedPhone);
-    formData.append("address",     trimmedAddress);
+    formData.append("access_key", String(accessKey ?? ""));
+    formData.append("subject", String("Новая заявка с сайта ПОТОЛКОВО"));
+    formData.append("from_name", String("ПОТОЛКОВО Сайт"));
+    formData.append("name", String(trimmedName ?? ""));
+    formData.append("phone", String(normalizedPhone ?? ""));
+    formData.append("address", String(trimmedAddress ?? ""));
     formData.append(
       "message",
-      // ← NEW: effectiveSource вместо source
-      buildLeadMessage(ceilingLines, lightingLines, trimmedAddress, effectiveSource)
+      String(buildLeadMessage(ceilingLines, lightingLines, trimmedAddress, effectiveSource) ?? "")
     );
-    formData.append("botcheck", "");
-    formData.append("company",  "");
+    formData.append("botcheck", String("" ?? ""));
+    formData.append("company", String("" ?? ""));
 
-    formData.append("lighting_mode", snapshot?.lighting?.mode ?? "none");
-    const lightingKitDisplay = snapshot?.lighting
-    ? getKitDisplayName(snapshot.lighting)
-    : "";
-    formData.append("lighting_kit", String(lightingKitDisplay));
-    formData.append("lighting_items_count",
-      String(snapshot?.lighting?.items?.length ?? 0)
-    );
-    formData.append("lighting_total",
-      String(snapshot?.lighting?.totalRub ?? 0)
-    );
-    formData.append("lighting_discounted_total",
-      String(snapshot?.lighting?.discountedTotalRub ?? 0)
-    );
-    formData.append("calculator_source", effectiveSource); // ← NEW: effectiveSource
+    formData.append("lighting_mode", String(lightingMode ?? ""));
+    formData.append("lighting_kit", String(lightingKitDisplay ?? ""));
+    formData.append("lighting_items_count", String(lightingItemsCount ?? 0));
+
+    // Каноничные поля totals для воронки.
+    formData.append("lighting_total_rub", String(lightingTotalRub ?? 0));
+    formData.append("lighting_discounted_total_rub", String(lightingDiscountedRub ?? 0));
+
+    // Legacy поля, если где-то еще читаются.
+    formData.append("lighting_total", String(lightingTotalRub ?? 0));
+    formData.append("lighting_discounted_total", String(lightingDiscountedRub ?? 0));
+
+    formData.append("calculator_source", String(effectiveSource ?? ""));
 
     setIsPending(true);
 
@@ -168,14 +168,14 @@ export function ActionForm({ source }: ActionFormProps) {
       const result = await response.json().catch(() => null);
 
       if (!response.ok || !result?.success) {
-        const errorText =
-          result?.message || result?.error || `HTTP ${response.status}`;
+        const errorText: string = String(
+          result?.message ?? result?.error ?? `HTTP ${response.status}`
+        );
         setStatus("error");
         setMessage(`Ошибка отправки в Web3Forms: ${errorText}`);
         return;
       }
 
-      // ← NEW: событие успешной отправки
       trackFormSubmitSuccess(effectiveSource);
 
       setStatus("success");
@@ -188,15 +188,12 @@ export function ActionForm({ source }: ActionFormProps) {
       setFieldErrors({});
     } catch {
       setStatus("error");
-      setMessage(
-        "Не удалось отправить заявку. Проверьте соединение и попробуйте ещё раз."
-      );
+      setMessage("Не удалось отправить заявку. Проверьте соединение и попробуйте еще раз.");
     } finally {
       setIsPending(false);
     }
   }
 
-  // JSX — без изменений относительно оригинала
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {status === "success" ? (
@@ -220,9 +217,7 @@ export function ActionForm({ source }: ActionFormProps) {
 
       {ceilingLines.length > 0 ? (
         <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
-          <p className="text-sm font-semibold text-slate-950">
-            В заявку попадёт ваш расчёт
-          </p>
+          <p className="text-sm font-semibold text-slate-950">В заявку попадет ваш расчет</p>
           <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
             {ceilingLines.map((line) => (
               <li key={line} className="flex gap-2">
@@ -291,8 +286,7 @@ export function ActionForm({ source }: ActionFormProps) {
           name="address"
           type="text"
           placeholder={
-            actionContent.addressFieldPlaceholder ??
-            "Например: Химки, Люберцы, м. Сокол"
+            actionContent.addressFieldPlaceholder ?? "Например: Химки, Люберцы, м. Сокол"
           }
           autoComplete="street-address"
           value={address}
@@ -318,11 +312,7 @@ export function ActionForm({ source }: ActionFormProps) {
         aria-hidden="true"
       />
 
-      <Button
-        type="submit"
-        className="w-full justify-center"
-        disabled={isPending}
-      >
+      <Button type="submit" className="w-full justify-center" disabled={isPending}>
         {isPending ? "Отправляю..." : actionContent.submitButtonLabel}
       </Button>
 
