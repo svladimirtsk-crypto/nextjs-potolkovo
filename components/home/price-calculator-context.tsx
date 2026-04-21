@@ -1,20 +1,7 @@
 "use client";
 
-import { getKitDisplayName } from "@/lib/calculator-modal-types";
-
-import {
-  createContext,
-  Dispatch,
-  ReactNode,
-  SetStateAction,
-  useContext,
-  useMemo,
-  useState,
-} from "react";
-
-import type { DerivedInputs, LightingSnapshot } from "@/lib/calculator-modal-types";
-
-// ─── Snapshot ────────────────────────────────────────────────────────────────
+import { createContext, useContext, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { getKitDisplayName, type DerivedInputs, type LightingSnapshot } from "@/lib/calculator-modal-types";
 
 export type CalculatorLeadSnapshot = {
   area: number;
@@ -48,26 +35,14 @@ export type CalculatorLeadSnapshot = {
   lightsRatePerUnit: number;
   lightsTotal: number;
 
-  /** Итог только по потолку (работы) */
   total: number;
-
-  /**
-   * Итог с освещением (потолок + оборудование со скидкой).
-   * Записывается при подтверждении wizard.
-   * Если освещение не выбрано — равно total.
-   */
   grandTotal?: number;
 
-  /** Производные параметры для рекомендаций освещения */
   derivedInputs: DerivedInputs;
-
-  /** Выбранное освещение (заполняется из модалки) */
   lighting?: LightingSnapshot;
   leadSource?: string;
   _reconciled?: boolean;
 };
-
-// ─── Context ─────────────────────────────────────────────────────────────────
 
 type PriceCalculatorContextValue = {
   snapshot: CalculatorLeadSnapshot | null;
@@ -76,9 +51,7 @@ type PriceCalculatorContextValue = {
   setHasInteracted: Dispatch<SetStateAction<boolean>>;
 };
 
-const PriceCalculatorContext = createContext<PriceCalculatorContextValue | null>(
-  null
-);
+const PriceCalculatorContext = createContext<PriceCalculatorContextValue | null>(null);
 
 export function PriceCalculatorProvider({ children }: { children: ReactNode }) {
   const [snapshot, setSnapshot] = useState<CalculatorLeadSnapshot | null>(null);
@@ -89,42 +62,26 @@ export function PriceCalculatorProvider({ children }: { children: ReactNode }) {
     [snapshot, hasInteracted]
   );
 
-  return (
-    <PriceCalculatorContext.Provider value={value}>
-      {children}
-    </PriceCalculatorContext.Provider>
-  );
+  return <PriceCalculatorContext.Provider value={value}>{children}</PriceCalculatorContext.Provider>;
 }
 
 export function usePriceCalculatorBridge() {
   const context = useContext(PriceCalculatorContext);
   if (!context) {
-    throw new Error(
-      "usePriceCalculatorBridge must be used inside PriceCalculatorProvider."
-    );
+    throw new Error("usePriceCalculatorBridge must be used inside PriceCalculatorProvider.");
   }
   return context;
 }
 
-// ─── Serialization ───────────────────────────────────────────────────────────
-
-export function serializeCalculatorSnapshot(
-  snapshot: CalculatorLeadSnapshot | null
-) {
+export function serializeCalculatorSnapshot(snapshot: CalculatorLeadSnapshot | null) {
   return snapshot ? JSON.stringify(snapshot) : "";
 }
 
-// ─── Formatters ──────────────────────────────────────────────────────────────
-
 function formatCurrency(value: number) {
-  return new Intl.NumberFormat("ru-RU").format(value);
+  return new Intl.NumberFormat("ru-RU").format(Math.round(value));
 }
 
-// ─── Summary lines (потолок) ─────────────────────────────────────────────────
-
-export function getCalculatorSummaryLines(
-  snapshot: CalculatorLeadSnapshot | null
-): string[] {
+export function getCalculatorSummaryLines(snapshot: CalculatorLeadSnapshot | null): string[] {
   if (!snapshot) return [];
 
   const lines: string[] = [
@@ -179,84 +136,32 @@ export function getCalculatorSummaryLines(
   }
 
   if (snapshot.lightsEnabled && snapshot.lightsTotal > 0 && snapshot.lightsCount !== null) {
-    lines.push(
-      `Светильники: ${snapshot.lightsCount} шт. × ${formatCurrency(snapshot.lightsRatePerUnit)} ₽`
-    );
+    lines.push(`Светильники: ${snapshot.lightsCount} шт. × ${formatCurrency(snapshot.lightsRatePerUnit)} ₽`);
   }
 
-  // Потолок итого — всегда
   lines.push(`Потолок (работы): ${formatCurrency(snapshot.total)} ₽`);
-
   return lines;
 }
 
-// ─── Summary lines (освещение) ───────────────────────────────────────────────
-
-export function getLightingSummaryLines(
-  snapshot: CalculatorLeadSnapshot | null
-): string[] {
+export function getLightingSummaryLines(snapshot: CalculatorLeadSnapshot | null): string[] {
   const lighting = snapshot?.lighting;
   if (!lighting || lighting.mode === "none") return [];
 
   const lines: string[] = [];
+  const displayName = lighting.mode === "kit" ? getKitDisplayName(lighting) : null;
 
-  if ((lighting.mode === "kit" || lighting.mode === "catalog") && lighting.items?.length) {
-    // ← Используем getKitDisplayName для кита, иначе "из каталога"
-    const displayName =
-      lighting.mode === "kit"
-        ? getKitDisplayName(lighting)
-        : null;
+  lines.push(displayName ? `Освещение - ${displayName}:` : "Освещение (из каталога):");
 
-    if (displayName) {
-      lines.push(`Освещение — ${displayName}:`);
-    } else {
-      lines.push("Освещение (из каталога):");
-    }
-
-    for (const item of lighting.items) {
-      lines.push(
-        `  — ${item.name} × ${item.qty} шт. × ${formatCurrency(item.priceRub)} ₽`
-      );
-    }
-    if (lighting.totalRub != null) {
-      lines.push(`  Оборудование: ${formatCurrency(lighting.totalRub)} ₽`);
-    }
-    if (lighting.discountedTotalRub != null) {
-      lines.push(
-        `  Со скидкой 15%: ${formatCurrency(lighting.discountedTotalRub)} ₽`
-      );
-    }
+  for (const item of lighting.items ?? []) {
+    lines.push(`  - ${item.name} × ${item.qty} × ${formatCurrency(item.priceRub)} ₽`);
   }
 
-  return lines;
-}
-/**
- * Итоговые строки для заявки — структурированный блок.
- * Используется в action-form.tsx и buildLeadMessage.
- * Всегда выводит: Потолок / Освещение (если есть) / Итого.
- */
-export function getTotalSummaryLines(
-  snapshot: CalculatorLeadSnapshot | null
-): string[] {
-  if (!snapshot) return [];
+  if (lighting.totalRub != null) {
+    lines.push(`  Оборудование: ${formatCurrency(lighting.totalRub)} ₽`);
+  }
 
-  const lighting   = snapshot.lighting;
-  const hasLighting =
-    lighting &&
-    lighting.mode !== "none" &&
-    (lighting.items?.length ?? 0) > 0 &&
-    (lighting.discountedTotalRub ?? 0) > 0;
-
-  const lines: string[] = [];
-
-  lines.push(`Потолок: ${formatCurrency(snapshot.total)} ₽`);
-
-  if (hasLighting && lighting!.discountedTotalRub != null) {
-    lines.push(
-      `Освещение (со скидкой 15%): ${formatCurrency(lighting!.discountedTotalRub)} ₽`
-    );
-    const grand = snapshot.grandTotal ?? (snapshot.total + lighting!.discountedTotalRub);
-    lines.push(`Итого: ~${formatCurrency(grand)} ₽`);
+  if (lighting.discountedTotalRub != null) {
+    lines.push(`  Со скидкой 15%: ${formatCurrency(lighting.discountedTotalRub)} ₽`);
   }
 
   return lines;
