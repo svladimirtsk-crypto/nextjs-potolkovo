@@ -1,4 +1,3 @@
-// app/uslugi/prodazha-trekovogo-osveshcheniya/_components/CatalogSectionClient.tsx
 "use client";
 
 import { useMemo, useState } from "react";
@@ -86,10 +85,10 @@ function minByUnit(unit: "pcs" | "m"): number {
 }
 
 function pickDisplayAttributes(product: FeedCatalogProduct) {
-  if (product.keyAttributes && product.keyAttributes.length > 0) {
+  if (Array.isArray(product.keyAttributes) && product.keyAttributes.length > 0) {
     return product.keyAttributes.slice(0, 4);
   }
-  return product.params.slice(0, 4);
+  return (product.params ?? []).slice(0, 4);
 }
 
 export function CatalogSectionClient({ data }: Props) {
@@ -200,6 +199,8 @@ export function CatalogSectionClient({ data }: Props) {
     });
   };
 
+  const debugData = (data as FeedCatalogResult & { debug?: Record<string, unknown> }).debug;
+
   return (
     <Section id="catalog" className="scroll-mt-24 bg-white">
       <Container>
@@ -225,7 +226,7 @@ export function CatalogSectionClient({ data }: Props) {
               Не удалось получить валидную базу товаров.
             </p>
             {data.errorMessage ? (
-              <p className="mt-2 text-xs text-amber-700">Причина: {data.errorMessage}</p>
+              <p className="mt-2 text-xs text-amber-700">Причина: {String(data.errorMessage)}</p>
             ) : null}
           </div>
         ) : (
@@ -447,25 +448,13 @@ export function CatalogSectionClient({ data }: Props) {
           </div>
         )}
 
-        {debugEnabled && data.debug ? (
+        {debugEnabled && debugData ? (
           <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
-            <p>enabled: {String(data.debug.enabled ?? "")}</p>
-            <p>strict: {String(data.debug.strict ?? "")}</p>
-            <p>selectedSource: {String(data.debug.selectedSource ?? "")}</p>
-            <p>status: {String(data.debug.status ?? "")}</p>
-            <p>contentType: {String(data.debug.contentType ?? "")}</p>
-            <p>bodyLength: {String(data.debug.bodyLength ?? "")}</p>
-            <p>categoriesCount: {String(data.debug.categoriesCount ?? "")}</p>
-            <p>offerBlocksCount: {String(data.debug.offerBlocksCount ?? "")}</p>
-            <p>productsParsed: {String(data.debug.productsParsed ?? "")}</p>
-            <p>productsKept: {String(data.debug.productsKept ?? "")}</p>
-            <p>skippedNoCategoryId: {String(data.debug.skippedNoCategoryId ?? "")}</p>
-            <p>skippedUnknownCategory: {String(data.debug.skippedUnknownCategory ?? "")}</p>
-            <p>skippedNotWhitelisted: {String(data.debug.skippedNotWhitelisted ?? "")}</p>
-            <p>skippedNoPrice: {String(data.debug.skippedNoPrice ?? "")}</p>
-            <p>skippedNoVendorCode: {String(data.debug.skippedNoVendorCode ?? "")}</p>
-            <p>errorMessage: {String(data.debug.errorMessage ?? "")}</p>
-            <p>fetchedAt: {String(data.debug.fetchedAt ?? "")}</p>
+            {Object.entries(debugData).map(([k, v]) => (
+              <p key={k}>
+                {k}: {String(v ?? "")}
+              </p>
+            ))}
           </div>
         ) : null}
       </Container>
