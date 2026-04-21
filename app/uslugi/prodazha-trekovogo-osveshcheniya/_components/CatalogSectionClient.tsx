@@ -22,6 +22,9 @@ type Props = {
 };
 
 type CartItems = Record<string, number>;
+type CatalogSection = "track-systems" | "point-fixtures";
+type TrackSystemUi = "COLIBRI_220" | "CLARUS_48" | "TRACK_220";
+type TrackGroupUi = "TRACK_FIXTURE" | "TRACK_PROFILE" | "TRACK_ACCESSORY";
 
 const IMG_FALLBACK =
   "data:image/svg+xml;utf8," +
@@ -34,46 +37,6 @@ const IMG_FALLBACK =
 
 function fmt(n: number) {
   return new Intl.NumberFormat("ru-RU").format(Math.round(n));
-}
-
-function getSystemLabel(system: FeedCatalogSystem): string {
-  switch (system) {
-    case "COLIBRI_220":
-      return "COLIBRI 220V";
-    case "CLARUS_48":
-      return "CLARUS 48V";
-    case "TRACK_220":
-      return "220V";
-    case "SMART_HOME":
-      return "Умный дом";
-    default:
-      return "Прочее";
-  }
-}
-
-function getKindLabel(kind: FeedCatalogKind): string {
-  switch (kind) {
-    case "TRACK_PROFILE":
-      return "Профили";
-    case "TRACK_ACCESSORY":
-      return "Комплектующие трека";
-    case "TRACK_FIXTURE":
-      return "Трековые светильники";
-    case "SPOT_FIXTURE":
-      return "Точечные";
-    case "LAMP":
-      return "Лампы";
-    case "PSU":
-      return "Блоки питания";
-    case "CONTROL":
-      return "Управление";
-    case "LED_STRIP":
-      return "Лента";
-    case "CEILING_COMPONENT":
-      return "Закладные и комплектующие";
-    default:
-      return "Другое";
-  }
 }
 
 function stepByUnit(unit: "pcs" | "m"): number {
@@ -91,15 +54,57 @@ function pickDisplayAttributes(product: FeedCatalogProduct) {
   return (product.params ?? []).slice(0, 4);
 }
 
+function detectSocket(product: FeedCatalogProduct): "GX53" | "MR16" | null {
+  const paramsText = (product.params ?? [])
+    .map((p) => `${p.label} ${p.value}`)
+    .join(" ")
+    .toLowerCase();
+  const text = `${product.name} ${product.vendorCode} ${paramsText}`.toLowerCase();
+
+  if (text.includes("gx53")) return "GX53";
+  if (text.includes("mr16") || text.includes("gu5.3")) return "MR16";
+  return null;
+}
+
+function isPointFixture(product: FeedCatalogProduct): boolean {
+  return product.kind === "SPOT_FIXTURE";
+}
+
+function isLamp(product: FeedCatalogProduct): boolean {
+  return product.kind === "LAMP";
+}
+
+function ProductImage({ src, alt }: { src?: string; alt: string }) {
+  const imageSrc: string = String(src ?? IMG_FALLBACK);
+
+  return (
+    <div className="mb-3 h-44 w-full overflow-hidden rounded-xl border border-slate-100 bg-slate-50 p-3">
+      <img
+        src={imageSrc}
+        alt={alt}
+        loading="lazy"
+        className="h-full w-full object-contain"
+        onError={(e) => {
+          const img = e.currentTarget;
+          img.onerror = null;
+          img.src = IMG_FALLBACK;
+        }}
+      />
+    </div>
+  );
+}
+
 export function CatalogSectionClient({ data }: Props) {
   const { openCalculator } = useCalculatorModal();
   const searchParams = useSearchParams();
   const debugEnabled = searchParams.get("catalogDebug") === "1";
 
-  const [systemFilter, setSystemFilter] = useState<FeedCatalogSystem | "all">("all");
-  const [kindFilter, setKindFilter] = useState<FeedCatalogKind | "all">("all");
+  const [catalogSection, setCatalogSection] = useState<CatalogSection>("track-systems");
+  const [trackSystem, setTrackSystem] = useState<TrackSystemUi>("COLIBRI_220");
+  const [trackGroup, setTrackGroup] = useState<TrackGroupUi>("TRACK_FIXTURE");
   const [searchQuery, setSearchQuery] = useState("");
   const [cartItems, setCartItems] = useState<CartItems>({});
+  const [lastAddedPointSku, setLastAddedPointSku] = useState<string | null>(null);
 
   const baseProducts = useMemo(() => {
     return data.products.filter((p) => Number.isFinite(p.priceRub) && p.priceRub > 0);
@@ -108,33 +113,49 @@ export function CatalogSectionClient({ data }: Props) {
   const baseIsEmpty = baseProducts.length === 0;
   const showCatalogError = !data.ok || baseIsEmpty;
 
-  const systems = useMemo(
-    () => Array.from(new Set(baseProducts.map((p) => p.system))),
-    [baseProducts]
-  );
-
-  const kinds = useMemo(
-    () => Array.from(new Set(baseProducts.map((p) => p.kind))),
-    [baseProducts]
-  );
-
   const productsById = useMemo(
     () => new Map(baseProducts.map((p) => [p.productId, p])),
     [baseProducts]
   );
 
+  const pointProducts = useMemo(() => {
+    return baseProducts
+      .filter((p) => isPointFixture(p))
+      .sort((a, b) => {
+        const avA = a.available === false ? 0 : 1;
+        const avB = b.available === false ? 0 : 1;
+        if (avA !== avB) return avB - avA;
+        return a.priceRub - b.priceRub;
+      });
+  }, [baseProducts]);
+
+  const lampsBySocket = useMemo(() => {
+    const allLamps = baseProducts.filter((p) => isLamp(p) && p.available !== false);
+    return {
+      GX53: allLamps.filter((p) => detectSocket(p) === "GX53").slice(0, 4),
+      MR16: allLamps.filter((p) => detectSocket(p) === "MR16").slice(0, 4),
+    };
+  }, [baseProducts]);
+
   const filteredProducts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
 
-    return baseProducts.filter((p) => {
-      if (systemFilter !== "all" && p.system !== systemFilter) return false;
-      if (kindFilter !== "all" && p.kind !== kindFilter) return false;
-      if (!q) return true;
+    const scoped =
+      catalogSection === "track-systems"
+        ? baseProducts.filter(
+            (p) =>
+              p.system === (trackSystem as FeedCatalogSystem) &&
+              p.kind === (trackGroup as FeedCatalogKind)
+          )
+        : pointProducts;
 
+    if (!q) return scoped;
+
+    return scoped.filter((p) => {
       const hay = `${p.name} ${p.vendorCode}`.toLowerCase();
       return hay.includes(q);
     });
-  }, [baseProducts, systemFilter, kindFilter, searchQuery]);
+  }, [baseProducts, catalogSection, pointProducts, searchQuery, trackGroup, trackSystem]);
 
   const selectedLines = useMemo(() => {
     return Object.entries(cartItems)
@@ -165,6 +186,14 @@ export function CatalogSectionClient({ data }: Props) {
       }
       return { ...prev, [product.productId]: normalized };
     });
+
+    if (normalized > 0 && isPointFixture(product)) {
+      setLastAddedPointSku(product.productId);
+    }
+  };
+
+  const addLampOneToOne = (lamp: FeedCatalogProduct, fixtureQty: number) => {
+    setQty(lamp, fixtureQty);
   };
 
   const handleTransferToCalculator = () => {
@@ -175,8 +204,18 @@ export function CatalogSectionClient({ data }: Props) {
       priceRub: product.priceRub,
     }));
 
+    const openWithExtendedOptions = (payload: Record<string, unknown>) => {
+      openCalculator(payload as Parameters<typeof openCalculator>[0]);
+    };
+
     if (items.length === 0) {
-      openCalculator({ initialStep: 1, source: "catalog_trek_page_empty" });
+      openWithExtendedOptions({
+        initialStep: 1,
+        initialLightingTab: "catalog",
+        initialLightingView: "browse",
+        entryMode: "lighting-first",
+        source: "catalog_trek_page_empty",
+      });
       return;
     }
 
@@ -191,9 +230,11 @@ export function CatalogSectionClient({ data }: Props) {
       userCustomizedLighting: true,
     };
 
-    openCalculator({
+    openWithExtendedOptions({
       initialStep: 1,
       initialLightingTab: "catalog",
+      initialLightingView: "selected",
+      entryMode: "lighting-first",
       initialLighting,
       source: "catalog_trek_page",
     });
@@ -206,14 +247,19 @@ export function CatalogSectionClient({ data }: Props) {
       <Container>
         <Heading
           eyebrow="Каталог"
-          title="Каталог трекового освещения"
-          description="Добавьте товары и передайте в калькулятор без потери данных."
+          title="Каталог трекового и точечного освещения"
+          description="Выберите товары, проверьте итог и передайте в калькулятор без потери позиций."
         />
 
         <div className="mt-6">
           <Button
             type="button"
-            onClick={() => openCalculator({ initialStep: 0, source: "catalog_trek_page_cta" })}
+            onClick={() =>
+              openCalculator({
+                initialStep: 0,
+                source: "catalog_trek_page_cta",
+              })
+            }
           >
             Открыть калькулятор
           </Button>
@@ -222,80 +268,99 @@ export function CatalogSectionClient({ data }: Props) {
         {showCatalogError ? (
           <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-5">
             <p className="text-sm font-semibold text-amber-900">Каталог временно недоступен</p>
-            <p className="mt-1 text-sm text-amber-800">
-              Не удалось получить валидную базу товаров.
-            </p>
+            <p className="mt-1 text-sm text-amber-800">Не удалось получить валидную базу товаров.</p>
             {data.errorMessage ? (
-              <p className="mt-2 text-xs text-amber-700">Причина: {String(data.errorMessage)}</p>
+              <p className="mt-2 text-xs text-amber-700">Причина: {String(data.errorMessage ?? "")}</p>
             ) : null}
           </div>
         ) : (
           <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_320px]">
             <div>
               <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCatalogSection("track-systems");
+                      setSearchQuery("");
+                    }}
+                    className={`rounded-lg px-3 py-2 text-sm font-medium ${
+                      catalogSection === "track-systems"
+                        ? "bg-slate-950 text-white"
+                        : "text-slate-700 hover:text-slate-950"
+                    }`}
+                  >
+                    Трековые системы
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCatalogSection("point-fixtures");
+                      setSearchQuery("");
+                    }}
+                    className={`rounded-lg px-3 py-2 text-sm font-medium ${
+                      catalogSection === "point-fixtures"
+                        ? "bg-slate-950 text-white"
+                        : "text-slate-700 hover:text-slate-950"
+                    }`}
+                  >
+                    Точечные светильники
+                  </button>
+                </div>
+
+                {catalogSection === "track-systems" ? (
+                  <>
+                    <div className="flex flex-wrap gap-2">
+                      {(["COLIBRI_220", "CLARUS_48", "TRACK_220"] as TrackSystemUi[]).map((system) => (
+                        <button
+                          key={system}
+                          type="button"
+                          onClick={() => setTrackSystem(system)}
+                          className={`rounded-full border px-4 py-2 text-sm transition-colors ${
+                            trackSystem === system
+                              ? "border-slate-950 bg-slate-950 text-white"
+                              : "border-slate-200 text-slate-700 hover:border-slate-400"
+                          }`}
+                        >
+                          {system === "COLIBRI_220"
+                            ? "COLIBRI 220V (встраиваемая)"
+                            : system === "CLARUS_48"
+                            ? "CLARUS 48V (встраиваемая)"
+                            : "ART 220V (накладная)"}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {(["TRACK_FIXTURE", "TRACK_PROFILE", "TRACK_ACCESSORY"] as TrackGroupUi[]).map((group) => (
+                        <button
+                          key={group}
+                          type="button"
+                          onClick={() => setTrackGroup(group)}
+                          className={`rounded-full border px-4 py-2 text-sm transition-colors ${
+                            trackGroup === group
+                              ? "border-slate-950 bg-slate-950 text-white"
+                              : "border-slate-200 text-slate-700 hover:border-slate-400"
+                          }`}
+                        >
+                          {group === "TRACK_FIXTURE"
+                            ? "Светильники"
+                            : group === "TRACK_PROFILE"
+                            ? "Профили"
+                            : "Комплектующие"}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : null}
+
                 <input
                   type="search"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Поиск по названию или артикулу"
+                  placeholder="Поиск в текущем разделе"
                   className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
                 />
-
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSystemFilter("all")}
-                    className={`rounded-full border px-4 py-2 text-sm transition-colors ${
-                      systemFilter === "all"
-                        ? "border-slate-950 bg-slate-950 text-white"
-                        : "border-slate-200 text-slate-700 hover:border-slate-400"
-                    }`}
-                  >
-                    Все системы
-                  </button>
-                  {systems.map((system) => (
-                    <button
-                      key={system}
-                      type="button"
-                      onClick={() => setSystemFilter(system)}
-                      className={`rounded-full border px-4 py-2 text-sm transition-colors ${
-                        systemFilter === system
-                          ? "border-slate-950 bg-slate-950 text-white"
-                          : "border-slate-200 text-slate-700 hover:border-slate-400"
-                      }`}
-                    >
-                      {getSystemLabel(system)}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setKindFilter("all")}
-                    className={`rounded-full border px-4 py-2 text-sm transition-colors ${
-                      kindFilter === "all"
-                        ? "border-slate-950 bg-slate-950 text-white"
-                        : "border-slate-200 text-slate-700 hover:border-slate-400"
-                    }`}
-                  >
-                    Все типы
-                  </button>
-                  {kinds.map((kind) => (
-                    <button
-                      key={kind}
-                      type="button"
-                      onClick={() => setKindFilter(kind)}
-                      className={`rounded-full border px-4 py-2 text-sm transition-colors ${
-                        kindFilter === kind
-                          ? "border-slate-950 bg-slate-950 text-white"
-                          : "border-slate-200 text-slate-700 hover:border-slate-400"
-                      }`}
-                    >
-                      {getKindLabel(kind)}
-                    </button>
-                  ))}
-                </div>
               </div>
 
               <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -310,7 +375,7 @@ export function CatalogSectionClient({ data }: Props) {
                   const regular = product.priceRub;
                   const discount = applyLightingDiscount(regular);
                   const benefit = Math.max(0, regular - discount);
-                  const src: string = String(product.coverImage || IMG_FALLBACK);
+                  const productUrl: string = String(product.url ?? "");
 
                   return (
                     <div
@@ -318,19 +383,7 @@ export function CatalogSectionClient({ data }: Props) {
                       className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4"
                     >
                       <div>
-                        <div className="mb-3 aspect-[4/3] overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
-                          <img
-                            src={src}
-                            alt={product.name}
-                            loading="lazy"
-                            className="h-full w-full object-cover"
-                            onError={(e) => {
-                              const img = e.currentTarget;
-                              img.onerror = null;
-                              img.src = IMG_FALLBACK;
-                            }}
-                          />
-                        </div>
+                        <ProductImage src={product.coverImage} alt={product.name} />
 
                         <p className="text-sm font-semibold text-slate-950">{product.name}</p>
                         <p className="mt-1 text-xs text-slate-500">Артикул: {product.vendorCode}</p>
@@ -387,15 +440,50 @@ export function CatalogSectionClient({ data }: Props) {
                             </div>
                           )}
 
-                          <a
-                            href={product.url}
-                            target="_blank"
-                            rel="nofollow noopener noreferrer"
-                            className="text-xs text-slate-500 hover:text-slate-900 underline"
-                          >
-                            Открыть товар
-                          </a>
+                          {productUrl ? (
+                            <a
+                              href={productUrl}
+                              target="_blank"
+                              rel="nofollow noopener noreferrer"
+                              className="text-xs text-slate-500 hover:text-slate-900 underline"
+                            >
+                              Открыть товар
+                            </a>
+                          ) : null}
                         </div>
+
+                        {isPointFixture(product) && qty > 0 ? (
+                          <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                            <p className="text-xs font-medium text-slate-800">
+                              Подобрать лампы ({String(detectSocket(product) ?? "") || "совместимые"})
+                            </p>
+                            <div className="mt-2 space-y-2">
+                              {(detectSocket(product) === "GX53"
+                                ? lampsBySocket.GX53
+                                : detectSocket(product) === "MR16"
+                                ? lampsBySocket.MR16
+                                : []
+                              ).map((lamp) => (
+                                <div
+                                  key={lamp.productId}
+                                  className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-2 py-2"
+                                >
+                                  <div className="min-w-0">
+                                    <p className="truncate text-xs font-medium text-slate-900">{lamp.name}</p>
+                                    <p className="text-xs text-slate-500">{fmt(lamp.priceRub)} ₽ / шт</p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => addLampOneToOne(lamp, qty)}
+                                    className="shrink-0 rounded-full border border-slate-900 bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800"
+                                  >
+                                    Добавить 1:1
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   );
@@ -404,8 +492,8 @@ export function CatalogSectionClient({ data }: Props) {
             </div>
 
             <aside className="h-fit rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:sticky lg:top-24">
-              <p className="text-sm font-semibold text-slate-950">Мини-корзина</p>
-              <p className="mt-1 text-xs text-slate-500">Выбрано позиций: {selectedLines.length}</p>
+              <p className="text-sm font-semibold text-slate-950">Выбрано</p>
+              <p className="mt-1 text-xs text-slate-500">Позиции: {selectedLines.length}</p>
 
               <div className="mt-3 max-h-[320px] space-y-2 overflow-auto">
                 {selectedLines.length === 0 ? (
@@ -428,9 +516,7 @@ export function CatalogSectionClient({ data }: Props) {
 
               <div className="mt-4 border-t border-slate-200 pt-3">
                 <p className="text-sm text-slate-700">Цена: {fmt(cartTotal)} ₽</p>
-                <p className="text-sm font-semibold text-emerald-700">
-                  Со скидкой: {fmt(cartDiscounted)} ₽
-                </p>
+                <p className="text-sm font-semibold text-emerald-700">Со скидкой: {fmt(cartDiscounted)} ₽</p>
                 <p className="text-xs text-emerald-600">Выгода: {fmt(cartBenefit)} ₽</p>
               </div>
 
@@ -444,6 +530,12 @@ export function CatalogSectionClient({ data }: Props) {
                   Передать в калькулятор
                 </Button>
               </div>
+
+              {lastAddedPointSku ? (
+                <p className="mt-3 text-xs text-slate-500">
+                  Для точечных корпусов можно добавить совместимые лампы 1:1.
+                </p>
+              ) : null}
             </aside>
           </div>
         )}
