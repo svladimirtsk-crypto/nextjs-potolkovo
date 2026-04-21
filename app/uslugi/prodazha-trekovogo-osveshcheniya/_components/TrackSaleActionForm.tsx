@@ -2,32 +2,23 @@
 
 import { useMemo, useState } from "react";
 
-import { trackFormSubmitSuccess } from "@/lib/analytics";
-import { homepage } from "@/content/homepage";
-import { legal } from "@/content/legal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TextLink } from "@/components/ui/text-link";
+import { homepage } from "@/content/homepage";
+import { legal } from "@/content/legal";
+import { trackFormSubmitSuccess } from "@/lib/analytics";
+import { applyLightingDiscount } from "@/lib/lighting-formulas";
 import {
   getCalculatorSummaryLines,
+  getLightingSummaryLines,
   usePriceCalculatorBridge,
 } from "@/components/home/price-calculator-context";
-import {
-  useTrackSaleIntent,
-  type SelectedProduct,
-} from "./TrackSaleIntentContext";
-
-const actionContent = homepage.action;
 
 type FormStatus = "idle" | "success" | "error";
+type FieldErrors = { name?: string; phone?: string; address?: string };
 
-type FieldErrors = {
-  name?: string;
-  phone?: string;
-  address?: string;
-};
-
-function normalizePhone(value: string) {
+function normalizePhone(value: string): string {
   const digits = value.replace(/\D/g, "");
   if (!digits) return "";
   if (digits.startsWith("8") && digits.length === 11) return `+7${digits.slice(1)}`;
@@ -36,274 +27,190 @@ function normalizePhone(value: string) {
   return value.trim();
 }
 
-function isValidPhone(value: string) {
+function isValidPhone(value: string): boolean {
   return /^\+\d{10,15}$/.test(value);
 }
 
-function formatProductLine(p: SelectedProduct, idx: number) {
-  const parts = [`${idx + 1}. ${p.title}`];
-  parts.push(`   Артикул: ${p.sku}`);
-  if (p.priceRetail != null) parts.push(`   Цена EKS: ${p.priceRetail} ₽`);
-  if (p.priceWithCeiling != null) parts.push(`   Со скидкой: ${p.priceWithCeiling} ₽`);
-  if (p.providerUrl) parts.push(`   Ссылка: ${p.providerUrl}`);
-  return parts.join("\n");
-}
-
-function buildLeadMessage(
-  lines: string[],
+function buildMessage(
+  ceilingLines: string[],
+  lightingLines: string[],
   address: string,
-  selectedProducts: SelectedProduct[],
-  mode: "install" | "buy"
-) {
-  const modeLabel = mode === "install" ? "С установкой в потолок" : "Только купить свет";
-  const parts: string[] = [`Заявка с страницы «Продажа трекового освещения»`, `Режим: ${modeLabel}`];
+  source: string
+): string {
+  const parts: string[] = ["Заявка с трековой страницы ПОТОЛКОВО"];
 
-  if (address.trim()) {
-    parts.push("", `Адрес / район: ${address.trim()}`);
-  }
-
-  if (selectedProducts.length > 0) {
-    parts.push("", `Выбранные позиции трек-света (${selectedProducts.length}):`);
-    selectedProducts.forEach((p, i) => parts.push(formatProductLine(p, i)));
-    parts.push("", "Количество/длины уточнить при подтверждении.");
-  }
-
-  if (lines.length) {
-    parts.push("", "Параметры из калькулятора:", ...lines.map((line) => `— ${line}`));
-  }
+  if (source) parts.push(`Источник: ${source}`);
+  if (address.trim()) parts.push("", `Адрес / район: ${address.trim()}`);
+  if (ceilingLines.length) parts.push("", "Потолок:", ...ceilingLines.map((x) => `- ${x}`));
+  if (lightingLines.length) parts.push("", "Освещение:", ...lightingLines.map((x) => `- ${x}`));
 
   return parts.join("\n");
 }
 
-export function TrackSaleActionForm() {
-  const { snapshot, hasInteracted } = usePriceCalculatorBridge();
-  const { selectedProducts, mode } = useTrackSaleIntent();
-  const effectiveSource =
-  snapshot?.leadSource ?? (mode === "install" ? "track-sale-install" : "track-sale-buy");
+type TrackSaleActionFormProps = {
+  source?: string;
+};
 
-  const calculatorSummaryLines = useMemo(
+export function TrackSaleActionForm({ source }: TrackSaleActionFormProps) {
+  const actionContent = homepage.action;
+  const { snapshot, hasInteracted } = usePriceCalculatorBridge();
+
+  const effectiveSource: string = String(snapshot?.leadSource ?? source ?? "catalog_trek_page");
+
+  const ceilingLines = useMemo(
     () => (hasInteracted ? getCalculatorSummaryLines(snapshot) : []),
     [hasInteracted, snapshot]
   );
+  const lightingLines = useMemo(() => getLightingSummaryLines(snapshot), [snapshot]);
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [status, setStatus] = useState<FormStatus>("idle");
   const [message, setMessage] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [errors, setErrors] = useState<FieldErrors>({});
   const [isPending, setIsPending] = useState(false);
 
-  const submitLabel =
-    mode === "install"
-      ? "Записаться на замер"
-      : "Проверить наличие / получить счёт";
-
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-  event.preventDefault();
-  setStatus("idle");
-  setMessage("");
-  setFieldErrors({});
+    event.preventDefault();
 
-  const trimmedName = name.trim();
-  const trimmedAddress = address.trim();
-  const normalizedPhoneValue = normalizePhone(phone);
+    setStatus("idle");
+    setMessage("");
+    setErrors({});
 
-  const nextErrors: FieldErrors = {};
-  if (!trimmedName) nextErrors.name = "Укажите имя.";
-  else if (trimmedName.length > 80) nextErrors.name = "Слишком длинное имя.";
-  if (!normalizedPhoneValue || !isValidPhone(normalizedPhoneValue))
-    nextErrors.phone = "Укажите корректный телефон.";
-  if (trimmedAddress.length > 160)
-    nextErrors.address = "Слишком длинный адрес или район.";
+    const trimmedName = name.trim();
+    const trimmedAddress = address.trim();
+    const normalizedPhone = normalizePhone(phone);
 
-  if (Object.keys(nextErrors).length > 0) {
-    setFieldErrors(nextErrors);
-    setStatus("error");
-    setMessage("Пожалуйста, заполните имя и телефон корректно.");
-    return;
-  }
+    const nextErrors: FieldErrors = {};
+    if (!trimmedName) nextErrors.name = "Укажите имя.";
+    if (!normalizedPhone || !isValidPhone(normalizedPhone)) {
+      nextErrors.phone = "Укажите корректный телефон.";
+    }
+    if (trimmedAddress.length > 160) {
+      nextErrors.address = "Слишком длинный адрес или район.";
+    }
 
-  const accessKey = process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY;
-  if (!accessKey) {
-    setStatus("error");
-    setMessage("На клиенте не настроен NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY.");
-    return;
-  }
-
-  const formData = new FormData();
-  formData.append("access_key", accessKey);
-  formData.append("subject", "Новая заявка с сайта ПОТОЛКОВО");
-  formData.append("from_name", "ПОТОЛКОВО Сайт");
-  formData.append("name", trimmedName);
-  formData.append("phone", normalizedPhoneValue);
-  formData.append("address", trimmedAddress);
-  formData.append(
-    "message",
-    buildLeadMessage(calculatorSummaryLines, trimmedAddress, selectedProducts, mode)
-  );
-  formData.append("botcheck", "");
-  formData.append("company", "");
-  formData.append("calculator_source", effectiveSource); // ← NEW
-
-  setIsPending(true);
-
-  try {
-    const response = await fetch("https://api.web3forms.com/submit", {
-      method: "POST",
-      body: formData,
-    });
-    const result = await response.json().catch(() => null);
-
-    if (!response.ok || !result?.success) {
-      const errorText = result?.message || result?.error || `HTTP ${response.status}`;
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
       setStatus("error");
-      setMessage(`Ошибка отправки: ${errorText}`);
+      setMessage("Проверьте поля формы.");
       return;
     }
 
-    trackFormSubmitSuccess(effectiveSource); // ← NEW
+    const accessKey = process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY;
+    if (!accessKey) {
+      setStatus("error");
+      setMessage("Не настроен NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY.");
+      return;
+    }
 
-    setStatus("success");
-    setMessage(
-      "Спасибо. Я свяжусь с вами, чтобы уточнить задачу и договориться о замере."
+    const lightingTotalRub = Number(snapshot?.lighting?.totalRub ?? 0);
+    const lightingDiscountedRub = Number(
+      snapshot?.lighting?.discountedTotalRub ?? applyLightingDiscount(lightingTotalRub)
     );
-    setName("");
-    setPhone("");
-    setAddress("");
-    setFieldErrors({});
-  } catch {
-    setStatus("error");
-    setMessage(
-      "Не удалось отправить заявку. Проверьте соединение и попробуйте ещё раз."
+
+    const formData = new FormData();
+    formData.append("access_key", String(accessKey ?? ""));
+    formData.append("subject", String("Новая заявка с трековой страницы ПОТОЛКОВО"));
+    formData.append("from_name", String("ПОТОЛКОВО - Трековая страница"));
+    formData.append("name", String(trimmedName ?? ""));
+    formData.append("phone", String(normalizedPhone ?? ""));
+    formData.append("address", String(trimmedAddress ?? ""));
+    formData.append(
+      "message",
+      String(buildMessage(ceilingLines, lightingLines, trimmedAddress, effectiveSource) ?? "")
     );
-  } finally {
-    setIsPending(false);
+    formData.append("botcheck", String("" ?? ""));
+    formData.append("company", String("" ?? ""));
+
+    formData.append("lighting_mode", String(snapshot?.lighting?.mode ?? "none"));
+    formData.append("lighting_items_count", String(snapshot?.lighting?.items?.length ?? 0));
+    formData.append("lighting_total_rub", String(lightingTotalRub ?? 0));
+    formData.append("lighting_discounted_total_rub", String(lightingDiscountedRub ?? 0));
+    formData.append("calculator_source", String(effectiveSource ?? ""));
+
+    setIsPending(true);
+
+    try {
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok || !result?.success) {
+        const errorText: string = String(result?.message ?? result?.error ?? `HTTP ${response.status}`);
+        setStatus("error");
+        setMessage(`Ошибка отправки: ${errorText}`);
+        return;
+      }
+
+      trackFormSubmitSuccess(effectiveSource);
+      setStatus("success");
+      setMessage("Спасибо. Мы свяжемся с вами для уточнения деталей и замера.");
+      setName("");
+      setPhone("");
+      setAddress("");
+      setErrors({});
+    } catch {
+      setStatus("error");
+      setMessage("Не удалось отправить заявку. Проверьте соединение и попробуйте еще раз.");
+    } finally {
+      setIsPending(false);
+    }
   }
-}
+
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {status === "success" ? (
-        <div
-          className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
-          aria-live="polite"
-        >
-          <p className="font-medium">{actionContent.successTitle}</p>
-          <p className="mt-1">{message}</p>
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          {message}
         </div>
       ) : null}
 
       {status === "error" ? (
-        <div
-          className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"
-          aria-live="polite"
-        >
-          {message || actionContent.errorMessage}
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+          {message}
         </div>
       ) : null}
 
-      {selectedProducts.length > 0 ? (
-        <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
-          <p className="text-sm font-semibold text-slate-950">
-            В заявке: {selectedProducts.length}{" "}
-            {selectedProducts.length === 1
-              ? "позиция"
-              : selectedProducts.length < 5
-              ? "позиции"
-              : "позиций"}{" "}
-            трек-света
-          </p>
-          <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
-            {selectedProducts.map((p) => (
-              <li key={p.sku} className="flex gap-2">
-                <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-slate-950" />
-                <span className="min-w-0">
-                  <span className="font-medium text-slate-900">{p.title}</span>
-                  <span className="text-slate-400 ml-1.5 text-xs">
-                    {p.sku}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-3 text-xs text-slate-400">
-            Количество/длины уточним при подтверждении
-          </p>
-        </div>
-      ) : null}
+      <Input
+        label={actionContent.nameFieldLabel}
+        name="name"
+        type="text"
+        placeholder={actionContent.nameFieldPlaceholder}
+        autoComplete="name"
+        required
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+      />
+      {errors.name ? <p className="text-sm text-rose-700">{errors.name}</p> : null}
 
-      {calculatorSummaryLines.length ? (
-        <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
-          <p className="text-sm font-semibold text-slate-950">
-            В заявку попадёт ваш расчёт
-          </p>
-          <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
-            {calculatorSummaryLines.map((line) => (
-              <li key={line} className="flex gap-2">
-                <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-slate-950" />
-                <span>{line}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+      <Input
+        label={actionContent.phoneFieldLabel}
+        name="phone"
+        type="tel"
+        placeholder={actionContent.phoneFieldPlaceholder}
+        autoComplete="tel"
+        inputMode="tel"
+        required
+        value={phone}
+        onChange={(e) => setPhone(e.target.value)}
+      />
+      {errors.phone ? <p className="text-sm text-rose-700">{errors.phone}</p> : null}
 
-      <div>
-        <Input
-          label={actionContent.nameFieldLabel}
-          name="name"
-          type="text"
-          placeholder={actionContent.nameFieldPlaceholder}
-          autoComplete="name"
-          required
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-        />
-        {fieldErrors.name ? (
-          <p className="mt-2 text-sm text-rose-700" aria-live="polite">
-            {fieldErrors.name}
-          </p>
-        ) : null}
-      </div>
-
-      <div>
-        <Input
-          label={actionContent.phoneFieldLabel}
-          name="phone"
-          type="tel"
-          placeholder={actionContent.phoneFieldPlaceholder}
-          autoComplete="tel"
-          inputMode="tel"
-          required
-          value={phone}
-          onChange={(event) => setPhone(event.target.value)}
-        />
-        {fieldErrors.phone ? (
-          <p className="mt-2 text-sm text-rose-700" aria-live="polite">
-            {fieldErrors.phone}
-          </p>
-        ) : null}
-      </div>
-
-      <div>
-        <Input
-          label="Адрес или район"
-          name="address"
-          type="text"
-          placeholder="Например: Химки, Люберцы, м. Сокол или ул. Ленина, 12"
-          autoComplete="street-address"
-          value={address}
-          onChange={(event) => setAddress(event.target.value)}
-        />
-        <p className="mt-2 text-sm text-slate-500">
-          Необязательно. Это поможет быстрее сориентироваться по выезду.
-        </p>
-        {fieldErrors.address ? (
-          <p className="mt-2 text-sm text-rose-700" aria-live="polite">
-            {fieldErrors.address}
-          </p>
-        ) : null}
-      </div>
+      <Input
+        label={actionContent.addressFieldLabel ?? "Адрес или район"}
+        name="address"
+        type="text"
+        placeholder={actionContent.addressFieldPlaceholder ?? "Например: Химки, Люберцы"}
+        autoComplete="street-address"
+        value={address}
+        onChange={(e) => setAddress(e.target.value)}
+      />
+      {errors.address ? <p className="text-sm text-rose-700">{errors.address}</p> : null}
 
       <input
         type="text"
@@ -314,17 +221,9 @@ export function TrackSaleActionForm() {
         aria-hidden="true"
       />
 
-      <Button
-        type="submit"
-        className="w-full justify-center"
-        disabled={isPending}
-      >
-        {isPending ? "Отправляю..." : submitLabel}
+      <Button type="submit" className="w-full justify-center" disabled={isPending}>
+        {isPending ? "Отправляю..." : actionContent.submitButtonLabel}
       </Button>
-
-      <p className="text-sm leading-6 text-slate-600">
-        {actionContent.helperText}
-      </p>
 
       <p className="text-xs leading-5 text-slate-500">
         {legal.consentTextPrefix}{" "}
