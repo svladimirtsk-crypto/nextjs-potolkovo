@@ -21,7 +21,8 @@ export function PriceStrip() {
 
   const extendedOptions = options as (typeof options & ExtendedOptions) | null;
   const isLightingFirst = extendedOptions?.entryMode === "lighting-first";
-  const step0Interacted = Boolean(snapshot?.hasInteracted);
+  const { hasInteracted } = usePriceCalculatorBridge();
+const step0Interacted = Boolean(hasInteracted);
 
   const hideCeilingPrice = isLightingFirst && !step0Interacted;
   const visibleCeilingTotal = hideCeilingPrice ? 0 : ceilingTotal;
