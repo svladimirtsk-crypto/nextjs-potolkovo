@@ -1,9 +1,9 @@
-// components/calculator-modal/wizard-step1-lighting.tsx
 "use client";
 
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import { catalog } from "@/content/eksmarket-assortment";
+import snapshotData from "@/data/eks-feed2-snapshot.json";
+import type { FeedCatalogProduct, FeedCatalogResult, FeedCatalogSystem } from "@/lib/eks-feed2-catalog";
 import {
   LIGHTING_KITS,
   COLIBRI_PROFILES,
@@ -20,14 +20,22 @@ import { usePriceCalculatorBridge } from "@/components/home/price-calculator-con
 type Tab = "recommendations" | "catalog";
 type CartItems = Record<string, number>;
 type BuiltInTrackSystem = "colibri" | "clarus";
+type KindFilter = "all" | FeedCatalogProduct["kind"];
+
+const IMG_FALLBACK =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600">
+      <rect width="100%" height="100%" fill="#f1f5f9"/>
+      <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" fill="#64748b">Фото товара</text>
+    </svg>`
+  );
 
 function fmt(n: number) {
-  return new Intl.NumberFormat("ru-RU").format(n);
+  return new Intl.NumberFormat("ru-RU").format(Math.round(n));
 }
 
-function getBuiltInProfileTable(
-  system: BuiltInTrackSystem | null
-): readonly ProfileEntry[] {
+function getBuiltInProfileTable(system: BuiltInTrackSystem | null): readonly ProfileEntry[] {
   if (system === "clarus") return CLARUS_PROFILES;
   if (system === "colibri") return COLIBRI_PROFILES;
   return [];
@@ -52,6 +60,69 @@ function mergeItems(groups: LightingItem[][]): LightingItem[] {
 
 function getPointKits() {
   return LIGHTING_KITS.filter((k) => k.kitCategory === "point").slice(0, 3);
+}
+
+function normalizeSystemFromTrack(
+  trackMountType: "built-in" | "surface" | "none",
+  builtInSystem: BuiltInTrackSystem
+): FeedCatalogSystem {
+  if (trackMountType === "surface") return "TRACK_220";
+  return builtInSystem === "clarus" ? "CLARUS_48" : "COLIBRI_220";
+}
+
+function stepByUnit(unit: "pcs" | "m"): number {
+  return unit === "m" ? 0.5 : 1;
+}
+
+function minByUnit(unit: "pcs" | "m"): number {
+  return unit === "m" ? 0.5 : 1;
+}
+
+function getSystemLabel(system: FeedCatalogSystem): string {
+  switch (system) {
+    case "COLIBRI_220":
+      return "COLIBRI 220V";
+    case "CLARUS_48":
+      return "CLARUS 48V";
+    case "TRACK_220":
+      return "220V";
+    case "SMART_HOME":
+      return "Умный дом";
+    default:
+      return "Прочее";
+  }
+}
+
+function getKindLabel(kind: FeedCatalogProduct["kind"]): string {
+  switch (kind) {
+    case "TRACK_PROFILE":
+      return "Профили";
+    case "TRACK_ACCESSORY":
+      return "Комплектующие трека";
+    case "TRACK_FIXTURE":
+      return "Трековые светильники";
+    case "SPOT_FIXTURE":
+      return "Точечные";
+    case "LAMP":
+      return "Лампы";
+    case "PSU":
+      return "Блоки питания";
+    case "CONTROL":
+      return "Управление";
+    case "LED_STRIP":
+      return "Лента";
+    case "CEILING_COMPONENT":
+      return "Закладные и комплектующие";
+    default:
+      return "Другое";
+  }
+}
+
+function pickDisplayAttributes(product: FeedCatalogProduct) {
+  if (Array.isArray(product.keyAttributes) && product.keyAttributes.length > 0) {
+    return product.keyAttributes.slice(0, 4);
+  }
+  return (product.params ?? []).slice(0, 4);
 }
 
 function TabButton({
@@ -84,7 +155,7 @@ function KitCard({
   scaledQty,
   onSelect,
 }: {
-  kit: typeof LIGHTING_KITS[number];
+  kit: (typeof LIGHTING_KITS)[number];
   selected: boolean;
   scaledQty: number;
   onSelect: () => void;
@@ -120,54 +191,64 @@ function KitCard({
         <span className="text-xs text-emerald-600 font-medium">−15%</span>
       </div>
 
-      {selected ? (
-        <p className="mt-1 text-xs text-emerald-600 font-medium">✓ Выбран</p>
-      ) : null}
+      {selected ? <p className="mt-1 text-xs text-emerald-600 font-medium">✓ Выбран</p> : null}
     </button>
   );
 }
 
 function CatalogTab({
+  products,
   cartItems,
   onCartChange,
-  forcedCategoryId,
+  systemFilter,
+  kindFilter,
+  searchQuery,
+  onSystemFilterChange,
+  onKindFilterChange,
+  onSearchQueryChange,
 }: {
+  products: FeedCatalogProduct[];
   cartItems: CartItems;
   onCartChange: (next: CartItems) => void;
-  forcedCategoryId: string | null;
+  systemFilter: FeedCatalogSystem | "all";
+  kindFilter: KindFilter;
+  searchQuery: string;
+  onSystemFilterChange: (next: FeedCatalogSystem | "all") => void;
+  onKindFilterChange: (next: KindFilter) => void;
+  onSearchQueryChange: (next: string) => void;
 }) {
-  const [activeCategoryId, setActiveCategoryId] = useState(
-    forcedCategoryId ?? catalog.categories[0]?.id ?? ""
-  );
-  const [searchQuery, setSearchQuery] = useState("");
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set()
+  const systems = useMemo(
+    () => Array.from(new Set(products.map((p) => p.system))),
+    [products]
   );
 
-  useEffect(() => {
-    if (!forcedCategoryId) return;
-    setActiveCategoryId(forcedCategoryId);
-    setSearchQuery("");
-  }, [forcedCategoryId]);
-
-  const HITS_COUNT = 4;
+  const kinds = useMemo(
+    () => Array.from(new Set(products.map((p) => p.kind))),
+    [products]
+  );
 
   const filteredProducts = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
-    return catalog.products.filter(
-      (p) =>
-        p.categoryId === activeCategoryId &&
-        (q === "" || p.title.toLowerCase().includes(q))
+    const q = searchQuery.trim().toLowerCase();
+
+    return products.filter((p) => {
+      if (systemFilter !== "all" && p.system !== systemFilter) return false;
+      if (kindFilter !== "all" && p.kind !== kindFilter) return false;
+      if (!q) return true;
+
+      const hay = `${p.name} ${p.vendorCode}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [products, searchQuery, systemFilter, kindFilter]);
+
+  const setQty = (product: FeedCatalogProduct, qty: number) => {
+    const step = stepByUnit(product.unit);
+    const normalized = Math.max(0, Math.round(qty / step) * step);
+
+    onCartChange(
+      normalized <= 0
+        ? Object.fromEntries(Object.entries(cartItems).filter(([k]) => k !== product.productId))
+        : { ...cartItems, [product.productId]: normalized }
     );
-  }, [activeCategoryId, searchQuery]);
-
-  const isExpanded = expandedCategories.has(activeCategoryId);
-  const visibleProducts = isExpanded
-    ? filteredProducts
-    : filteredProducts.slice(0, HITS_COUNT);
-
-  const setQty = (sku: string, qty: number) => {
-    onCartChange({ ...cartItems, [sku]: Math.max(0, qty) });
   };
 
   return (
@@ -176,72 +257,129 @@ function CatalogTab({
         type="search"
         placeholder="Поиск по каталогу..."
         value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
+        onChange={(e) => onSearchQueryChange(e.target.value)}
         className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
         aria-label="Поиск по каталогу"
       />
 
       <div className="flex flex-wrap gap-2">
-        {catalog.categories.map((cat) => (
+        <button
+          type="button"
+          onClick={() => onSystemFilterChange("all")}
+          className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+            systemFilter === "all"
+              ? "border-slate-950 bg-slate-950 text-white"
+              : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"
+          }`}
+        >
+          Все системы
+        </button>
+        {systems.map((system) => (
           <button
-            key={cat.id}
+            key={system}
             type="button"
-            onClick={() => {
-              setActiveCategoryId(cat.id);
-              setSearchQuery("");
-            }}
+            onClick={() => onSystemFilterChange(system)}
             className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-              activeCategoryId === cat.id
+              systemFilter === system
                 ? "border-slate-950 bg-slate-950 text-white"
                 : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"
             }`}
           >
-            {cat.title}
+            {getSystemLabel(system)}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => onKindFilterChange("all")}
+          className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+            kindFilter === "all"
+              ? "border-slate-950 bg-slate-950 text-white"
+              : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"
+          }`}
+        >
+          Все типы
+        </button>
+        {kinds.map((kind) => (
+          <button
+            key={kind}
+            type="button"
+            onClick={() => onKindFilterChange(kind)}
+            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+              kindFilter === kind
+                ? "border-slate-950 bg-slate-950 text-white"
+                : "border-slate-200 bg-white text-slate-600 hover:border-slate-400"
+            }`}
+          >
+            {getKindLabel(kind)}
           </button>
         ))}
       </div>
 
       <div className="space-y-2">
-        {visibleProducts.length === 0 ? (
+        {filteredProducts.length === 0 ? (
           <p className="text-sm text-slate-500 py-4 text-center">Ничего не найдено</p>
         ) : null}
 
-        {visibleProducts.map((product) => {
-          const qty = cartItems[product.id] ?? 0;
-          const hasPrice = product.priceRub !== null;
-          const profileLengthMm = product.lengthMm ?? null;
+        {filteredProducts.map((product) => {
+          const qty = cartItems[product.productId] ?? 0;
+          const regular = product.priceRub;
+          const discounted = applyLightingDiscount(regular);
+          const benefit = Math.max(0, regular - discounted);
+          const src: string = String(product.coverImage || IMG_FALLBACK);
 
           return (
             <div
-              key={product.id}
-              className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3"
+              key={product.productId}
+              className="rounded-2xl border border-slate-200 bg-white p-3"
             >
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-slate-950 leading-5">
-                  {product.title}
-                </p>
-                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                  {profileLengthMm != null ? (
-                    <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
-                      {profileLengthMm} мм
-                    </span>
-                  ) : null}
+              <div className="flex gap-3">
+                <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-slate-100 bg-slate-50">
+                  <img
+                    src={src}
+                    alt={product.name}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                    onError={(e) => {
+                      const img = e.currentTarget;
+                      img.onerror = null;
+                      img.src = IMG_FALLBACK;
+                    }}
+                  />
+                </div>
 
-                  {hasPrice ? (
-                    <span className="text-xs text-slate-500">
-                      {fmt(product.priceRub!)} ₽ / шт.
-                    </span>
-                  ) : (
-                    <span className="text-xs text-slate-400">Цена по запросу</span>
-                  )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-slate-950 leading-5">{product.name}</p>
+                  <ul className="mt-1 space-y-0.5">
+                    {pickDisplayAttributes(product).map((attr) => (
+                      <li
+                        key={`${product.productId}-${attr.label}-${attr.value}`}
+                        className="text-xs text-slate-500"
+                      >
+                        {attr.label}: {attr.value}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </div>
 
-              {hasPrice ? (
-                qty === 0 ? (
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs text-slate-500">
+                    Цена: {fmt(regular)} ₽{product.unit === "m" ? " / м" : ""}
+                  </p>
+                  <p className="text-xs font-semibold text-emerald-700">
+                    Со скидкой: {fmt(discounted)} ₽{product.unit === "m" ? " / м" : ""}
+                  </p>
+                  <p className="text-xs text-emerald-600">Выгода: {fmt(benefit)} ₽</p>
+                </div>
+
+                {qty <= 0 ? (
                   <button
                     type="button"
-                    onClick={() => setQty(product.id, 1)}
+                    onClick={() => setQty(product, minByUnit(product.unit))}
                     className="shrink-0 rounded-full border border-slate-950 bg-slate-950 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800 transition-colors"
                   >
                     + Добавить
@@ -250,46 +388,31 @@ function CatalogTab({
                   <div className="flex shrink-0 items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => setQty(product.id, qty - 1)}
+                      onClick={() => setQty(product, qty - stepByUnit(product.unit))}
                       className="h-7 w-7 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-950 hover:bg-slate-50 transition-colors"
                       aria-label="Уменьшить количество"
                     >
                       −
                     </button>
-                    <span className="w-5 text-center text-sm font-semibold text-slate-950">
+                    <span className="min-w-[64px] text-center text-sm font-semibold text-slate-950">
                       {qty}
+                      {product.unit === "m" ? " м" : " шт"}
                     </span>
                     <button
                       type="button"
-                      onClick={() => setQty(product.id, qty + 1)}
+                      onClick={() => setQty(product, qty + stepByUnit(product.unit))}
                       className="h-7 w-7 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-950 hover:bg-slate-50 transition-colors"
                       aria-label="Увеличить количество"
                     >
                       +
                     </button>
                   </div>
-                )
-              ) : (
-                <span className="shrink-0 text-xs text-slate-400">—</span>
-              )}
+                )}
+              </div>
             </div>
           );
         })}
-
-        {filteredProducts.length > HITS_COUNT && !isExpanded ? (
-          <button
-            type="button"
-            onClick={() =>
-              setExpandedCategories((prev) => new Set([...prev, activeCategoryId]))
-            }
-            className="w-full rounded-2xl border border-dashed border-slate-200 py-2.5 text-sm text-slate-500 hover:border-slate-400 hover:text-slate-700 transition-colors"
-          >
-            Показать ещё {filteredProducts.length - HITS_COUNT} позиций
-          </button>
-        ) : null}
       </div>
-
-      <p className="text-xs text-slate-400">{catalog.disclaimer}</p>
     </div>
   );
 }
@@ -297,6 +420,20 @@ function CatalogTab({
 export function WizardStep1Lighting() {
   const { lightingDraft, setLightingDraft, options } = useCalculatorModal();
   const { snapshot } = usePriceCalculatorBridge();
+
+  const snapshotCatalog = snapshotData as FeedCatalogResult;
+  const products = useMemo(
+    () =>
+      (snapshotCatalog.products ?? []).filter(
+        (p) => Number.isFinite(p.priceRub) && p.priceRub > 0
+      ) as FeedCatalogProduct[],
+    [snapshotCatalog.products]
+  );
+
+  const productsById = useMemo(
+    () => new Map(products.map((p) => [p.productId, p])),
+    [products]
+  );
 
   const derivedInputs = snapshot?.derivedInputs ?? {
     pointSpotsQty: 0,
@@ -311,27 +448,28 @@ export function WizardStep1Lighting() {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
   const [selectedPointKitId, setSelectedPointKitId] = useState<string | null>(() => {
-    if (lightingDraft?.mode === "kit" && lightingDraft.kitId?.startsWith("combo:")) {
-      const pair = lightingDraft.kitId.replace("combo:", "");
-      const [pointId] = pair.split("|");
-      return pointId || null;
-    }
-    return lightingDraft?.mode === "kit" ? (lightingDraft.kitId ?? null) : null;
+    if (lightingDraft?.mode !== "kit") return null;
+    if (!lightingDraft.kitId) return null;
+    if (!lightingDraft.kitId.startsWith("combo:")) return lightingDraft.kitId;
+
+    const pair = lightingDraft.kitId.replace("combo:", "");
+    const [pointId] = pair.split("|");
+    return pointId || null;
   });
 
   const [selectedBuiltInSystem, setSelectedBuiltInSystem] =
     useState<BuiltInTrackSystem>("colibri");
 
   const [cartItems, setCartItems] = useState<CartItems>(() => {
-    if (lightingDraft?.mode === "catalog" && lightingDraft.items?.length) {
+    if (lightingDraft?.items?.length) {
       return Object.fromEntries(lightingDraft.items.map((i) => [i.sku, i.qty]));
     }
     return {};
   });
 
-  const [forcedCatalogCategoryId, setForcedCatalogCategoryId] = useState<string | null>(
-    null
-  );
+  const [systemFilter, setSystemFilter] = useState<FeedCatalogSystem | "all">("all");
+  const [kindFilter, setKindFilter] = useState<KindFilter>("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const prevInitialLightingRef = useRef<LightingSnapshot | null | undefined>(undefined);
 
@@ -345,9 +483,12 @@ export function WizardStep1Lighting() {
 
     if (incoming.mode === "catalog" && incoming.items?.length) {
       const next: CartItems = {};
-      for (const item of incoming.items) next[item.sku] = item.qty;
+      for (const item of incoming.items) {
+        next[item.sku] = item.qty;
+      }
       setCartItems(next);
       setSelectedPointKitId(null);
+      setActiveTab("catalog");
       return;
     }
 
@@ -361,17 +502,10 @@ export function WizardStep1Lighting() {
         }
       } else {
         const found = LIGHTING_KITS.find((k) => k.kitId === incoming.kitId);
-        if (found?.kitCategory === "point") {
-          setSelectedPointKitId(incoming.kitId);
-        }
+        if (found?.kitCategory === "point") setSelectedPointKitId(incoming.kitId);
       }
     }
   }, [options?.initialLighting]);
-
-  useEffect(() => {
-    if (derivedInputs.trackMountType !== "built-in") return;
-    if (!selectedBuiltInSystem) setSelectedBuiltInSystem("colibri");
-  }, [derivedInputs.trackMountType, selectedBuiltInSystem]);
 
   const pointKits = useMemo(() => getPointKits(), []);
 
@@ -393,31 +527,56 @@ export function WizardStep1Lighting() {
     const table = getBuiltInProfileTable(selectedBuiltInSystem);
     const pieces = calcProfilesForTrackMeters(derivedInputs.trackLengthMeters, table);
 
-    return pieces.map((piece) => ({
-      sku: piece.sku,
-      name: `Профиль ${piece.lengthMm} мм`,
-      qty: piece.qty,
-      priceRub: piece.priceRub ?? 0,
-    }));
+    return pieces.map((piece) => {
+      const product = productsById.get(piece.sku);
+      return {
+        sku: piece.sku,
+        name: product?.name ?? `Профиль ${piece.lengthMm} мм`,
+        qty: piece.qty,
+        priceRub: product?.priceRub ?? piece.priceRub ?? 0,
+      };
+    });
   }, [
     derivedInputs.trackMountType,
     derivedInputs.trackLengthMeters,
     selectedBuiltInSystem,
+    productsById,
   ]);
 
   const catalogExtrasItems = useMemo<LightingItem[]>(() => {
+    const fallbackItems = lightingDraft?.items ?? [];
+
     return Object.entries(cartItems)
       .filter(([, qty]) => qty > 0)
       .map(([sku, qty]) => {
-        const product = catalog.products.find((p) => p.id === sku);
+        const product = productsById.get(sku);
+        if (product) {
+          return {
+            sku,
+            name: product.name,
+            qty,
+            priceRub: product.priceRub,
+          };
+        }
+
+        const fromDraft = fallbackItems.find((i) => i.sku === sku);
+        if (fromDraft) {
+          return {
+            sku,
+            name: fromDraft.name,
+            qty,
+            priceRub: fromDraft.priceRub,
+          };
+        }
+
         return {
           sku,
-          name: product?.title ?? sku,
+          name: sku,
           qty,
-          priceRub: product?.priceRub ?? 0,
+          priceRub: 0,
         };
       });
-  }, [cartItems]);
+  }, [cartItems, productsById, lightingDraft?.items]);
 
   const mergedItems = useMemo(
     () => mergeItems([pointKitItems, trackProfileItems, catalogExtrasItems]),
@@ -434,7 +593,7 @@ export function WizardStep1Lighting() {
       return;
     }
 
-    const totalRub = mergedItems.reduce((sum, i) => sum + i.qty * i.priceRub, 0);
+    const totalRub = mergedItems.reduce((sum, item) => sum + item.qty * item.priceRub, 0);
     const discountedTotalRub = applyLightingDiscount(totalRub);
 
     if (hasPointKit || hasTrackInfrastructure) {
@@ -503,12 +662,6 @@ export function WizardStep1Lighting() {
   };
 
   const recommendedPowerW = Math.ceil((derivedInputs.trackLengthMeters ?? 0) * 20);
-  const trackCatalogCategoryId: string =
-    derivedInputs.trackMountType === "surface"
-      ? "art-220v"
-      : selectedBuiltInSystem === "clarus"
-      ? "clarus-48v"
-      : "colibri-220v";
 
   return (
     <div className="space-y-4">
@@ -600,8 +753,14 @@ export function WizardStep1Lighting() {
               <button
                 type="button"
                 onClick={() => {
-                  setForcedCatalogCategoryId(trackCatalogCategoryId);
+                  const forcedSystem = normalizeSystemFromTrack(
+                    derivedInputs.trackMountType,
+                    selectedBuiltInSystem
+                  );
                   setActiveTab("catalog");
+                  setSystemFilter(forcedSystem);
+                  setKindFilter("TRACK_FIXTURE");
+                  setSearchQuery("");
                 }}
                 className="rounded-full border border-slate-950 bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 transition-colors"
               >
@@ -630,9 +789,15 @@ export function WizardStep1Lighting() {
 
       {activeTab === "catalog" ? (
         <CatalogTab
+          products={products}
           cartItems={cartItems}
           onCartChange={handleCartChange}
-          forcedCategoryId={forcedCatalogCategoryId}
+          systemFilter={systemFilter}
+          kindFilter={kindFilter}
+          searchQuery={searchQuery}
+          onSystemFilterChange={setSystemFilter}
+          onKindFilterChange={setKindFilter}
+          onSearchQueryChange={setSearchQuery}
         />
       ) : null}
     </div>
