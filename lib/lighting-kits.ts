@@ -1,4 +1,3 @@
-// lib/lighting-kits.ts
 import type { LightingItem } from "@/lib/calculator-modal-types";
 import { scaleKitItemQty } from "@/lib/lighting-formulas";
 
@@ -22,15 +21,15 @@ export type ProfileEntry = {
 };
 
 export const COLIBRI_PROFILES: readonly ProfileEntry[] = [
-  { sku: "colibri-profile-220v-1000", lengthMm: 1000, priceRub: 3900 },
-  { sku: "colibri-profile-220v-2000", lengthMm: 2000, priceRub: 7400 },
-  { sku: "colibri-profile-220v-3000", lengthMm: 3000, priceRub: 10500 },
+  { sku: "eks-colibri-profile-220v-1000", lengthMm: 1000, priceRub: 3900 },
+  { sku: "eks-colibri-profile-220v-2000", lengthMm: 2000, priceRub: 7400 },
+  { sku: "eks-colibri-profile-220v-3000", lengthMm: 3000, priceRub: 10500 },
 ];
 
 export const CLARUS_PROFILES: readonly ProfileEntry[] = [
-  { sku: "clarus-profile-48v-1000", lengthMm: 1000, priceRub: 4200 },
-  { sku: "clarus-profile-48v-2000", lengthMm: 2000, priceRub: 8000 },
-  { sku: "clarus-profile-48v-3000", lengthMm: 3000, priceRub: 11500 },
+  { sku: "eks-clarus-profile-48v-1000", lengthMm: 1000, priceRub: 4200 },
+  { sku: "eks-clarus-profile-48v-2000", lengthMm: 2000, priceRub: 8000 },
+  { sku: "eks-clarus-profile-48v-3000", lengthMm: 3000, priceRub: 11500 },
 ];
 
 export type ProfilePiece = {
@@ -140,7 +139,7 @@ export const LIGHTING_KITS: readonly LightingKit[] = [
     scaleGroup: ["colibri-london-10w"],
     items: [
       {
-        sku: "colibri-profile-220v-2000",
+        sku: "eks-colibri-profile-220v-2000",
         name: "Профиль COLIBRI 220V 2000 мм",
         qty: 1,
         priceRub: 7400,
@@ -163,7 +162,7 @@ export const LIGHTING_KITS: readonly LightingKit[] = [
     scaleGroup: ["clarus-spot-12w-4000k"],
     items: [
       {
-        sku: "clarus-profile-48v-2000",
+        sku: "eks-clarus-profile-48v-2000",
         name: "Профиль CLARUS 48V 2000 мм",
         qty: 1,
         priceRub: 8000,
@@ -192,7 +191,7 @@ export const LIGHTING_KITS: readonly LightingKit[] = [
     scaleGroup: ["colibri-rio-12w"],
     items: [
       {
-        sku: "colibri-profile-220v-2000",
+        sku: "eks-colibri-profile-220v-2000",
         name: "Профиль COLIBRI 220V 2000 мм",
         qty: 2,
         priceRub: 7400,
