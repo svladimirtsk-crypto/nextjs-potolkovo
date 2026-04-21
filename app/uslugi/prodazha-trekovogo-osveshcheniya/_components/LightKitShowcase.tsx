@@ -1,80 +1,104 @@
-// app/uslugi/prodazha-trekovogo-osveshcheniya/_components/LightKitShowcase.tsx
+import snapshotData from "@/data/eks-feed2-snapshot.json";
 
-import { LIGHTING_KITS } from "@/lib/lighting-kits";
-import { applyLightingDiscount } from "@/lib/lighting-formulas";
 import { Container } from "@/components/ui/container";
 import { Heading } from "@/components/ui/heading";
 import { Section } from "@/components/ui/section";
+import { applyLightingDiscount } from "@/lib/lighting-formulas";
+import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
+import type { LightingItem } from "@/lib/calculator-modal-types";
 import { LightKitCtaButton } from "./LightKitCtaButton";
 
 function fmt(n: number) {
-  return new Intl.NumberFormat("ru-RU").format(n);
+  return new Intl.NumberFormat("ru-RU").format(Math.round(n));
 }
 
-// Только трековые киты в этой секции
-const TRACK_KITS = LIGHTING_KITS.filter(
-  (k) => k.kitCategory === "track-built-in" || k.kitCategory === "track-surface"
-);
+type SnapshotCatalogShape = { products?: FeedCatalogProduct[] };
+
+function bySystem(products: FeedCatalogProduct[], system: FeedCatalogProduct["system"]) {
+  return products.filter((p) => p.system === system);
+}
+
+function firstAvailable(products: FeedCatalogProduct[], kind: FeedCatalogProduct["kind"]) {
+  return products.find((p) => p.kind === kind && p.available !== false) ?? null;
+}
+
+function buildSet(
+  title: string,
+  systemProducts: FeedCatalogProduct[],
+  defaultFixtureQty: number
+): { title: string; items: LightingItem[] } | null {
+  const fixture = firstAvailable(systemProducts, "TRACK_FIXTURE");
+  const profile = firstAvailable(systemProducts, "TRACK_PROFILE");
+
+  if (!fixture || !profile) return null;
+
+  return {
+    title,
+    items: [
+      {
+        sku: profile.productId,
+        name: profile.name,
+        qty: 2,
+        priceRub: profile.priceRub,
+      },
+      {
+        sku: fixture.productId,
+        name: fixture.name,
+        qty: defaultFixtureQty,
+        priceRub: fixture.priceRub,
+      },
+    ],
+  };
+}
 
 export function LightKitShowcase() {
+  const catalog = snapshotData as unknown as SnapshotCatalogShape;
+  const products = (catalog.products ?? []).filter((p) => Number.isFinite(p.priceRub) && p.priceRub > 0);
+
+  const colibri = buildSet("COLIBRI 220V: готовый старт", bySystem(products, "COLIBRI_220"), 5);
+  const clarus = buildSet("CLARUS 48V: готовый старт", bySystem(products, "CLARUS_48"), 5);
+  const art = buildSet("ART 220V: готовый старт", bySystem(products, "TRACK_220"), 4);
+
+  const sets = [colibri, clarus, art].filter((x): x is NonNullable<typeof x> => x !== null);
+
   return (
     <Section id="proof" className="scroll-mt-24 bg-slate-50">
       <Container>
         <Heading
           eyebrow="Готовые комплекты"
-          title="Трековое освещение под ключ"
-          description="Подобранные комплекты — от профиля до спотов. Скидка 15% на всё оборудование при заказе натяжного потолка."
+          title="Готовые наборы на базе feed2"
+          description="Комплекты собраны из актуального feed2 snapshot. Цены и товары совпадают с каталогом."
         />
 
-        <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {TRACK_KITS.map((kit) => {
-            const discountedTotal = applyLightingDiscount(kit.totalRub);
+        <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {sets.map((set) => {
+            const totalRub = set.items.reduce((sum, i) => sum + i.qty * i.priceRub, 0);
+            const discounted = applyLightingDiscount(totalRub);
 
             return (
               <div
-                key={kit.kitId}
-                className="flex flex-col h-full rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm"
+                key={set.title}
+                className="flex h-full flex-col rounded-[1.5rem] border border-slate-200 bg-white p-6 shadow-sm"
               >
                 <div className="mb-4 flex-grow">
-                  {/* Название — baseName без жёсткого qty (qty в defaultSpotsQty) */}
-                  <h3 className="text-lg font-semibold text-slate-950 mb-1">
-                    {kit.kitBaseName}
-                  </h3>
-                  <p className="text-sm text-slate-500 mb-3">
-                    Базовый комплект · {kit.defaultSpotsQty} светильника
-                  </p>
-
+                  <h3 className="mb-1 text-lg font-semibold text-slate-950">{set.title}</h3>
                   <ul className="space-y-1.5">
-                    {kit.items.map((item) => (
-                      <li
-                        key={item.sku}
-                        className="text-sm text-slate-600 flex justify-between gap-2"
-                      >
+                    {set.items.map((item) => (
+                      <li key={item.sku} className="flex justify-between gap-2 text-sm text-slate-600">
                         <span>{item.name}</span>
-                        <span className="text-slate-400 shrink-0">
-                          × {item.qty}
-                        </span>
+                        <span className="shrink-0 text-slate-400">× {item.qty}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
 
                 <div className="border-t border-slate-100 pt-4">
-                  {/* Две цены */}
-                  <div className="mb-1">
-                    <p className="text-sm text-slate-400 line-through">
-                      {fmt(kit.totalRub)} ₽
-                    </p>
-                    <p className="text-2xl font-bold text-emerald-600">
-                      {fmt(discountedTotal)} ₽
-                    </p>
-                    <p className="text-xs text-emerald-700 font-medium mt-0.5">
-                      −15% при заказе потолка
-                    </p>
-                  </div>
+                  <p className="text-sm text-slate-400 line-through">{fmt(totalRub)} ₽</p>
+                  <p className="text-2xl font-bold text-emerald-600">{fmt(discounted)} ₽</p>
+                  <p className="mt-0.5 text-xs font-medium text-emerald-700">−15% при заказе потолка</p>
 
                   <div className="mt-4">
-                    <LightKitCtaButton kit={kit} />
+                    <LightKitCtaButton title={set.title} items={set.items} />
                   </div>
                 </div>
               </div>
@@ -84,7 +108,7 @@ export function LightKitShowcase() {
 
         <div className="mt-10 text-center">
           <p className="text-sm text-slate-500">
-            Точечные светильники (GX53/MR16) — в каталоге ниже или в калькуляторе.
+            Точечные светильники и лампы 1:1 выбирайте в каталоге ниже.
           </p>
         </div>
       </Container>
