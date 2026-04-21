@@ -17,7 +17,7 @@ type ExtendedOptions = {
 export function PriceStrip() {
   const { ceilingTotal, lightingDiscountedTotal, currentStep, options } =
     useCalculatorModal();
- const { snapshot, hasInteracted } = usePriceCalculatorBridge();
+ const { snapshot } = usePriceCalculatorBridge();
 
   const extendedOptions = options as (typeof options & ExtendedOptions) | null;
   const isLightingFirst = extendedOptions?.entryMode === "lighting-first";
