@@ -1,4 +1,3 @@
-// components/calculator-modal/calculator-modal-context.tsx
 "use client";
 
 import {
@@ -42,7 +41,6 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       setOptions(resolvedOpts);
       setCurrentStep(resolvedOpts.initialStep ?? 0);
 
-      // Всегда синхронизируем драфт с входными опциями, чтобы не тянуть прошлый выбор.
       if (resolvedOpts.initialLighting) {
         setLightingDraftState(resolvedOpts.initialLighting);
       } else {
@@ -72,11 +70,13 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
     if (!lightingDraft) return 0;
 
     if (Number.isFinite(lightingDraft.discountedTotalRub)) {
-      return lightingDraft.discountedTotalRub;
+      const discounted = Number(lightingDraft.discountedTotalRub ?? 0);
+      return discounted;
     }
 
     if (Number.isFinite(lightingDraft.totalRub)) {
-      return applyLightingDiscount(lightingDraft.totalRub);
+      const total = Number(lightingDraft.totalRub ?? 0);
+      return applyLightingDiscount(total);
     }
 
     return 0;
