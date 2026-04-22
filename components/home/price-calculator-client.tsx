@@ -1,4 +1,3 @@
-// components/home/price-calculator-client.tsx
 "use client";
 
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
@@ -56,30 +55,28 @@ function getPerimeterSuggestion(area: number): PerimeterSuggestion {
   const max = clamp(
     roundToStep(maxRaw, calculator.specialMeters.step),
     calculator.specialMeters.min,
-    calculator.specialMeters.max      
+    calculator.specialMeters.max
   );
   const normalizedMax = Math.max(min, max);
   const recommended = clamp(
     roundToStep((min + normalizedMax) / 2, calculator.specialMeters.step),
     min,
     normalizedMax
-  );                      
+  );
 
   return { min, max: normalizedMax, recommended };
 }
 
 function getDefaultOpenSection(pathname: string): AccordionSectionId | null {
   const routeMap: Record<string, AccordionSectionId> = {
-    "/uslugi/tenevoy-profil":       "ceiling-profile",
-    "/uslugi/paryashchie-potolki":  "ceiling-profile",
-    "/uslugi/skrytye-karnizy":      "cornices",
-    "/uslugi/trekovoe-osveshchenie":"tracks",
-    "/uslugi/svetovye-linii":       "light-lines",
+    "/uslugi/tenevoy-profil": "ceiling-profile",
+    "/uslugi/paryashchie-potolki": "ceiling-profile",
+    "/uslugi/skrytye-karnizy": "cornices",
+    "/uslugi/trekovoe-osveshchenie": "tracks",
+    "/uslugi/svetovye-linii": "light-lines",
   };
   return routeMap[pathname] ?? null;
 }
-
-// ── Sub-components ────────────────────────────────────────────────────────────
 
 function SectionCard({
   title,
@@ -199,8 +196,6 @@ function CollapsibleSection({
   );
 }
 
-// ── OptionCard — ИЗМЕНЕНО: line-clamp + фиксированная высота ─────────────────
-
 function OptionCard({
   active,
   title,
@@ -218,24 +213,19 @@ function OptionCard({
       onClick={onClick}
       aria-pressed={active}
       className={[
-        // Базовая геометрия
         "rounded-2xl border p-4 text-left transition-all",
-        // Выравниваем высоту всех карточек в строке
-        "flex flex-col h-full",
-        // Активное/неактивное состояние
+        "flex h-full flex-col",
         active
           ? "border-slate-950 bg-slate-950 text-white shadow-lg shadow-slate-950/10"
           : "border-slate-200 bg-white text-slate-950 hover:border-slate-400 hover:bg-slate-50",
       ].join(" ")}
     >
-      <div className="flex items-start justify-between gap-3 flex-1">
+      <div className="flex flex-1 items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          {/* line-clamp-2: заголовок не растягивает карточку */}
-          <p className="text-sm font-semibold line-clamp-2 leading-5">{title}</p>
-          {/* line-clamp-2: мета тоже ограничена */}
+          <p className="line-clamp-2 text-sm font-semibold leading-5">{title}</p>
           <p
             className={[
-              "mt-1 text-xs leading-5 line-clamp-2",
+              "mt-1 line-clamp-2 text-xs leading-5",
               active ? "text-white/75" : "text-slate-500",
             ].join(" ")}
           >
@@ -409,8 +399,6 @@ function PriceRow({
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
-
 type PriceCalculatorClientProps = {
   preset?: ServiceCalculatorPreset;
   compactSections?: boolean;
@@ -433,26 +421,26 @@ export function PriceCalculatorClient({
     return () => mq.removeEventListener("change", update);
   }, [compactSections]);
 
-  const resolvedAreaDefault   = preset?.areaDefault  ?? calculator.areaDefault;
-  const resolvedCeilingType   = preset?.ceilingType  ?? "standard";
-  const resolvedCorniceType   = preset?.corniceType  ?? "none";
-  const resolvedTrackType     = preset?.trackType    ?? "none";
+  const resolvedAreaDefault = preset?.areaDefault ?? calculator.areaDefault;
+  const resolvedCeilingType = preset?.ceilingType ?? "standard";
+  const resolvedCorniceType = preset?.corniceType ?? "none";
+  const resolvedTrackType = preset?.trackType ?? "none";
   const resolvedLightsEnabled = preset?.lightsEnabled ?? false;
-  const resolvedLightsCount   = preset?.lightsCount  ?? calculator.lights.countDefault;
+  const resolvedLightsCount = preset?.lightsCount ?? calculator.lights.countDefault;
 
-  const [area, setArea]               = useState<number>(resolvedAreaDefault);
+  const [area, setArea] = useState<number>(resolvedAreaDefault);
   const [ceilingType, setCeilingType] = useState<CeilingType>(resolvedCeilingType);
   const [ceilingLength, setCeilingLength] = useState<number>(
     () => getPerimeterSuggestion(resolvedAreaDefault).recommended
   );
   const [lightLinesEnabled, setLightLinesEnabled] = useState<boolean>(false);
-  const [lightLinesLength, setLightLinesLength]   = useState<number>(calculator.lightLineMeters.default);
+  const [lightLinesLength, setLightLinesLength] = useState<number>(calculator.lightLineMeters.default);
   const [corniceType, setCorniceType] = useState<CorniceType>(resolvedCorniceType);
   const [corniceLength, setCorniceLength] = useState<number>(calculator.corniceMeters.default);
-  const [trackType, setTrackType]     = useState<TrackType>(resolvedTrackType);
+  const [trackType, setTrackType] = useState<TrackType>(resolvedTrackType);
   const [trackLength, setTrackLength] = useState<number>(calculator.trackMeters.default);
   const [lightsEnabled, setLightsEnabled] = useState<boolean>(resolvedLightsEnabled);
-  const [lightsCount, setLightsCount]     = useState<number>(resolvedLightsCount);
+  const [lightsCount, setLightsCount] = useState<number>(resolvedLightsCount);
 
   const perimeterSuggestion = useMemo(() => getPerimeterSuggestion(area), [area]);
 
@@ -474,10 +462,10 @@ export function PriceCalculatorClient({
 
   const [openSections, setOpenSections] = useState<Record<AccordionSectionId, boolean>>({
     "ceiling-profile": false,
-    "light-lines":     false,
-    cornices:          false,
-    tracks:            false,
-    lights:            false,
+    "light-lines": false,
+    cornices: false,
+    tracks: false,
+    lights: false,
   });
   const [lastToggledSection, setLastToggledSection] = useState<AccordionSectionId | null>(null);
 
@@ -486,10 +474,10 @@ export function PriceCalculatorClient({
     setLastToggledSection(null);
     setOpenSections({
       "ceiling-profile": defaultOpenSection === "ceiling-profile" && hasSpecialCeiling,
-      "light-lines":     defaultOpenSection === "light-lines",
-      cornices:          defaultOpenSection === "cornices",
-      tracks:            defaultOpenSection === "tracks",
-      lights:            defaultOpenSection === "lights",
+      "light-lines": defaultOpenSection === "light-lines",
+      cornices: defaultOpenSection === "cornices",
+      tracks: defaultOpenSection === "tracks",
+      lights: defaultOpenSection === "lights",
     });
   }, [defaultOpenSection, hasSpecialCeiling, isDesktopAccordion]);
 
@@ -498,39 +486,27 @@ export function PriceCalculatorClient({
     setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // ── Calculations ───────────────────────────────────────────────────────────
-  const ceilingBaseRate  = selectedCeiling.baseRatePerSqm;
+  const ceilingBaseRate = selectedCeiling.baseRatePerSqm;
   const ceilingBaseTotal = area * ceilingBaseRate;
-  const ceilingExtraTotal = hasSpecialCeiling
-    ? ceilingLength * selectedCeiling.extraRatePerMeter
-    : 0;
-  const lightLinesTotal = lightLinesEnabled
-    ? lightLinesLength * calculator.lightLines.ratePerMeter
-    : 0;
-  const corniceTotal = selectedCornice.ratePerMeter > 0
-    ? corniceLength * selectedCornice.ratePerMeter
-    : 0;
-  const trackTotal = selectedTrack.ratePerMeter > 0
-    ? trackLength * selectedTrack.ratePerMeter
-    : 0;
-  const lightsTotal = lightsEnabled
-    ? lightsCount * calculator.lights.ratePerUnit
-    : 0;
+  const ceilingExtraTotal = hasSpecialCeiling ? ceilingLength * selectedCeiling.extraRatePerMeter : 0;
+  const lightLinesTotal = lightLinesEnabled ? lightLinesLength * calculator.lightLines.ratePerMeter : 0;
+  const corniceTotal = selectedCornice.ratePerMeter > 0 ? corniceLength * selectedCornice.ratePerMeter : 0;
+  const trackTotal = selectedTrack.ratePerMeter > 0 ? trackLength * selectedTrack.ratePerMeter : 0;
+  const lightsTotal = lightsEnabled ? lightsCount * calculator.lights.ratePerUnit : 0;
+
   const total =
     ceilingBaseTotal + ceilingExtraTotal + lightLinesTotal + corniceTotal + trackTotal + lightsTotal;
 
   const derivedTrackMountType: DerivedInputs["trackMountType"] =
-    trackType === "built-in" ? "built-in"
-    : trackType === "surface" ? "surface"
-    : "none";
+    trackType === "built-in" ? "built-in" : trackType === "surface" ? "surface" : "none";
 
   const derivedTrackLength = trackType !== "none" ? trackLength : 0;
 
   const derivedInputs = useMemo<DerivedInputs>(
     () => ({
-      pointSpotsQty:            lightsEnabled ? lightsCount : 0,
-      trackMountType:           derivedTrackMountType,
-      trackLengthMeters:        derivedTrackLength,
+      pointSpotsQty: lightsEnabled ? lightsCount : 0,
+      trackMountType: derivedTrackMountType,
+      trackLengthMeters: derivedTrackLength,
       recommendedTrackSpotsQty: calcRecommendedTrackSpots(derivedTrackLength),
     }),
     [lightsEnabled, lightsCount, derivedTrackMountType, derivedTrackLength]
@@ -543,29 +519,29 @@ export function PriceCalculatorClient({
       ceilingBaseRate,
       ceilingBaseTotal,
 
-      ceilingExtraLabel:        hasSpecialCeiling ? selectedCeiling.extraLabel ?? null : null,
-      ceilingLength:            hasSpecialCeiling ? ceilingLength : null,
+      ceilingExtraLabel: hasSpecialCeiling ? selectedCeiling.extraLabel ?? null : null,
+      ceilingLength: hasSpecialCeiling ? ceilingLength : null,
       ceilingExtraRatePerMeter: hasSpecialCeiling ? selectedCeiling.extraRatePerMeter : null,
       ceilingExtraTotal,
 
       lightLinesEnabled,
-      lightLinesLabel:        lightLinesEnabled ? calculator.lightLines.label : null,
-      lightLinesLength:       lightLinesEnabled ? lightLinesLength : null,
+      lightLinesLabel: lightLinesEnabled ? calculator.lightLines.label : null,
+      lightLinesLength: lightLinesEnabled ? lightLinesLength : null,
       lightLinesRatePerMeter: lightLinesEnabled ? calculator.lightLines.ratePerMeter : null,
       lightLinesTotal,
 
-      corniceLabel:      selectedCornice.ratePerMeter > 0 ? selectedCornice.label : null,
-      corniceLength:     selectedCornice.ratePerMeter > 0 ? corniceLength : null,
+      corniceLabel: selectedCornice.ratePerMeter > 0 ? selectedCornice.label : null,
+      corniceLength: selectedCornice.ratePerMeter > 0 ? corniceLength : null,
       corniceRatePerMeter: selectedCornice.ratePerMeter > 0 ? selectedCornice.ratePerMeter : null,
       corniceTotal,
 
-      trackLabel:      selectedTrack.ratePerMeter > 0 ? selectedTrack.label : null,
-      trackLength:     selectedTrack.ratePerMeter > 0 ? trackLength : null,
+      trackLabel: selectedTrack.ratePerMeter > 0 ? selectedTrack.label : null,
+      trackLength: selectedTrack.ratePerMeter > 0 ? trackLength : null,
       trackRatePerMeter: selectedTrack.ratePerMeter > 0 ? selectedTrack.ratePerMeter : null,
       trackTotal,
 
       lightsEnabled,
-      lightsCount:     lightsEnabled ? lightsCount : null,
+      lightsCount: lightsEnabled ? lightsCount : null,
       lightsRatePerUnit: calculator.lights.ratePerUnit,
       lightsTotal,
 
@@ -573,35 +549,52 @@ export function PriceCalculatorClient({
       derivedInputs,
     }),
     [
-      area, selectedCeiling, ceilingBaseRate, ceilingBaseTotal,
-      hasSpecialCeiling, ceilingLength, ceilingExtraTotal,
-      lightLinesEnabled, lightLinesLength, lightLinesTotal,
-      selectedCornice, corniceLength, corniceTotal,
-      selectedTrack, trackLength, trackTotal,
-      lightsEnabled, lightsCount, lightsTotal,
-      total, derivedInputs,
+      area,
+      selectedCeiling,
+      ceilingBaseRate,
+      ceilingBaseTotal,
+      hasSpecialCeiling,
+      ceilingLength,
+      ceilingExtraTotal,
+      lightLinesEnabled,
+      lightLinesLength,
+      lightLinesTotal,
+      selectedCornice,
+      corniceLength,
+      corniceTotal,
+      selectedTrack,
+      trackLength,
+      trackTotal,
+      lightsEnabled,
+      lightsCount,
+      lightsTotal,
+      total,
+      derivedInputs,
     ]
   );
 
- useEffect(() => {
-  const computedSnapshot = snapshot;
+  useEffect(() => {
+    const computedSnapshot = snapshot;
 
-  setSnapshot((prev) => {
-    if (prev == null) return computedSnapshot;
+    setSnapshot((prev) => {
+      if (prev == null) return computedSnapshot;
 
-    return {
-      ...computedSnapshot,
-      leadSource: prev.leadSource ?? computedSnapshot.leadSource,
-      lighting: prev.lighting,
-      grandTotal: prev.grandTotal,
-      _reconciled: prev._reconciled,
-    };
-  });
-}, [setSnapshot, snapshot]);
+      return {
+        ...computedSnapshot,
+        leadSource: prev.leadSource ?? computedSnapshot.leadSource,
+        lighting: prev.lighting,
+        grandTotal: prev.grandTotal,
+        _reconciled: prev._reconciled,
+      };
+    });
+  }, [setSnapshot, snapshot]);
 
   const markInteracted = () => setHasInteracted(true);
 
-  const handleAreaChange = (v: number) => { markInteracted(); setArea(v); };
+  const handleAreaChange = (v: number) => {
+    markInteracted();
+    setArea(v);
+  };
 
   const handleCeilingTypeChange = (slug: CeilingType) => {
     markInteracted();
@@ -609,39 +602,61 @@ export function PriceCalculatorClient({
     if (slug !== "standard") setCeilingLength(perimeterSuggestion.recommended);
   };
 
-  const handleCeilingLengthChange = (v: number) => { markInteracted(); setCeilingLength(v); };
+  const handleCeilingLengthChange = (v: number) => {
+    markInteracted();
+    setCeilingLength(v);
+  };
 
-  const handleLightLinesEnabledChange = (v: boolean) => { markInteracted(); setLightLinesEnabled(v); };
-  const handleLightLinesLengthChange  = (v: number)  => { markInteracted(); setLightLinesLength(v); };
+  const handleLightLinesEnabledChange = (v: boolean) => {
+    markInteracted();
+    setLightLinesEnabled(v);
+  };
+
+  const handleLightLinesLengthChange = (v: number) => {
+    markInteracted();
+    setLightLinesLength(v);
+  };
 
   const handleCorniceTypeChange = (slug: CorniceType) => {
     markInteracted();
     setCorniceType(slug);
     if (slug !== "none") setCorniceLength(calculator.corniceMeters.default);
   };
-  const handleCorniceLengthChange = (v: number) => { markInteracted(); setCorniceLength(v); };
+
+  const handleCorniceLengthChange = (v: number) => {
+    markInteracted();
+    setCorniceLength(v);
+  };
 
   const handleTrackTypeChange = (slug: TrackType) => {
     markInteracted();
     setTrackType(slug);
     if (slug !== "none") setTrackLength(calculator.trackMeters.default);
   };
-  const handleTrackLengthChange = (v: number) => { markInteracted(); setTrackLength(v); };
 
-  const handleLightsEnabledChange = (v: boolean) => { markInteracted(); setLightsEnabled(v); };
-  const handleLightsCountChange   = (v: number)  => { markInteracted(); setLightsCount(v); };
+  const handleTrackLengthChange = (v: number) => {
+    markInteracted();
+    setTrackLength(v);
+  };
+
+  const handleLightsEnabledChange = (v: boolean) => {
+    markInteracted();
+    setLightsEnabled(v);
+  };
+
+  const handleLightsCountChange = (v: number) => {
+    markInteracted();
+    setLightsCount(v);
+  };
 
   const applyPerimeterSuggestion = () => {
     markInteracted();
     setCeilingLength(perimeterSuggestion.recommended);
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:p-8">
       <div className="min-w-0 space-y-5">
-
-        {/* ── Area ── */}
         <SectionCard title="Площадь помещения">
           <RangeField
             id="area-range"
@@ -655,19 +670,10 @@ export function PriceCalculatorClient({
           />
         </SectionCard>
 
-        {/* ── Ceiling type — 3 варианта → grid-cols-3 в модалке ── */}
         <SectionCard
           title="Тип потолка"
           description="Для теневого и парящего потолка цена полотна считается по новой ставке за м², а профиль считается отдельно в погонных метрах."
         >
-          {/*
-            ИЗМЕНЕНО:
-            - Было: grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3
-            - Стало: grid-cols-1 gap-3 sm:grid-cols-3
-            Причина: xl:grid-cols-3 не срабатывал в модалке md:max-w-3xl (768px).
-            sm:grid-cols-3 (≥640px) — все 3 варианта в строку, нет хвоста.
-            В мобилке (< 640px) — 1 колонка, ОК.
-          */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {calculator.ceilingTypes.map((option) => {
               const meta =
@@ -687,7 +693,6 @@ export function PriceCalculatorClient({
           </div>
         </SectionCard>
 
-        {/* ── Ceiling profile length ── */}
         {hasSpecialCeiling ? (
           <CollapsibleSection
             id="ceiling-profile"
@@ -716,7 +721,6 @@ export function PriceCalculatorClient({
           </CollapsibleSection>
         ) : null}
 
-        {/* ── Light lines ── */}
         <CollapsibleSection
           id="light-lines"
           title="Световые линии"
@@ -725,9 +729,6 @@ export function PriceCalculatorClient({
           onToggle={toggleSection}
           lastToggledId={lastToggledSection}
         >
-          {/*
-            2 варианта → grid-cols-2 везде. Без изменений — уже ОК.
-          */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <OptionCard
               active={!lightLinesEnabled}
@@ -758,7 +759,6 @@ export function PriceCalculatorClient({
           ) : null}
         </CollapsibleSection>
 
-        {/* ── Cornices — 4 варианта → grid-cols-2, нет хвоста ── */}
         <CollapsibleSection
           id="cornices"
           title="Карнизы"
@@ -767,11 +767,7 @@ export function PriceCalculatorClient({
           onToggle={toggleSection}
           lastToggledId={lastToggledSection}
         >
-          {/*
-            4 варианта → grid-cols-2 = 2+2. Без изменений — уже ОК.
-            items-stretch добавляем чтобы карточки выравнивались по высоте.
-          */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 items-stretch">
+          <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2">
             {calculator.cornices.map((option) => (
               <OptionCard
                 key={option.slug}
@@ -802,7 +798,6 @@ export function PriceCalculatorClient({
           ) : null}
         </CollapsibleSection>
 
-        {/* ── Tracks — 3 варианта → grid-cols-3 в модалке ── */}
         <CollapsibleSection
           id="tracks"
           title="Трековое освещение"
@@ -811,13 +806,6 @@ export function PriceCalculatorClient({
           onToggle={toggleSection}
           lastToggledId={lastToggledSection}
         >
-          {/*
-            ИЗМЕНЕНО:
-            - Было: grid-cols-1 gap-3 sm:grid-cols-2
-            - Стало: grid-cols-1 gap-3 sm:grid-cols-3
-            Причина: 3 варианта (Без/Встроенный/Накладной) → 2+1 хвост.
-            sm:grid-cols-3 убирает хвост, все 3 в строке ≥640px.
-          */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {calculator.tracks.map((option) => (
               <OptionCard
@@ -846,14 +834,13 @@ export function PriceCalculatorClient({
                 onChange={handleTrackLengthChange}
               />
               <p className="mt-3 text-xs text-slate-500">
-               Ориентировочно: ~{calcRecommendedTrackSpots(trackLength)} спотов.
+                Ориентировочно: ~{calcRecommendedTrackSpots(trackLength)} спотов.
                 Точный подбор — на следующем шаге.
               </p>
             </div>
           ) : null}
         </CollapsibleSection>
 
-        {/* ── Lights — 2 варианта → grid-cols-2 ── */}
         <CollapsibleSection
           id="lights"
           title="Точечные светильники"
@@ -862,9 +849,6 @@ export function PriceCalculatorClient({
           onToggle={toggleSection}
           lastToggledId={lastToggledSection}
         >
-          {/*
-            2 варианта → grid-cols-2. Без изменений — уже ОК.
-          */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <OptionCard
               active={!lightsEnabled}
@@ -895,7 +879,6 @@ export function PriceCalculatorClient({
           ) : null}
         </CollapsibleSection>
 
-        {/* ── Breakdown ── */}
         <SectionCard title="Состав расчёта">
           <div className="space-y-3">
             <PriceRow
@@ -943,8 +926,7 @@ export function PriceCalculatorClient({
         </SectionCard>
       </div>
 
-      {/* ── Desktop sidebar ── */}
-      <div className="hidden lg:block lg:sticky lg:top-24 lg:self-start">
+      <div className="hidden lg:sticky lg:top-24 lg:block lg:self-start">
         <div className="rounded-[1.75rem] bg-slate-950 p-6 text-white shadow-2xl shadow-slate-950/10">
           <p className="text-sm text-white/60">Ориентировочная стоимость от</p>
           <div className="mt-4 flex items-end gap-2">
