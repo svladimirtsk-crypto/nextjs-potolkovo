@@ -100,7 +100,9 @@ export function CalculatorModal() {
 
   const stepTitle = useMemo(() => {
     if (currentStep === 1) {
-      const hasLight = Boolean(lightingDraft && lightingDraft.mode !== "none" && (lightingDraft.items?.length ?? 0) > 0);
+      const hasLight = Boolean(
+        lightingDraft && lightingDraft.mode !== "none" && (lightingDraft.items?.length ?? 0) > 0
+      );
       return hasLight ? "Освещение ✓" : "Освещение";
     }
     const titles: Record<WizardStep, string> = {
@@ -242,23 +244,24 @@ export function CalculatorModal() {
   const reducedMotion =
     typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const transitionClass = reducedMotion ? "" : "transition-all duration-200";
+  const modalActive = isOpen && visible;
 
   return createPortal(
     <div
       aria-hidden={!isOpen}
-      className={`fixed inset-0 z-[120] ${isOpen ? "pointer-events-auto" : "pointer-events-none"}`}
+      className={`fixed inset-0 z-[120] ${modalActive ? "pointer-events-auto" : "pointer-events-none"}`}
     >
       <div
         ref={overlayRef}
         onClick={handleOverlayClick}
         className={`fixed inset-0 z-[120] bg-black/50 ${transitionClass} ${
           visible && isOpen ? "opacity-100" : "opacity-0"
-        } ${isOpen ? "pointer-events-auto" : "pointer-events-none"}`}
+        } ${modalActive ? "pointer-events-auto" : "pointer-events-none"}`}
       />
 
       <div
         className={`fixed inset-0 z-[121] flex items-end lg:items-center lg:justify-center ${
-          isOpen ? "pointer-events-auto" : "pointer-events-none"
+          modalActive ? "pointer-events-auto" : "pointer-events-none"
         }`}
       >
         <div
@@ -270,7 +273,7 @@ export function CalculatorModal() {
             visible && isOpen
               ? "translate-y-0 opacity-100 lg:scale-100"
               : "translate-y-4 opacity-0 lg:scale-95"
-          } ${isOpen ? "pointer-events-auto" : "pointer-events-none"}`}
+          } ${modalActive ? "pointer-events-auto" : "pointer-events-none"}`}
         >
           <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4">
             <div>
