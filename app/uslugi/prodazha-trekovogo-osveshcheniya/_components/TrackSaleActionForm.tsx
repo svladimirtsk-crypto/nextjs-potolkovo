@@ -112,26 +112,26 @@ export function TrackSaleActionForm({ source }: TrackSaleActionFormProps) {
     );
 
     const formData = new FormData();
-    formData.append("access_key", String(accessKey ?? ""));
+    formData.append("access_key", String(accessKey));
     formData.append("subject", String("Новая заявка с трековой страницы ПОТОЛКОВО"));
     formData.append("from_name", String("ПОТОЛКОВО - Трековая страница"));
-    formData.append("name", String(trimmedName ?? ""));
-    formData.append("phone", String(normalizedPhone ?? ""));
-    formData.append("address", String(trimmedAddress ?? ""));
+    formData.append("name", String(trimmedName));
+    formData.append("phone", String(normalizedPhone));
+    formData.append("address", String(trimmedAddress));
     formData.append(
       "message",
-      String(buildMessage(ceilingLines, lightingLines, trimmedAddress, effectiveSource) ?? "")
+      String(buildMessage(ceilingLines, lightingLines, trimmedAddress, effectiveSource))
     );
     formData.append("botcheck", String(""));
     formData.append("company", String(""));
 
     formData.append("lighting_mode", String(snapshot?.lighting?.mode ?? "none"));
     formData.append("lighting_items_count", String(snapshot?.lighting?.items?.length ?? 0));
-    formData.append("lighting_total_rub", String(lightingTotalRub ?? 0));
-    formData.append("lighting_discounted_total_rub", String(lightingDiscountedRub ?? 0));
-    formData.append("lighting_total", String(lightingTotalRub ?? 0));
-    formData.append("lighting_discounted_total", String(lightingDiscountedRub ?? 0));
-    formData.append("calculator_source", String(effectiveSource ?? ""));
+    formData.append("lighting_total_rub", String(lightingTotalRub));
+    formData.append("lighting_discounted_total_rub", String(lightingDiscountedRub));
+    formData.append("lighting_total", String(lightingTotalRub));
+    formData.append("lighting_discounted_total", String(lightingDiscountedRub));
+    formData.append("calculator_source", String(effectiveSource));
 
     setIsPending(true);
 
