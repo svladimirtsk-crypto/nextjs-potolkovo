@@ -273,7 +273,14 @@ function ProductRow({
 }
 
 export function WizardStep1Lighting() {
-  const { lightingDraft, setLightingDraft, options, goToStep } = useCalculatorModal();
+  const {
+    lightingDraft,
+    setLightingDraft,
+    options,
+    goToStep,
+    step1CatalogView,
+    setStep1CatalogView,
+  } = useCalculatorModal();
   const { snapshot } = usePriceCalculatorBridge();
 
   type SnapshotCatalogShape = { products?: FeedCatalogProduct[] };
@@ -302,6 +309,11 @@ export function WizardStep1Lighting() {
 
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [catalogView, setCatalogView] = useState<CatalogView>(initialCatalogView);
+
+  useEffect(() => {
+    if (!step1CatalogView) return;
+    setCatalogView(step1CatalogView);
+  }, [step1CatalogView]);
 
   const [cartItems, setCartItems] = useState<CartItems>(() => {
     if (lightingDraft?.items?.length) {
@@ -337,9 +349,12 @@ export function WizardStep1Lighting() {
       }
       setCartItems(next);
       setActiveTab("catalog");
-      setCatalogView(options?.initialLightingView === "selected" ? "selected" : "browse");
+      const nextView: CatalogView =
+        options?.initialLightingView === "selected" ? "selected" : "browse";
+      setCatalogView(nextView);
+      setStep1CatalogView(nextView);
     }
-  }, [options?.initialLighting, options?.initialLightingView]);
+  }, [options?.initialLighting, options?.initialLightingView, setStep1CatalogView]);
 
   const currentTrackSystemFromInputs: FeedCatalogSystem = useMemo(() => {
     if (derivedInputs.trackMountType === "surface") return "TRACK_220";
@@ -498,6 +513,7 @@ export function WizardStep1Lighting() {
   const handleOpenCatalogTrackFixtures = (system: FeedCatalogSystem) => {
     setActiveTab("catalog");
     setCatalogView("browse");
+    setStep1CatalogView("browse");
     setCatalogSection("track-systems");
     setTrackSystem(system === "CLARUS_48" ? "CLARUS_48" : system === "TRACK_220" ? "TRACK_220" : "COLIBRI_220");
     setTrackGroup("TRACK_FIXTURE");
@@ -653,6 +669,7 @@ export function WizardStep1Lighting() {
                   onClick={() => {
                     setActiveTab("catalog");
                     setCatalogView("browse");
+                    setStep1CatalogView("browse");
                     setCatalogSection("point-fixtures");
                     setSearchQuery("");
                   }}
@@ -704,6 +721,7 @@ export function WizardStep1Lighting() {
                   onClick={() => {
                     setActiveTab("catalog");
                     setCatalogView("browse");
+                    setStep1CatalogView("browse");
                     setCatalogSection("track-systems");
                     setTrackGroup("TRACK_FIXTURE");
                     setSearchQuery("");
@@ -808,14 +826,20 @@ export function WizardStep1Lighting() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setCatalogView("browse")}
+                  onClick={() => {
+                    setCatalogView("browse");
+                    setStep1CatalogView("browse");
+                  }}
                   className="flex-1 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:border-slate-500"
                 >
                   Добавить еще
                 </button>
                 <button
                   type="button"
-                  onClick={() => goToStep(2)}
+                  onClick={() => {
+                    setStep1CatalogView("selected");
+                    goToStep(2);
+                  }}
                   className="flex-1 rounded-full border border-slate-950 bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
                 >
                   Далее
