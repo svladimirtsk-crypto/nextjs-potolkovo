@@ -1,10 +1,8 @@
-// components/calculator-modal/price-strip.tsx
 "use client";
 
 import { useMemo } from "react";
 
 import { useCalculatorModal } from "./calculator-modal-context";
-import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("ru-RU").format(Math.round(n));
@@ -15,14 +13,17 @@ type ExtendedOptions = {
 };
 
 export function PriceStrip() {
-  const { ceilingTotal, lightingDiscountedTotal, currentStep, options } =
-    useCalculatorModal();
- const { snapshot } = usePriceCalculatorBridge();
+  const {
+    ceilingTotal,
+    lightingDiscountedTotal,
+    currentStep,
+    options,
+    step0SessionInteracted,
+  } = useCalculatorModal();
 
   const extendedOptions = options as (typeof options & ExtendedOptions) | null;
   const isLightingFirst = extendedOptions?.entryMode === "lighting-first";
-  const { hasInteracted } = usePriceCalculatorBridge();
-const step0Interacted = Boolean(hasInteracted);
+  const step0Interacted = Boolean(step0SessionInteracted);
 
   const hideCeilingPrice = isLightingFirst && !step0Interacted;
   const visibleCeilingTotal = hideCeilingPrice ? 0 : ceilingTotal;
@@ -31,7 +32,6 @@ const step0Interacted = Boolean(hasInteracted);
     return visibleCeilingTotal + lightingDiscountedTotal;
   }, [visibleCeilingTotal, lightingDiscountedTotal]);
 
-  // Базовый placeholder для шага 0, если потолок еще не рассчитан и света нет.
   if (visibleCeilingTotal === 0 && lightingDiscountedTotal <= 0) {
     if (currentStep !== 0) return null;
     return (
