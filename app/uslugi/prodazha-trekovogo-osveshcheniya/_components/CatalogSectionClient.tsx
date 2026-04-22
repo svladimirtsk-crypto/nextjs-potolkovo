@@ -146,7 +146,7 @@ export function CatalogSectionClient({ data }: Props) {
     setQty(lamp, fixtureQty);
   };
 
-  const handleTransferToCalculator = () => {
+  const buildInitialLightingFromCart = (): LightingSnapshot | null => {
     const items: LightingItem[] = selectedLines.map(({ product, qty }) => ({
       sku: product.productId,
       name: product.name,
@@ -154,7 +154,24 @@ export function CatalogSectionClient({ data }: Props) {
       priceRub: product.priceRub,
     }));
 
-    if (items.length === 0) {
+    if (items.length === 0) return null;
+
+    const totalRub = items.reduce((sum, i) => sum + i.qty * i.priceRub, 0);
+    const discountedTotalRub = applyLightingDiscount(totalRub);
+
+    return {
+      mode: "catalog",
+      items,
+      totalRub,
+      discountedTotalRub,
+      userCustomizedLighting: true,
+    };
+  };
+
+  const handleTransferToCalculator = () => {
+    const initialLighting = buildInitialLightingFromCart();
+
+    if (!initialLighting) {
       openCalculator({
         initialStep: 1,
         initialLightingTab: "catalog",
@@ -165,17 +182,6 @@ export function CatalogSectionClient({ data }: Props) {
       return;
     }
 
-    const totalRub = items.reduce((sum, i) => sum + i.qty * i.priceRub, 0);
-    const discountedTotalRub = applyLightingDiscount(totalRub);
-
-    const initialLighting: LightingSnapshot = {
-      mode: "catalog",
-      items,
-      totalRub,
-      discountedTotalRub,
-      userCustomizedLighting: true,
-    };
-
     openCalculator({
       initialStep: 1,
       initialLightingTab: "catalog",
@@ -183,6 +189,19 @@ export function CatalogSectionClient({ data }: Props) {
       entryMode: "lighting-first",
       initialLighting,
       source: "catalog_trek_page",
+    });
+  };
+
+  const handleCalcCeilingWithCart = () => {
+    const initialLighting = buildInitialLightingFromCart();
+
+    openCalculator({
+      initialStep: 0,
+      initialLightingTab: "catalog",
+      initialLightingView: "selected",
+      entryMode: "lighting-first",
+      initialLighting: initialLighting ?? undefined,
+      source: "catalog_trek_page_calc_ceiling",
     });
   };
 
@@ -198,16 +217,8 @@ export function CatalogSectionClient({ data }: Props) {
         />
 
         <div className="mt-6">
-          <Button
-            type="button"
-            onClick={() =>
-              openCalculator({
-                initialStep: 0,
-                source: "catalog_trek_page_cta",
-              })
-            }
-          >
-            Открыть калькулятор
+          <Button type="button" onClick={handleCalcCeilingWithCart}>
+            Посчитать потолок
           </Button>
         </div>
 
@@ -471,7 +482,7 @@ export function CatalogSectionClient({ data }: Props) {
                 <p className="text-xs text-emerald-600">Выгода: {fmt(cartBenefit)} ₽</p>
               </div>
 
-              <div className="mt-4">
+              <div className="mt-4 space-y-2">
                 <Button
                   type="button"
                   onClick={handleTransferToCalculator}
@@ -479,6 +490,14 @@ export function CatalogSectionClient({ data }: Props) {
                   className="w-full justify-center"
                 >
                   Передать в калькулятор
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleCalcCeilingWithCart}
+                  className="w-full justify-center"
+                  variant="secondary"
+                >
+                  Посчитать потолок
                 </Button>
               </div>
 
