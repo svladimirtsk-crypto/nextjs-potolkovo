@@ -11,6 +11,7 @@ import {
 
 import type {
   CalculatorModalContextValue,
+  CatalogViewMode,
   LightingSnapshot,
   OpenCalculatorOptions,
   WizardStep,
@@ -28,11 +29,17 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   const [options, setOptions] = useState<OpenCalculatorOptions | null>(null);
   const [lightingDraft, setLightingDraftState] =
     useState<LightingSnapshot | null>(null);
+  const [step0SessionInteracted, setStep0SessionInteracted] = useState(false);
+  const [step1CatalogView, setStep1CatalogView] = useState<CatalogViewMode | null>(null);
 
   const { snapshot, setSnapshot } = usePriceCalculatorBridge();
 
   const setLightingDraft = useCallback((draft: LightingSnapshot | null) => {
     setLightingDraftState(draft);
+  }, []);
+
+  const markStep0SessionInteracted = useCallback(() => {
+    setStep0SessionInteracted(true);
   }, []);
 
   const openCalculator = useCallback(
@@ -51,6 +58,8 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
         setSnapshot((prev) => (prev ? { ...prev, leadSource: resolvedOpts.source } : prev));
       }
 
+      setStep0SessionInteracted(false);
+      setStep1CatalogView(resolvedOpts.initialLightingView ?? null);
       setIsOpen(true);
     },
     [setSnapshot]
@@ -97,6 +106,10 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       ceilingTotal,
       lightingDiscountedTotal,
       grandTotal,
+      step0SessionInteracted,
+      markStep0SessionInteracted,
+      step1CatalogView,
+      setStep1CatalogView,
     }),
     [
       isOpen,
@@ -110,6 +123,10 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       ceilingTotal,
       lightingDiscountedTotal,
       grandTotal,
+      step0SessionInteracted,
+      markStep0SessionInteracted,
+      step1CatalogView,
+      setStep1CatalogView,
     ]
   );
 
