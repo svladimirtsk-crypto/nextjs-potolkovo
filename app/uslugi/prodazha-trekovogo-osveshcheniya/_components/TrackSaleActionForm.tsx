@@ -122,8 +122,8 @@ export function TrackSaleActionForm({ source }: TrackSaleActionFormProps) {
       "message",
       String(buildMessage(ceilingLines, lightingLines, trimmedAddress, effectiveSource) ?? "")
     );
-    formData.append("botcheck", String("" ?? ""));
-    formData.append("company", String("" ?? ""));
+    formData.append("botcheck", String(""));
+    formData.append("company", String(""));
 
     formData.append("lighting_mode", String(snapshot?.lighting?.mode ?? "none"));
     formData.append("lighting_items_count", String(snapshot?.lighting?.items?.length ?? 0));
