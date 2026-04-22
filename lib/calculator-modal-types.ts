@@ -1,6 +1,7 @@
 import type { ServiceCalculatorPreset } from "@/content/services";
 
 export type LightingMode = "kit" | "catalog" | "none";
+export type CatalogViewMode = "selected" | "browse";
 
 export type LightingItem = {
   sku: string;
@@ -37,7 +38,7 @@ export type OpenCalculatorOptions = {
   initialStep?: WizardStep;
   initialLighting?: LightingSnapshot;
   initialLightingTab?: "recommendations" | "catalog";
-  initialLightingView?: "selected" | "browse";
+  initialLightingView?: CatalogViewMode;
   entryMode?: "default" | "lighting-first";
   source?: string;
 };
@@ -54,6 +55,10 @@ export type CalculatorModalContextValue = {
   ceilingTotal: number;
   lightingDiscountedTotal: number;
   grandTotal: number;
+  step0SessionInteracted: boolean;
+  markStep0SessionInteracted: () => void;
+  step1CatalogView: CatalogViewMode | null;
+  setStep1CatalogView: (view: CatalogViewMode | null) => void;
 };
 
 export function getKitDisplayName(
