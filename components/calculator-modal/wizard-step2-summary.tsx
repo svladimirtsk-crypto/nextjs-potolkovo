@@ -1,4 +1,3 @@
-// components/calculator-modal/wizard-step2-summary.tsx
 "use client";
 
 import {
@@ -24,19 +23,21 @@ type ExtendedOptions = {
 };
 
 export function WizardStep2Summary({ onConfirm: _onConfirm }: WizardStep2SummaryProps) {
-  const { snapshot, hasInteracted } = usePriceCalculatorBridge();
+  const { snapshot } = usePriceCalculatorBridge();
   const {
     lightingDraft,
     ceilingTotal,
     lightingDiscountedTotal,
-    grandTotal,
     goToStep,
     options,
+    step0SessionInteracted,
+    setLightingDraft,
+    setStep1CatalogView,
   } = useCalculatorModal();
 
   const extendedOptions = options as (typeof options & ExtendedOptions) | null;
   const isLightingFirst = extendedOptions?.entryMode === "lighting-first";
-  const hasCeilingInputs = Boolean(hasInteracted) && isSnapshotValid(snapshot);
+  const hasCeilingInputs = Boolean(step0SessionInteracted) && isSnapshotValid(snapshot);
 
   const calcLines = hasCeilingInputs ? getCalculatorSummaryLines(snapshot) : [];
 
@@ -45,7 +46,6 @@ export function WizardStep2Summary({ onConfirm: _onConfirm }: WizardStep2Summary
     lightingDraft.mode !== "none" &&
     (lightingDraft.items?.length ?? 0) > 0;
 
-  // Step2 должен опираться на discountedTotalRub, если он уже рассчитан.
   const lightingDiscountedForStep2 =
     Number.isFinite(lightingDraft?.discountedTotalRub)
       ? Number(lightingDraft?.discountedTotalRub ?? 0)
@@ -98,6 +98,64 @@ export function WizardStep2Summary({ onConfirm: _onConfirm }: WizardStep2Summary
           </p>
         ) : null}
       </div>
+
+      {hasLighting && lightingDraft?.items?.length ? (
+        <details className="group rounded-2xl border border-slate-200 bg-white">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-semibold text-slate-950">
+            <span>Вы выбрали ({lightingDraft.items.length} поз.)</span>
+            <span className="text-slate-400 transition-transform group-open:rotate-180">▾</span>
+          </summary>
+          <div className="space-y-2 border-t border-slate-200 p-3">
+            {lightingDraft.items.map((item) => (
+              <div key={item.sku} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-900">{item.name}</p>
+                    <p className="text-xs text-slate-500">
+                      {item.qty} × {fmt(item.priceRub)} ₽ = {fmt(item.qty * item.priceRub)} ₽
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!lightingDraft?.items) return;
+                      const nextItems = lightingDraft.items.filter((x) => x.sku !== item.sku);
+                      if (nextItems.length === 0) {
+                        setLightingDraft({ mode: "none", userCustomizedLighting: false });
+                        return;
+                      }
+                      const nextTotal = nextItems.reduce((sum, x) => sum + x.qty * x.priceRub, 0);
+                      const nextDiscounted = applyLightingDiscount(nextTotal);
+                      setLightingDraft({
+                        ...lightingDraft,
+                        mode: "catalog",
+                        items: nextItems,
+                        totalRub: nextTotal,
+                        discountedTotalRub: nextDiscounted,
+                        userCustomizedLighting: true,
+                      });
+                    }}
+                    className="rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:border-slate-500"
+                  >
+                    Удалить
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            <button
+              type="button"
+              onClick={() => {
+                setStep1CatalogView("selected");
+                goToStep(1 as WizardStep);
+              }}
+              className="w-full rounded-xl border border-slate-950 bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+            >
+              Редактировать
+            </button>
+          </div>
+        </details>
+      ) : null}
 
       {reconcileNote ? (
         <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3">
@@ -165,10 +223,10 @@ export function WizardStep2Summary({ onConfirm: _onConfirm }: WizardStep2Summary
             ) : null}
           </div>
 
-          {hasLighting && lightingDraft?.items && lightingDraft.items.length > 0 ? (
+          {hasLighting ? (
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                Освещение (товары)
+                Освещение
               </p>
               {(() => {
                 const displayName = getKitDisplayName(lightingDraft);
@@ -176,23 +234,8 @@ export function WizardStep2Summary({ onConfirm: _onConfirm }: WizardStep2Summary
                   <p className="mb-1 text-sm font-medium text-slate-700">{displayName}</p>
                 ) : null;
               })()}
-              <ul className="space-y-1.5">
-                {lightingDraft.items.map((item) => (
-                  <li
-                    key={item.sku}
-                    className="flex items-start justify-between gap-2 text-sm text-slate-600"
-                  >
-                    <span className="min-w-0">
-                      {item.name} × {item.qty}
-                    </span>
-                    <span className="shrink-0 text-slate-400">
-                      {fmt(item.qty * item.priceRub)} ₽
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              {lightingDraft.totalRub != null ? (
-                <p className="mt-2 text-sm font-semibold text-slate-950">
+              {lightingDraft?.totalRub != null ? (
+                <p className="text-sm font-semibold text-slate-950">
                   Свет итого: {fmt(lightingDraft.totalRub)} ₽
                   {lightingDiscountedForStep2 > 0 ? (
                     <span className="ml-2 text-emerald-600">
