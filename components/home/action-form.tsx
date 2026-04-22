@@ -1,4 +1,3 @@
-// components/home/action-form.tsx
 "use client";
 
 import { useMemo, useState } from "react";
@@ -140,18 +139,15 @@ export function ActionForm({ source }: ActionFormProps) {
       "message",
       String(buildLeadMessage(ceilingLines, lightingLines, trimmedAddress, effectiveSource) ?? "")
     );
-    formData.append("botcheck", String(""));
-    formData.append("company", String(""));
+    formData.append("botcheck", String("" ?? ""));
+    formData.append("company", String("" ?? ""));
 
     formData.append("lighting_mode", String(lightingMode ?? ""));
     formData.append("lighting_kit", String(lightingKitDisplay ?? ""));
     formData.append("lighting_items_count", String(lightingItemsCount ?? 0));
 
-    // Каноничные поля totals для воронки.
     formData.append("lighting_total_rub", String(lightingTotalRub ?? 0));
     formData.append("lighting_discounted_total_rub", String(lightingDiscountedRub ?? 0));
-
-    // Legacy поля, если где-то еще читаются.
     formData.append("lighting_total", String(lightingTotalRub ?? 0));
     formData.append("lighting_discounted_total", String(lightingDiscountedRub ?? 0));
 
