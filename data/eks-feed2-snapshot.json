@@ -1,3 +1,4 @@
+
 {
   "updatedAt": "2026-04-19T12:00:00.000Z",
   "source": "feed2-snapshot",
@@ -97,6 +98,11 @@
       "id": 186,
       "parentId": 133,
       "title": "Платформы/закладные"
+    },
+    {
+      "id": 190,
+      "parentId": 186,
+      "title": "Платформы для светильников"
     },
     {
       "id": 192,
@@ -15733,6 +15739,1610 @@
       "lengthMeters": null
     },
     {
+      "productId": "eks-uta00001105",
+      "offerId": "68",
+      "vendorCode": "UTA00001105",
+      "name": "Платформа для светильника 60 мм Белый 300 шт Н",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-dlya-svetilnika-60-mm-belyy-300-sht-n/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/0e3/cb0hth00xqk46hkdrj51ylj5t00mxw8p.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/0e3/cb0hth00xqk46hkdrj51ylj5t00mxw8p.png",
+      "priceRub": 20,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-uta00001106",
+      "offerId": "69",
+      "vendorCode": "UTA00001106",
+      "name": "Платформа для светильника 65 мм Белый 200/250 шт Н",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-dlya-svetilnika-65-mm-belyy-200-250-sht-n/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/c44/xmrzuwlo48qs0vvwj533tee4g8u80ha0.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/c44/xmrzuwlo48qs0vvwj533tee4g8u80ha0.png",
+      "priceRub": 20,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-uta00815742",
+      "offerId": "70",
+      "vendorCode": "UTA00815742",
+      "name": "Платформа для светильника 70 мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-dlya-svetilnika-70-mm-150-sht/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/c95/9ta85vvb7h0qmx4txtgg4plyma0oni35.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/c95/9ta85vvb7h0qmx4txtgg4plyma0oni35.png",
+      "priceRub": 36,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-uta00001108",
+      "offerId": "71",
+      "vendorCode": "UTA00001108",
+      "name": "Платформа для светильника 60 мм Серый 210/300 шт Н",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-dlya-svetilnika-60-mm-seryy-210-300-sht-n/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/7db/dlnhir2w0zxodf48zglv6l6pjmpestsm.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/7db/dlnhir2w0zxodf48zglv6l6pjmpestsm.png",
+      "priceRub": 15,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-uta00001109",
+      "offerId": "72",
+      "vendorCode": "UTA00001109",
+      "name": "Платформа для светильника 65 мм Серый 200/250 шт Н",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-dlya-svetilnika-65-mm-seryy-200-250-sht-n/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/64b/kzslkf0unk9oufypoq5j70f73nbk5par.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/64b/kzslkf0unk9oufypoq5j70f73nbk5par.png",
+      "priceRub": 15,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-uta00001110",
+      "offerId": "73",
+      "vendorCode": "UTA00001110",
+      "name": "Платформа для светильника 85 мм Серые (260 шт.) Н",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-dlya-svetilnika-85-mm-serye-260-sht-n/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/65c/nmwwombf08qcwxi6yqp3olt760o3jxea.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/65c/nmwwombf08qcwxi6yqp3olt760o3jxea.png",
+      "priceRub": 18,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-uta00001112",
+      "offerId": "74",
+      "vendorCode": "UTA00001112",
+      "name": "Платформа для светильника 90 мм Серые (250 шт.) Н",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-dlya-svetilnika-90-mm-serye-250-sht-n/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/e34/3vekkt3iknpxo576knbs7ahy7xpe3xp6.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/e34/3vekkt3iknpxo576knbs7ahy7xpe3xp6.png",
+      "priceRub": 20,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-uta00001113",
+      "offerId": "75",
+      "vendorCode": "UTA00001113",
+      "name": "Платформа для светильника 80 мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-dlya-svetilnika-80-mm-150-sht/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/8ff/jltlp85gka38txje4h3gtvh4rxzld69b.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/8ff/jltlp85gka38txje4h3gtvh4rxzld69b.png",
+      "priceRub": 36,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-uta00001114",
+      "offerId": "76",
+      "vendorCode": "UTA00001114",
+      "name": "Платформа для светильника 75 мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-dlya-svetilnika-75-mm-150-sht/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/57b/ne866kswfdt91z4afs7154nlld7mfve9.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/57b/ne866kswfdt91z4afs7154nlld7mfve9.png",
+      "priceRub": 36,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-uta00001115",
+      "offerId": "77",
+      "vendorCode": "UTA00001115",
+      "name": "Платформа 60-110 мм Серый универсал. (250 шт.) Н",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-60-110-mm-seryy-universal-250-sht-n/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/5f0/jq3m31a41ae3jc993s3wdyc1zfe4tnpd.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/5f0/jq3m31a41ae3jc993s3wdyc1zfe4tnpd.png",
+      "priceRub": 20,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-uta00001116",
+      "offerId": "78",
+      "vendorCode": "UTA00001116",
+      "name": "Платформа 100-150 мм Серый универсал. (170 шт.) Н",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-100-150-mm-seryy-universal-170-sht-n/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/c14/n84llugdm75p7qbz5tic7m0ynpb0rtsy.jpg"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/c14/n84llugdm75p7qbz5tic7m0ynpb0rtsy.jpg",
+      "priceRub": 39,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-uta00001117",
+      "offerId": "79",
+      "vendorCode": "UTA00001117",
+      "name": "Платформа 155-205 мм Серый универсал. (100 шт.) Н",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-155-205-mm-seryy-universal-100-sht-n/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/674/qy1z060tic2y4e9prz5yt2pdhtddtn5h.jpg",
+        "https://eksmarket.ru/upload/iblock/059/hkrszlxa7h30ial1bw6pv06mlohguwqq.png",
+        "https://eksmarket.ru/upload/iblock/706/9nfbam3iska38b8dicgq3zj9ud4uodk2.jpg",
+        "https://eksmarket.ru/upload/iblock/2ce/fctjdsiag0zl5smzw6kq849bcjbfzfnf.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/674/qy1z060tic2y4e9prz5yt2pdhtddtn5h.jpg",
+      "priceRub": 48,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-uta00001118",
+      "offerId": "80",
+      "vendorCode": "UTA00001118",
+      "name": "Платформа 155-205 мм БЕЛЫЙ универсал. (100 шт.) Н",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-155-205-mm-belyy-universal-100-sht-n/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/9bf/3mkl5trtbs9d7640lxydhqihu92pclu6.jpg",
+        "https://eksmarket.ru/upload/iblock/715/fj8ttc9ip2tns9rw1vl9oq2gx8phwu7k.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/9bf/3mkl5trtbs9d7640lxydhqihu92pclu6.jpg",
+      "priceRub": 60,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-uta00001119",
+      "offerId": "81",
+      "vendorCode": "UTA00001119",
+      "name": "Платформа 100-150 мм БЕЛЫЙ универсал. (170 шт.) Н",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-100-150-mm-belyy-universal-170-sht-n/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/801/1vktd1zzgy2ers2lsjcyntbng9hyk4s6.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/801/1vktd1zzgy2ers2lsjcyntbng9hyk4s6.png",
+      "priceRub": 51,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-uta00001121",
+      "offerId": "83",
+      "vendorCode": "UTA00001121",
+      "name": "Платформа 60-110 мм БЕЛАЯ универсал. (250 шт.) Н",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-60-110-mm-belaya-universal-250-sht-n/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/604/0luca5ff9p7e985wthz20o2miq28e5mj.jpg",
+        "https://eksmarket.ru/upload/iblock/028/hzac5j113ehs0d27n372dbym9kuapmau.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/604/0luca5ff9p7e985wthz20o2miq28e5mj.jpg",
+      "priceRub": 25,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-uta00002396",
+      "offerId": "253",
+      "vendorCode": "UTA00002396",
+      "name": "Платформа 165-225 мм универсал",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-165-225-mm-universal-30sht/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/17a/cqmfndn7tdo708d5oq34w58gqg6cex7o.jpg",
+        "https://eksmarket.ru/upload/iblock/9c1/ginmw9uo0j2l0nc13rc4c46yqjdudu3n.png",
+        "https://eksmarket.ru/upload/iblock/694/y3qhvruczdj6a0hv9svs28vn0z126h2k.jpg",
+        "https://eksmarket.ru/upload/iblock/efd/v0i1z8drroihy73iuyviv90f7gt3630d.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/17a/cqmfndn7tdo708d5oq34w58gqg6cex7o.jpg",
+      "priceRub": 278,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-uta00002397",
+      "offerId": "254",
+      "vendorCode": "UTA00002397",
+      "name": "Платформа 235-305 мм универсал.",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-235-305-mm-universal-30sht/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/5cf/xujiuicnyjv2oqog534yx18pqim53xjv.jpg",
+        "https://eksmarket.ru/upload/iblock/c82/kw5ghmhaz4se78ax1gvm8waa5vwoe6lq.png",
+        "https://eksmarket.ru/upload/iblock/ad8/3etfmiq8lq555hs98tntgsbp4chr021l.jpg",
+        "https://eksmarket.ru/upload/iblock/cb5/8yppmjtwd3ktdmmvosb4xrieh0srdtxc.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/5cf/xujiuicnyjv2oqog534yx18pqim53xjv.jpg",
+      "priceRub": 467,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-uta00002398",
+      "offerId": "255",
+      "vendorCode": "UTA00002398",
+      "name": "Платформа 90-140 мм универсал. квадрат",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-90-140-mm-universal-kvadrat-30sht/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/434/kf2y0d9jh0myruce2n07097f6yyfgf8m.jpg",
+        "https://eksmarket.ru/upload/iblock/2fd/b02eoqn97xoc4tujold8aw0xh621mmhh.png",
+        "https://eksmarket.ru/upload/iblock/54b/k7401w6yo3gql22foaq3f4q3k601hrkg.jpg",
+        "https://eksmarket.ru/upload/iblock/471/55jhn4nlvggn8piiez88lbtxjjufodc7.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/434/kf2y0d9jh0myruce2n07097f6yyfgf8m.jpg",
+      "priceRub": 178,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-uta00002399",
+      "offerId": "256",
+      "vendorCode": "UTA00002399",
+      "name": "Платформа 150-200 мм универсал. квадрат",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-150-200-mm-universal-kvadrat-40sht/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/33f/ejj76nllgivckihis5fm4bpgb9pbvm1f.jpg",
+        "https://eksmarket.ru/upload/iblock/3b1/n8tp1e7bgebpkisgl56f574mj3h0bmba.png",
+        "https://eksmarket.ru/upload/iblock/dfb/0uitu8rh84um0c8kl8dg9rqb7cff0mfn.jpg",
+        "https://eksmarket.ru/upload/iblock/8c0/t3hc8l8vwu8hbhgznvz74pbqpybdevre.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/33f/ejj76nllgivckihis5fm4bpgb9pbvm1f.jpg",
+      "priceRub": 251,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-utt00001840",
+      "offerId": "326",
+      "vendorCode": "UTT00001840",
+      "name": "Платформа для светильника 90 мм БЕЛАЯ (250 шт.) Н",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-dlya-svetilnika-90-mm-belaya-250-sht-n/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/375/nq3ushsjyryh1mpogirxe8yertl7m2l4.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/375/nq3ushsjyryh1mpogirxe8yertl7m2l4.png",
+      "priceRub": 26,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-utt00001841",
+      "offerId": "327",
+      "vendorCode": "UTT00001841",
+      "name": "Платформа для светильника 85 мм БЕЛЫЕ (260 шт.) Н",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-dlya-svetilnika-85-mm-belye-260-sht-n/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/ae4/03gpiikfsr71rhn2vcpdy4su95rzmwyd.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/ae4/03gpiikfsr71rhn2vcpdy4su95rzmwyd.png",
+      "priceRub": 26,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00001406",
+      "offerId": "1534",
+      "vendorCode": "0У-00001406",
+      "name": "Платформа д/накл.свет.и пожар. датчиков 95 мм/30 мм Серая (120 шт. в кор.) Н",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-d-nakl-svet-i-pozhar-datchikov-95-mm-30-mm-seraya-120-sht-v-kor-n/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/363/oiszi80vu4h5y8288erivleeub2ykgje.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/363/oiszi80vu4h5y8288erivleeub2ykgje.png",
+      "priceRub": 27,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00001781",
+      "offerId": "1651",
+      "vendorCode": "0У-00001781",
+      "name": "Платформа д/накл.свет.и пожар. датчиков 95 мм/30 мм БЕЛАЯ (120 шт. в кор.) Н",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-d-nakl-svet-i-pozhar-datchikov-95-mm-30-mm-belaya-120-sht-v-kor-n/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/fac/k8npuwevkwf3yu8se2su4328u5huzc1h.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/fac/k8npuwevkwf3yu8se2su4328u5huzc1h.png",
+      "priceRub": 33,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00001995",
+      "offerId": "1663",
+      "vendorCode": "0У-00001995",
+      "name": "Платформа для светильника GX DUO D195х85мм/250х140мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-dlya-svetilnika-gx-duo-d195kh85mm-250kh140mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/41c/dssaijeg7cnjbkzryascjc3wfsc6cq5s.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/41c/dssaijeg7cnjbkzryascjc3wfsc6cq5s.png",
+      "priceRub": 1350,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00001996",
+      "offerId": "1664",
+      "vendorCode": "0У-00001996",
+      "name": "Платформа для светильника MR DUO D150х70мм/205х120мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-dlya-svetilnika-mr-duo-d150kh70mm-205kh120mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/e57/snrwkgsx2bs4qxdlvhrlt690j35qhckr.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/e57/snrwkgsx2bs4qxdlvhrlt690j35qhckr.png",
+      "priceRub": 1050,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00002079",
+      "offerId": "1681",
+      "vendorCode": "0У-00002079",
+      "name": "Платформа 50-90 мм универсал. квадрат",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-50-90-mm-universal-kvadrat-50sht/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/168/3dkc86tp0m0o77rnaqzan26t09dazqsp.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/168/3dkc86tp0m0o77rnaqzan26t09dazqsp.png",
+      "priceRub": 100,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00002662",
+      "offerId": "1908",
+      "vendorCode": "0У-00002662",
+      "name": "Платформа для светильника PRACTIC DUO 12W 192х105х10",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-dlya-svetilnika-practic-duo-12w-192kh105kh10/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/c7b/wcjkrsw5rqwlt2sh2yag35uj9ipxr3su.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/c7b/wcjkrsw5rqwlt2sh2yag35uj9ipxr3su.png",
+      "priceRub": 900,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00002663",
+      "offerId": "1909",
+      "vendorCode": "0У-00002663",
+      "name": "Платформа для светильника PRACTIC DUO 18W 130х230х10",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-dlya-svetilnika-practic-duo-18w-130kh230kh10/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/bcc/d60lxs1lwfqecupy4j6pkvjij5dgiijy.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/bcc/d60lxs1lwfqecupy4j6pkvjij5dgiijy.png",
+      "priceRub": 960,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00004449",
+      "offerId": "2599",
+      "vendorCode": "0У-00004449",
+      "name": "Платформа теневая белая круг ДУО под светильник GU10 160х90х20мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-tenevaya-belaya-krug-duo-pod-svetilnik-gu10-160kh90kh20mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/a5b/f803m6p1nk1tz49i8fkzuuupt4boled6.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/a5b/f803m6p1nk1tz49i8fkzuuupt4boled6.png",
+      "priceRub": 1000,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00004447",
+      "offerId": "2600",
+      "vendorCode": "0У-00004447",
+      "name": "Платформа теневая белая круг ДУО под светильник GX53 215х120х15мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-tenevaya-belaya-krug-duo-pod-svetilnik-gx53-215kh120kh15mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/405/nhq8d4ezg01dwwqmbjlw113eo6pfl97s.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/405/nhq8d4ezg01dwwqmbjlw113eo6pfl97s.png",
+      "priceRub": 1000,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00004450",
+      "offerId": "2601",
+      "vendorCode": "0У-00004450",
+      "name": "Платформа теневая чёрная круг ДУО под светильник GU10 160х90х20мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-tenevaya-chyernaya-krug-duo-pod-svetilnik-gu10-160kh90kh20mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/b49/q6m5p40a4csqa53ngpdqzltv54pm7eew.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/b49/q6m5p40a4csqa53ngpdqzltv54pm7eew.png",
+      "priceRub": 1000,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00004444",
+      "offerId": "2602",
+      "vendorCode": "0У-00004444",
+      "name": "Платформа теневая чёрная круг ДУО под светильник GX53 215х120х15мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-tenevaya-chyernaya-krug-duo-pod-svetilnik-gx53-215kh120kh15mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/122/yzvcvsxthu2wnbacfck9sio1b4gkkxz4.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/122/yzvcvsxthu2wnbacfck9sio1b4gkkxz4.png",
+      "priceRub": 1000,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00004451",
+      "offerId": "2603",
+      "vendorCode": "0У-00004451",
+      "name": "Платформа теневая белая круг под светильник GU10 90х90х20мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-tenevaya-belaya-krug-pod-svetilnik-gu10-90kh90kh20mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/1cf/108632f8ss86h88qibwpvkerelxl7jm1.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/1cf/108632f8ss86h88qibwpvkerelxl7jm1.png",
+      "priceRub": 900,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00004443",
+      "offerId": "2604",
+      "vendorCode": "0У-00004443",
+      "name": "Платформа теневая чёрная круг под светильник GU10 90х90х20мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-tenevaya-chyernaya-krug-pod-svetilnik-gu10-90kh90kh20mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/a2b/5jiwd2m7rbxthq7e26bo1fp8y9bwsfx5.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/a2b/5jiwd2m7rbxthq7e26bo1fp8y9bwsfx5.png",
+      "priceRub": 900,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00004441",
+      "offerId": "2605",
+      "vendorCode": "0У-00004441",
+      "name": "Платформа теневая белая круг под светильник GX53 117х117х20мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-tenevaya-belaya-krug-pod-svetilnik-gx53-117kh117kh20mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/756/ssu7j4917l1znfpwi3lgc4o83ir2in1z.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/756/ssu7j4917l1znfpwi3lgc4o83ir2in1z.png",
+      "priceRub": 900,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00004442",
+      "offerId": "2606",
+      "vendorCode": "0У-00004442",
+      "name": "Платформа теневая чёрная круг под светильник GX53 117х117х20мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-tenevaya-chyernaya-krug-pod-svetilnik-gx53-117kh117kh20mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/7c2/ta94yjh0bjzdj6bpi48klxzd16sayei3.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/7c2/ta94yjh0bjzdj6bpi48klxzd16sayei3.png",
+      "priceRub": 900,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00004445",
+      "offerId": "2607",
+      "vendorCode": "0У-00004445",
+      "name": "Платформа теневая белая овал ДУО под светильник GX53 215х117х20мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-tenevaya-belaya-oval-duo-pod-svetilnik-gx53-215kh117kh20mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/f44/hy0kpsfrzg6n3md8nvfmpqc2uz521xy7.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/f44/hy0kpsfrzg6n3md8nvfmpqc2uz521xy7.png",
+      "priceRub": 1000,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00004446",
+      "offerId": "2608",
+      "vendorCode": "0У-00004446",
+      "name": "Платформа теневая черная овал ДУО под светильник GX53 215х117х20мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-tenevaya-chernaya-oval-duo-pod-svetilnik-gx53-215kh117kh20mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/909/4luqdwkkfsxxg73w4ofogu1s7715lb6v.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/909/4luqdwkkfsxxg73w4ofogu1s7715lb6v.png",
+      "priceRub": 1000,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00004448",
+      "offerId": "2609",
+      "vendorCode": "0У-00004448",
+      "name": "Платформа теневая белая овал ДУО под светильник GU10 160х90х20мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-tenevaya-belaya-oval-duo-pod-svetilnik-gu10-160kh90kh20mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/5a0/mk4bwmswjdi280lde2apq5uasvbf32v2.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/5a0/mk4bwmswjdi280lde2apq5uasvbf32v2.png",
+      "priceRub": 1000,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00004452",
+      "offerId": "2610",
+      "vendorCode": "0У-00004452",
+      "name": "Платформа теневая черная овал ДУО под светильник GU10 160х90х20мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-tenevaya-chernaya-oval-duo-pod-svetilnik-gu10-160kh90kh20mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/3f2/ol4lridtuypvegee4dkz9c8rvnlfihu2.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/3f2/ol4lridtuypvegee4dkz9c8rvnlfihu2.png",
+      "priceRub": 1000,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00003018",
+      "offerId": "2611",
+      "vendorCode": "0У-00003018",
+      "name": "Платформа 55-105 мм универсал.",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-55-105-mm-universal-150sht/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/316/v7nm5a40hxdchvqxondm4s2nw4cp86cx.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/316/v7nm5a40hxdchvqxondm4s2nw4cp86cx.png",
+      "priceRub": 60,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00003286",
+      "offerId": "2676",
+      "vendorCode": "0У-00003286",
+      "name": "Платформа круг белая под светильник MR ZOOM 116х130х16мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-krug-belaya-pod-svetilnik-mr-zoom-116kh130kh16mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/321/pgaq5kzy9d187c2sr6i86znma1oek1dc.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/321/pgaq5kzy9d187c2sr6i86znma1oek1dc.png",
+      "priceRub": 900,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00004722",
+      "offerId": "2715",
+      "vendorCode": "0У-00004722",
+      "name": "Платформа теневая круглая одинарная под светильник HANDY/ИНДИ 10W белая 125х125х2мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-tenevaya-kruglaya-odinarnaya-pod-svetilnik-handy-indi-10w-belaya-125kh125kh2mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/621/r2pys0qa76itxr2ltcfyjjft839pwk9r.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/621/r2pys0qa76itxr2ltcfyjjft839pwk9r.png",
+      "priceRub": 900,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00004723",
+      "offerId": "2716",
+      "vendorCode": "0У-00004723",
+      "name": "Платформа теневая круглая одинарная под светильник HANDY/ИНДИ 10W черная 125х125х2мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-tenevaya-kruglaya-odinarnaya-pod-svetilnik-handy-indi-10w-chernaya-125kh125kh2mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/194/a1bf2op02mrp7tbjkm3yz8529amwn1cv.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/194/a1bf2op02mrp7tbjkm3yz8529amwn1cv.png",
+      "priceRub": 900,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00004720",
+      "offerId": "2717",
+      "vendorCode": "0У-00004720",
+      "name": "Платформа теневая круглая одинарная под светильник HANDY/ИНДИ 20W белая 150х150х2мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-tenevaya-kruglaya-odinarnaya-pod-svetilnik-handy-indi-20w-belaya-150kh150kh2mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/66f/w870xr78rxwzegakdpovegkeywuwy0a4.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/66f/w870xr78rxwzegakdpovegkeywuwy0a4.png",
+      "priceRub": 1000,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00004721",
+      "offerId": "2718",
+      "vendorCode": "0У-00004721",
+      "name": "Платформа теневая круглая одинарная под светильник HANDY/ИНДИ 20W черная 150х150х2мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-tenevaya-kruglaya-odinarnaya-pod-svetilnik-handy-indi-20w-chernaya-150kh150kh2mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/3f7/clktgor37765o22w2er9lxs4uf6l1s94.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/3f7/clktgor37765o22w2er9lxs4uf6l1s94.png",
+      "priceRub": 1000,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00004718",
+      "offerId": "2719",
+      "vendorCode": "0У-00004718",
+      "name": "Платформа теневая круглая одинарная под светильник HANDY//ИНДИ 28W белая 175х175х2мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-tenevaya-kruglaya-odinarnaya-pod-svetilnik-handy-indi-28w-belaya-175kh175kh2mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/ce1/r98vg2ffq8z0ln0amftzrmx9ce8o72pc.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/ce1/r98vg2ffq8z0ln0amftzrmx9ce8o72pc.png",
+      "priceRub": 1000,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00004719",
+      "offerId": "2720",
+      "vendorCode": "0У-00004719",
+      "name": "Платформа теневая круглая одинарная под светильник HANDY/ИНДИ 28W черная 175х175х2мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-tenevaya-kruglaya-odinarnaya-pod-svetilnik-handy-indi-28w-chernaya-175kh175kh2mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/3d4/0rvvpjqhg3xn7rzpl5u6d3qxiymvnxh6.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/3d4/0rvvpjqhg3xn7rzpl5u6d3qxiymvnxh6.png",
+      "priceRub": 1000,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00004726",
+      "offerId": "2721",
+      "vendorCode": "0У-00004726",
+      "name": "Платформа теневая овальная ДУО под светильник HANDY/ИНДИ 10W белая 230х125х2мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-tenevaya-ovalnaya-duo-pod-svetilnik-handy-indi-10w-belaya-230kh125kh2mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/c4a/fvov4vzn7xfmv8ou8x3uc86qc28qznqd.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/c4a/fvov4vzn7xfmv8ou8x3uc86qc28qznqd.png",
+      "priceRub": 1000,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00004727",
+      "offerId": "2722",
+      "vendorCode": "0У-00004727",
+      "name": "Платформа теневая овальная ДУО под светильник HANDY/ИНДИ 10W черная 230х125х2мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-tenevaya-ovalnaya-duo-pod-svetilnik-handy-indi-10w-chernaya-230kh125kh2mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/c3b/g1gh5i7n8t6hvf3binzqkuwx3o3qcg2r.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/c3b/g1gh5i7n8t6hvf3binzqkuwx3o3qcg2r.png",
+      "priceRub": 1000,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00004724",
+      "offerId": "2723",
+      "vendorCode": "0У-00004724",
+      "name": "Платформа теневая круглая ДУО под светильник HANDY/ИНДИ 10W белая 230х125х2мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-tenevaya-kruglaya-duo-pod-svetilnik-handy-indi-10w-belaya-230kh125kh2mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/513/z0gtv91m3mc3elvh7lcsm3ppl24q53rn.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/513/z0gtv91m3mc3elvh7lcsm3ppl24q53rn.png",
+      "priceRub": 1000,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00004725",
+      "offerId": "2724",
+      "vendorCode": "0У-00004725",
+      "name": "Платформа теневая круглая ДУО под светильник HANDY/ИНДИ 10W черная 230х125х2мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-tenevaya-kruglaya-duo-pod-svetilnik-handy-indi-10w-chernaya-230kh125kh2mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/bf3/wzq96h7enlfkoeum28irq6crpxwjaxk0.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/bf3/wzq96h7enlfkoeum28irq6crpxwjaxk0.png",
+      "priceRub": 1000,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00004928",
+      "offerId": "2858",
+      "vendorCode": "0У-00004928",
+      "name": "Платформа для светильника 90 мм Серые (200 шт.) КОРОБКА",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-dlya-svetilnika-90-mm-serye-200-sht-korobka/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/743/m04ua8oi1na5mo26ankmk2epx4u8q76z.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/743/m04ua8oi1na5mo26ankmk2epx4u8q76z.png",
+      "priceRub": 15,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00004979",
+      "offerId": "2885",
+      "vendorCode": "0У-00004979",
+      "name": "Платформа для светильника 90 мм Белая (200 шт.) КОРОБКА",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-dlya-svetilnika-90-mm-belaya-200-sht-korobka/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/b51/m2c4m0xmudpaq05vh5jpiormbguey02n.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/b51/m2c4m0xmudpaq05vh5jpiormbguey02n.png",
+      "priceRub": 20,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00005160",
+      "offerId": "3115",
+      "vendorCode": "0У-00005160",
+      "name": "Платформа круг белая под светильник MOON 116х130х19мм",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-krug-belaya-pod-svetilnik-moon-116kh130kh19mm/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/5b1/mvsj6kb4ay010472jptg89f89a7awfw8.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/5b1/mvsj6kb4ay010472jptg89f89a7awfw8.png",
+      "priceRub": 1040,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Да"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Да"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00005425",
+      "offerId": "10989",
+      "vendorCode": "0У-00005425",
+      "name": "Платформа универсал. прямоугольная 155*75/165*85/175*95мм под ZOOM/SKILL DUO",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-universal-pryamougolnaya-155-75-165-85-175-95mm-pod-zoom-skill-duo-50sht/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/1ec/soid27si0ecpvj2lwfaypb6n683yqo4c.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/1ec/soid27si0ecpvj2lwfaypb6n683yqo4c.png",
+      "priceRub": 150,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-0-00005498",
+      "offerId": "11016",
+      "vendorCode": "0У-00005498",
+      "name": "Платформа 60-110 мм NEO Серый универсал. (210 шт.) КОРОБКА Н",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-svetilnikov/platforma-60-110-mm-neo-seryy-universal-210-sht-korobka-n/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/de5/0dus4m6nujilmzyjgyljw39x8fox8zea.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/de5/0dus4m6nujilmzyjgyljw39x8fox8zea.png",
+      "priceRub": 9,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 190,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для светильников",
+      "params": [],
+      "keyAttributes": [],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
+      "productId": "eks-uta00002352",
+      "offerId": "212",
+      "vendorCode": "UTA00002352",
+      "name": "Платформа для гардин ПУГ универсальная, 7*14",
+      "url": "https://eksmarket.ru/catalog/platformy-dlya-gardin/platforma-dlya-gardin-pug-universalnaya-7-14-300sht/",
+      "images": [
+        "https://eksmarket.ru/upload/iblock/850/ztn64c6i89tnyzrekb3v7c364bvfeg5d.jpg",
+        "https://eksmarket.ru/upload/iblock/4fc/xs1r0j5zszief6mtw6n0fc5o2t6o8gz1.png",
+        "https://eksmarket.ru/upload/iblock/587/qtig2yqlskukhu33dz33hixj9u7fwyuw.jpg",
+        "https://eksmarket.ru/upload/iblock/cad/kye7m5pw6pkknd02atv6w9m33i99j7i8.png"
+      ],
+      "coverImage": "https://eksmarket.ru/upload/iblock/850/ztn64c6i89tnyzrekb3v7c364bvfeg5d.jpg",
+      "priceRub": 74,
+      "available": true,
+      "currencyId": "RUB",
+      "categoryId": 192,
+      "categoryPath": "Комплектующие для натяжных потолков / Платформы/закладные / Платформы для гардин",
+      "params": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "keyAttributes": [
+        {
+          "label": "Новинка",
+          "value": "Нет"
+        }
+      ],
+      "system": "OTHER",
+      "kind": "CEILING_COMPONENT",
+      "unit": "pcs",
+      "pieceLengthMeters": null,
+      "lengthMeters": null
+    },
+    {
       "productId": "eks-0-00002350",
       "offerId": "2954",
       "vendorCode": "0У-00002350",
@@ -18602,16 +20212,16 @@
   ],
   "meta": {
     "offersTotal": 685,
-    "productsKept": 342,
-    "skippedNotWhitelisted": 10,
+    "productsKept": 400,
+    "skippedNotWhitelisted": 14,
     "skippedNoPrice": 0,
     "skippedNoUrlOrName": 0,
-    "skippedNoCategoryId": 333,
+    "skippedNoCategoryId": 271,
     "skippedUnavailable": 0,
-    "derivedCategoryIdFromUrl": 352,
+    "derivedCategoryIdFromUrl": 414,
     "dedupProductIdCollisions": 0,
     "keptBySystem": {
-      "OTHER": 116,
+      "OTHER": 174,
       "PSU": 12,
       "TRACK_220": 38,
       "COLIBRI_220": 45,
@@ -18620,7 +20230,7 @@
       "LED_STRIP": 72
     },
     "keptByKind": {
-      "CEILING_COMPONENT": 9,
+      "CEILING_COMPONENT": 67,
       "LAMP": 54,
       "PSU": 12,
       "OTHER": 45,
@@ -18630,6 +20240,33 @@
       "TRACK_PROFILE": 7,
       "CONTROL": 1,
       "LED_STRIP": 72
+    },
+    "keptByCategoryId": {
+      "22": 9,
+      "41": 33,
+      "42": 10,
+      "46": 12,
+      "50": 27,
+      "61": 26,
+      "134": 38,
+      "135": 45,
+      "145": 1,
+      "146": 58,
+      "190": 57,
+      "192": 1,
+      "210": 11,
+      "213": 72
+    },
+    "debugCategory190": {
+      "found": 57,
+      "kept": 57,
+      "skipped": 0
+    },
+    "debugCategory186": {
+      "found": 0,
+      "kept": 0,
+      "skipped": 0,
+      "skippedReason": ""
     }
   }
 }
