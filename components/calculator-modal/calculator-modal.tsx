@@ -113,6 +113,12 @@ export function CalculatorModal() {
     return titles[currentStep];
   }, [currentStep, lightingDraft]);
 
+  // Единая точка закрытия: сначала убираем visible, затем закрываем контекст.
+  const requestClose = useCallback(() => {
+    setVisible(false);
+    closeCalculator();
+  }, [closeCalculator]);
+
   useEffect(() => {
     if (!isOpen) return;
     previousFocusRef.current = document.activeElement as HTMLElement;
@@ -149,7 +155,7 @@ export function CalculatorModal() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
-        closeCalculator();
+        requestClose();
         return;
       }
       if (e.key !== "Tab" || !panelRef.current) return;
@@ -171,14 +177,14 @@ export function CalculatorModal() {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, closeCalculator]);
+  }, [isOpen, requestClose]);
 
   const handleOverlayClick = useCallback(
     (e: React.MouseEvent) => {
       if (!isOpen) return;
-      if (e.target === overlayRef.current) closeCalculator();
+      if (e.target === overlayRef.current) requestClose();
     },
-    [closeCalculator, isOpen]
+    [isOpen, requestClose]
   );
 
   const handleConfirm = useCallback(() => {
@@ -224,7 +230,7 @@ export function CalculatorModal() {
       setHasInteracted(true);
     }
 
-    closeCalculator();
+    requestClose();
     requestAnimationFrame(() => {
       scrollToAnchorTarget("#action", { focus: true, highlight: true });
     });
@@ -236,7 +242,7 @@ export function CalculatorModal() {
     setSnapshot,
     snapshotValid,
     setHasInteracted,
-    closeCalculator,
+    requestClose,
   ]);
 
   if (!mounted) return null;
@@ -284,7 +290,7 @@ export function CalculatorModal() {
             </div>
             <button
               type="button"
-              onClick={closeCalculator}
+              onClick={requestClose}
               aria-label="Закрыть"
               className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
               style={{ minHeight: 48, minWidth: 48 }}
