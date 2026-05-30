@@ -16,12 +16,21 @@ const BULLETS = [
   "Точечные светильники и трековое освещение",
 ];
 
+function resolveButtonLabel(explicitLabel: string | undefined, heading: string): string | undefined {
+  if (explicitLabel) return explicitLabel;
+  const headingText = String(heading ?? "").toLowerCase();
+  if (headingText.includes("каталог")) return "Открыть каталог в калькуляторе";
+  return undefined;
+}
+
 export function CalculatorTeaser({
   preset,
   source,
   heading = "Рассчитайте стоимость",
   buttonLabel,
 }: CalculatorTeaserProps) {
+  const resolvedLabel = resolveButtonLabel(buttonLabel, heading);
+
   return (
     <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
       <Heading
@@ -42,7 +51,11 @@ export function CalculatorTeaser({
       </ul>
 
       <div className="mt-8">
-        <CalculatorTeaserButton preset={preset} source={String(source ?? "")} label={buttonLabel} />
+        <CalculatorTeaserButton
+          preset={preset}
+          source={String(source ?? "")}
+          label={resolvedLabel}
+        />
       </div>
 
       <p className="mt-4 text-sm text-slate-500">
