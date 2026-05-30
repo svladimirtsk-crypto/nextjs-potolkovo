@@ -2,7 +2,6 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 
-import { homepage } from "@/content/homepage";
 import { legal } from "@/content/legal";
 
 import { getKitDisplayName } from "@/lib/calculator-modal-types";
@@ -19,9 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TextLink } from "@/components/ui/text-link";
 
-// ВАЖНО: НЕ полагаемся на homepage.action.* кроме sectionTitle/subtitle,
-// потому что структура контента сейчас не содержит successTitle/errorMessage/etc.
-const DEFAULT_COPY = {
+const COPY = {
   successTitle: "Заявка отправлена",
   errorMessage: "Не удалось отправить заявку. Проверьте данные и попробуйте ещё раз.",
   submitButtonLabel: "Записаться на замер",
@@ -71,7 +68,6 @@ function buildLeadMessage(
   const parts: string[] = ["Заявка с сайта ПОТОЛКОВО"];
 
   if (source) parts.push(`Источник: ${source}`);
-
   if (address.trim()) parts.push("", `Адрес / район: ${address.trim()}`);
 
   if (ceilingLines.length) {
@@ -110,10 +106,6 @@ export function ActionForm({ source }: ActionFormProps) {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isPending, setIsPending] = useState<boolean>(false);
 
-  // Copy: если homepage.action когда-нибудь расширят — можно будет заменить
-  // DEFAULT_COPY на значения из контента. Сейчас делаем максимально надёжно.
-  const copy = DEFAULT_COPY;
-
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -150,7 +142,6 @@ export function ActionForm({ source }: ActionFormProps) {
       return;
     }
 
-    // Lighting metadata for CRM / webhooks
     const lightingMode: string = String(snapshot?.lighting?.mode ?? "none");
     const lightingKitDisplay: string = String(
       snapshot?.lighting ? getKitDisplayName(snapshot.lighting) : ""
@@ -181,16 +172,15 @@ export function ActionForm({ source }: ActionFormProps) {
     formData.append("botcheck", "");
     formData.append("company", "");
 
-    // extra fields (easy filtering)
+    // extra fields
     formData.append("calculator_source", effectiveSource);
     formData.append("lighting_mode", lightingMode);
     formData.append("lighting_kit", lightingKitDisplay);
     formData.append("lighting_items_count", String(lightingItemsCount));
-
     formData.append("lighting_total_rub", String(lightingTotalRub));
     formData.append("lighting_discounted_total_rub", String(lightingDiscountedRub));
 
-    // legacy compatibility (если где-то уже используются старые поля)
+    // legacy compatibility
     formData.append("lighting_total", String(lightingTotalRub));
     formData.append("lighting_discounted_total", String(lightingDiscountedRub));
 
@@ -222,7 +212,7 @@ export function ActionForm({ source }: ActionFormProps) {
       setFieldErrors({});
     } catch {
       setStatus("error");
-      setMessage(copy.errorMessage);
+      setMessage(COPY.errorMessage);
     } finally {
       setIsPending(false);
     }
@@ -236,7 +226,7 @@ export function ActionForm({ source }: ActionFormProps) {
           role="status"
           aria-live="polite"
         >
-          <p className="font-medium">{copy.successTitle}</p>
+          <p className="font-medium">{COPY.successTitle}</p>
           <p className="mt-1 text-sm text-emerald-900/80">{message}</p>
         </div>
       ) : null}
@@ -247,7 +237,7 @@ export function ActionForm({ source }: ActionFormProps) {
           role="alert"
           aria-live="polite"
         >
-          <p className="text-sm">{message || copy.errorMessage}</p>
+          <p className="text-sm">{message || COPY.errorMessage}</p>
         </div>
       ) : null}
 
@@ -275,7 +265,6 @@ export function ActionForm({ source }: ActionFormProps) {
                 ))}
               </ul>
 
-              {/* небольшая подсказка про суммы, если нужно */}
               {snapshot?.lighting?.totalRub != null ? (
                 <p className="mt-2 text-xs text-slate-500">
                   Сумма оборудования: {formatCurrency(Number(snapshot.lighting.totalRub))} ₽
@@ -287,50 +276,50 @@ export function ActionForm({ source }: ActionFormProps) {
       )}
 
       <div className="grid gap-3">
-        <div>
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Имя"
-            aria-invalid={Boolean(fieldErrors.name) || undefined}
-          />
-          {fieldErrors.name ? (
-            <p className="mt-1 text-xs text-rose-600">{fieldErrors.name}</p>
-          ) : null}
-        </div>
+        <Input
+          label="Имя"
+          name="name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Иван"
+          autoComplete="name"
+          aria-invalid={Boolean(fieldErrors.name) || undefined}
+        />
+        {fieldErrors.name ? <p className="text-xs text-rose-600">{fieldErrors.name}</p> : null}
 
-        <div>
-          <Input
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="Телефон (например, +79051234567)"
-            inputMode="tel"
-            aria-invalid={Boolean(fieldErrors.phone) || undefined}
-          />
-          {fieldErrors.phone ? (
-            <p className="mt-1 text-xs text-rose-600">{fieldErrors.phone}</p>
-          ) : null}
-        </div>
+        <Input
+          label="Телефон"
+          name="phone"
+          type="tel"
+          inputMode="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="+79051234567"
+          autoComplete="tel"
+          aria-invalid={Boolean(fieldErrors.phone) || undefined}
+        />
+        {fieldErrors.phone ? <p className="text-xs text-rose-600">{fieldErrors.phone}</p> : null}
 
-        <div>
-          <Input
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            placeholder="Адрес или район (необязательно)"
-            aria-invalid={Boolean(fieldErrors.address) || undefined}
-          />
-          <p className="mt-1 text-xs text-slate-500">{copy.addressFieldHint}</p>
-          {fieldErrors.address ? (
-            <p className="mt-1 text-xs text-rose-600">{fieldErrors.address}</p>
-          ) : null}
-        </div>
+        <Input
+          label="Адрес или район (необязательно)"
+          name="address"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          placeholder="Например: Центральный район"
+          autoComplete="street-address"
+          aria-invalid={Boolean(fieldErrors.address) || undefined}
+        />
+        <p className="text-xs text-slate-500">{COPY.addressFieldHint}</p>
+        {fieldErrors.address ? (
+          <p className="text-xs text-rose-600">{fieldErrors.address}</p>
+        ) : null}
       </div>
 
       <Button type="submit" className="w-full" disabled={isPending}>
-        {isPending ? "Отправляю..." : copy.submitButtonLabel}
+        {isPending ? "Отправляю..." : COPY.submitButtonLabel}
       </Button>
 
-      <p className="text-xs text-slate-500">{copy.helperText}</p>
+      <p className="text-xs text-slate-500">{COPY.helperText}</p>
 
       <p className="text-xs text-slate-500">
         {legal.consentTextPrefix}
