@@ -11430,53 +11430,6 @@
       "lengthMeters": null
     },
     {
-      "productId": "eks-0-00002967",
-      "offerId": "2570",
-      "vendorCode": "0У-00002967",
-      "name": "Профиль Стандарт S-25 для трековой системы КОЛИБРИ, 2 м (цена за пог м) (упаковка 8 метров)",
-      "url": "https://eksmarket.ru/catalog/sistema-colibri-220v/profil-standart-s-25-dlya-trekovoy-sistemy-kolibri-2-m-tsena-za-pog-m-upakovka-8-metrov/",
-      "images": [
-        "https://eksmarket.ru/upload/iblock/57a/fdv0gp4jnebm93tnrjdhkcjhh5l5apu9.png",
-        "https://eksmarket.ru/upload/iblock/c76/vi7060dgmx861xv8pwcm3mu9rew6wz7f.png"
-      ],
-      "coverImage": "https://eksmarket.ru/upload/iblock/57a/fdv0gp4jnebm93tnrjdhkcjhh5l5apu9.png",
-      "priceRub": 3238,
-      "available": true,
-      "currencyId": "RUB",
-      "categoryId": 135,
-      "categoryPath": "Трековые системы / Система КОЛИБРИ 220V",
-      "params": [],
-      "keyAttributes": [],
-      "system": "COLIBRI_220",
-      "kind": "TRACK_PROFILE",
-      "unit": "m",
-      "pieceLengthMeters": 2,
-      "lengthMeters": null
-    },
-    {
-      "productId": "eks-0-00002968",
-      "offerId": "2571",
-      "vendorCode": "0У-00002968",
-      "name": "Торцевая заглушка Стандарт для профиля S-25",
-      "url": "https://eksmarket.ru/catalog/sistema-colibri-220v/tortsevaya-zaglushka-standart-dlya-profilya-s-25-2-sht-up/",
-      "images": [
-        "https://eksmarket.ru/upload/iblock/781/fhhbtzv4vw7h1mrgu3u12kerimxnguna.png"
-      ],
-      "coverImage": "https://eksmarket.ru/upload/iblock/781/fhhbtzv4vw7h1mrgu3u12kerimxnguna.png",
-      "priceRub": 429,
-      "available": true,
-      "currencyId": "RUB",
-      "categoryId": 135,
-      "categoryPath": "Трековые системы / Система КОЛИБРИ 220V",
-      "params": [],
-      "keyAttributes": [],
-      "system": "COLIBRI_220",
-      "kind": "TRACK_ACCESSORY",
-      "unit": "pcs",
-      "pieceLengthMeters": null,
-      "lengthMeters": null
-    },
-    {
       "productId": "eks-0-00002959",
       "offerId": "2742",
       "vendorCode": "0У-00002959",
