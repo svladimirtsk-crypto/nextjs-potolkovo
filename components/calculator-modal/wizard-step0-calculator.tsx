@@ -2,6 +2,7 @@
 
 import type { ServiceCalculatorPreset } from "@/content/services";
 import { PriceCalculatorClient } from "@/components/home/price-calculator-client";
+import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
 import { useCalculatorModal } from "./calculator-modal-context";
 
 type WizardStep0CalculatorProps = {
@@ -13,7 +14,7 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
 
   const resolvedPreset: ServiceCalculatorPreset = {
     ceilingType: String(preset?.ceilingType ?? "standard") as ServiceCalculatorPreset["ceilingType"],
-    areaDefault: Number(preset?.areaDefault ?? 10),
+    areaDefault: Number(preset?.areaDefault ?? DEFAULT_CALCULATOR_AREA),
     corniceType: preset?.corniceType,
     trackType: preset?.trackType,
     lightsEnabled: preset?.lightsEnabled,
