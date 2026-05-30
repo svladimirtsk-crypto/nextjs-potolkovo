@@ -7,7 +7,7 @@ import { useCalculatorModal } from "@/components/calculator-modal/calculator-mod
 import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
 import type { FeedCatalogProduct, FeedCatalogResult } from "@/lib/eks-feed2-catalog";
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
-import { detectSocket, getDiscountedPrice } from "@/lib/feed2-products";
+import { detectSocket, getDiscountedPrice, getRequiredLampSocket } from "@/lib/feed2-products";
 import {
   CATALOG_SECTIONS,
   POINT_SUBTYPES,
@@ -88,12 +88,11 @@ export function CatalogSectionClient({ data }: Props) {
   const { openCalculator } = useCalculatorModal();
 
   const products = useMemo(() => {
-    const list = (data.products ?? []).filter((product) => {
+    return (data.products ?? []).filter((product) => {
       const vendorCode = toText(product.vendorCode);
       if (REMOVED_COLIBRI_VENDOR_CODES.has(vendorCode)) return false;
       return true;
     });
-    return list;
   }, [data.products]);
 
   const byProductId = useMemo(() => {
@@ -307,9 +306,7 @@ export function CatalogSectionClient({ data }: Props) {
       {selectedProducts.length > 0 ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-slate-950">
-              Выбрано: {selectedProducts.length} поз.
-            </p>
+            <p className="text-sm font-semibold text-slate-950">Выбрано: {selectedProducts.length} поз.</p>
             <button
               type="button"
               onClick={openInCalculator}
@@ -323,10 +320,7 @@ export function CatalogSectionClient({ data }: Props) {
             {selectedProducts.map((entry) => {
               const productId = toText(entry.product.productId);
               return (
-                <div
-                  key={productId}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs"
-                >
+                <div key={productId} className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs">
                   <span className="max-w-[220px] truncate">{toText(entry.product.name)} x {entry.qty}</span>
                   <button
                     type="button"
@@ -354,7 +348,7 @@ export function CatalogSectionClient({ data }: Props) {
           const qty = toNumber(cartItems[productId]);
           const regular = toNumber(product.priceRub);
           const discounted = getDiscountedPrice(regular);
-          const socket = detectSocket(product);
+          const requiredSocket = getRequiredLampSocket(product);
 
           return (
             <article key={productId} className="rounded-2xl border border-slate-200 bg-white p-3">
@@ -366,10 +360,8 @@ export function CatalogSectionClient({ data }: Props) {
 
               <div className="mt-2 text-xs text-slate-600">
                 <p>Цена: {fmt(regular)} ₽{product.unit === "m" ? " / м" : ""}</p>
-                <p className="font-semibold text-emerald-700">
-                  Со скидкой: {fmt(discounted)} ₽{product.unit === "m" ? " / м" : ""}
-                </p>
-                {socket ? <p>Сокет: {socket}</p> : null}
+                <p className="font-semibold text-emerald-700">Со скидкой: {fmt(discounted)} ₽{product.unit === "m" ? " / м" : ""}</p>
+                {requiredSocket ? <p>Требуется лампа: {requiredSocket}</p> : null}
               </div>
 
               <div className="mt-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
@@ -380,9 +372,7 @@ export function CatalogSectionClient({ data }: Props) {
                 >
                   -
                 </button>
-                <span className="min-w-14 text-center text-sm font-semibold text-slate-900">
-                  {qty}
-                </span>
+                <span className="min-w-14 text-center text-sm font-semibold text-slate-900">{qty}</span>
                 <button
                   type="button"
                   onClick={() => setProductQty(product, qty + (product.unit === "m" ? 0.5 : 1))}
