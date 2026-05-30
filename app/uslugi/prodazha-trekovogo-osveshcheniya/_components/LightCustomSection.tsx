@@ -16,7 +16,7 @@ export function LightCustomSection() {
           <Heading
             eyebrow="Свой вариант"
             title="Хотите подобрать самостоятельно?"
-            description="Откройте каталог прямо в калькуляторе — выберите позиции, количество и сразу увидите итоговую стоимость со скидкой 15%."
+            description="Откройте каталог прямо в калькуляторе - выберите позиции, количество и сразу увидите итоговую стоимость со скидкой 15%."
             align="center"
           />
 
@@ -27,6 +27,8 @@ export function LightCustomSection() {
                 openCalculator({
                   initialStep: 1,
                   initialLightingTab: "catalog",
+                  initialLightingView: "browse",
+                  entryMode: "lighting-first",
                   source: "track-sale-custom",
                 })
               }
@@ -51,7 +53,7 @@ export function LightCustomSection() {
           </div>
 
           <p className="mt-4 text-sm text-slate-500">
-            Или прокрутите ниже — полный каталог с фильтрами доступен на этой странице
+            Или прокрутите ниже - полный каталог с фильтрами доступен на этой странице
           </p>
         </div>
       </Container>
