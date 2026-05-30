@@ -11,10 +11,10 @@ import { detectSocket, getDiscountedPrice, getRequiredLampSocket } from "@/lib/f
 import {
   CATALOG_SECTIONS,
   POINT_SUBTYPES,
-  REMOVED_COLIBRI_VENDOR_CODES,
   TRACK_GROUPS,
   TRACK_PROFILE_WHITELIST,
   TRACK_SYSTEMS,
+  isRemovedColibriVendorCode,
   type CatalogSectionId,
   type PointSubtypeId,
   type TrackGroupId,
@@ -88,11 +88,7 @@ export function CatalogSectionClient({ data }: Props) {
   const { openCalculator } = useCalculatorModal();
 
   const products = useMemo(() => {
-    return (data.products ?? []).filter((product) => {
-      const vendorCode = toText(product.vendorCode);
-      if (REMOVED_COLIBRI_VENDOR_CODES.has(vendorCode)) return false;
-      return true;
-    });
+    return (data.products ?? []).filter((product) => !isRemovedColibriVendorCode(product.vendorCode));
   }, [data.products]);
 
   const byProductId = useMemo(() => {
