@@ -44,13 +44,22 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       const incoming = opts ?? {};
       const isLightingFirst = incoming.entryMode === "lighting-first";
 
-      // Страховка: lighting-first всегда стартует с каталога на шаге 1,
-      // если вызывающий код явно не переопределил значения.
       const resolvedOpts: OpenCalculatorOptions = {
         ...incoming,
+        // Единый дефолт первого шага.
         initialStep: incoming.initialStep ?? (isLightingFirst ? 1 : 0),
+        // Единый дефолт входа в каталог для lighting-first.
         initialLightingTab: incoming.initialLightingTab ?? (isLightingFirst ? "catalog" : undefined),
         initialLightingView: incoming.initialLightingView ?? (isLightingFirst ? "browse" : undefined),
+        // Глобальная страховка: если preset не передан, Step0 стартует с 10 м².
+        preset:
+          incoming.preset ??
+          (isLightingFirst
+            ? undefined
+            : {
+                ceilingType: "standard",
+                areaDefault: 10,
+              }),
       };
 
       setOptions(resolvedOpts);
@@ -67,12 +76,8 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
         setSnapshot((prev) => (prev ? { ...prev, leadSource: source } : prev));
       }
 
-      // Сессионный флаг сбрасываем на каждое открытие.
       setStep0SessionInteracted(false);
-
-      // Единая синхронизация selected/browse между Step1 и Step2.
       setStep1CatalogView(resolvedOpts.initialLightingView ?? null);
-
       setIsOpen(true);
     },
     [setSnapshot]
