@@ -13,6 +13,7 @@ import { useCalculatorModal } from "./calculator-modal-context";
 import { isSnapshotValid } from "@/lib/calculator-snapshot-guard";
 import { calcRequiredWorksFromLighting, applyLightingDiscount } from "@/lib/lighting-formulas";
 import type { WizardStep } from "@/lib/calculator-modal-types";
+import { REMOVED_COLIBRI_VENDOR_CODES } from "@/lib/catalog-ui-config";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("ru-RU").format(Math.round(n));
@@ -146,7 +147,7 @@ export function WizardStep2Summary({ onConfirm: _onConfirm }: WizardStep2Summary
     return map;
   }, []);
 
-  const miniCartItems = useMemo(() => {
+  const miniCartItemsRaw = useMemo(() => {
     const items = lightingDraft?.items ?? [];
     return items.map((item) => {
       const sku = toText(item.sku);
@@ -164,6 +165,17 @@ export function WizardStep2Summary({ onConfirm: _onConfirm }: WizardStep2Summary
       };
     });
   }, [lightingDraft?.items, productsByKey]);
+
+  const miniCartItems = useMemo(() => {
+    return miniCartItemsRaw.filter((item) => {
+      const byVendor = toText(item.product?.vendorCode);
+      if (REMOVED_COLIBRI_VENDOR_CODES.has(byVendor)) return false;
+      if (REMOVED_COLIBRI_VENDOR_CODES.has(toText(item.sku))) return false;
+      return true;
+    });
+  }, [miniCartItemsRaw]);
+
+  const removedItemsCount = miniCartItemsRaw.length - miniCartItems.length;
 
   const miniCartTotals = useMemo(() => {
     const regular = miniCartItems.reduce((sum, item) => sum + item.subtotal, 0);
@@ -219,6 +231,12 @@ export function WizardStep2Summary({ onConfirm: _onConfirm }: WizardStep2Summary
             </button>
           </div>
 
+          {removedItemsCount > 0 ? (
+            <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800">
+              {removedItemsCount} поз. удалено из ассортимента и не включено в итог.
+            </div>
+          ) : null}
+
           <div className="space-y-2 p-3">
             {miniCartItems.map((item) => {
               const attrs = (item.product?.keyAttributes ?? item.product?.params ?? []).slice(0, 3);
@@ -255,16 +273,19 @@ export function WizardStep2Summary({ onConfirm: _onConfirm }: WizardStep2Summary
                       type="button"
                       onClick={() => {
                         if (!lightingDraft?.items) return;
+
                         const nextItems = lightingDraft.items.filter((x) => toText(x.sku) !== item.sku);
                         if (nextItems.length === 0) {
                           setLightingDraft({ mode: "none", userCustomizedLighting: false });
                           return;
                         }
+
                         const nextTotal = nextItems.reduce((sum, x) => {
                           const qty = Number(x.qty ?? 0);
                           const price = Number(x.priceRub ?? 0);
                           return sum + qty * price;
                         }, 0);
+
                         const nextDiscounted = applyLightingDiscount(nextTotal);
 
                         setLightingDraft({
@@ -300,9 +321,7 @@ export function WizardStep2Summary({ onConfirm: _onConfirm }: WizardStep2Summary
         <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3">
           <p className="text-sm font-semibold text-blue-900">Параметры монтажа обновятся автоматически</p>
           <p className="mt-1 text-sm leading-5 text-blue-800">{reconcileNote}</p>
-          <p className="mt-1.5 text-xs text-blue-700">
-            Точное количество уточним на замере.
-          </p>
+          <p className="mt-1.5 text-xs text-blue-700">Точное количество уточним на замере.</p>
         </div>
       ) : null}
 
