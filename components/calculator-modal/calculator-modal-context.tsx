@@ -18,6 +18,7 @@ import type {
 } from "@/lib/calculator-modal-types";
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
+import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
 
 const CalculatorModalContext = createContext<CalculatorModalContextValue | null>(null);
 
@@ -46,19 +47,16 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
 
       const resolvedOpts: OpenCalculatorOptions = {
         ...incoming,
-        // Единый дефолт первого шага.
         initialStep: incoming.initialStep ?? (isLightingFirst ? 1 : 0),
-        // Единый дефолт входа в каталог для lighting-first.
         initialLightingTab: incoming.initialLightingTab ?? (isLightingFirst ? "catalog" : undefined),
         initialLightingView: incoming.initialLightingView ?? (isLightingFirst ? "browse" : undefined),
-        // Глобальная страховка: если preset не передан, Step0 стартует с 10 м².
         preset:
           incoming.preset ??
           (isLightingFirst
             ? undefined
             : {
                 ceilingType: "standard",
-                areaDefault: 10,
+                areaDefault: DEFAULT_CALCULATOR_AREA,
               }),
       };
 
