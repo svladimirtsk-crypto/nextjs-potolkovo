@@ -143,302 +143,201 @@ export const homepage = {
   },
 
   price: {
-  sectionTitle: "Быстрый ориентир по цене",
-  sectionIntro:
-    "Выберите площадь и нужные параметры. Калькулятор покажет ориентировочную стоимость, а точную цену я зафиксирую после замера.",
-  includedLine:
-    "Это ориентировочный расчёт для понимания бюджета. Итоговая смета фиксируется после осмотра помещения и согласования решения.",
-  fixedPriceNote:
-    " ",
-  noExtraChargeNote:
-    " ",
-  primaryCtaLabel: "Записаться на замер",
-  calculator: {
-    areaMin: 10,
-    areaMax: 100,
-    areaStep: 1,
-    areaDefault: 25,
+    sectionTitle: "Быстрый ориентир по цене",
+    sectionIntro:
+      "Выберите площадь и нужные параметры. Калькулятор покажет ориентировочную стоимость, а точную цену я зафиксирую после замера.",
+    includedLine:
+      "Это ориентировочный расчёт для понимания бюджета. Итоговая смета фиксируется после осмотра помещения и согласования решения.",
+    fixedPriceNote: " ",
+    noExtraChargeNote: " ",
+    primaryCtaLabel: "Записаться на замер",
+    calculator: {
+      areaMin: 10,
+      areaMax: 100,
+      areaStep: 1,
+      areaDefault: 10,
 
-    perimeterHintMinMultiplier: 4,
-    perimeterHintMaxMultiplier: 4.5,
+      perimeterHintMinMultiplier: 4,
+      perimeterHintMaxMultiplier: 4.5,
 
-    specialMeters: {
-      min: 1,
-      max: 150,
-      step: 1,
-    },
+      specialMeters: {
+        min: 1,
+        max: 150,
+        step: 1,
+      },
 
-    corniceMeters: {
-      min: 1,
-      max: 50,
-      step: 1,
-      default: 2,
-    },
+      corniceMeters: {
+        min: 1,
+        max: 50,
+        step: 1,
+        default: 2,
+      },
 
-    lightLineMeters: {
-  min: 1,
-  max: 50,
-  step: 1,
-  default: 2,
-},
-    trackMeters: {
-      min: 1,
-      max: 50,
-      step: 1,
-      default: 2,
-    },
+      lightLineMeters: {
+        min: 1,
+        max: 50,
+        step: 1,
+        default: 2,
+      },
+      trackMeters: {
+        min: 1,
+        max: 50,
+        step: 1,
+        default: 2,
+      },
 
-    baseDescription: "Базовая стоимость простого потолка — от 1 000 ₽ / м²",
+      baseDescription: "Базовая стоимость простого потолка — от 1 000 ₽ / м²",
 
-    ceilingTypes: [
-      {
-        slug: "standard",
-        label: "Простой потолок",
-        baseRatePerSqm: 1000,
-        extraLabel: null,
-        extraRatePerMeter: 0,
-      },
-      {
-        slug: "shadow",
-        label: "Теневой потолок",
-        baseRatePerSqm: 800,
-        extraLabel: "Теневой профиль",
-        extraRatePerMeter: 950,
-      },
-      {
-        slug: "floating",
-        label: "Парящий потолок",
-        baseRatePerSqm: 800,
-        extraLabel: "Парящий профиль",
-        extraRatePerMeter: 2500,
-      },
-    ],
+      ceilingTypes: [
+        {
+          slug: "standard",
+          label: "Простой потолок",
+          baseRatePerSqm: 1000,
+          extraLabel: null,
+          extraRatePerMeter: 0,
+        },
+        {
+          slug: "shadow",
+          label: "Теневой потолок",
+          baseRatePerSqm: 800,
+          extraLabel: "Теневой профиль",
+          extraRatePerMeter: 950,
+        },
+        {
+          slug: "floating",
+          label: "Парящий потолок",
+          baseRatePerSqm: 800,
+          extraLabel: "Парящий профиль",
+          extraRatePerMeter: 2500,
+        },
+      ],
 
-    cornices: [
-      {
-        slug: "none",
-        label: "Без карниза",
-        ratePerMeter: 0,
-      },
-      {
-        slug: "built-in",
-        label: "Встроенный карниз",
-        ratePerMeter: 4500,
-      },
-      {
-        slug: "hidden-niche",
-        label: "Скрытая ниша",
-        ratePerMeter: 1800,
-      },
-      {
-        slug: "surface",
-        label: "Накладной карниз",
-        ratePerMeter: 1000,
-      },
-    ],
+      cornices: [
+        {
+          slug: "none",
+          label: "Без карниза",
+          ratePerMeter: 0,
+        },
+        {
+          slug: "built-in",
+          label: "Встроенный карниз",
+          ratePerMeter: 4500,
+        },
+        {
+          slug: "hidden-niche",
+          label: "Скрытая ниша",
+          ratePerMeter: 1800,
+        },
+        {
+          slug: "surface",
+          label: "Накладной карниз",
+          ratePerMeter: 1000,
+        },
+      ],
 
-lightLines: {
-  label: "Световые линии",
-  ratePerMeter: 3500,
-},
-    tracks: [
-      {
-        slug: "none",
-        label: "Без трека",
-        ratePerMeter: 0,
+      lightLines: {
+        label: "Световые линии",
+        ratePerMeter: 3500,
       },
-      {
-        slug: "built-in",
-        label: "Встроенный трек",
-        ratePerMeter: 2500,
-      },
-      {
-        slug: "surface",
-        label: "Накладной трек",
-        ratePerMeter: 1500,
-      },
-    ],
+      tracks: [
+        {
+          slug: "none",
+          label: "Без трека",
+          ratePerMeter: 0,
+        },
+        {
+          slug: "built-in",
+          label: "Встроенный трек",
+          ratePerMeter: 2500,
+        },
+        {
+          slug: "surface",
+          label: "Накладной трек",
+          ratePerMeter: 1500,
+        },
+      ],
 
-    lights: {
-      label: "Светильники",
-      ratePerUnit: 750,
-      countMin: 1,
-      countMax: 40,
-      countStep: 1,
-      countDefault: 6,
+      lights: {
+        label: "Светильники",
+        ratePerUnit: 750,
+        countMin: 1,
+        countMax: 40,
+        countStep: 1,
+        countDefault: 6,
+      },
     },
   },
-},
 
   trust: {
     sectionTitle: "Работаю лично. Отвечаю за результат.",
     sectionIntro:
-      "Без обезличенной компании и менеджеров между вами и монтажом. Я лично веду объект от замера до сдачи.",
-    externalRatingLabel: "Отзывы и рейтинг",
-    externalRatingValue: "5.0",
-    externalRatingSource: "Авито",
-    externalRatingUrl:
-      "https://www.avito.ru/user/9c4e73bea5d88b91a6e6cb55a6e36574/profile?src=sharing",
-    stats: [
+      "Без обезличенной компании и менеджеров между нами. От замера до монтажа объект веду сам и заранее проговариваю все узлы.",
+    bullets: [
       {
-        label: "лет опыта",
-        valueDisplay: "15+",
+        title: "Личный контроль на каждом этапе",
+        description:
+          "Сам приезжаю на замер, согласовываю решение и контролирую монтаж на объекте.",
       },
       {
-        label: "с 2010 года",
-        valueDisplay: "Работаю",
+        title: "Прозрачная смета до старта работ",
+        description:
+          "Фиксируем объем, материалы и стоимость заранее, без скрытых доплат после начала монтажа.",
       },
       {
-        label: "рейтинг",
-        valueDisplay: "5.0",
-      },
-    ],
-    founder: {
-      name: "Владимир",
-      role: "Мастер по натяжным потолкам",
-      responsibilityLine: "Лично веду объект и отвечаю за результат.",
-      bioLines: [
-        "С 2010 года занимаюсь натяжными потолками в Москве и Московской области.",
-        "Специализируюсь на современных решениях: теневой профиль, парящие потолки, световые линии и встроенные треки.",
-        "Делаю точный замер, составляю смету до начала работ и работаю по договору.",
-        "Для меня каждый объект — это личная репутация, а не потоковая заявка.",
-      ],
-      portraitAssetKey: "vladimir-portrait",
-      portraitAlt: "Владимир — мастер по натяжным потолкам",
-      specializationLine:
-        "Современные натяжные потолки для квартир, частных интерьеров и нестандартных проектов.",
-      microproofLines: [
-        "Личный контроль на каждом этапе",
-        "Аккуратный монтаж",
-        "Без посредников",
-      ],
-    },
-    reviewsTitle: "Что говорят клиенты",
-    reviews: [
-      {
-        slug: "review-ballonbliss",
-        authorName: "BallonBliss",
-        sourceLabel: "Авито",
-        quote:
-          "Оперативно ответил, на замер приехал в этот же день, после замера назвал стоимость работ, предоплату не брал. На монтаж приехал в назначенный день, стоимость не изменилась. Потолки не пахли сразу, материалы хорошие. Результатом довольны.",
-        highlightQuote: "Стоимость не изменилась.",
-        objectType: "Квартира",
-        resultLabel: "Цена не изменилась после замера",
+        title: "Понятные сроки",
+        description:
+          "Согласовываем удобную дату монтажа и соблюдаем договоренности по времени.",
       },
       {
-        slug: "review-natalya",
-        authorName: "Наталья Рябинина",
-        sourceLabel: "Авито",
-        quote:
-          "Работа выполнена качественно, быстро, цена соответствует заявленной. Владимир быстро, в этот же день, ответил на заявку. Мастер своего дела. Я очень довольна. Буду рекомендовать только его!",
-        highlightQuote: "Цена соответствует заявленной.",
-        objectType: "Квартира",
-        resultLabel: "Быстро и без расхождения по цене",
-      },
-      {
-        slug: "review-iiya",
-        authorName: "Ия",
-        sourceLabel: "Авито",
-        quote:
-          "Договорились быстро. Работа сделана качественно. С исполнителем было приятно пообщаться. В перспективе потолок в другой комнате. Рекомендую.",
-        highlightQuote: "Работа сделана качественно.",
-        objectType: "Жилая комната",
-        resultLabel: "Клиент готов обращаться снова",
-      },
-      {
-        slug: "review-yulia",
-        authorName: "Юлия Кравченко",
-        sourceLabel: "Авито",
-        quote:
-          "Всё очень понравилось, быстро и качественно сделали потолки. Минимум шума и пыли. Спасибо! Однозначно рекомендую.",
-        highlightQuote: "Минимум шума и пыли.",
-        objectType: "Квартира",
-        resultLabel: "Аккуратный монтаж",
+        title: "Договор и гарантия",
+        description:
+          "Оформляем документы официально, чтобы у вас были понятные обязательства и гарантия на результат.",
       },
     ],
   },
 
   promise: {
-    sectionTitle: "Что фиксируем заранее",
+    sectionTitle: "Как проходит работа",
     sectionIntro:
-      "Перед началом работ вы понимаете, кто делает объект, сколько это стоит и что будет дальше.",
-    guarantees: [
+      "Без сложной бюрократии: быстро выходим на замер, согласовываем решение, фиксируем смету и делаем монтаж в согласованный день.",
+    steps: [
       {
-        label: "Цена фиксируется после замера",
-        detail: "Согласованная смета и договор до начала монтажа.",
+        stepLabel: "Шаг 1",
+        title: "Заявка и консультация",
+        description:
+          "Вы оставляете заявку удобным способом. Уточняю задачу, тип помещения и желаемое решение.",
       },
       {
-        label: "Монтаж в согласованный срок",
-        detail: "Для стандартных объектов работа обычно занимает один день.",
-      },
-      {
-        label: "Гарантия по договору",
-        detail: "Условия фиксируются до начала работ.",
-      },
-    ],
-    includedLine:
-      "Замер, согласование решения, смета, монтаж и сдача результата — в одном понятном процессе.",
-    processTitle: "Как проходит работа",
-    processSteps: [
-      {
-        title: "Заявка",
-        description: "Вы оставляете заявку или пишете в Telegram.",
-        stepLabel: "01",
-      },
-      {
+        stepLabel: "Шаг 2",
         title: "Бесплатный замер",
-        description: "Приезжаю на объект, смотрю помещение и обсуждаю задачу.",
-        stepLabel: "02",
+        description:
+          "Приезжаю на объект, снимаю размеры, смотрю геометрию, примыкания, закладные и свет.",
       },
       {
-        title: "Точная смета",
-        description: "Фиксируем стоимость, объём работ и удобную дату монтажа.",
-        stepLabel: "03",
+        stepLabel: "Шаг 3",
+        title: "Смета и согласование",
+        description:
+          "Предлагаю оптимальный вариант под ваш бюджет, фиксирую стоимость и сроки в договоре.",
       },
       {
-        title: "Монтаж",
-        description: "Делаю потолок аккуратно и сдаю готовый результат.",
-        stepLabel: "04",
+        stepLabel: "Шаг 4",
+        title: "Монтаж и сдача",
+        description:
+          "Выполняем монтаж аккуратно и в срок. Принимаете готовый результат и получаете гарантию.",
       },
     ],
     closingNote:
-      "Без длинных согласований и без ситуации, когда на объект приезжают случайные люди.",
+      "Обычно монтаж занимает 1 день для стандартных объектов. По сложным проектам срок согласуем заранее.",
   },
 
   action: {
-  sectionTitle: "Запишитесь на замер — дальше всё беру на себя",
-  sectionSubtitle:
-    "Оставьте имя и телефон. Я свяжусь с вами, уточню задачу и предложу удобное время для замера.",
-  formTitle: "Бесплатный замер и расчёт стоимости",
-  nameFieldLabel: "Имя",
-  nameFieldPlaceholder: "Как к вам обращаться",
-  phoneFieldLabel: "Телефон",
-  phoneFieldPlaceholder: "+7 (___) ___-__-__",
-  addressFieldLabel: "Адрес или район",
-  addressFieldPlaceholder:
-    "Например: Химки, Люберцы, м. Сокол или ул. Ленина, 12",
-  addressFieldHint:
-    "Необязательно. Это поможет быстрее сориентироваться по выезду.",
-  submitButtonLabel: "Записаться на замер",
-  helperText: "Замер бесплатный. Вы ни к чему не обязаны.",
-  successTitle: "Заявка отправлена",
-  successMessage:
-    "Спасибо. Я свяжусь с вами, чтобы уточнить задачу и договориться о замере.",
-  errorMessage:
-    "Не удалось отправить заявку. Попробуйте ещё раз или свяжитесь со мной по телефону.",
-  validationMessage: "Пожалуйста, заполните имя и телефон.",
-  secondaryContactsTitle: "Или свяжитесь напрямую",
-  phoneButtonLabel: "Позвонить",
-  telegramButtonLabel: "Написать в Telegram",
-  anchorId: "action",
-},
+    sectionTitle: "Оставьте заявку на бесплатный замер",
+    sectionSubtitle:
+      "Перезвоню, уточню детали и предложу решение под ваш объект и бюджет.",
+  },
 
   footer: {
-    servicesGroupLabel: "Услуги",
-    contactsGroupLabel: "Контакты",
-    legalGroupLabel: "Информация",
-    footerNote: "Натяжные потолки в Москве и Московской области.",
-    copyrightLine: "ПОТОЛКОВО. Все права защищены.",
-    privacyLinkLabelOverride: "Политика конфиденциальности",
+    legalLine:
+      "ПОТОЛКОВО • Натяжные потолки в Москве и МО • Замер бесплатно • Договор и гарантия",
   },
-} as const;
+};
