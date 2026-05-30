@@ -1,6 +1,6 @@
 "use client";
 
-import { CalculatorTeaserButton } from "@/components/calculator-modal/calculator-teaser-button";
+import { CalculatorTeaser } from "@/components/calculator-modal/calculator-teaser";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
@@ -22,29 +22,32 @@ export function LightCustomSection() {
             align="center"
           />
 
-          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <CalculatorTeaserButton
-              label="Открыть каталог в калькуляторе"
+          <div className="mt-8 space-y-4">
+            <CalculatorTeaser
               source="track-sale-custom"
+              heading="Открыть каталог в калькуляторе"
+              buttonLabel="Открыть каталог в калькуляторе"
             />
 
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() =>
-                openCalculator({
-                  initialStep: 0,
-                  source: "track-sale-calculator",
-                  preset: {
-                    ceilingType: "standard",
-                    areaDefault: DEFAULT_CALCULATOR_AREA,
-                  },
-                })
-              }
-              className="justify-center"
-            >
-              Рассчитать потолок
-            </Button>
+            <div className="flex justify-center">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() =>
+                  openCalculator({
+                    initialStep: 0,
+                    source: "track-sale-calculator",
+                    preset: {
+                      ceilingType: "standard",
+                      areaDefault: DEFAULT_CALCULATOR_AREA,
+                    },
+                  })
+                }
+                className="justify-center"
+              >
+                Рассчитать потолок
+              </Button>
+            </div>
           </div>
 
           <p className="mt-4 text-sm text-slate-500">
