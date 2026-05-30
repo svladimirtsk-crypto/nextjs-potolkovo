@@ -2,6 +2,10 @@ import snapshotData from "@/data/eks-feed2-snapshot.json";
 import type { LightingItem } from "@/lib/calculator-modal-types";
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
 import { LightKitCtaButton } from "./LightKitCtaButton";
+import {
+  REMOVED_COLIBRI_VENDOR_CODES,
+  TRACK_PROFILE_WHITELIST,
+} from "@/lib/catalog-ui-config";
 
 type SnapshotParam = {
   label?: unknown;
@@ -30,8 +34,6 @@ type KitCard = {
   items: LightingItem[];
 };
 
-const REMOVED_VENDOR_CODES = new Set(["0У-00002967", "0У-00001345"]);
-
 function toText(value: unknown): string {
   return String(value ?? "").trim();
 }
@@ -45,7 +47,11 @@ function normalizeProducts(): SnapshotProduct[] {
   const raw = (snapshotData as { products?: unknown[] })?.products ?? [];
   return raw
     .map((item) => item as SnapshotProduct)
-    .filter((item) => !REMOVED_VENDOR_CODES.has(toText(item.vendorCode)));
+    .filter((item) => {
+      const vendorCode = toText(item.vendorCode);
+      if (REMOVED_COLIBRI_VENDOR_CODES.has(vendorCode)) return false;
+      return true;
+    });
 }
 
 function getProductImage(product: SnapshotProduct | null): string {
@@ -66,30 +72,33 @@ function findByVendor(products: SnapshotProduct[], vendorCode: string): Snapshot
   return products.find((product) => toText(product.vendorCode) === safeVendorCode) ?? null;
 }
 
+function inferLengthMm(product: SnapshotProduct): number {
+  const name = toText(product.name).toLowerCase();
+
+  const mmMatch = name.match(/(\d{3,4})\s*мм/i);
+  if (mmMatch) return Number(mmMatch[1]);
+
+  const mMatch = name.match(/(\d(?:[.,]\d)?)\s*м(?!м)/i);
+  if (mMatch) return Number(String(mMatch[1]).replace(",", ".")) * 1000;
+
+  return 0;
+}
+
 function findColibriProfileByLength(products: SnapshotProduct[], targetMm: 1000 | 2000): SnapshotProduct | null {
+  const whitelist = new Set(TRACK_PROFILE_WHITELIST.COLIBRI_220);
+
   const candidates = products.filter((product) => {
+    const vendorCode = toText(product.vendorCode);
+    if (!whitelist.has(vendorCode)) return false;
     if (toText(product.system) !== "COLIBRI_220") return false;
     if (toText(product.kind) !== "TRACK_PROFILE") return false;
-    const vendorCode = toText(product.vendorCode);
-    if (REMOVED_VENDOR_CODES.has(vendorCode)) return false;
+    if (product.available === false) return false;
+    if (toNumber(product.priceRub) <= 0) return false;
     return true;
   });
 
   const scored = candidates.map((product) => {
-    const name = toText(product.name).toLowerCase();
-
-    const fromMm = name.match(/(\d{3,4})\s*мм/i);
-    const mmValue = fromMm ? Number(fromMm[1]) : NaN;
-
-    const fromMeters = name.match(/(\d(?:[.,]\d)?)\s*м(?!м)/i);
-    const metersValue = fromMeters ? Number(String(fromMeters[1]).replace(",", ".")) * 1000 : NaN;
-
-    const inferred = Number.isFinite(mmValue)
-      ? mmValue
-      : Number.isFinite(metersValue)
-      ? metersValue
-      : 0;
-
+    const inferred = inferLengthMm(product);
     const diff = Math.abs(inferred - targetMm);
     return { product, diff };
   });
@@ -103,10 +112,7 @@ function isMR16Lamp(product: SnapshotProduct): boolean {
   if (toNumber(product.priceRub) <= 0) return false;
   if (product.available === false) return false;
 
-  const textParts: string[] = [
-    toText(product.name),
-    toText(product.vendorCode),
-  ];
+  const textParts: string[] = [toText(product.name), toText(product.vendorCode)];
 
   const params = Array.isArray(product.params) ? (product.params as SnapshotParam[]) : [];
   for (const p of params) {
@@ -175,19 +181,25 @@ function buildKits(products: SnapshotProduct[]): KitCard[] {
     {
       title: "Готовый комплект для кухни",
       subtitle: "Лаконичный трековый свет для рабочей зоны и обеденного стола.",
-      imageUrl: getProductImage(findByVendor(products, "0У-00001338")) || getProductImage(colibri2000),
+      imageUrl:
+        getProductImage(findByVendor(products, "0У-00001338")) ||
+        getProductImage(colibri2000),
       items: kitchenItems,
     },
     {
       title: "Готовый комплект для гостиной",
       subtitle: "Сценарное освещение для мягкой зоны и центральной части комнаты.",
-      imageUrl: getProductImage(findByVendor(products, "0У-00001339")) || getProductImage(colibri2000),
+      imageUrl:
+        getProductImage(findByVendor(products, "0У-00001339")) ||
+        getProductImage(colibri2000),
       items: livingItems,
     },
     {
       title: "Готовый комплект для прихожей",
       subtitle: "Компактное ART-решение с направленным светом и лампами 1:1.",
-      imageUrl: getProductImage(findByVendor(products, "0У-00006327")) || getProductImage(findByVendor(products, "0У-00001355")),
+      imageUrl:
+        getProductImage(findByVendor(products, "0У-00006327")) ||
+        getProductImage(findByVendor(products, "0У-00001355")),
       items: hallwayItems,
     },
   ];
@@ -259,7 +271,11 @@ export function LightKitShowcase() {
                   <p className="mt-0.5 text-xs font-medium text-emerald-700">-15% при заказе потолка</p>
 
                   <div className="mt-4">
-                    <LightKitCtaButton title={kit.title} items={kit.items} source="track-sale-ready-kit" />
+                    <LightKitCtaButton
+                      title={kit.title}
+                      items={kit.items}
+                      source="track-sale-ready-kit"
+                    />
                   </div>
                 </div>
               </div>
