@@ -4,6 +4,9 @@ export type TrackGroupId = "TRACK_FIXTURE" | "TRACK_PROFILE" | "TRACK_ACCESSORY"
 export type PointSubtypeId = "GX53" | "MR16" | "PANELS";
 export type LampSocket = "GX53" | "MR16";
 
+export const DEFAULT_CALCULATOR_AREA = 10;
+export const PROFILE_PERIMETER_AUTO_RATIO = 1;
+
 export const CATALOG_SECTIONS: { id: CatalogSectionId; label: string }[] = [
   { id: "track-systems", label: "Трековые системы" },
   { id: "point-fixtures", label: "Точечные светильники" },
