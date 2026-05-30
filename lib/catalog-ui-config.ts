@@ -2,6 +2,7 @@ export type CatalogSectionId = "track-systems" | "point-fixtures" | "mounts-gril
 export type TrackSystemId = "COLIBRI_220" | "CLARUS_48" | "TRACK_220";
 export type TrackGroupId = "TRACK_FIXTURE" | "TRACK_PROFILE" | "TRACK_ACCESSORY";
 export type PointSubtypeId = "GX53" | "MR16" | "PANELS";
+export type LampSocket = "GX53" | "MR16";
 
 export const CATALOG_SECTIONS: { id: CatalogSectionId; label: string }[] = [
   { id: "track-systems", label: "Трековые системы" },
@@ -45,3 +46,35 @@ export const TRACK_PROFILE_WHITELIST: Record<TrackSystemId, string[]> = {
     "0У-00001353",
   ],
 };
+
+export const ART_GX53_REQUIRED_VENDOR_CODES = new Set<string>([
+  "0У-00006334",
+  "0У-00006333",
+  "0У-00006332",
+  "0У-00006331",
+  "0У-00006330",
+  "0У-00006329",
+]);
+
+export const ART_MR16_REQUIRED_VENDOR_CODES = new Set<string>([
+  "0У-00006324",
+  "0У-00006325",
+  "0У-00006326",
+  "0У-00006327",
+  "0У-00006328",
+]);
+
+export const ART_NO_LAMP_VENDOR_CODES = new Set<string>([
+  "0У-00006476",
+  "0У-00006475",
+  "0У-00006358",
+]);
+
+export const POINT_TO_MOUNT_VENDOR_CODE: Record<string, string> = {
+  "0У-00007177": "0У-00007121",
+  "0У-00007176": "0У-00007121",
+  "0У-00001551": "0У-00003286",
+  "0У-00001552": "0У-00003286",
+};
+
+export const CLARUS_PSU_VENDOR_CODES = ["0У-00002310", "0У-00002308"] as const;
