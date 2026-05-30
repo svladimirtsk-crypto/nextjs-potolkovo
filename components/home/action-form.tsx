@@ -1,36 +1,65 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { getKitDisplayName } from "@/lib/calculator-modal-types";
+import { useMemo, useState, type FormEvent } from "react";
+
 import { homepage } from "@/content/homepage";
 import { legal } from "@/content/legal";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { TextLink } from "@/components/ui/text-link";
+
+import { getKitDisplayName } from "@/lib/calculator-modal-types";
 import { trackFormSubmitSuccess } from "@/lib/analytics";
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
+
 import {
   getCalculatorSummaryLines,
   getLightingSummaryLines,
   usePriceCalculatorBridge,
 } from "@/components/home/price-calculator-context";
 
-const actionContent = homepage.action;
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { TextLink } from "@/components/ui/text-link";
+
+// ВАЖНО: НЕ полагаемся на homepage.action.* кроме sectionTitle/subtitle,
+// потому что структура контента сейчас не содержит successTitle/errorMessage/etc.
+const DEFAULT_COPY = {
+  successTitle: "Заявка отправлена",
+  errorMessage: "Не удалось отправить заявку. Проверьте данные и попробуйте ещё раз.",
+  submitButtonLabel: "Записаться на замер",
+  helperText:
+    "Обычно отвечаю быстро. Можно указать район — так проще сориентироваться по выезду.",
+  addressFieldHint: "Необязательно. Это поможет быстрее сориентироваться по выезду.",
+} as const;
 
 type FormStatus = "idle" | "success" | "error";
-type FieldErrors = { name?: string; phone?: string; address?: string };
+
+type FieldErrors = {
+  name?: string;
+  phone?: string;
+  address?: string;
+};
 
 function normalizePhone(value: string): string {
   const digits = value.replace(/\D/g, "");
   if (!digits) return "";
+
+  // 8XXXXXXXXXX -> +7XXXXXXXXXX
   if (digits.startsWith("8") && digits.length === 11) return `+7${digits.slice(1)}`;
+
+  // 7XXXXXXXXXX -> +7XXXXXXXXXX
   if (digits.startsWith("7") && digits.length === 11) return `+${digits}`;
+
+  // generic +<digits>
   if (digits.length >= 10 && digits.length <= 15) return `+${digits}`;
+
   return value.trim();
 }
 
 function isValidPhone(value: string): boolean {
   return /^\+\d{10,15}$/.test(value);
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("ru-RU").format(Math.round(value));
 }
 
 function buildLeadMessage(
@@ -42,6 +71,7 @@ function buildLeadMessage(
   const parts: string[] = ["Заявка с сайта ПОТОЛКОВО"];
 
   if (source) parts.push(`Источник: ${source}`);
+
   if (address.trim()) parts.push("", `Адрес / район: ${address.trim()}`);
 
   if (ceilingLines.length) {
@@ -71,16 +101,22 @@ export function ActionForm({ source }: ActionFormProps) {
 
   const lightingLines = useMemo(() => getLightingSummaryLines(snapshot), [snapshot]);
 
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [status, setStatus] = useState<FormStatus>("idle");
-  const [message, setMessage] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [isPending, setIsPending] = useState(false);
+  const [name, setName] = useState<string>("");
+  const [phone, setPhone] = useState<string>("");
+  const [address, setAddress] = useState<string>("");
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  const [status, setStatus] = useState<FormStatus>("idle");
+  const [message, setMessage] = useState<string>("");
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [isPending, setIsPending] = useState<boolean>(false);
+
+  // Copy: если homepage.action когда-нибудь расширят — можно будет заменить
+  // DEFAULT_COPY на значения из контента. Сейчас делаем максимально надёжно.
+  const copy = DEFAULT_COPY;
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
     setStatus("idle");
     setMessage("");
     setFieldErrors({});
@@ -88,21 +124,17 @@ export function ActionForm({ source }: ActionFormProps) {
     const trimmedName = name.trim();
     const trimmedAddress = address.trim();
     const normalizedPhone = normalizePhone(phone);
+
     const nextErrors: FieldErrors = {};
 
-    if (!trimmedName) {
-      nextErrors.name = "Укажите имя.";
-    } else if (trimmedName.length > 80) {
-      nextErrors.name = "Слишком длинное имя.";
-    }
+    if (!trimmedName) nextErrors.name = "Укажите имя.";
+    else if (trimmedName.length > 80) nextErrors.name = "Слишком длинное имя.";
 
     if (!normalizedPhone || !isValidPhone(normalizedPhone)) {
-      nextErrors.phone = "Укажите корректный телефон.";
+      nextErrors.phone = "Укажите корректный телефон (например, +79051234567).";
     }
 
-    if (trimmedAddress.length > 160) {
-      nextErrors.address = "Слишком длинный адрес или район.";
-    }
+    if (trimmedAddress.length > 160) nextErrors.address = "Слишком длинный адрес или район.";
 
     if (Object.keys(nextErrors).length > 0) {
       setFieldErrors(nextErrors);
@@ -118,40 +150,49 @@ export function ActionForm({ source }: ActionFormProps) {
       return;
     }
 
+    // Lighting metadata for CRM / webhooks
     const lightingMode: string = String(snapshot?.lighting?.mode ?? "none");
     const lightingKitDisplay: string = String(
       snapshot?.lighting ? getKitDisplayName(snapshot.lighting) : ""
     );
+
     const lightingItemsCount = Number(snapshot?.lighting?.items?.length ?? 0);
     const lightingTotalRub = Number(snapshot?.lighting?.totalRub ?? 0);
+
     const lightingDiscountedRub = Number(
       snapshot?.lighting?.discountedTotalRub ?? applyLightingDiscount(lightingTotalRub)
     );
 
     const formData = new FormData();
     formData.append("access_key", String(accessKey));
-    formData.append("subject", String("Новая заявка с сайта ПОТОЛКОВО"));
-    formData.append("from_name", String("ПОТОЛКОВО Сайт"));
-    formData.append("name", String(trimmedName));
-    formData.append("phone", String(normalizedPhone));
-    formData.append("address", String(trimmedAddress));
+    formData.append("subject", "Новая заявка с сайта ПОТОЛКОВО");
+    formData.append("from_name", "ПОТОЛКОВО Сайт");
+
+    formData.append("name", trimmedName);
+    formData.append("phone", normalizedPhone);
+    formData.append("address", trimmedAddress);
+
     formData.append(
       "message",
-      String(buildLeadMessage(ceilingLines, lightingLines, trimmedAddress, effectiveSource))
+      buildLeadMessage(ceilingLines, lightingLines, trimmedAddress, effectiveSource)
     );
-    formData.append("botcheck", String(""));
-    formData.append("company", String(""));
 
-    formData.append("lighting_mode", String(lightingMode));
-    formData.append("lighting_kit", String(lightingKitDisplay));
+    // anti-spam
+    formData.append("botcheck", "");
+    formData.append("company", "");
+
+    // extra fields (easy filtering)
+    formData.append("calculator_source", effectiveSource);
+    formData.append("lighting_mode", lightingMode);
+    formData.append("lighting_kit", lightingKitDisplay);
     formData.append("lighting_items_count", String(lightingItemsCount));
 
     formData.append("lighting_total_rub", String(lightingTotalRub));
     formData.append("lighting_discounted_total_rub", String(lightingDiscountedRub));
+
+    // legacy compatibility (если где-то уже используются старые поля)
     formData.append("lighting_total", String(lightingTotalRub));
     formData.append("lighting_discounted_total", String(lightingDiscountedRub));
-
-    formData.append("calculator_source", String(effectiveSource));
 
     setIsPending(true);
 
@@ -164,9 +205,7 @@ export function ActionForm({ source }: ActionFormProps) {
       const result = await response.json().catch(() => null);
 
       if (!response.ok || !result?.success) {
-        const errorText: string = String(
-          result?.message ?? result?.error ?? `HTTP ${response.status}`
-        );
+        const errorText: string = String(result?.message ?? result?.error ?? `HTTP ${response.status}`);
         setStatus("error");
         setMessage(`Ошибка отправки в Web3Forms: ${errorText}`);
         return;
@@ -175,150 +214,127 @@ export function ActionForm({ source }: ActionFormProps) {
       trackFormSubmitSuccess(effectiveSource);
 
       setStatus("success");
-      setMessage(
-        "Спасибо. Я свяжусь с вами, чтобы уточнить задачу и договориться о замере."
-      );
+      setMessage("Спасибо. Я свяжусь с вами, чтобы уточнить задачу и договориться о замере.");
+
       setName("");
       setPhone("");
       setAddress("");
       setFieldErrors({});
     } catch {
       setStatus("error");
-      setMessage("Не удалось отправить заявку. Проверьте соединение и попробуйте еще раз.");
+      setMessage(copy.errorMessage);
     } finally {
       setIsPending(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {status === "success" ? (
         <div
-          className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+          className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950"
+          role="status"
           aria-live="polite"
         >
-          <p className="font-medium">{actionContent.successTitle}</p>
-          <p className="mt-1">{message}</p>
+          <p className="font-medium">{copy.successTitle}</p>
+          <p className="mt-1 text-sm text-emerald-900/80">{message}</p>
         </div>
       ) : null}
 
       {status === "error" ? (
         <div
-          className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"
+          className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-950"
+          role="alert"
           aria-live="polite"
         >
-          {message || actionContent.errorMessage}
+          <p className="text-sm">{message || copy.errorMessage}</p>
         </div>
       ) : null}
 
-      {ceilingLines.length > 0 ? (
-        <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
-          <p className="text-sm font-semibold text-slate-950">В заявку попадет ваш расчет</p>
-          <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
-            {ceilingLines.map((line) => (
-              <li key={line} className="flex gap-2">
-                <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-slate-950" />
-                <span>{line}</span>
-              </li>
-            ))}
-          </ul>
+      {(ceilingLines.length > 0 || lightingLines.length > 0) && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          {ceilingLines.length > 0 ? (
+            <div>
+              <p className="text-sm font-medium text-slate-950">
+                В заявку попадёт ваш расчёт потолка
+              </p>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-600">
+                {ceilingLines.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {lightingLines.length > 0 ? (
+            <div className={ceilingLines.length > 0 ? "mt-4" : ""}>
+              <p className="text-sm font-medium text-slate-950">Освещение</p>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-600">
+                {lightingLines.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+
+              {/* небольшая подсказка про суммы, если нужно */}
+              {snapshot?.lighting?.totalRub != null ? (
+                <p className="mt-2 text-xs text-slate-500">
+                  Сумма оборудования: {formatCurrency(Number(snapshot.lighting.totalRub))} ₽
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
-      ) : null}
+      )}
 
-      {lightingLines.length > 0 ? (
-        <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
-          <p className="text-sm font-semibold text-slate-950">Освещение</p>
-          <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
-            {lightingLines.map((line) => (
-              <li key={line} className="flex gap-2">
-                <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-slate-950" />
-                <span>{line}</span>
-              </li>
-            ))}
-          </ul>
+      <div className="grid gap-3">
+        <div>
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Имя"
+            aria-invalid={Boolean(fieldErrors.name) || undefined}
+          />
+          {fieldErrors.name ? (
+            <p className="mt-1 text-xs text-rose-600">{fieldErrors.name}</p>
+          ) : null}
         </div>
-      ) : null}
 
-      <div>
-        <Input
-          label={actionContent.nameFieldLabel}
-          name="name"
-          type="text"
-          placeholder={actionContent.nameFieldPlaceholder}
-          autoComplete="name"
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        {fieldErrors.name ? (
-          <p className="mt-2 text-sm text-rose-700" aria-live="polite">
-            {fieldErrors.name}
-          </p>
-        ) : null}
+        <div>
+          <Input
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="Телефон (например, +79051234567)"
+            inputMode="tel"
+            aria-invalid={Boolean(fieldErrors.phone) || undefined}
+          />
+          {fieldErrors.phone ? (
+            <p className="mt-1 text-xs text-rose-600">{fieldErrors.phone}</p>
+          ) : null}
+        </div>
+
+        <div>
+          <Input
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="Адрес или район (необязательно)"
+            aria-invalid={Boolean(fieldErrors.address) || undefined}
+          />
+          <p className="mt-1 text-xs text-slate-500">{copy.addressFieldHint}</p>
+          {fieldErrors.address ? (
+            <p className="mt-1 text-xs text-rose-600">{fieldErrors.address}</p>
+          ) : null}
+        </div>
       </div>
 
-      <div>
-        <Input
-          label={actionContent.phoneFieldLabel}
-          name="phone"
-          type="tel"
-          placeholder={actionContent.phoneFieldPlaceholder}
-          autoComplete="tel"
-          inputMode="tel"
-          required
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-        />
-        {fieldErrors.phone ? (
-          <p className="mt-2 text-sm text-rose-700" aria-live="polite">
-            {fieldErrors.phone}
-          </p>
-        ) : null}
-      </div>
-
-      <div>
-        <Input
-          label={actionContent.addressFieldLabel ?? "Адрес или район"}
-          name="address"
-          type="text"
-          placeholder={
-            actionContent.addressFieldPlaceholder ?? "Например: Химки, Люберцы, м. Сокол"
-          }
-          autoComplete="street-address"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-        />
-        <p className="mt-2 text-sm text-slate-500">
-          {actionContent.addressFieldHint ??
-            "Необязательно. Это поможет быстрее сориентироваться по выезду."}
-        </p>
-        {fieldErrors.address ? (
-          <p className="mt-2 text-sm text-rose-700" aria-live="polite">
-            {fieldErrors.address}
-          </p>
-        ) : null}
-      </div>
-
-      <input
-        type="text"
-        name="company"
-        tabIndex={-1}
-        autoComplete="off"
-        className="hidden"
-        aria-hidden="true"
-      />
-
-      <Button type="submit" className="w-full justify-center" disabled={isPending}>
-        {isPending ? "Отправляю..." : actionContent.submitButtonLabel}
+      <Button type="submit" className="w-full" disabled={isPending}>
+        {isPending ? "Отправляю..." : copy.submitButtonLabel}
       </Button>
 
-      <p className="text-sm leading-6 text-slate-600">{actionContent.helperText}</p>
+      <p className="text-xs text-slate-500">{copy.helperText}</p>
 
-      <p className="text-xs leading-5 text-slate-500">
-        {legal.consentTextPrefix}{" "}
-        <TextLink href={legal.privacyHref} className="text-xs">
-          {legal.privacyLabel}
-        </TextLink>{" "}
+      <p className="text-xs text-slate-500">
+        {legal.consentTextPrefix}
+        <TextLink href={legal.privacyHref}>{legal.privacyLabel}</TextLink>
         {legal.consentTextSuffix}
       </p>
     </form>
