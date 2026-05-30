@@ -1,4 +1,10 @@
 import type { FeedCatalogKind, FeedCatalogProduct, FeedCatalogSystem } from "@/lib/eks-feed2-catalog";
+import {
+  ART_GX53_REQUIRED_VENDOR_CODES,
+  ART_MR16_REQUIRED_VENDOR_CODES,
+  ART_NO_LAMP_VENDOR_CODES,
+  type LampSocket,
+} from "@/lib/catalog-ui-config";
 
 export type UiCatalogSystem = "COLIBRI_220" | "CLARUS_48" | "ART_220" | "NONE";
 export type UiCatalogKind =
@@ -9,10 +15,12 @@ export type UiCatalogKind =
   | "LAMP"
   | "OTHER";
 
+function toText(value: unknown): string {
+  return String(value ?? "").trim();
+}
+
 function getText(product: FeedCatalogProduct): string {
-  const attrs = (product.keyAttributes ?? [])
-    .map((a) => `${a.label} ${a.value}`)
-    .join(" ");
+  const attrs = (product.keyAttributes ?? []).map((a) => `${a.label} ${a.value}`).join(" ");
   const params = (product.params ?? []).map((p) => `${p.label} ${p.value}`).join(" ");
   return `${product.name} ${product.vendorCode} ${attrs} ${params}`.toLowerCase();
 }
@@ -48,11 +56,26 @@ export function detectSmart(product: FeedCatalogProduct): boolean {
   );
 }
 
-export function detectSocket(product: FeedCatalogProduct): "GX53" | "MR16" | null {
+export function detectSocket(product: FeedCatalogProduct): LampSocket | null {
   const text = getText(product);
   if (text.includes("gx53")) return "GX53";
   if (text.includes("mr16") || text.includes("gu5.3")) return "MR16";
   return null;
+}
+
+/**
+ * Единая бизнес-логика сокета для обязательных ламп:
+ * 1) ART TRACK_220 по vendorCode (жесткие списки)
+ * 2) fallback на обычное определение detectSocket
+ */
+export function getRequiredLampSocket(product: FeedCatalogProduct): LampSocket | null {
+  const vendorCode = toText(product.vendorCode);
+
+  if (ART_NO_LAMP_VENDOR_CODES.has(vendorCode)) return null;
+  if (ART_GX53_REQUIRED_VENDOR_CODES.has(vendorCode)) return "GX53";
+  if (ART_MR16_REQUIRED_VENDOR_CODES.has(vendorCode)) return "MR16";
+
+  return detectSocket(product);
 }
 
 export function normalizeSystem(system: FeedCatalogSystem): UiCatalogSystem {
