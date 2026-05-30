@@ -3,6 +3,7 @@
 import type { ServiceCalculatorPreset } from "@/content/services";
 import { Button } from "@/components/ui/button";
 import { trackCalculatorOpen } from "@/lib/analytics";
+import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
 import { useCalculatorModal } from "./calculator-modal-context";
 
 type CalculatorTeaserButtonProps = {
@@ -53,7 +54,7 @@ export function CalculatorTeaserButton({
         const resolvedPreset: ServiceCalculatorPreset =
           preset ?? {
             ceilingType: "standard",
-            areaDefault: 10,
+            areaDefault: DEFAULT_CALCULATOR_AREA,
           };
 
         openCalculator({
