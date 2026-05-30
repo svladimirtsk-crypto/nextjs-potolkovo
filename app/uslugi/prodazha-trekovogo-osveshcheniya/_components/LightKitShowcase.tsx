@@ -179,24 +179,24 @@ function buildKits(products: SnapshotProduct[]): KitCard[] {
 
   return [
     {
-      title: "Готовый комплект для кухни",
-      subtitle: "Лаконичный трековый свет для рабочей зоны и обеденного стола.",
+      title: "Для кухни",
+      subtitle: "Сбалансированный свет для рабочей и обеденной зоны.",
       imageUrl:
         getProductImage(findByVendor(products, "0У-00001338")) ||
         getProductImage(colibri2000),
       items: kitchenItems,
     },
     {
-      title: "Готовый комплект для гостиной",
-      subtitle: "Сценарное освещение для мягкой зоны и центральной части комнаты.",
+      title: "Для гостиной",
+      subtitle: "Сценарное освещение для общего и акцентного света.",
       imageUrl:
         getProductImage(findByVendor(products, "0У-00001339")) ||
         getProductImage(colibri2000),
       items: livingItems,
     },
     {
-      title: "Готовый комплект для прихожей",
-      subtitle: "Компактное ART-решение с направленным светом и лампами 1:1.",
+      title: "Для прихожей",
+      subtitle: "Компактный ART-набор с лампами MR16 1:1.",
       imageUrl:
         getProductImage(findByVendor(products, "0У-00006327")) ||
         getProductImage(findByVendor(products, "0У-00001355")),
@@ -216,13 +216,14 @@ export function LightKitShowcase() {
   return (
     <section className="space-y-6">
       <div className="max-w-3xl">
-        <p className="text-sm font-medium uppercase tracking-[0.16em] text-slate-500">Готовые решения</p>
+        <p className="text-sm font-medium uppercase tracking-[0.16em] text-slate-500">
+          Готовые комплекты
+        </p>
         <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-          Выберите готовый комплект и откройте его в калькуляторе за 1 клик
+          Подберите комплект под комнату и сразу откройте его в калькуляторе
         </h2>
         <p className="mt-2 text-sm text-slate-600">
-          Все наборы уже собраны с учетом совместимых компонентов. Вы сможете сразу отредактировать
-          количество и увидеть итоговую стоимость.
+          Нажмите на подходящий вариант, и он откроется в калькуляторе в готовом виде для быстрого редактирования.
         </p>
       </div>
 
