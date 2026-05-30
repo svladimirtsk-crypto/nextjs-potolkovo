@@ -34,8 +34,12 @@ export function ServiceActionSection({ service }: ServiceActionSectionProps) {
 
           <div className="rounded-[2rem] border border-slate-200 bg-white p-6 sm:p-8">
             <h3 className="text-xl font-semibold tracking-tight text-slate-950">
-              {actionContent.secondaryContactsTitle}
+              Контакты для связи
             </h3>
+
+            <div className="mt-2">
+              <p className="text-sm text-slate-500">{actionContent.sectionSubtitle}</p>
+            </div>
 
             <div className="mt-6 space-y-5">
               <div>
