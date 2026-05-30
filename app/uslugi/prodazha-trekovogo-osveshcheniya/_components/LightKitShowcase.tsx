@@ -1,7 +1,6 @@
 import snapshotData from "@/data/eks-feed2-snapshot.json";
 import type { LightingItem } from "@/lib/calculator-modal-types";
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
-import { detectSocket } from "@/lib/feed2-products";
 import { LightKitCtaButton } from "./LightKitCtaButton";
 
 type SnapshotParam = {
@@ -11,6 +10,7 @@ type SnapshotParam = {
 
 type SnapshotProduct = {
   productId?: unknown;
+  offerId?: unknown;
   vendorCode?: unknown;
   name?: unknown;
   coverImage?: unknown;
@@ -63,9 +63,7 @@ function getProductImage(product: SnapshotProduct | null): string {
 
 function findByVendor(products: SnapshotProduct[], vendorCode: string): SnapshotProduct | null {
   const safeVendorCode = toText(vendorCode);
-  return (
-    products.find((product) => toText(product.vendorCode) === safeVendorCode) ?? null
-  );
+  return products.find((product) => toText(product.vendorCode) === safeVendorCode) ?? null;
 }
 
 function findColibriProfileByLength(products: SnapshotProduct[], targetMm: 1000 | 2000): SnapshotProduct | null {
@@ -93,13 +91,11 @@ function findColibriProfileByLength(products: SnapshotProduct[], targetMm: 1000 
       : 0;
 
     const diff = Math.abs(inferred - targetMm);
-    return { product, diff, inferred };
+    return { product, diff };
   });
 
   scored.sort((a, b) => a.diff - b.diff);
-
-  const best = scored[0];
-  return best ? best.product : null;
+  return scored[0]?.product ?? null;
 }
 
 function isMR16Lamp(product: SnapshotProduct): boolean {
@@ -107,27 +103,23 @@ function isMR16Lamp(product: SnapshotProduct): boolean {
   if (toNumber(product.priceRub) <= 0) return false;
   if (product.available === false) return false;
 
-  const mapped = {
-    productId: toText(product.productId),
-    vendorCode: toText(product.vendorCode),
-    name: toText(product.name),
-    url: "",
-    categoryId: "",
-    categoryPath: "",
-    images: [],
-    coverImage: toText(product.coverImage),
-    priceRub: toNumber(product.priceRub),
-    available: true,
-    params: (Array.isArray(product.params) ? product.params : []) as SnapshotParam[],
-    keyAttributes: (Array.isArray(product.keyAttributes) ? product.keyAttributes : []) as SnapshotParam[],
-    system: "UNKNOWN",
-    kind: "LAMP",
-    unit: "pcs",
-    lengthMeters: null,
-    pieceLengthMeters: null,
-  };
+  const textParts: string[] = [
+    toText(product.name),
+    toText(product.vendorCode),
+  ];
 
-  return detectSocket(mapped) === "MR16";
+  const params = Array.isArray(product.params) ? (product.params as SnapshotParam[]) : [];
+  for (const p of params) {
+    textParts.push(`${toText(p.label)} ${toText(p.value)}`);
+  }
+
+  const attrs = Array.isArray(product.keyAttributes) ? (product.keyAttributes as SnapshotParam[]) : [];
+  for (const a of attrs) {
+    textParts.push(`${toText(a.label)} ${toText(a.value)}`);
+  }
+
+  const text = textParts.join(" ").toLowerCase();
+  return text.includes("mr16") || text.includes("gu5.3");
 }
 
 function toLightingItem(product: SnapshotProduct | null, qty: number, fallbackVendor: string): LightingItem {
@@ -171,8 +163,7 @@ function buildKits(products: SnapshotProduct[]): KitCard[] {
     toLightingItem(findByVendor(products, "0У-00001342"), 4, "0У-00001342"),
   ];
 
-  const bestMr16Lamp =
-    products.find((product) => isMR16Lamp(product)) ?? null;
+  const bestMr16Lamp = products.find((product) => isMR16Lamp(product)) ?? null;
 
   const hallwayItems: LightingItem[] = [
     toLightingItem(findByVendor(products, "0У-00001355"), 1, "0У-00001355"),
@@ -184,25 +175,19 @@ function buildKits(products: SnapshotProduct[]): KitCard[] {
     {
       title: "Готовый комплект для кухни",
       subtitle: "Лаконичный трековый свет для рабочей зоны и обеденного стола.",
-      imageUrl:
-        getProductImage(findByVendor(products, "0У-00001338")) ||
-        getProductImage(colibri2000),
+      imageUrl: getProductImage(findByVendor(products, "0У-00001338")) || getProductImage(colibri2000),
       items: kitchenItems,
     },
     {
       title: "Готовый комплект для гостиной",
       subtitle: "Сценарное освещение для мягкой зоны и центральной части комнаты.",
-      imageUrl:
-        getProductImage(findByVendor(products, "0У-00001339")) ||
-        getProductImage(colibri2000),
+      imageUrl: getProductImage(findByVendor(products, "0У-00001339")) || getProductImage(colibri2000),
       items: livingItems,
     },
     {
       title: "Готовый комплект для прихожей",
       subtitle: "Компактное ART-решение с направленным светом и лампами 1:1.",
-      imageUrl:
-        getProductImage(findByVendor(products, "0У-00006327")) ||
-        getProductImage(findByVendor(products, "0У-00001355")),
+      imageUrl: getProductImage(findByVendor(products, "0У-00006327")) || getProductImage(findByVendor(products, "0У-00001355")),
       items: hallwayItems,
     },
   ];
@@ -219,15 +204,13 @@ export function LightKitShowcase() {
   return (
     <section className="space-y-6">
       <div className="max-w-3xl">
-        <p className="text-sm font-medium uppercase tracking-[0.16em] text-slate-500">
-          Готовые решения
-        </p>
+        <p className="text-sm font-medium uppercase tracking-[0.16em] text-slate-500">Готовые решения</p>
         <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
           Выберите готовый комплект и откройте его в калькуляторе за 1 клик
         </h2>
         <p className="mt-2 text-sm text-slate-600">
-          Все наборы уже собраны с учетом совместимых компонентов. Вы сможете сразу
-          отредактировать количество и увидеть итоговую стоимость.
+          Все наборы уже собраны с учетом совместимых компонентов. Вы сможете сразу отредактировать
+          количество и увидеть итоговую стоимость.
         </p>
       </div>
 
@@ -276,11 +259,7 @@ export function LightKitShowcase() {
                   <p className="mt-0.5 text-xs font-medium text-emerald-700">-15% при заказе потолка</p>
 
                   <div className="mt-4">
-                    <LightKitCtaButton
-                      title={kit.title}
-                      items={kit.items}
-                      source="track-sale-ready-kit"
-                    />
+                    <LightKitCtaButton title={kit.title} items={kit.items} source="track-sale-ready-kit" />
                   </div>
                 </div>
               </div>
