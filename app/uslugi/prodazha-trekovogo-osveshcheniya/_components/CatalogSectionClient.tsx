@@ -1,186 +1,202 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
 
-import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 import { ProductImage } from "@/components/feed2/ProductImage";
-import { Button } from "@/components/ui/button";
-import { Container } from "@/components/ui/container";
-import { Heading } from "@/components/ui/heading";
-import { Section } from "@/components/ui/section";
+import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
 import type { FeedCatalogProduct, FeedCatalogResult } from "@/lib/eks-feed2-catalog";
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
+import { detectSocket, getDiscountedPrice } from "@/lib/feed2-products";
 import {
-  buildProductsIndex,
-  computeBenefit,
-  detectSocket,
-  getDiscountedPrice,
-} from "@/lib/feed2-products";
+  CATALOG_SECTIONS,
+  POINT_SUBTYPES,
+  REMOVED_COLIBRI_VENDOR_CODES,
+  TRACK_GROUPS,
+  TRACK_PROFILE_WHITELIST,
+  TRACK_SYSTEMS,
+  type CatalogSectionId,
+  type PointSubtypeId,
+  type TrackGroupId,
+  type TrackSystemId,
+} from "@/lib/catalog-ui-config";
+
+type CartItems = Record<string, number>;
+
+function toText(value: unknown): string {
+  return String(value ?? "").trim();
+}
+
+function toNumber(value: unknown): number {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function fmt(value: number): string {
+  return new Intl.NumberFormat("ru-RU").format(Math.round(value));
+}
+
+function isMountsOrGrilles(product: FeedCatalogProduct): boolean {
+  const text = `${toText(product.name)} ${toText(product.vendorCode)} ${toText(product.categoryPath)}`.toLowerCase();
+  if (product.kind === "CEILING_COMPONENT") return true;
+  return text.includes("заклад") || text.includes("решетк") || text.includes("решётк");
+}
+
+function isPanelProduct(product: FeedCatalogProduct): boolean {
+  const text = `${toText(product.name)} ${toText(product.categoryPath)}`.toLowerCase();
+  return text.includes("панел") || text.includes("led-панел") || text.includes("led панел");
+}
+
+function getPointSocket(product: FeedCatalogProduct): "GX53" | "MR16" | null {
+  const vendorCode = toText(product.vendorCode);
+  if (vendorCode === "0У-00007177" || vendorCode === "0У-00007176") return "GX53";
+  if (vendorCode === "0У-00001551" || vendorCode === "0У-00001552") return "MR16";
+
+  const fromDetect = detectSocket(product);
+  if (fromDetect === "GX53") return "GX53";
+  if (fromDetect === "MR16") return "MR16";
+  return null;
+}
+
+function matchesPointSubtype(product: FeedCatalogProduct, subtype: PointSubtypeId): boolean {
+  if (product.kind !== "SPOT_FIXTURE") return false;
+  if (subtype === "PANELS") return isPanelProduct(product);
+  const socket = getPointSocket(product);
+  return socket === subtype;
+}
+
+function normalizeQty(nextQtyRaw: number, unit: "pcs" | "m"): number {
+  const step = unit === "m" ? 0.5 : 1;
+  const normalized = Math.round(nextQtyRaw / step) * step;
+  return Math.max(0, Number.isFinite(normalized) ? normalized : 0);
+}
+
+function productToLightingItem(product: FeedCatalogProduct, qty: number): LightingItem {
+  return {
+    sku: toText(product.productId),
+    name: toText(product.name),
+    qty,
+    priceRub: toNumber(product.priceRub),
+  };
+}
 
 type Props = {
   data: FeedCatalogResult;
 };
 
-type CartItems = Record<string, number>;
-type CatalogSectionMode = "track-systems" | "point-fixtures";
-type TrackSystemUi = "COLIBRI_220" | "CLARUS_48" | "TRACK_220";
-type TrackGroupUi = "TRACK_FIXTURE" | "TRACK_PROFILE" | "TRACK_ACCESSORY";
-
-function fmt(n: number) {
-  return new Intl.NumberFormat("ru-RU").format(Math.round(n));
-}
-
-function stepByUnit(unit: "pcs" | "m"): number {
-  return unit === "m" ? 0.5 : 1;
-}
-
-function minByUnit(unit: "pcs" | "m"): number {
-  return unit === "m" ? 0.5 : 1;
-}
-
-function pickDisplayAttributes(product: FeedCatalogProduct) {
-  if (Array.isArray(product.keyAttributes) && product.keyAttributes.length > 0) {
-    return product.keyAttributes.slice(0, 4);
-  }
-  return (product.params ?? []).slice(0, 4);
-}
-
-function isPointFixture(product: FeedCatalogProduct): boolean {
-  return product.kind === "SPOT_FIXTURE";
-}
-
-function isLamp(product: FeedCatalogProduct): boolean {
-  return product.kind === "LAMP";
-}
-
 export function CatalogSectionClient({ data }: Props) {
   const { openCalculator } = useCalculatorModal();
-  const searchParams = useSearchParams();
-  const debugEnabled = searchParams.get("catalogDebug") === "1";
 
-  const [catalogSection, setCatalogSection] = useState<CatalogSectionMode>("track-systems");
-  const [trackSystem, setTrackSystem] = useState<TrackSystemUi>("COLIBRI_220");
-  const [trackGroup, setTrackGroup] = useState<TrackGroupUi>("TRACK_FIXTURE");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [cartItems, setCartItems] = useState<CartItems>({});
-  const [lastAddedPointSku, setLastAddedPointSku] = useState<string | null>(null);
-
-  const baseProducts = useMemo(() => {
-    return data.products.filter((p) => Number.isFinite(p.priceRub) && p.priceRub > 0);
+  const products = useMemo(() => {
+    const list = (data.products ?? []).filter((product) => {
+      const vendorCode = toText(product.vendorCode);
+      if (REMOVED_COLIBRI_VENDOR_CODES.has(vendorCode)) return false;
+      return true;
+    });
+    return list;
   }, [data.products]);
 
-  const baseIsEmpty = baseProducts.length === 0;
-  const showCatalogError = !data.ok || baseIsEmpty;
+  const byProductId = useMemo(() => {
+    const map = new Map<string, FeedCatalogProduct>();
+    for (const product of products) {
+      map.set(toText(product.productId), product);
+    }
+    return map;
+  }, [products]);
 
-  const productsById = useMemo(() => buildProductsIndex(baseProducts), [baseProducts]);
-
-  const pointProducts = useMemo(() => {
-    return baseProducts
-      .filter((p) => isPointFixture(p))
-      .sort((a, b) => {
-        const avA = a.available === false ? 0 : 1;
-        const avB = b.available === false ? 0 : 1;
-        if (avA !== avB) return avB - avA;
-        return a.priceRub - b.priceRub;
-      });
-  }, [baseProducts]);
-
-  const lampsBySocket = useMemo(() => {
-    const allLamps = baseProducts.filter((p) => isLamp(p) && p.available !== false);
-    return {
-      GX53: allLamps.filter((p) => detectSocket(p) === "GX53").slice(0, 4),
-      MR16: allLamps.filter((p) => detectSocket(p) === "MR16").slice(0, 4),
-    };
-  }, [baseProducts]);
+  const [section, setSection] = useState<CatalogSectionId>("track-systems");
+  const [trackSystem, setTrackSystem] = useState<TrackSystemId>("COLIBRI_220");
+  const [trackGroup, setTrackGroup] = useState<TrackGroupId>("TRACK_FIXTURE");
+  const [pointSubtype, setPointSubtype] = useState<PointSubtypeId>("GX53");
+  const [query, setQuery] = useState("");
+  const [cartItems, setCartItems] = useState<CartItems>({});
 
   const filteredProducts = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
+    let scoped: FeedCatalogProduct[] = [];
 
-    const scoped =
-      catalogSection === "track-systems"
-        ? baseProducts.filter((p) => p.system === trackSystem && p.kind === trackGroup)
-        : pointProducts;
+    if (section === "track-systems") {
+      if (trackGroup === "TRACK_PROFILE") {
+        const allowed = new Set(TRACK_PROFILE_WHITELIST[trackSystem]);
+        scoped = products.filter((product) => {
+          if (product.system !== trackSystem) return false;
+          if (product.kind !== "TRACK_PROFILE") return false;
+          return allowed.has(toText(product.vendorCode));
+        });
+      } else {
+        scoped = products.filter((product) => {
+          if (product.system !== trackSystem) return false;
+          if (product.kind !== trackGroup) return false;
+          return true;
+        });
+      }
+    } else if (section === "point-fixtures") {
+      scoped = products.filter((product) => matchesPointSubtype(product, pointSubtype));
+    } else {
+      scoped = products.filter((product) => isMountsOrGrilles(product));
+    }
 
+    const q = toText(query).toLowerCase();
     if (!q) return scoped;
-    return scoped.filter((p) => `${p.name} ${p.vendorCode}`.toLowerCase().includes(q));
-  }, [baseProducts, catalogSection, pointProducts, searchQuery, trackGroup, trackSystem]);
 
-  const selectedLines = useMemo(() => {
+    return scoped.filter((product) => {
+      const haystack = `${toText(product.name)} ${toText(product.vendorCode)} ${toText(product.categoryPath)}`.toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [pointSubtype, products, query, section, trackGroup, trackSystem]);
+
+  const selectedProducts = useMemo(() => {
     return Object.entries(cartItems)
+      .filter(([, qty]) => qty > 0)
       .map(([id, qty]) => {
-        const product = productsById.get(id);
-        if (!product || qty <= 0) return null;
-        return { product, qty };
+        const product = byProductId.get(toText(id));
+        return product ? { product, qty } : null;
       })
-      .filter((x): x is { product: FeedCatalogProduct; qty: number } => x !== null);
-  }, [cartItems, productsById]);
+      .filter((item): item is { product: FeedCatalogProduct; qty: number } => Boolean(item));
+  }, [byProductId, cartItems]);
 
-  const cartTotal = useMemo(() => {
-    return selectedLines.reduce((sum, x) => sum + x.qty * x.product.priceRub, 0);
-  }, [selectedLines]);
+  const selectedTotal = useMemo(() => {
+    return selectedProducts.reduce((sum, item) => sum + toNumber(item.product.priceRub) * item.qty, 0);
+  }, [selectedProducts]);
 
-  const cartDiscounted = useMemo(() => applyLightingDiscount(cartTotal), [cartTotal]);
-  const cartBenefit = computeBenefit(cartTotal, cartDiscounted);
+  const selectedDiscounted = useMemo(() => applyLightingDiscount(selectedTotal), [selectedTotal]);
 
-  const setQty = (product: FeedCatalogProduct, qty: number) => {
-    const step = stepByUnit(product.unit);
-    const normalized = Math.max(0, Math.round(qty / step) * step);
+  const setProductQty = (product: FeedCatalogProduct, nextQtyRaw: number) => {
+    const id = toText(product.productId);
+    const nextQty = normalizeQty(nextQtyRaw, product.unit);
 
     setCartItems((prev) => {
-      if (normalized <= 0) {
-        const clone = { ...prev };
-        delete clone[product.productId];
-        return clone;
+      const next = { ...prev };
+      if (nextQty <= 0) {
+        delete next[id];
+      } else {
+        next[id] = nextQty;
       }
-      return { ...prev, [product.productId]: normalized };
+      return next;
     });
-
-    if (normalized > 0 && isPointFixture(product)) {
-      setLastAddedPointSku(product.productId);
-    }
   };
 
-  const addLampOneToOne = (lamp: FeedCatalogProduct, fixtureQty: number) => {
-    setQty(lamp, fixtureQty);
+  const removeFromSelected = (productId: string) => {
+    setCartItems((prev) => {
+      const next = { ...prev };
+      delete next[productId];
+      return next;
+    });
   };
 
-  const buildInitialLightingFromCart = (): LightingSnapshot | null => {
-    const items: LightingItem[] = selectedLines.map(({ product, qty }) => ({
-      sku: product.productId,
-      name: product.name,
-      qty,
-      priceRub: product.priceRub,
-    }));
+  const openInCalculator = () => {
+    const items = selectedProducts.map((entry) => productToLightingItem(entry.product, entry.qty));
+    if (items.length === 0) return;
 
-    if (items.length === 0) return null;
-
-    const totalRub = items.reduce((sum, i) => sum + i.qty * i.priceRub, 0);
+    const totalRub = items.reduce((sum, item) => sum + item.qty * item.priceRub, 0);
     const discountedTotalRub = applyLightingDiscount(totalRub);
 
-    return {
+    const initialLighting: LightingSnapshot = {
       mode: "catalog",
       items,
       totalRub,
       discountedTotalRub,
       userCustomizedLighting: true,
     };
-  };
-
-  const handleTransferToCalculator = () => {
-    const initialLighting = buildInitialLightingFromCart();
-
-    if (!initialLighting) {
-      openCalculator({
-        initialStep: 1,
-        initialLightingTab: "catalog",
-        initialLightingView: "browse",
-        entryMode: "lighting-first",
-        source: "catalog_trek_page_empty",
-      });
-      return;
-    }
 
     openCalculator({
       initialStep: 1,
@@ -188,338 +204,201 @@ export function CatalogSectionClient({ data }: Props) {
       initialLightingView: "selected",
       entryMode: "lighting-first",
       initialLighting,
-      source: "catalog_trek_page",
+      source: "catalog-track-sale-page",
     });
   };
-
-  const handleCalcCeilingWithCart = () => {
-    const initialLighting = buildInitialLightingFromCart();
-
-    openCalculator({
-      initialStep: 0,
-      initialLightingTab: "catalog",
-      initialLightingView: "selected",
-      entryMode: "lighting-first",
-      initialLighting: initialLighting ?? undefined,
-      source: "catalog_trek_page_calc_ceiling",
-    });
-  };
-
-  const debugData = (data as FeedCatalogResult & { debug?: Record<string, unknown> }).debug;
 
   return (
-    <Section id="catalog" className="scroll-mt-24 bg-white">
-      <Container>
-        <Heading
-          eyebrow="Каталог"
-          title="Каталог трекового и точечного освещения"
-          description="Выберите товары, проверьте итог и передайте в калькулятор без потери позиций."
-        />
+    <section className="space-y-6">
+      <div>
+        <h2 className="text-3xl font-semibold tracking-tight text-slate-950">Каталог освещения и комплектующих</h2>
+        <p className="mt-2 max-w-3xl text-sm text-slate-600">
+          Выберите позиции и откройте их в калькуляторе. Структура разделов совпадает с модалкой.
+        </p>
+      </div>
 
-        <div className="mt-6">
-          <Button type="button" onClick={handleCalcCeilingWithCart}>
-            Посчитать потолок
-          </Button>
+      <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="flex flex-wrap gap-2">
+          {CATALOG_SECTIONS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => {
+                setSection(item.id);
+                setQuery("");
+              }}
+              className={`rounded-xl px-3 py-2 text-sm font-medium ${
+                section === item.id ? "bg-slate-950 text-white" : "bg-white text-slate-700"
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
 
-        {showCatalogError ? (
-          <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-5">
-            <p className="text-sm font-semibold text-amber-900">Каталог временно недоступен</p>
-            <p className="mt-1 text-sm text-amber-800">Не удалось получить валидную базу товаров.</p>
-            {data.errorMessage ? (
-              <p className="mt-2 text-xs text-amber-700">Причина: {String(data.errorMessage ?? "")}</p>
-            ) : null}
-          </div>
-        ) : (
-          <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_320px]">
-            <div>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCatalogSection("track-systems");
-                      setSearchQuery("");
-                    }}
-                    className={`rounded-lg px-3 py-2 text-sm font-medium ${
-                      catalogSection === "track-systems"
-                        ? "bg-slate-950 text-white"
-                        : "text-slate-700 hover:text-slate-950"
-                    }`}
-                  >
-                    Трековые системы
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCatalogSection("point-fixtures");
-                      setSearchQuery("");
-                    }}
-                    className={`rounded-lg px-3 py-2 text-sm font-medium ${
-                      catalogSection === "point-fixtures"
-                        ? "bg-slate-950 text-white"
-                        : "text-slate-700 hover:text-slate-950"
-                    }`}
-                  >
-                    Точечные светильники
-                  </button>
-                </div>
-
-                {catalogSection === "track-systems" ? (
-                  <>
-                    <div className="flex flex-wrap gap-2">
-                      {(["COLIBRI_220", "CLARUS_48", "TRACK_220"] as TrackSystemUi[]).map((system) => (
-                        <button
-                          key={system}
-                          type="button"
-                          onClick={() => setTrackSystem(system)}
-                          className={`rounded-full border px-4 py-2 text-sm transition-colors ${
-                            trackSystem === system
-                              ? "border-slate-950 bg-slate-950 text-white"
-                              : "border-slate-200 text-slate-700 hover:border-slate-400"
-                          }`}
-                        >
-                          {system === "COLIBRI_220"
-                            ? "COLIBRI 220V (встраиваемая)"
-                            : system === "CLARUS_48"
-                            ? "CLARUS 48V (встраиваемая)"
-                            : "ART 220V (накладная)"}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      {(["TRACK_FIXTURE", "TRACK_PROFILE", "TRACK_ACCESSORY"] as TrackGroupUi[]).map((group) => (
-                        <button
-                          key={group}
-                          type="button"
-                          onClick={() => setTrackGroup(group)}
-                          className={`rounded-full border px-4 py-2 text-sm transition-colors ${
-                            trackGroup === group
-                              ? "border-slate-950 bg-slate-950 text-white"
-                              : "border-slate-200 text-slate-700 hover:border-slate-400"
-                          }`}
-                        >
-                          {group === "TRACK_FIXTURE"
-                            ? "Светильники"
-                            : group === "TRACK_PROFILE"
-                            ? "Профили"
-                            : "Комплектующие"}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                ) : null}
-
-                <input
-                  type="search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Поиск в текущем разделе"
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
-                />
-              </div>
-
-              <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {filteredProducts.length === 0 ? (
-                  <p className="col-span-full py-8 text-center text-sm text-slate-500">
-                    По текущим фильтрам ничего не найдено
-                  </p>
-                ) : null}
-
-                {filteredProducts.map((product) => {
-                  const qty = cartItems[product.productId] ?? 0;
-                  const regular = product.priceRub;
-                  const discount = getDiscountedPrice(regular);
-                  const benefit = computeBenefit(regular, discount);
-                  const productUrl: string = String(product.url ?? "");
-
-                  return (
-                    <div
-                      key={product.productId}
-                      className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4"
-                    >
-                      <div>
-                        <ProductImage
-                          src={product.coverImage}
-                          alt={product.name}
-                          containerClassName="mb-3 h-44 w-full overflow-hidden rounded-xl border border-slate-100 bg-slate-50 p-3"
-                          className="h-full w-full object-contain"
-                        />
-
-                        <p className="text-sm font-semibold text-slate-950">{product.name}</p>
-                        <p className="mt-1 text-xs text-slate-500">Артикул: {product.vendorCode}</p>
-
-                        <ul className="mt-2 space-y-1">
-                          {pickDisplayAttributes(product).map((a) => (
-                            <li key={`${a.label}-${a.value}`} className="text-xs text-slate-500">
-                              {a.label}: {a.value}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      <div className="mt-4">
-                        <p className="text-xs text-slate-500">
-                          Цена: {fmt(regular)} ₽{product.unit === "m" ? " / м" : ""}
-                        </p>
-                        <p className="text-sm font-semibold text-emerald-700">
-                          Со скидкой: {fmt(discount)} ₽{product.unit === "m" ? " / м" : ""}
-                        </p>
-                        <p className="text-xs text-emerald-600">Выгода: {fmt(benefit)} ₽</p>
-
-                        <div className="mt-3 flex items-center justify-between gap-2">
-                          {qty <= 0 ? (
-                            <button
-                              type="button"
-                              onClick={() => setQty(product, minByUnit(product.unit))}
-                              className="rounded-full border border-slate-950 bg-slate-950 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-slate-800"
-                            >
-                              Добавить
-                            </button>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => setQty(product, qty - stepByUnit(product.unit))}
-                                className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 transition-colors hover:bg-slate-50"
-                                aria-label="Уменьшить"
-                              >
-                                −
-                              </button>
-                              <span className="min-w-[64px] text-center text-sm font-semibold text-slate-950">
-                                {qty}
-                                {product.unit === "m" ? " м" : " шт"}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => setQty(product, qty + stepByUnit(product.unit))}
-                                className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 transition-colors hover:bg-slate-50"
-                                aria-label="Увеличить"
-                              >
-                                +
-                              </button>
-                            </div>
-                          )}
-
-                          {productUrl ? (
-                            <a
-                              href={productUrl}
-                              target="_blank"
-                              rel="nofollow noopener noreferrer"
-                              className="text-xs text-slate-500 underline hover:text-slate-900"
-                            >
-                              Открыть товар
-                            </a>
-                          ) : null}
-                        </div>
-
-                        {isPointFixture(product) && qty > 0 ? (
-                          <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                            <p className="text-xs font-medium text-slate-800">
-                              Подобрать лампы ({String(detectSocket(product) ?? "") || "совместимые"})
-                            </p>
-                            <div className="mt-2 space-y-2">
-                              {(detectSocket(product) === "GX53"
-                                ? lampsBySocket.GX53
-                                : detectSocket(product) === "MR16"
-                                ? lampsBySocket.MR16
-                                : []
-                              ).map((lamp) => (
-                                <div
-                                  key={lamp.productId}
-                                  className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-2 py-2"
-                                >
-                                  <div className="min-w-0">
-                                    <p className="truncate text-xs font-medium text-slate-900">{lamp.name}</p>
-                                    <p className="text-xs text-slate-500">{fmt(lamp.priceRub)} ₽ / шт</p>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => addLampOneToOne(lamp, qty)}
-                                    className="shrink-0 rounded-full border border-slate-900 bg-slate-900 px-3 py-1 text-xs font-semibold text-white hover:bg-slate-800"
-                                  >
-                                    Добавить 1:1
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+        {section === "track-systems" ? (
+          <>
+            <div className="flex flex-wrap gap-2">
+              {TRACK_SYSTEMS.map((sys) => (
+                <button
+                  key={sys.id}
+                  type="button"
+                  onClick={() => {
+                    setTrackSystem(sys.id);
+                    setQuery("");
+                  }}
+                  className={`rounded-xl px-3 py-1.5 text-xs ${
+                    trackSystem === sys.id ? "bg-slate-900 text-white" : "bg-white text-slate-700"
+                  }`}
+                >
+                  {sys.label}
+                </button>
+              ))}
             </div>
 
-            <aside className="h-fit rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:sticky lg:top-24">
-              <p className="text-sm font-semibold text-slate-950">Выбрано</p>
-              <p className="mt-1 text-xs text-slate-500">Позиции: {selectedLines.length}</p>
-
-              <div className="mt-3 max-h-[320px] space-y-2 overflow-auto">
-                {selectedLines.length === 0 ? (
-                  <p className="text-sm text-slate-500">Пока пусто</p>
-                ) : null}
-
-                {selectedLines.map(({ product, qty }) => (
-                  <div
-                    key={product.productId}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2"
-                  >
-                    <p className="text-xs font-semibold text-slate-900">{product.name}</p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {qty} {product.unit === "m" ? "м" : "шт"} × {fmt(product.priceRub)} ₽
-                    </p>
-                    <p className="text-xs text-slate-700">Итого: {fmt(qty * product.priceRub)} ₽</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-4 border-t border-slate-200 pt-3">
-                <p className="text-sm text-slate-700">Цена: {fmt(cartTotal)} ₽</p>
-                <p className="text-sm font-semibold text-emerald-700">Со скидкой: {fmt(cartDiscounted)} ₽</p>
-                <p className="text-xs text-emerald-600">Выгода: {fmt(cartBenefit)} ₽</p>
-              </div>
-
-              <div className="mt-4 space-y-2">
-                <Button
+            <div className="flex flex-wrap gap-2">
+              {TRACK_GROUPS.map((group) => (
+                <button
+                  key={group.id}
                   type="button"
-                  onClick={handleTransferToCalculator}
-                  disabled={selectedLines.length === 0}
-                  className="w-full justify-center"
+                  onClick={() => {
+                    setTrackGroup(group.id);
+                    setQuery("");
+                  }}
+                  className={`rounded-xl px-3 py-1.5 text-xs ${
+                    trackGroup === group.id ? "bg-slate-900 text-white" : "bg-white text-slate-700"
+                  }`}
                 >
-                  Передать в калькулятор
-                </Button>
-                <Button
-                  type="button"
-                  onClick={handleCalcCeilingWithCart}
-                  className="w-full justify-center"
-                  variant="secondary"
-                >
-                  Посчитать потолок
-                </Button>
-              </div>
+                  {group.label}
+                </button>
+              ))}
+            </div>
+          </>
+        ) : null}
 
-              {lastAddedPointSku ? (
-                <p className="mt-3 text-xs text-slate-500">
-                  Для точечных корпусов можно добавить совместимые лампы 1:1.
-                </p>
-              ) : null}
-            </aside>
-          </div>
-        )}
-
-        {debugEnabled && debugData ? (
-          <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
-            {Object.entries(debugData).map(([k, v]) => (
-              <p key={k}>
-                {k}: {String(v ?? "")}
-              </p>
+        {section === "point-fixtures" ? (
+          <div className="flex flex-wrap gap-2">
+            {POINT_SUBTYPES.map((subtype) => (
+              <button
+                key={subtype.id}
+                type="button"
+                onClick={() => {
+                  setPointSubtype(subtype.id);
+                  setQuery("");
+                }}
+                className={`rounded-xl px-3 py-1.5 text-xs ${
+                  pointSubtype === subtype.id ? "bg-slate-900 text-white" : "bg-white text-slate-700"
+                }`}
+              >
+                {subtype.label}
+              </button>
             ))}
           </div>
         ) : null}
-      </Container>
-    </Section>
+
+        <input
+          value={query}
+          onChange={(event) => setQuery(String(event.target.value ?? ""))}
+          placeholder="Поиск в текущем разделе"
+          className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
+        />
+      </div>
+
+      {selectedProducts.length > 0 ? (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-slate-950">
+              Выбрано: {selectedProducts.length} поз.
+            </p>
+            <button
+              type="button"
+              onClick={openInCalculator}
+              className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+            >
+              Открыть в калькуляторе
+            </button>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {selectedProducts.map((entry) => {
+              const productId = toText(entry.product.productId);
+              return (
+                <div
+                  key={productId}
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs"
+                >
+                  <span className="max-w-[220px] truncate">{toText(entry.product.name)} x {entry.qty}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeFromSelected(productId)}
+                    aria-label={`Удалить ${toText(entry.product.name)}`}
+                    className="rounded-full px-1 text-slate-500 hover:bg-slate-200 hover:text-slate-900"
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-3 text-sm">
+            <p>Итого: {fmt(selectedTotal)} ₽</p>
+            <p className="font-semibold text-emerald-700">Со скидкой: {fmt(selectedDiscounted)} ₽</p>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {filteredProducts.map((product) => {
+          const productId = toText(product.productId);
+          const qty = toNumber(cartItems[productId]);
+          const regular = toNumber(product.priceRub);
+          const discounted = getDiscountedPrice(regular);
+          const socket = detectSocket(product);
+
+          return (
+            <article key={productId} className="rounded-2xl border border-slate-200 bg-white p-3">
+              <ProductImage src={toText(product.coverImage)} alt={toText(product.name)} />
+              <div className="mt-3">
+                <p className="line-clamp-2 text-sm font-semibold text-slate-900">{toText(product.name)}</p>
+                <p className="mt-1 text-xs text-slate-500">Артикул: {toText(product.vendorCode)}</p>
+              </div>
+
+              <div className="mt-2 text-xs text-slate-600">
+                <p>Цена: {fmt(regular)} ₽{product.unit === "m" ? " / м" : ""}</p>
+                <p className="font-semibold text-emerald-700">
+                  Со скидкой: {fmt(discounted)} ₽{product.unit === "m" ? " / м" : ""}
+                </p>
+                {socket ? <p>Сокет: {socket}</p> : null}
+              </div>
+
+              <div className="mt-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-1">
+                <button
+                  type="button"
+                  onClick={() => setProductQty(product, qty - (product.unit === "m" ? 0.5 : 1))}
+                  className="h-8 w-8 rounded-lg text-base font-semibold text-slate-700 hover:bg-slate-100"
+                >
+                  -
+                </button>
+                <span className="min-w-14 text-center text-sm font-semibold text-slate-900">
+                  {qty}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setProductQty(product, qty + (product.unit === "m" ? 0.5 : 1))}
+                  className="h-8 w-8 rounded-lg text-base font-semibold text-slate-700 hover:bg-slate-100"
+                >
+                  +
+                </button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      {filteredProducts.length === 0 ? (
+        <p className="text-sm text-slate-500">По текущим фильтрам ничего не найдено</p>
+      ) : null}
+    </section>
   );
 }
