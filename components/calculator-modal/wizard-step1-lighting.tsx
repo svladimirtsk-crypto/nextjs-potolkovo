@@ -6,10 +6,18 @@ import snapshotData from "@/data/eks-feed2-snapshot.json";
 import type { FeedCatalogParam, FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
-import { buildProductsIndex, computeBenefit, detectSocket, getDiscountedPrice } from "@/lib/feed2-products";
+import {
+  buildProductsIndex,
+  computeBenefit,
+  detectSocket,
+  getDiscountedPrice,
+  getRequiredLampSocket,
+} from "@/lib/feed2-products";
 import {
   CATALOG_SECTIONS,
   POINT_SUBTYPES,
+  POINT_TO_MOUNT_VENDOR_CODE,
+  CLARUS_PSU_VENDOR_CODES,
   REMOVED_COLIBRI_VENDOR_CODES,
   TRACK_GROUPS,
   TRACK_PROFILE_WHITELIST,
@@ -18,6 +26,7 @@ import {
   type PointSubtypeId,
   type TrackGroupId,
   type TrackSystemId,
+  type LampSocket,
 } from "@/lib/catalog-ui-config";
 import { ProductImage } from "@/components/feed2/ProductImage";
 import { useCalculatorModal } from "./calculator-modal-context";
@@ -26,35 +35,6 @@ import { usePriceCalculatorBridge } from "@/components/home/price-calculator-con
 type Tab = "recommendations" | "catalog";
 type CatalogView = "selected" | "browse";
 type CartItems = Record<string, number>;
-type SocketType = "GX53" | "MR16";
-
-const POINT_TO_MOUNT_VENDOR: Record<string, string> = {
-  "0У-00007177": "0У-00007121",
-  "0У-00007176": "0У-00007121",
-  "0У-00001551": "0У-00003286",
-  "0У-00001552": "0У-00003286",
-};
-
-const CLARUS_PSU_VENDORS = ["0У-00002310", "0У-00002308"];
-
-const ART_GX53_REQUIRED = new Set([
-  "0У-00006334",
-  "0У-00006333",
-  "0У-00006332",
-  "0У-00006331",
-  "0У-00006330",
-  "0У-00006329",
-]);
-
-const ART_MR16_REQUIRED = new Set([
-  "0У-00006324",
-  "0У-00006325",
-  "0У-00006326",
-  "0У-00006327",
-  "0У-00006328",
-]);
-
-const ART_NO_LAMP = new Set(["0У-00006476", "0У-00006475", "0У-00006358"]);
 
 function toText(value: unknown): string {
   return String(value ?? "").trim();
@@ -141,26 +121,16 @@ function isPanelProduct(product: FeedCatalogProduct): boolean {
   return text.includes("панел") || text.includes("led-панел") || text.includes("led панел");
 }
 
-function getBaseSocketByProduct(product: FeedCatalogProduct): SocketType | null {
+function getPointSocketByProduct(product: FeedCatalogProduct): LampSocket | null {
   const vendorCode = toText(product.vendorCode);
 
   if (vendorCode === "0У-00007177" || vendorCode === "0У-00007176") return "GX53";
   if (vendorCode === "0У-00001551" || vendorCode === "0У-00001552") return "MR16";
 
-  const fromDetect = detectSocket(product);
-  if (fromDetect === "GX53") return "GX53";
-  if (fromDetect === "MR16") return "MR16";
+  const detected = detectSocket(product);
+  if (detected === "GX53") return "GX53";
+  if (detected === "MR16") return "MR16";
   return null;
-}
-
-function getRequiredLampSocket(product: FeedCatalogProduct): SocketType | null {
-  const vendorCode = toText(product.vendorCode);
-
-  if (ART_NO_LAMP.has(vendorCode)) return null;
-  if (ART_GX53_REQUIRED.has(vendorCode)) return "GX53";
-  if (ART_MR16_REQUIRED.has(vendorCode)) return "MR16";
-
-  return getBaseSocketByProduct(product);
 }
 
 function isPointFixture(product: FeedCatalogProduct): boolean {
@@ -170,7 +140,7 @@ function isPointFixture(product: FeedCatalogProduct): boolean {
 function matchesPointSubtype(product: FeedCatalogProduct, subtype: PointSubtypeId): boolean {
   if (!isPointFixture(product)) return false;
   if (subtype === "PANELS") return isPanelProduct(product);
-  const socket = getBaseSocketByProduct(product);
+  const socket = getPointSocketByProduct(product);
   return socket === subtype;
 }
 
@@ -287,7 +257,7 @@ export function WizardStep1Lighting() {
   const [pointSubtype, setPointSubtype] = useState<PointSubtypeId>("GX53");
   const [query, setQuery] = useState("");
 
-  const [selectedLampBySocket, setSelectedLampBySocket] = useState<Record<SocketType, string | null>>({
+  const [selectedLampBySocket, setSelectedLampBySocket] = useState<Record<LampSocket, string | null>>({
     GX53: null,
     MR16: null,
   });
@@ -299,11 +269,10 @@ export function WizardStep1Lighting() {
 
   const products = useMemo<FeedCatalogProduct[]>(() => {
     const rawProducts = (snapshotData as { products?: unknown[] })?.products ?? [];
-    const normalized = rawProducts
+    return rawProducts
       .map((item) => normalizeProduct(item))
       .filter((item): item is FeedCatalogProduct => Boolean(item))
       .filter((item) => !REMOVED_COLIBRI_VENDOR_CODES.has(toText(item.vendorCode)));
-    return normalized;
   }, []);
 
   const productsById = useMemo(() => buildProductsIndex(products), [products]);
@@ -363,6 +332,7 @@ export function WizardStep1Lighting() {
       setCartItems(next);
       setRemovedHint(removedAny);
       setActiveTab("catalog");
+
       const nextView: CatalogView = options?.initialLightingView === "selected" ? "selected" : "browse";
       setCatalogView(nextView);
       setStep1CatalogView(nextView);
@@ -387,12 +357,7 @@ export function WizardStep1Lighting() {
 
       for (const [productId] of Object.entries(next)) {
         const product = productsById.get(productId);
-        if (!product) {
-          delete next[productId];
-          changed = true;
-          continue;
-        }
-        if (REMOVED_COLIBRI_VENDOR_CODES.has(toText(product.vendorCode))) {
+        if (!product || REMOVED_COLIBRI_VENDOR_CODES.has(toText(product.vendorCode))) {
           delete next[productId];
           changed = true;
         }
@@ -433,7 +398,7 @@ export function WizardStep1Lighting() {
     const required: Record<string, number> = {};
     for (const entry of cartEntries) {
       const fixtureVendor = toText(entry.product.vendorCode);
-      const mountVendor = POINT_TO_MOUNT_VENDOR[fixtureVendor];
+      const mountVendor = POINT_TO_MOUNT_VENDOR_CODE[fixtureVendor];
       if (!mountVendor) continue;
       required[mountVendor] = (required[mountVendor] ?? 0) + entry.qty;
     }
@@ -441,7 +406,7 @@ export function WizardStep1Lighting() {
   }, [cartEntries]);
 
   const lampRequiredBySocket = useMemo(() => {
-    const required: Record<SocketType, number> = { GX53: 0, MR16: 0 };
+    const required: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
     for (const entry of cartEntries) {
       const socket = getRequiredLampSocket(entry.product);
       if (!socket) continue;
@@ -470,8 +435,7 @@ export function WizardStep1Lighting() {
         }
       }
 
-      const sockets: SocketType[] = ["GX53", "MR16"];
-      for (const socket of sockets) {
+      for (const socket of ["GX53", "MR16"] as LampSocket[]) {
         const requiredQty = toNumber(lampRequiredBySocket[socket]);
         const lampIds = lampOptionsBySocket[socket].map((lamp) => toText(lamp.productId));
         const lampsInCart = lampIds.filter((id) => toNumber(next[id]) > 0);
@@ -534,9 +498,7 @@ export function WizardStep1Lighting() {
     setLightingDraft(draft);
   }, [cartEntries, setLightingDraft, snapshot?.derivedInputs]);
 
-  const hasClarusInSnapshot = useMemo(() => {
-    return products.some((product) => product.system === "CLARUS_48");
-  }, [products]);
+  const hasClarusInSnapshot = useMemo(() => products.some((product) => product.system === "CLARUS_48"), [products]);
 
   const hasClarusInCart = useMemo(() => {
     return cartEntries.some((entry) => entry.product.system === "CLARUS_48");
@@ -544,7 +506,7 @@ export function WizardStep1Lighting() {
 
   const clarusPsuQty = useMemo(() => {
     return cartEntries
-      .filter((entry) => CLARUS_PSU_VENDORS.includes(toText(entry.product.vendorCode)))
+      .filter((entry) => CLARUS_PSU_VENDOR_CODES.includes(toText(entry.product.vendorCode) as (typeof CLARUS_PSU_VENDOR_CODES)[number]))
       .reduce((sum, entry) => sum + entry.qty, 0);
   }, [cartEntries]);
 
@@ -558,7 +520,7 @@ export function WizardStep1Lighting() {
       currentQty: number;
     }> = [];
 
-    for (const [fixtureVendor, mountVendor] of Object.entries(POINT_TO_MOUNT_VENDOR)) {
+    for (const [fixtureVendor, mountVendor] of Object.entries(POINT_TO_MOUNT_VENDOR_CODE)) {
       const fixtureId = productIdByVendorCode.get(fixtureVendor);
       const mountId = productIdByVendorCode.get(mountVendor);
       if (!fixtureId || !mountId) continue;
@@ -587,9 +549,9 @@ export function WizardStep1Lighting() {
   }, [cartItems, productIdByVendorCode, productsById]);
 
   const missingLamps = useMemo(() => {
-    const out: Array<{ socket: SocketType; requiredQty: number; currentQty: number }> = [];
+    const out: Array<{ socket: LampSocket; requiredQty: number; currentQty: number }> = [];
 
-    for (const socket of ["GX53", "MR16"] as SocketType[]) {
+    for (const socket of ["GX53", "MR16"] as LampSocket[]) {
       const required = toNumber(lampRequiredBySocket[socket]);
       if (required <= 0) continue;
 
@@ -623,7 +585,7 @@ export function WizardStep1Lighting() {
   };
 
   const addMountOneToOne = (fixtureVendor: string) => {
-    const mountVendor = POINT_TO_MOUNT_VENDOR[toText(fixtureVendor)];
+    const mountVendor = POINT_TO_MOUNT_VENDOR_CODE[toText(fixtureVendor)];
     if (!mountVendor) return;
     const mountId = productIdByVendorCode.get(mountVendor);
     if (!mountId) return;
@@ -632,7 +594,7 @@ export function WizardStep1Lighting() {
     setCartItems((prev) => ({ ...prev, [mountId]: required }));
   };
 
-  const addLampOneToOne = (socket: SocketType, lampId: string) => {
+  const addLampOneToOne = (socket: LampSocket, lampId: string) => {
     const required = toNumber(lampRequiredBySocket[socket]);
     if (required <= 0) return;
 
@@ -652,7 +614,7 @@ export function WizardStep1Lighting() {
   const setClarusPsu = (productId: string) => {
     setCartItems((prev) => {
       const next = { ...prev };
-      for (const vendor of CLARUS_PSU_VENDORS) {
+      for (const vendor of CLARUS_PSU_VENDOR_CODES) {
         const id = productIdByVendorCode.get(vendor);
         if (!id) continue;
         if (id !== productId) delete next[id];
@@ -690,13 +652,13 @@ export function WizardStep1Lighting() {
       const socket = getRequiredLampSocket(entry.product);
       if (socket) return true;
       const vendorCode = toText(entry.product.vendorCode);
-      return POINT_TO_MOUNT_VENDOR[vendorCode] !== undefined;
+      return POINT_TO_MOUNT_VENDOR_CODE[vendorCode] !== undefined;
     });
 
     if (fixtures.length === 0) return false;
 
-    const lampQtyBySocket: Record<SocketType, number> = { GX53: 0, MR16: 0 };
-    for (const socket of ["GX53", "MR16"] as SocketType[]) {
+    const lampQtyBySocket: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
+    for (const socket of ["GX53", "MR16"] as LampSocket[]) {
       const lampIds = lampOptionsBySocket[socket].map((lamp) => toText(lamp.productId));
       lampQtyBySocket[socket] = lampIds.reduce((sum, id) => sum + toNumber(cartItems[id]), 0);
     }
@@ -704,7 +666,7 @@ export function WizardStep1Lighting() {
     return fixtures.every((entry) => {
       const vendorCode = toText(entry.product.vendorCode);
 
-      const mountVendor = POINT_TO_MOUNT_VENDOR[vendorCode];
+      const mountVendor = POINT_TO_MOUNT_VENDOR_CODE[vendorCode];
       const mountOk = mountVendor
         ? toNumber(cartItems[toText(productIdByVendorCode.get(mountVendor) ?? "")]) >= entry.qty
         : true;
@@ -843,7 +805,7 @@ export function WizardStep1Lighting() {
                 Для системы CLARUS обязателен минимум 1 блок питания.
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
-                {CLARUS_PSU_VENDORS.map((vendor) => {
+                {CLARUS_PSU_VENDOR_CODES.map((vendor) => {
                   const id = productIdByVendorCode.get(vendor);
                   if (!id) return null;
                   const product = productsById.get(id);
