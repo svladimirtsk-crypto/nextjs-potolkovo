@@ -11,9 +11,15 @@ type CalculatorTeaserButtonProps = {
   label?: string;
 };
 
-function shouldOpenLightingFirst(label: string): boolean {
-  const text = String(label ?? "").toLowerCase();
-  return text.includes("каталог");
+function shouldOpenLightingFirst(label: string, source: string): boolean {
+  const labelText = String(label ?? "").toLowerCase();
+  const sourceText = String(source ?? "").toLowerCase();
+
+  if (labelText.includes("открыть каталог")) return true;
+  if (labelText.includes("каталог в калькуляторе")) return true;
+  if (sourceText.includes("track-sale-custom")) return true;
+
+  return false;
 }
 
 export function CalculatorTeaserButton({
@@ -33,7 +39,7 @@ export function CalculatorTeaserButton({
 
         trackCalculatorOpen(safeSource);
 
-        if (shouldOpenLightingFirst(safeLabel)) {
+        if (shouldOpenLightingFirst(safeLabel, safeSource)) {
           openCalculator({
             initialStep: 1,
             initialLightingTab: "catalog",
