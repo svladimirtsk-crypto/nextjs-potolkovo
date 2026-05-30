@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import snapshotData from "@/data/eks-feed2-snapshot.json";
-import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
+import type { FeedCatalogProduct, FeedCatalogParam } from "@/lib/eks-feed2-catalog";
 import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
 import {
@@ -60,6 +60,73 @@ function fmt(n: number): string {
 
 function toText(value: unknown): string {
   return String(value ?? "").trim();
+}
+
+function toNumberOrNull(value: unknown): number | null {
+  const n = Number(value ?? NaN);
+  return Number.isFinite(n) ? n : null;
+}
+
+function toParams(input: unknown): FeedCatalogParam[] {
+  if (!Array.isArray(input)) return [];
+  return input
+    .map((item) => {
+      const x = item as { label?: unknown; value?: unknown };
+      return {
+        label: toText(x?.label),
+        value: toText(x?.value),
+      };
+    })
+    .filter((item) => item.label.length > 0 && item.value.length > 0);
+}
+
+function normalizeProduct(raw: unknown): FeedCatalogProduct | null {
+  const p = raw as Record<string, unknown>;
+
+  const vendorCode = toText(p.vendorCode);
+  const offerId = toText(p.offerId);
+  const name = toText(p.name);
+  const url = toText(p.url);
+  const categoryId = toText(p.categoryId);
+  const categoryPath = toText(p.categoryPath);
+
+  if (!name || (!vendorCode && !offerId)) return null;
+
+  const productIdRaw = toText(p.productId);
+  const productId = productIdRaw || `feed2-${vendorCode || offerId || name}`;
+
+  const images = Array.isArray(p.images)
+    ? p.images.map((item) => toText(item)).filter(Boolean)
+    : [];
+
+  const coverImage = toText(p.coverImage) || images[0] || "";
+  const priceRub = Number(p.priceRub ?? 0);
+  const available = Boolean(p.available ?? true);
+  const params = toParams(p.params);
+  const keyAttributes = toParams(p.keyAttributes);
+
+  const normalized: FeedCatalogProduct = {
+    productId: toText(productId),
+    vendorCode,
+    offerId,
+    name,
+    url,
+    categoryId,
+    categoryPath,
+    images,
+    coverImage,
+    priceRub: Number.isFinite(priceRub) ? priceRub : 0,
+    available,
+    params,
+    keyAttributes,
+    system: (toText(p.system) || "UNKNOWN") as FeedCatalogProduct["system"],
+    kind: (toText(p.kind) || "OTHER") as FeedCatalogProduct["kind"],
+    unit: (toText(p.unit) === "m" ? "m" : "pcs") as FeedCatalogProduct["unit"],
+    lengthMeters: toNumberOrNull(p.lengthMeters),
+    pieceLengthMeters: toNumberOrNull(p.pieceLengthMeters),
+  };
+
+  return normalized;
 }
 
 function stepByUnit(unit: "pcs" | "m"): number {
@@ -256,10 +323,12 @@ export function WizardStep1Lighting() {
   const prevInitialLightingRef = useRef<LightingSnapshot | null | undefined>(undefined);
 
   const products = useMemo<FeedCatalogProduct[]>(() => {
-    const raw = ((snapshotData as { products?: FeedCatalogProduct[] })?.products ?? []).filter((item) =>
-      Boolean(toText(item.productId))
-    );
-    return raw;
+    const rawProducts = (snapshotData as { products?: unknown[] })?.products ?? [];
+    const normalized = rawProducts
+      .map((item) => normalizeProduct(item))
+      .filter((item): item is FeedCatalogProduct => Boolean(item))
+      .filter((item) => Boolean(toText(item.productId)));
+    return normalized;
   }, []);
 
   const productsById = useMemo(() => buildProductsIndex(products), [products]);
@@ -741,9 +810,7 @@ export function WizardStep1Lighting() {
               По параметрам: точечных {Number(derivedInputs?.pointSpotsQty ?? 0)}, трек{" "}
               {Number(derivedInputs?.trackLengthMeters ?? 0)} м.п.
             </p>
-            <p className="mt-2 text-xs text-slate-500">
-              Статусы сборки систем:
-            </p>
+            <p className="mt-2 text-xs text-slate-500">Статусы сборки систем:</p>
             <ul className="mt-1 space-y-1 text-sm">
               <li>COLIBRI: {trackAssembledBySystem.COLIBRI_220 ? "собрано" : "не собрано"}</li>
               <li>CLARUS: {trackAssembledBySystem.CLARUS_48 ? "собрано" : "не собрано"}</li>
