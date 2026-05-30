@@ -41,7 +41,17 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
 
   const openCalculator = useCallback(
     (opts?: OpenCalculatorOptions) => {
-      const resolvedOpts = opts ?? {};
+      const incoming = opts ?? {};
+      const isLightingFirst = incoming.entryMode === "lighting-first";
+
+      // Страховка: lighting-first всегда стартует с каталога на шаге 1,
+      // если вызывающий код явно не переопределил значения.
+      const resolvedOpts: OpenCalculatorOptions = {
+        ...incoming,
+        initialStep: incoming.initialStep ?? (isLightingFirst ? 1 : 0),
+        initialLightingTab: incoming.initialLightingTab ?? (isLightingFirst ? "catalog" : undefined),
+        initialLightingView: incoming.initialLightingView ?? (isLightingFirst ? "browse" : undefined),
+      };
 
       setOptions(resolvedOpts);
       setCurrentStep(resolvedOpts.initialStep ?? 0);
@@ -57,10 +67,10 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
         setSnapshot((prev) => (prev ? { ...prev, leadSource: source } : prev));
       }
 
-      // Сессионный флаг должен сбрасываться на каждом новом openCalculator.
+      // Сессионный флаг сбрасываем на каждое открытие.
       setStep0SessionInteracted(false);
 
-      // Стабильная синхронизация view для Step1 <-> Step2.
+      // Единая синхронизация selected/browse между Step1 и Step2.
       setStep1CatalogView(resolvedOpts.initialLightingView ?? null);
 
       setIsOpen(true);
