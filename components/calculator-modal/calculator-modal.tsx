@@ -113,7 +113,6 @@ export function CalculatorModal() {
     return titles[currentStep];
   }, [currentStep, lightingDraft]);
 
-  // Единая точка закрытия: сначала убираем visible, затем закрываем контекст.
   const requestClose = useCallback(() => {
     setVisible(false);
     closeCalculator();
@@ -158,6 +157,7 @@ export function CalculatorModal() {
         requestClose();
         return;
       }
+
       if (e.key !== "Tab" || !panelRef.current) return;
 
       const focusable = getFocusableElements(panelRef.current);
@@ -261,8 +261,8 @@ export function CalculatorModal() {
         ref={overlayRef}
         onClick={handleOverlayClick}
         className={`fixed inset-0 z-[120] bg-black/50 ${transitionClass} ${
-          visible && isOpen ? "opacity-100" : "opacity-0"
-        } ${modalActive ? "pointer-events-auto" : "pointer-events-none"}`}
+          modalActive ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
       />
 
       <div
@@ -276,10 +276,10 @@ export function CalculatorModal() {
           aria-modal={isOpen ? "true" : undefined}
           aria-labelledby="calc-modal-title"
           className={`w-full max-h-[92dvh] flex flex-col rounded-t-2xl bg-white shadow-2xl lg:max-h-[90dvh] lg:max-w-5xl lg:rounded-2xl xl:max-w-6xl ${transitionClass} ${
-            visible && isOpen
-              ? "translate-y-0 opacity-100 lg:scale-100"
-              : "translate-y-4 opacity-0 lg:scale-95"
-          } ${modalActive ? "pointer-events-auto" : "pointer-events-none"}`}
+            modalActive
+              ? "translate-y-0 opacity-100 lg:scale-100 pointer-events-auto"
+              : "translate-y-4 opacity-0 lg:scale-95 pointer-events-none"
+          }`}
         >
           <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4">
             <div>
