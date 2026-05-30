@@ -362,6 +362,9 @@ export const homepage = {
   },
 
   action: {
+    // ДОБАВЛЕНО: нужно для components/home/home-action.tsx
+    anchorId: "action",
+
     sectionTitle: "Оставьте заявку на бесплатный замер",
     sectionSubtitle:
       "Перезвоню, уточню детали и предложу решение под ваш объект и бюджет.",
