@@ -50,7 +50,16 @@ export function CalculatorTeaserButton({
           return;
         }
 
-        openCalculator({ preset, source: safeSource });
+        const resolvedPreset: ServiceCalculatorPreset =
+          preset ?? {
+            ceilingType: "standard",
+            areaDefault: 10,
+          };
+
+        openCalculator({
+          preset: resolvedPreset,
+          source: safeSource,
+        });
       }}
     >
       {label}
