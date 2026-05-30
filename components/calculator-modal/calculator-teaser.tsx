@@ -6,6 +6,7 @@ type CalculatorTeaserProps = {
   preset?: ServiceCalculatorPreset;
   source: string;
   heading?: string;
+  buttonLabel?: string;
 };
 
 const BULLETS = [
@@ -19,12 +20,13 @@ export function CalculatorTeaser({
   preset,
   source,
   heading = "Рассчитайте стоимость",
+  buttonLabel,
 }: CalculatorTeaserProps) {
   return (
     <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
       <Heading
         title={heading}
-        description="Учтём все параметры — от типа потолка до освещения."
+        description="Учтем все параметры: от типа потолка до освещения."
       />
 
       <ul className="mt-6 space-y-2.5">
@@ -40,10 +42,9 @@ export function CalculatorTeaser({
       </ul>
 
       <div className="mt-8">
-        <CalculatorTeaserButton preset={preset} source={source} />
+        <CalculatorTeaserButton preset={preset} source={String(source ?? "")} label={buttonLabel} />
       </div>
 
-      {/* ← ИЗМЕНЕНО: убрано "фиксируется", формулировка унифицирована */}
       <p className="mt-4 text-sm text-slate-500">
         Точную стоимость определим на бесплатном замере
       </p>
