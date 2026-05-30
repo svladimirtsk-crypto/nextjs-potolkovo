@@ -25,7 +25,9 @@ export function ProductImage({
   containerClassName,
 }: ProductImageProps) {
   const [failed, setFailed] = useState(false);
-  const safeSrc = useMemo(() => String(src ?? ""), [src]);
+
+  const safeSrc = useMemo(() => String(src ?? "").trim(), [src]);
+  const safeAlt = useMemo(() => String(alt ?? ""), [alt]);
 
   const imageSrc = failed || !safeSrc ? IMG_FALLBACK : safeSrc;
 
@@ -38,7 +40,7 @@ export function ProductImage({
     >
       <img
         src={imageSrc}
-        alt={alt}
+        alt={safeAlt}
         loading="lazy"
         className={className ?? "h-full w-full object-contain"}
         onError={() => setFailed(true)}
