@@ -1,5 +1,6 @@
 "use client";
 
+import { CalculatorTeaserButton } from "@/components/calculator-modal/calculator-teaser-button";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
@@ -21,21 +22,10 @@ export function LightCustomSection() {
           />
 
           <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <Button
-              type="button"
-              onClick={() =>
-                openCalculator({
-                  initialStep: 1,
-                  initialLightingTab: "catalog",
-                  initialLightingView: "browse",
-                  entryMode: "lighting-first",
-                  source: "track-sale-custom",
-                })
-              }
-              className="justify-center py-6 text-base"
-            >
-              Открыть каталог в калькуляторе
-            </Button>
+            <CalculatorTeaserButton
+              label="Открыть каталог в калькуляторе"
+              source="track-sale-custom"
+            />
 
             <Button
               type="button"
