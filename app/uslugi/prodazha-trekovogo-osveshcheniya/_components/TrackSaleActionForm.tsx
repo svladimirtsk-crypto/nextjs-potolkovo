@@ -5,7 +5,6 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TextLink } from "@/components/ui/text-link";
-import { homepage } from "@/content/homepage";
 import { legal } from "@/content/legal";
 import { trackFormSubmitSuccess } from "@/lib/analytics";
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
@@ -52,7 +51,6 @@ type TrackSaleActionFormProps = {
 };
 
 export function TrackSaleActionForm({ source }: TrackSaleActionFormProps) {
-  const actionContent = homepage.action;
   const { snapshot, hasInteracted } = usePriceCalculatorBridge();
 
   const effectiveSource: string = String(snapshot?.leadSource ?? source ?? "catalog_trek_page");
@@ -180,10 +178,10 @@ export function TrackSaleActionForm({ source }: TrackSaleActionFormProps) {
       ) : null}
 
       <Input
-        label={actionContent.nameFieldLabel}
+        label="Имя"
         name="name"
         type="text"
-        placeholder={actionContent.nameFieldPlaceholder}
+        placeholder="Как к вам обращаться"
         autoComplete="name"
         required
         value={name}
@@ -192,10 +190,10 @@ export function TrackSaleActionForm({ source }: TrackSaleActionFormProps) {
       {errors.name ? <p className="text-sm text-rose-700">{errors.name}</p> : null}
 
       <Input
-        label={actionContent.phoneFieldLabel}
+        label="Телефон"
         name="phone"
         type="tel"
-        placeholder={actionContent.phoneFieldPlaceholder}
+        placeholder="+7 (___) ___-__-__"
         autoComplete="tel"
         inputMode="tel"
         required
@@ -205,10 +203,10 @@ export function TrackSaleActionForm({ source }: TrackSaleActionFormProps) {
       {errors.phone ? <p className="text-sm text-rose-700">{errors.phone}</p> : null}
 
       <Input
-        label={actionContent.addressFieldLabel ?? "Адрес или район"}
+        label="Адрес или район"
         name="address"
         type="text"
-        placeholder={actionContent.addressFieldPlaceholder ?? "Например: Химки, Люберцы"}
+        placeholder="Например: Химки, Люберцы"
         autoComplete="street-address"
         value={address}
         onChange={(e) => setAddress(e.target.value)}
@@ -225,12 +223,12 @@ export function TrackSaleActionForm({ source }: TrackSaleActionFormProps) {
       />
 
       <Button type="submit" className="w-full justify-center" disabled={isPending}>
-        {isPending ? "Отправляю..." : actionContent.submitButtonLabel}
+        {isPending ? "Отправляю..." : "Отправить заявку"}
       </Button>
 
       <p className="text-xs leading-5 text-slate-500">
         {legal.consentTextPrefix}{" "}
-        <TextLink href={legal.privacyHref} className="text-xs">
+        <TextLink href="/privacy" className="font-medium">
           {legal.privacyLabel}
         </TextLink>{" "}
         {legal.consentTextSuffix}
