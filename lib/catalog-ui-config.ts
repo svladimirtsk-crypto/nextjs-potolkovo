@@ -36,6 +36,10 @@ export const REMOVED_COLIBRI_VENDOR_CODES = new Set<string>([
   "0У-00001345",
 ]);
 
+export function isRemovedColibriVendorCode(vendorCode: unknown): boolean {
+  return REMOVED_COLIBRI_VENDOR_CODES.has(String(vendorCode ?? "").trim());
+}
+
 export const TRACK_PROFILE_WHITELIST: Record<TrackSystemId, string[]> = {
   COLIBRI_220: ["0У-00006089", "0У-00006090", "0У-00006986"],
   CLARUS_48: ["0У-00006634", "0У-00006633"],
