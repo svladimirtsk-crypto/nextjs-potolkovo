@@ -44,6 +44,10 @@ export function LightCustomSection() {
                 openCalculator({
                   initialStep: 0,
                   source: "track-sale-calculator",
+                  preset: {
+                    ceilingType: "standard",
+                    areaDefault: 10,
+                  },
                 })
               }
               className="justify-center"
