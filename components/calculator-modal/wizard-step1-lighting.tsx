@@ -3,47 +3,30 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import snapshotData from "@/data/eks-feed2-snapshot.json";
-import type { FeedCatalogProduct, FeedCatalogParam } from "@/lib/eks-feed2-catalog";
+import type { FeedCatalogParam, FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
+import { buildProductsIndex, computeBenefit, detectSocket, getDiscountedPrice } from "@/lib/feed2-products";
 import {
-  buildProductsIndex,
-  computeBenefit,
-  detectSocket,
-  getDiscountedPrice,
-} from "@/lib/feed2-products";
+  CATALOG_SECTIONS,
+  POINT_SUBTYPES,
+  REMOVED_COLIBRI_VENDOR_CODES,
+  TRACK_GROUPS,
+  TRACK_PROFILE_WHITELIST,
+  TRACK_SYSTEMS,
+  type CatalogSectionId,
+  type PointSubtypeId,
+  type TrackGroupId,
+  type TrackSystemId,
+} from "@/lib/catalog-ui-config";
 import { ProductImage } from "@/components/feed2/ProductImage";
 import { useCalculatorModal } from "./calculator-modal-context";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 
 type Tab = "recommendations" | "catalog";
 type CatalogView = "selected" | "browse";
-type CatalogSection = "track-systems" | "point-fixtures" | "mounts-grilles";
-type TrackSystemUi = "COLIBRI_220" | "CLARUS_48" | "TRACK_220";
-type TrackGroupUi = "TRACK_FIXTURE" | "TRACK_PROFILE";
-type PointSubtype = "GX53" | "MR16" | "PANELS";
 type CartItems = Record<string, number>;
 type SocketType = "GX53" | "MR16";
-
-const TRACK_SYSTEM_LABELS: Record<TrackSystemUi, string> = {
-  COLIBRI_220: "COLIBRI 220V (встраиваемая)",
-  CLARUS_48: "CLARUS 48V (встраиваемая)",
-  TRACK_220: "ART 220V (накладная)",
-};
-
-const TRACK_PROFILE_WHITELIST: Record<TrackSystemUi, string[]> = {
-  COLIBRI_220: ["0У-00006089", "0У-00006090", "0У-00006986"],
-  CLARUS_48: ["0У-00006634", "0У-00006633"],
-  TRACK_220: [
-    "0У-00006342",
-    "0У-00006341",
-    "0У-00001613",
-    "0У-00001356",
-    "0У-00001355",
-    "0У-00001354",
-    "0У-00001353",
-  ],
-};
 
 const POINT_TO_MOUNT_VENDOR: Record<string, string> = {
   "0У-00007177": "0У-00007121",
@@ -54,12 +37,36 @@ const POINT_TO_MOUNT_VENDOR: Record<string, string> = {
 
 const CLARUS_PSU_VENDORS = ["0У-00002310", "0У-00002308"];
 
-function fmt(n: number): string {
-  return new Intl.NumberFormat("ru-RU").format(Math.round(n));
-}
+const ART_GX53_REQUIRED = new Set([
+  "0У-00006334",
+  "0У-00006333",
+  "0У-00006332",
+  "0У-00006331",
+  "0У-00006330",
+  "0У-00006329",
+]);
+
+const ART_MR16_REQUIRED = new Set([
+  "0У-00006324",
+  "0У-00006325",
+  "0У-00006326",
+  "0У-00006327",
+  "0У-00006328",
+]);
+
+const ART_NO_LAMP = new Set(["0У-00006476", "0У-00006475", "0У-00006358"]);
 
 function toText(value: unknown): string {
   return String(value ?? "").trim();
+}
+
+function toNumber(value: unknown): number {
+  const num = Number(value ?? 0);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function fmt(value: number): string {
+  return new Intl.NumberFormat("ru-RU").format(Math.round(value));
 }
 
 function toNumberOrNull(value: unknown): number | null {
@@ -86,10 +93,6 @@ function normalizeProduct(raw: unknown): FeedCatalogProduct | null {
   const vendorCode = toText(p.vendorCode);
   const offerId = toText(p.offerId);
   const name = toText(p.name);
-  const url = toText(p.url);
-  const categoryId = toText(p.categoryId);
-  const categoryPath = toText(p.categoryPath);
-
   if (!name || (!vendorCode && !offerId)) return null;
 
   const productIdRaw = toText(p.productId);
@@ -99,92 +102,80 @@ function normalizeProduct(raw: unknown): FeedCatalogProduct | null {
     ? p.images.map((item) => toText(item)).filter(Boolean)
     : [];
 
-  const coverImage = toText(p.coverImage) || images[0] || "";
-  const priceRub = Number(p.priceRub ?? 0);
-  const available = Boolean(p.available ?? true);
-  const params = toParams(p.params);
-  const keyAttributes = toParams(p.keyAttributes);
-
-  const normalized: FeedCatalogProduct = {
+  return {
     productId: toText(productId),
     vendorCode,
     offerId,
     name,
-    url,
-    categoryId,
-    categoryPath,
+    url: toText(p.url),
+    categoryId: toText(p.categoryId),
+    categoryPath: toText(p.categoryPath),
     images,
-    coverImage,
-    priceRub: Number.isFinite(priceRub) ? priceRub : 0,
-    available,
-    params,
-    keyAttributes,
+    coverImage: toText(p.coverImage) || images[0] || "",
+    priceRub: toNumber(p.priceRub),
+    available: Boolean(p.available ?? true),
+    params: toParams(p.params),
+    keyAttributes: toParams(p.keyAttributes),
     system: (toText(p.system) || "UNKNOWN") as FeedCatalogProduct["system"],
     kind: (toText(p.kind) || "OTHER") as FeedCatalogProduct["kind"],
     unit: (toText(p.unit) === "m" ? "m" : "pcs") as FeedCatalogProduct["unit"],
     lengthMeters: toNumberOrNull(p.lengthMeters),
     pieceLengthMeters: toNumberOrNull(p.pieceLengthMeters),
   };
-
-  return normalized;
 }
 
-function stepByUnit(unit: "pcs" | "m"): number {
-  return unit === "m" ? 0.5 : 1;
+function normalizeQty(nextQtyRaw: number, unit: "pcs" | "m"): number {
+  const step = unit === "m" ? 0.5 : 1;
+  const normalized = Math.round(nextQtyRaw / step) * step;
+  return Math.max(0, Number.isFinite(normalized) ? normalized : 0);
 }
 
-function normalizeQty(value: number, unit: "pcs" | "m"): number {
-  const step = stepByUnit(unit);
-  const normalized = Math.round(value / step) * step;
-  if (!Number.isFinite(normalized)) return 0;
-  return Math.max(0, normalized);
-}
-
-function pickDisplayAttributes(product: FeedCatalogProduct): { label: string; value: string }[] {
-  const attrs = product.keyAttributes?.length ? product.keyAttributes : product.params;
-  return (attrs ?? []).slice(0, 4).map((attr) => ({
-    label: toText(attr.label),
-    value: toText(attr.value),
-  }));
-}
-
-function getSocketByFixture(product: FeedCatalogProduct): SocketType | null {
-  const vendorCode = toText(product.vendorCode);
-  if (vendorCode === "0У-00007177" || vendorCode === "0У-00007176") return "GX53";
-  if (vendorCode === "0У-00001551" || vendorCode === "0У-00001552") return "MR16";
-
-  const autoSocket = detectSocket(product);
-  if (autoSocket === "GX53") return "GX53";
-  if (autoSocket === "MR16") return "MR16";
-  return null;
-}
-
-function isPanelProduct(product: FeedCatalogProduct): boolean {
-  const text = `${toText(product.name)} ${toText(product.vendorCode)}`.toLowerCase();
-  return text.includes("панел");
-}
-
-function isMountOrGrille(product: FeedCatalogProduct): boolean {
-  const text = `${toText(product.name)} ${toText(product.vendorCode)}`.toLowerCase();
+function isMountsOrGrilles(product: FeedCatalogProduct): boolean {
+  const text = `${toText(product.name)} ${toText(product.vendorCode)} ${toText(product.categoryPath)}`.toLowerCase();
+  if (product.kind === "CEILING_COMPONENT") return true;
   return text.includes("заклад") || text.includes("решетк") || text.includes("решётк");
 }
 
-function isLamp(product: FeedCatalogProduct): boolean {
-  return product.kind === "LAMP";
+function isPanelProduct(product: FeedCatalogProduct): boolean {
+  const text = `${toText(product.name)} ${toText(product.categoryPath)}`.toLowerCase();
+  return text.includes("панел") || text.includes("led-панел") || text.includes("led панел");
+}
+
+function getBaseSocketByProduct(product: FeedCatalogProduct): SocketType | null {
+  const vendorCode = toText(product.vendorCode);
+
+  if (vendorCode === "0У-00007177" || vendorCode === "0У-00007176") return "GX53";
+  if (vendorCode === "0У-00001551" || vendorCode === "0У-00001552") return "MR16";
+
+  const fromDetect = detectSocket(product);
+  if (fromDetect === "GX53") return "GX53";
+  if (fromDetect === "MR16") return "MR16";
+  return null;
+}
+
+function getRequiredLampSocket(product: FeedCatalogProduct): SocketType | null {
+  const vendorCode = toText(product.vendorCode);
+
+  if (ART_NO_LAMP.has(vendorCode)) return null;
+  if (ART_GX53_REQUIRED.has(vendorCode)) return "GX53";
+  if (ART_MR16_REQUIRED.has(vendorCode)) return "MR16";
+
+  return getBaseSocketByProduct(product);
 }
 
 function isPointFixture(product: FeedCatalogProduct): boolean {
   return product.kind === "SPOT_FIXTURE";
 }
 
-function matchesPointSubtype(product: FeedCatalogProduct, subtype: PointSubtype): boolean {
+function matchesPointSubtype(product: FeedCatalogProduct, subtype: PointSubtypeId): boolean {
   if (!isPointFixture(product)) return false;
   if (subtype === "PANELS") return isPanelProduct(product);
+  const socket = getBaseSocketByProduct(product);
+  return socket === subtype;
+}
 
-  const socket = getSocketByFixture(product);
-  if (subtype === "GX53") return socket === "GX53";
-  if (subtype === "MR16") return socket === "MR16";
-  return false;
+function isLamp(product: FeedCatalogProduct): boolean {
+  return product.kind === "LAMP" && toNumber(product.priceRub) > 0 && product.available !== false;
 }
 
 function ProductQtyControls({
@@ -198,19 +189,11 @@ function ProductQtyControls({
 }) {
   return (
     <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-1">
-      <button
-        type="button"
-        onClick={onDec}
-        className="h-8 w-8 rounded-lg text-base font-semibold text-slate-700 hover:bg-slate-100"
-      >
-        −
+      <button type="button" onClick={onDec} className="h-8 w-8 rounded-lg text-base font-semibold text-slate-700 hover:bg-slate-100">
+        -
       </button>
       <span className="min-w-14 text-center text-sm font-semibold text-slate-900">{qty}</span>
-      <button
-        type="button"
-        onClick={onInc}
-        className="h-8 w-8 rounded-lg text-base font-semibold text-slate-700 hover:bg-slate-100"
-      >
+      <button type="button" onClick={onInc} className="h-8 w-8 rounded-lg text-base font-semibold text-slate-700 hover:bg-slate-100">
         +
       </button>
     </div>
@@ -239,6 +222,14 @@ function TabButton({
   );
 }
 
+function pickDisplayAttributes(product: FeedCatalogProduct): { label: string; value: string }[] {
+  const attrs = product.keyAttributes?.length ? product.keyAttributes : product.params;
+  return (attrs ?? []).slice(0, 4).map((attr) => ({
+    label: toText(attr.label),
+    value: toText(attr.value),
+  }));
+}
+
 function ProductCard({
   product,
   qty,
@@ -250,36 +241,29 @@ function ProductCard({
   onInc: () => void;
   onDec: () => void;
 }) {
-  const regular = product.priceRub;
+  const regular = toNumber(product.priceRub);
   const discounted = getDiscountedPrice(regular);
   const benefit = computeBenefit(regular, discounted);
 
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-3">
-      <ProductImage src={product.coverImage} alt={toText(product.name)} />
+      <ProductImage src={toText(product.coverImage)} alt={toText(product.name)} />
       <div className="mt-3 space-y-1">
         <p className="line-clamp-2 text-sm font-semibold text-slate-950">{toText(product.name)}</p>
-        <p className="text-xs text-slate-500">VC: {toText(product.vendorCode)}</p>
+        <p className="text-xs text-slate-500">Артикул: {toText(product.vendorCode)}</p>
         <ul className="space-y-0.5">
           {pickDisplayAttributes(product).map((attr) => (
-            <li
-              key={`${toText(product.productId)}-${attr.label}-${attr.value}`}
-              className="text-xs text-slate-600"
-            >
+            <li key={`${toText(product.productId)}-${attr.label}-${attr.value}`} className="text-xs text-slate-600">
               {attr.label}: {attr.value}
             </li>
           ))}
         </ul>
       </div>
-
       <div className="mt-3 space-y-1">
         <p className="text-xs text-slate-500">Цена: {fmt(regular)} ₽</p>
-        <p className="text-xs font-semibold text-emerald-700">
-          Со скидкой 15%: {fmt(discounted)} ₽
-        </p>
+        <p className="text-xs font-semibold text-emerald-700">Со скидкой: {fmt(discounted)} ₽</p>
         <p className="text-xs text-emerald-600">Выгода: {fmt(benefit)} ₽</p>
       </div>
-
       <div className="mt-3">
         <ProductQtyControls qty={qty} onDec={onDec} onInc={onInc} />
       </div>
@@ -289,36 +273,27 @@ function ProductCard({
 
 export function WizardStep1Lighting() {
   const { snapshot } = usePriceCalculatorBridge();
-  const {
-    lightingDraft,
-    setLightingDraft,
-    options,
-    step1CatalogView,
-    setStep1CatalogView,
-  } = useCalculatorModal();
+  const { lightingDraft, setLightingDraft, options, step1CatalogView, setStep1CatalogView } = useCalculatorModal();
 
   const initialTab: Tab = options?.initialLightingTab === "catalog" ? "catalog" : "recommendations";
-  const initialCatalogView: CatalogView =
-    options?.initialLightingView === "selected" ? "selected" : "browse";
+  const initialCatalogView: CatalogView = options?.initialLightingView === "selected" ? "selected" : "browse";
 
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [catalogView, setCatalogView] = useState<CatalogView>(initialCatalogView);
 
-  const [catalogSection, setCatalogSection] = useState<CatalogSection>("track-systems");
-  const [trackSystem, setTrackSystem] = useState<TrackSystemUi>("COLIBRI_220");
-  const [trackGroup, setTrackGroup] = useState<TrackGroupUi>("TRACK_FIXTURE");
-  const [pointSubtype, setPointSubtype] = useState<PointSubtype>("GX53");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [section, setSection] = useState<CatalogSectionId>("track-systems");
+  const [trackSystem, setTrackSystem] = useState<TrackSystemId>("COLIBRI_220");
+  const [trackGroup, setTrackGroup] = useState<TrackGroupId>("TRACK_FIXTURE");
+  const [pointSubtype, setPointSubtype] = useState<PointSubtypeId>("GX53");
+  const [query, setQuery] = useState("");
 
   const [selectedLampBySocket, setSelectedLampBySocket] = useState<Record<SocketType, string | null>>({
     GX53: null,
     MR16: null,
   });
 
-  const [cartItems, setCartItems] = useState<CartItems>(() => {
-    const initialItems = lightingDraft?.items ?? [];
-    return Object.fromEntries(initialItems.map((item) => [toText(item.sku), Number(item.qty ?? 0)]));
-  });
+  const [cartItems, setCartItems] = useState<CartItems>({});
+  const [removedHint, setRemovedHint] = useState(false);
 
   const prevInitialLightingRef = useRef<LightingSnapshot | null | undefined>(undefined);
 
@@ -327,7 +302,7 @@ export function WizardStep1Lighting() {
     const normalized = rawProducts
       .map((item) => normalizeProduct(item))
       .filter((item): item is FeedCatalogProduct => Boolean(item))
-      .filter((item) => Boolean(toText(item.productId)));
+      .filter((item) => !REMOVED_COLIBRI_VENDOR_CODES.has(toText(item.vendorCode)));
     return normalized;
   }, []);
 
@@ -338,8 +313,7 @@ export function WizardStep1Lighting() {
     for (const product of products) {
       const vendorCode = toText(product.vendorCode);
       const productId = toText(product.productId);
-      if (!vendorCode || !productId) continue;
-      if (!map.has(vendorCode)) map.set(vendorCode, productId);
+      if (vendorCode && productId) map.set(vendorCode, productId);
     }
     return map;
   }, [products]);
@@ -359,60 +333,96 @@ export function WizardStep1Lighting() {
 
     if (incoming.mode === "catalog" && incoming.items?.length) {
       const next: CartItems = {};
-      for (const item of incoming.items) {
-        next[toText(item.sku)] = Number(item.qty ?? 0);
-      }
-      setCartItems(next);
-      setActiveTab("catalog");
+      let removedAny = false;
 
-      const nextView: CatalogView =
-        options?.initialLightingView === "selected" ? "selected" : "browse";
+      for (const item of incoming.items) {
+        const incomingSku = toText(item.sku);
+        const byProductId = productsById.get(incomingSku);
+        const byVendorCodeId = productIdByVendorCode.get(incomingSku);
+        const resolvedId = byProductId ? incomingSku : toText(byVendorCodeId ?? "");
+
+        if (!resolvedId) {
+          removedAny = true;
+          continue;
+        }
+
+        const resolvedProduct = productsById.get(resolvedId);
+        if (!resolvedProduct) {
+          removedAny = true;
+          continue;
+        }
+
+        if (REMOVED_COLIBRI_VENDOR_CODES.has(toText(resolvedProduct.vendorCode))) {
+          removedAny = true;
+          continue;
+        }
+
+        next[resolvedId] = toNumber(item.qty);
+      }
+
+      setCartItems(next);
+      setRemovedHint(removedAny);
+      setActiveTab("catalog");
+      const nextView: CatalogView = options?.initialLightingView === "selected" ? "selected" : "browse";
       setCatalogView(nextView);
       setStep1CatalogView(nextView);
     }
-  }, [options?.initialLighting, options?.initialLightingView, setStep1CatalogView]);
+  }, [options?.initialLighting, options?.initialLightingView, productIdByVendorCode, productsById, setStep1CatalogView]);
 
   const cartEntries = useMemo(() => {
     return Object.entries(cartItems)
-      .filter(([, qty]) => Number(qty) > 0)
+      .filter(([, qty]) => qty > 0)
       .map(([productId, qty]) => {
         const product = productsById.get(productId);
-        return {
-          product,
-          productId,
-          qty: Number(qty),
-        };
+        return product ? { productId, product, qty } : null;
       })
-      .filter(
-        (entry): entry is { product: FeedCatalogProduct; productId: string; qty: number } =>
-          Boolean(entry.product)
-      );
+      .filter((entry): entry is { productId: string; product: FeedCatalogProduct; qty: number } => Boolean(entry))
+      .filter((entry) => !REMOVED_COLIBRI_VENDOR_CODES.has(toText(entry.product.vendorCode)));
   }, [cartItems, productsById]);
+
+  useEffect(() => {
+    setCartItems((prev) => {
+      const next: CartItems = { ...prev };
+      let changed = false;
+
+      for (const [productId] of Object.entries(next)) {
+        const product = productsById.get(productId);
+        if (!product) {
+          delete next[productId];
+          changed = true;
+          continue;
+        }
+        if (REMOVED_COLIBRI_VENDOR_CODES.has(toText(product.vendorCode))) {
+          delete next[productId];
+          changed = true;
+        }
+      }
+
+      return changed ? next : prev;
+    });
+  }, [productsById]);
 
   const selectedViewItems = useMemo(() => {
     return cartEntries.map((entry) => ({
-      item: {
-        sku: entry.productId,
-        qty: entry.qty,
-        name: toText(entry.product.name),
-        priceRub: Number(entry.product.priceRub ?? 0),
-      },
       product: entry.product,
+      item: {
+        sku: toText(entry.product.productId),
+        name: toText(entry.product.name),
+        qty: entry.qty,
+        priceRub: toNumber(entry.product.priceRub),
+      },
     }));
   }, [cartEntries]);
 
   const selectedTotals = useMemo(() => {
     const regular = selectedViewItems.reduce((sum, x) => sum + x.item.qty * x.item.priceRub, 0);
-    const discounted = getDiscountedPrice(regular);
-    return {
-      regular,
-      discounted,
-      benefit: computeBenefit(regular, discounted),
-    };
+    const discounted = applyLightingDiscount(regular);
+    const benefit = Math.max(0, regular - discounted);
+    return { regular, discounted, benefit };
   }, [selectedViewItems]);
 
   const lampOptionsBySocket = useMemo(() => {
-    const lamps = products.filter((product) => isLamp(product) && product.available !== false);
+    const lamps = products.filter((product) => isLamp(product));
     return {
       GX53: lamps.filter((lamp) => detectSocket(lamp) === "GX53"),
       MR16: lamps.filter((lamp) => detectSocket(lamp) === "MR16"),
@@ -422,10 +432,10 @@ export function WizardStep1Lighting() {
   const mountRequiredByVendor = useMemo(() => {
     const required: Record<string, number> = {};
     for (const entry of cartEntries) {
-      const fixtureVendorCode = toText(entry.product.vendorCode);
-      const mountVendorCode = POINT_TO_MOUNT_VENDOR[fixtureVendorCode];
-      if (!mountVendorCode) continue;
-      required[mountVendorCode] = Number(required[mountVendorCode] ?? 0) + Number(entry.qty ?? 0);
+      const fixtureVendor = toText(entry.product.vendorCode);
+      const mountVendor = POINT_TO_MOUNT_VENDOR[fixtureVendor];
+      if (!mountVendor) continue;
+      required[mountVendor] = (required[mountVendor] ?? 0) + entry.qty;
     }
     return required;
   }, [cartEntries]);
@@ -433,9 +443,9 @@ export function WizardStep1Lighting() {
   const lampRequiredBySocket = useMemo(() => {
     const required: Record<SocketType, number> = { GX53: 0, MR16: 0 };
     for (const entry of cartEntries) {
-      const socket = getSocketByFixture(entry.product);
+      const socket = getRequiredLampSocket(entry.product);
       if (!socket) continue;
-      required[socket] = Number(required[socket] ?? 0) + Number(entry.qty ?? 0);
+      required[socket] = (required[socket] ?? 0) + entry.qty;
     }
     return required;
   }, [cartEntries]);
@@ -445,58 +455,54 @@ export function WizardStep1Lighting() {
       const next: CartItems = { ...prev };
       let changed = false;
 
-      for (const [mountVendorCode, requiredQtyRaw] of Object.entries(mountRequiredByVendor)) {
-        const requiredQty = Number(requiredQtyRaw ?? 0);
-        const mountProductId = productIdByVendorCode.get(toText(mountVendorCode));
-        if (!mountProductId) continue;
-        const currentQty = Number(next[mountProductId] ?? 0);
+      for (const [mountVendor, requiredQty] of Object.entries(mountRequiredByVendor)) {
+        const mountId = productIdByVendorCode.get(toText(mountVendor));
+        if (!mountId) continue;
 
-        if (requiredQty <= 0 && currentQty > 0) {
-          delete next[mountProductId];
-          changed = true;
-          continue;
-        }
-
+        const currentQty = toNumber(next[mountId]);
         if (requiredQty > 0 && currentQty > 0 && currentQty !== requiredQty) {
-          next[mountProductId] = requiredQty;
+          next[mountId] = requiredQty;
+          changed = true;
+        }
+        if (requiredQty <= 0 && currentQty > 0) {
+          delete next[mountId];
           changed = true;
         }
       }
 
       const sockets: SocketType[] = ["GX53", "MR16"];
       for (const socket of sockets) {
-        const requiredQty = Number(lampRequiredBySocket[socket] ?? 0);
+        const requiredQty = toNumber(lampRequiredBySocket[socket]);
         const lampIds = lampOptionsBySocket[socket].map((lamp) => toText(lamp.productId));
-        const lampIdsInCart = lampIds.filter((id) => Number(next[id] ?? 0) > 0);
+        const lampsInCart = lampIds.filter((id) => toNumber(next[id]) > 0);
 
         if (requiredQty <= 0) {
-          for (const id of lampIdsInCart) {
+          for (const id of lampsInCart) {
             delete next[id];
             changed = true;
           }
           continue;
         }
 
-        if (lampIdsInCart.length > 0) {
+        if (lampsInCart.length > 0) {
           const selectedId = toText(selectedLampBySocket[socket] ?? "");
-          const chosenId = lampIdsInCart.includes(selectedId) ? selectedId : lampIdsInCart[0];
+          const chosenId = lampsInCart.includes(selectedId) ? selectedId : lampsInCart[0];
 
-          for (const id of lampIdsInCart) {
+          for (const id of lampsInCart) {
             if (id !== chosenId) {
               delete next[id];
               changed = true;
             }
           }
 
-          if (Number(next[chosenId] ?? 0) !== requiredQty) {
+          if (toNumber(next[chosenId]) !== requiredQty) {
             next[chosenId] = requiredQty;
             changed = true;
           }
         }
       }
 
-      if (!changed) return prev;
-      return next;
+      return changed ? next : prev;
     });
   }, [lampOptionsBySocket, lampRequiredBySocket, mountRequiredByVendor, productIdByVendorCode, selectedLampBySocket]);
 
@@ -509,8 +515,8 @@ export function WizardStep1Lighting() {
     const items: LightingItem[] = cartEntries.map((entry) => ({
       sku: toText(entry.productId),
       name: toText(entry.product.name),
-      qty: Number(entry.qty ?? 0),
-      priceRub: Number(entry.product.priceRub ?? 0),
+      qty: entry.qty,
+      priceRub: toNumber(entry.product.priceRub),
     }));
 
     const totalRub = items.reduce((sum, item) => sum + item.qty * item.priceRub, 0);
@@ -528,73 +534,6 @@ export function WizardStep1Lighting() {
     setLightingDraft(draft);
   }, [cartEntries, setLightingDraft, snapshot?.derivedInputs]);
 
-  const setCatalogViewAndSync = (view: CatalogView) => {
-    setCatalogView(view);
-    setStep1CatalogView(view);
-  };
-
-  const setProductQty = (product: FeedCatalogProduct, nextQtyRaw: number) => {
-    const productId = toText(product.productId);
-    const normalizedQty = normalizeQty(Number(nextQtyRaw ?? 0), product.unit);
-
-    setCartItems((prev) => {
-      const next = { ...prev };
-      if (normalizedQty <= 0) {
-        delete next[productId];
-        return next;
-      }
-      next[productId] = normalizedQty;
-      return next;
-    });
-  };
-
-  const addMountOneToOne = (fixtureVendorCode: string) => {
-    const mountVendorCode = POINT_TO_MOUNT_VENDOR[toText(fixtureVendorCode)];
-    if (!mountVendorCode) return;
-
-    const mountProductId = productIdByVendorCode.get(toText(mountVendorCode));
-    if (!mountProductId) return;
-
-    const requiredQty = Number(mountRequiredByVendor[mountVendorCode] ?? 0);
-    if (requiredQty <= 0) return;
-
-    setCartItems((prev) => ({ ...prev, [mountProductId]: requiredQty }));
-  };
-
-  const addLampOneToOne = (socket: SocketType, lampProductId: string) => {
-    const requiredQty = Number(lampRequiredBySocket[socket] ?? 0);
-    if (requiredQty <= 0) return;
-
-    setSelectedLampBySocket((prev) => ({ ...prev, [socket]: lampProductId }));
-
-    setCartItems((prev) => {
-      const next = { ...prev };
-      const lampIds = lampOptionsBySocket[socket].map((lamp) => toText(lamp.productId));
-
-      for (const id of lampIds) {
-        if (id !== lampProductId) delete next[id];
-      }
-
-      next[lampProductId] = requiredQty;
-      return next;
-    });
-  };
-
-  const setClarusPsu = (psuProductId: string) => {
-    setCartItems((prev) => {
-      const next = { ...prev };
-
-      for (const vendorCode of CLARUS_PSU_VENDORS) {
-        const id = productIdByVendorCode.get(vendorCode);
-        if (!id) continue;
-        if (id !== psuProductId) delete next[id];
-      }
-
-      next[psuProductId] = Math.max(1, Number(next[psuProductId] ?? 0));
-      return next;
-    });
-  };
-
   const hasClarusInSnapshot = useMemo(() => {
     return products.some((product) => product.system === "CLARUS_48");
   }, [products]);
@@ -606,27 +545,140 @@ export function WizardStep1Lighting() {
   const clarusPsuQty = useMemo(() => {
     return cartEntries
       .filter((entry) => CLARUS_PSU_VENDORS.includes(toText(entry.product.vendorCode)))
-      .reduce((sum, entry) => sum + Number(entry.qty ?? 0), 0);
+      .reduce((sum, entry) => sum + entry.qty, 0);
   }, [cartEntries]);
 
-  const trackAssembledBySystem = useMemo(() => {
-    const result: Record<TrackSystemUi, boolean> = {
+  const missingMounts = useMemo(() => {
+    const out: Array<{
+      fixtureVendorCode: string;
+      mountVendorCode: string;
+      fixtureName: string;
+      mountName: string;
+      requiredQty: number;
+      currentQty: number;
+    }> = [];
+
+    for (const [fixtureVendor, mountVendor] of Object.entries(POINT_TO_MOUNT_VENDOR)) {
+      const fixtureId = productIdByVendorCode.get(fixtureVendor);
+      const mountId = productIdByVendorCode.get(mountVendor);
+      if (!fixtureId || !mountId) continue;
+
+      const fixtureProduct = productsById.get(fixtureId);
+      const mountProduct = productsById.get(mountId);
+      if (!fixtureProduct || !mountProduct) continue;
+
+      const fixtureQty = toNumber(cartItems[fixtureId]);
+      if (fixtureQty <= 0) continue;
+
+      const mountQty = toNumber(cartItems[mountId]);
+      if (mountQty < fixtureQty) {
+        out.push({
+          fixtureVendorCode: fixtureVendor,
+          mountVendorCode: mountVendor,
+          fixtureName: toText(fixtureProduct.name),
+          mountName: toText(mountProduct.name),
+          requiredQty: fixtureQty,
+          currentQty: mountQty,
+        });
+      }
+    }
+
+    return out;
+  }, [cartItems, productIdByVendorCode, productsById]);
+
+  const missingLamps = useMemo(() => {
+    const out: Array<{ socket: SocketType; requiredQty: number; currentQty: number }> = [];
+
+    for (const socket of ["GX53", "MR16"] as SocketType[]) {
+      const required = toNumber(lampRequiredBySocket[socket]);
+      if (required <= 0) continue;
+
+      const ids = lampOptionsBySocket[socket].map((lamp) => toText(lamp.productId));
+      const current = ids.reduce((sum, id) => sum + toNumber(cartItems[id]), 0);
+
+      if (current < required) out.push({ socket, requiredQty: required, currentQty: current });
+    }
+
+    return out;
+  }, [cartItems, lampOptionsBySocket, lampRequiredBySocket]);
+
+  const setCatalogViewAndSync = (view: CatalogView) => {
+    setCatalogView(view);
+    setStep1CatalogView(view);
+  };
+
+  const setProductQty = (product: FeedCatalogProduct, nextQtyRaw: number) => {
+    const id = toText(product.productId);
+    const qty = normalizeQty(nextQtyRaw, product.unit);
+
+    setCartItems((prev) => {
+      const next = { ...prev };
+      if (qty <= 0) {
+        delete next[id];
+      } else {
+        next[id] = qty;
+      }
+      return next;
+    });
+  };
+
+  const addMountOneToOne = (fixtureVendor: string) => {
+    const mountVendor = POINT_TO_MOUNT_VENDOR[toText(fixtureVendor)];
+    if (!mountVendor) return;
+    const mountId = productIdByVendorCode.get(mountVendor);
+    if (!mountId) return;
+    const required = toNumber(mountRequiredByVendor[mountVendor]);
+    if (required <= 0) return;
+    setCartItems((prev) => ({ ...prev, [mountId]: required }));
+  };
+
+  const addLampOneToOne = (socket: SocketType, lampId: string) => {
+    const required = toNumber(lampRequiredBySocket[socket]);
+    if (required <= 0) return;
+
+    setSelectedLampBySocket((prev) => ({ ...prev, [socket]: lampId }));
+
+    setCartItems((prev) => {
+      const next = { ...prev };
+      const lampIds = lampOptionsBySocket[socket].map((lamp) => toText(lamp.productId));
+      for (const id of lampIds) {
+        if (id !== lampId) delete next[id];
+      }
+      next[lampId] = required;
+      return next;
+    });
+  };
+
+  const setClarusPsu = (productId: string) => {
+    setCartItems((prev) => {
+      const next = { ...prev };
+      for (const vendor of CLARUS_PSU_VENDORS) {
+        const id = productIdByVendorCode.get(vendor);
+        if (!id) continue;
+        if (id !== productId) delete next[id];
+      }
+      next[productId] = Math.max(1, toNumber(next[productId]));
+      return next;
+    });
+  };
+
+  const trackAssembled = useMemo(() => {
+    const result: Record<TrackSystemId, boolean> = {
       COLIBRI_220: false,
       CLARUS_48: false,
       TRACK_220: false,
     };
 
-    const systems: TrackSystemUi[] = ["COLIBRI_220", "CLARUS_48", "TRACK_220"];
-    for (const system of systems) {
+    for (const system of ["COLIBRI_220", "CLARUS_48", "TRACK_220"] as TrackSystemId[]) {
       const hasFixture = cartEntries.some(
         (entry) => entry.product.system === system && entry.product.kind === "TRACK_FIXTURE"
       );
-      const profileWhitelist = TRACK_PROFILE_WHITELIST[system];
-      const hasProfile = cartEntries.some((entry) => {
-        if (entry.product.system !== system) return false;
-        const vendorCode = toText(entry.product.vendorCode);
-        return profileWhitelist.includes(vendorCode);
-      });
+      const profileWhitelist = new Set(TRACK_PROFILE_WHITELIST[system]);
+      const hasProfile = cartEntries.some(
+        (entry) =>
+          entry.product.system === system &&
+          profileWhitelist.has(toText(entry.product.vendorCode))
+      );
       result[system] = hasFixture && hasProfile;
     }
 
@@ -634,163 +686,73 @@ export function WizardStep1Lighting() {
   }, [cartEntries]);
 
   const pointCompleted = useMemo(() => {
-    const pointFixtures = cartEntries.filter((entry) => isPointFixture(entry.product));
-    if (pointFixtures.length === 0) return false;
-
-    const mountQtyByVendor: Record<string, number> = {};
-    for (const entry of cartEntries) {
+    const fixtures = cartEntries.filter((entry) => {
+      const socket = getRequiredLampSocket(entry.product);
+      if (socket) return true;
       const vendorCode = toText(entry.product.vendorCode);
-      mountQtyByVendor[vendorCode] = Number(mountQtyByVendor[vendorCode] ?? 0) + Number(entry.qty ?? 0);
-    }
+      return POINT_TO_MOUNT_VENDOR[vendorCode] !== undefined;
+    });
+
+    if (fixtures.length === 0) return false;
 
     const lampQtyBySocket: Record<SocketType, number> = { GX53: 0, MR16: 0 };
-    for (const socket of (["GX53", "MR16"] as SocketType[])) {
+    for (const socket of ["GX53", "MR16"] as SocketType[]) {
       const lampIds = lampOptionsBySocket[socket].map((lamp) => toText(lamp.productId));
-      lampQtyBySocket[socket] = lampIds.reduce(
-        (sum, id) => sum + Number(cartItems[id] ?? 0),
-        0
-      );
+      lampQtyBySocket[socket] = lampIds.reduce((sum, id) => sum + toNumber(cartItems[id]), 0);
     }
 
-    const requiredLampQtyBySocket = lampRequiredBySocket;
+    return fixtures.every((entry) => {
+      const vendorCode = toText(entry.product.vendorCode);
 
-    return pointFixtures.every((entry) => {
-      const fixtureVendorCode = toText(entry.product.vendorCode);
-      const mountVendorCode = POINT_TO_MOUNT_VENDOR[fixtureVendorCode];
-      const mountOk = mountVendorCode
-        ? Number(mountQtyByVendor[mountVendorCode] ?? 0) >= Number(entry.qty ?? 0)
+      const mountVendor = POINT_TO_MOUNT_VENDOR[vendorCode];
+      const mountOk = mountVendor
+        ? toNumber(cartItems[toText(productIdByVendorCode.get(mountVendor) ?? "")]) >= entry.qty
         : true;
 
-      const socket = getSocketByFixture(entry.product);
-      const lampOk = socket
-        ? Number(lampQtyBySocket[socket] ?? 0) >= Number(requiredLampQtyBySocket[socket] ?? 0)
-        : true;
+      const socket = getRequiredLampSocket(entry.product);
+      const lampOk = socket ? lampQtyBySocket[socket] >= toNumber(lampRequiredBySocket[socket]) : true;
 
       return mountOk && lampOk;
     });
-  }, [cartEntries, lampOptionsBySocket, lampRequiredBySocket, cartItems]);
+  }, [cartEntries, lampOptionsBySocket, lampRequiredBySocket, cartItems, productIdByVendorCode]);
 
-  const missingMounts = useMemo(() => {
-    const list: Array<{
-      fixtureVendorCode: string;
-      mountVendorCode: string;
-      requiredQty: number;
-      currentQty: number;
-      fixtureName: string;
-      mountName: string;
-    }> = [];
-
-    for (const [fixtureVendorCode, mountVendorCode] of Object.entries(POINT_TO_MOUNT_VENDOR)) {
-      const fixtureProductId = productIdByVendorCode.get(fixtureVendorCode);
-      const mountProductId = productIdByVendorCode.get(mountVendorCode);
-      if (!fixtureProductId || !mountProductId) continue;
-
-      const fixtureProduct = productsById.get(fixtureProductId);
-      const mountProduct = productsById.get(mountProductId);
-      if (!fixtureProduct || !mountProduct) continue;
-
-      const fixtureQty = Number(cartItems[fixtureProductId] ?? 0);
-      if (fixtureQty <= 0) continue;
-
-      const mountQty = Number(cartItems[mountProductId] ?? 0);
-      if (mountQty < fixtureQty) {
-        list.push({
-          fixtureVendorCode,
-          mountVendorCode,
-          requiredQty: fixtureQty,
-          currentQty: mountQty,
-          fixtureName: toText(fixtureProduct.name),
-          mountName: toText(mountProduct.name),
-        });
-      }
-    }
-
-    return list;
-  }, [cartItems, productIdByVendorCode, productsById]);
-
-  const missingLamps = useMemo(() => {
-    const list: Array<{ socket: SocketType; requiredQty: number; currentQty: number }> = [];
-
-    for (const socket of (["GX53", "MR16"] as SocketType[])) {
-      const requiredQty = Number(lampRequiredBySocket[socket] ?? 0);
-      if (requiredQty <= 0) continue;
-
-      const lampIds = lampOptionsBySocket[socket].map((lamp) => toText(lamp.productId));
-      const currentQty = lampIds.reduce((sum, id) => sum + Number(cartItems[id] ?? 0), 0);
-
-      if (currentQty < requiredQty) {
-        list.push({ socket, requiredQty, currentQty });
-      }
-    }
-
-    return list;
-  }, [cartItems, lampOptionsBySocket, lampRequiredBySocket]);
-
-  const browseProducts = useMemo(() => {
+  const scopedProducts = useMemo(() => {
     let scoped: FeedCatalogProduct[] = [];
 
     if (catalogView === "selected") {
-      scoped = selectedViewItems.map((x) => x.product);
-    } else if (catalogSection === "track-systems") {
-      if (trackGroup === "TRACK_FIXTURE") {
+      scoped = selectedViewItems.map((item) => item.product);
+    } else if (section === "track-systems") {
+      if (trackGroup === "TRACK_PROFILE") {
+        const whitelist = new Set(TRACK_PROFILE_WHITELIST[trackSystem]);
         scoped = products.filter(
           (product) =>
             product.system === trackSystem &&
-            product.kind === "TRACK_FIXTURE" &&
-            product.available !== false
+            product.kind === "TRACK_PROFILE" &&
+            whitelist.has(toText(product.vendorCode))
         );
       } else {
-        const whitelist = TRACK_PROFILE_WHITELIST[trackSystem];
-        scoped = products.filter((product) => {
-          if (product.system !== trackSystem) return false;
-          if (product.available === false) return false;
-          const vendorCode = toText(product.vendorCode);
-          return whitelist.includes(vendorCode);
-        });
+        scoped = products.filter(
+          (product) => product.system === trackSystem && product.kind === trackGroup
+        );
       }
-    } else if (catalogSection === "point-fixtures") {
-      scoped = products.filter(
-        (product) => matchesPointSubtype(product, pointSubtype) && product.available !== false
-      );
+    } else if (section === "point-fixtures") {
+      scoped = products.filter((product) => matchesPointSubtype(product, pointSubtype));
     } else {
-      scoped = products.filter(
-        (product) => isMountOrGrille(product) && product.available !== false
-      );
+      scoped = products.filter((product) => isMountsOrGrilles(product));
     }
 
-    const query = toText(searchQuery).toLowerCase();
-    if (!query) return scoped;
+    const q = toText(query).toLowerCase();
+    if (!q) return scoped;
 
     return scoped.filter((product) => {
-      const attrText = pickDisplayAttributes(product)
-        .map((attr) => `${attr.label} ${attr.value}`)
-        .join(" ");
-      const haystack = `${toText(product.name)} ${toText(product.vendorCode)} ${attrText}`.toLowerCase();
-      return haystack.includes(query);
+      const attrs = pickDisplayAttributes(product).map((a) => `${a.label} ${a.value}`).join(" ");
+      const haystack = `${toText(product.name)} ${toText(product.vendorCode)} ${toText(product.categoryPath)} ${attrs}`.toLowerCase();
+      return haystack.includes(q);
     });
-  }, [catalogSection, catalogView, pointSubtype, products, searchQuery, selectedViewItems, trackGroup, trackSystem]);
+  }, [catalogView, pointSubtype, products, query, section, selectedViewItems, trackGroup, trackSystem]);
 
-  const recommendationTrack = useMemo(() => {
-    return products
-      .filter((product) => product.kind === "TRACK_FIXTURE" && product.available !== false)
-      .slice(0, 6);
-  }, [products]);
-
-  const recommendationPoint = useMemo(() => {
-    return products.filter((product) => isPointFixture(product) && product.available !== false).slice(0, 6);
-  }, [products]);
-
-  const setNoLighting = () => {
-    setCartItems({});
-    setLightingDraft({ mode: "none", userCustomizedLighting: false });
-  };
-
-  const showClarusMissingMessage =
-    catalogSection === "track-systems" &&
-    trackSystem === "CLARUS_48" &&
-    !hasClarusInSnapshot;
-
-  const derivedInputs = snapshot?.derivedInputs;
+  const showClarusEmptyMessage =
+    section === "track-systems" && trackSystem === "CLARUS_48" && !hasClarusInSnapshot;
 
   return (
     <div className="space-y-4">
@@ -803,18 +765,22 @@ export function WizardStep1Lighting() {
         </TabButton>
       </div>
 
+      {removedHint ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          Некоторые позиции удалены из ассортимента и автоматически убраны из выбранного.
+        </div>
+      ) : null}
+
       {activeTab === "recommendations" ? (
         <div className="space-y-4">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <p className="text-sm text-slate-600">
-              По параметрам: точечных {Number(derivedInputs?.pointSpotsQty ?? 0)}, трек{" "}
-              {Number(derivedInputs?.trackLengthMeters ?? 0)} м.п.
+              По параметрам: точечных {toNumber(snapshot?.derivedInputs?.pointSpotsQty)} шт., трек {toNumber(snapshot?.derivedInputs?.trackLengthMeters)} м.
             </p>
-            <p className="mt-2 text-xs text-slate-500">Статусы сборки систем:</p>
-            <ul className="mt-1 space-y-1 text-sm">
-              <li>COLIBRI: {trackAssembledBySystem.COLIBRI_220 ? "собрано" : "не собрано"}</li>
-              <li>CLARUS: {trackAssembledBySystem.CLARUS_48 ? "собрано" : "не собрано"}</li>
-              <li>ART: {trackAssembledBySystem.TRACK_220 ? "собрано" : "не собрано"}</li>
+            <ul className="mt-2 space-y-1 text-sm text-slate-700">
+              <li>COLIBRI: {trackAssembled.COLIBRI_220 ? "собрано" : "не собрано"}</li>
+              <li>CLARUS: {trackAssembled.CLARUS_48 ? "собрано" : "не собрано"}</li>
+              <li>ART: {trackAssembled.TRACK_220 ? "собрано" : "не собрано"}</li>
               <li>Точечные: {pointCompleted ? "укомплектовано" : "не укомплектовано"}</li>
             </ul>
           </div>
@@ -822,7 +788,7 @@ export function WizardStep1Lighting() {
           {missingMounts.map((item) => (
             <div key={`${item.fixtureVendorCode}-${item.mountVendorCode}`} className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
               <p className="text-sm font-medium text-amber-900">
-                Для {item.fixtureName} нужна закладная {item.mountName} 1:1
+                Для {item.fixtureName} нужна закладная {item.mountName}
               </p>
               <p className="mt-1 text-xs text-amber-700">
                 Нужно: {item.requiredQty} шт., в корзине: {item.currentQty} шт.
@@ -830,9 +796,9 @@ export function WizardStep1Lighting() {
               <button
                 type="button"
                 onClick={() => addMountOneToOne(item.fixtureVendorCode)}
-                className="mt-3 rounded-xl bg-amber-700 px-4 py-2 text-xs font-semibold text-white hover:bg-amber-800"
+                className="mt-2 rounded-xl bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-800"
               >
-                Добавить / синхронизировать 1:1
+                Добавить 1:1
               </button>
             </div>
           ))}
@@ -840,13 +806,13 @@ export function WizardStep1Lighting() {
           {missingLamps.map((missing) => (
             <div key={missing.socket} className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
               <p className="text-sm font-medium text-blue-900">
-                Для корпусов {missing.socket} не хватает ламп
+                Для светильников с цоколем {missing.socket} не хватает ламп.
               </p>
               <p className="mt-1 text-xs text-blue-700">
                 Нужно: {missing.requiredQty} шт., в корзине: {missing.currentQty} шт.
               </p>
 
-              <div className="mt-3 space-y-2">
+              <div className="mt-2 space-y-2">
                 {lampOptionsBySocket[missing.socket].slice(0, 4).map((lamp) => {
                   const lampId = toText(lamp.productId);
                   return (
@@ -877,17 +843,16 @@ export function WizardStep1Lighting() {
                 Для системы CLARUS обязателен минимум 1 блок питания.
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
-                {CLARUS_PSU_VENDORS.map((vendorCode) => {
-                  const productId = productIdByVendorCode.get(vendorCode);
-                  if (!productId) return null;
-                  const product = productsById.get(productId);
+                {CLARUS_PSU_VENDORS.map((vendor) => {
+                  const id = productIdByVendorCode.get(vendor);
+                  if (!id) return null;
+                  const product = productsById.get(id);
                   if (!product) return null;
-
                   return (
                     <button
-                      key={vendorCode}
+                      key={vendor}
                       type="button"
-                      onClick={() => setClarusPsu(productId)}
+                      onClick={() => setClarusPsu(id)}
                       className="rounded-xl bg-rose-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-800"
                     >
                       {toText(product.name)}
@@ -897,52 +862,6 @@ export function WizardStep1Lighting() {
               </div>
             </div>
           ) : null}
-
-          <div className="space-y-2">
-            <p className="text-sm font-semibold text-slate-950">Точечные (подбор)</p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {recommendationPoint.map((product) => {
-                const productId = toText(product.productId);
-                const qty = Number(cartItems[productId] ?? 0);
-                return (
-                  <ProductCard
-                    key={productId}
-                    product={product}
-                    qty={qty}
-                    onInc={() => setProductQty(product, qty + stepByUnit(product.unit))}
-                    onDec={() => setProductQty(product, qty - stepByUnit(product.unit))}
-                  />
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-sm font-semibold text-slate-950">Трековые (подбор)</p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {recommendationTrack.map((product) => {
-                const productId = toText(product.productId);
-                const qty = Number(cartItems[productId] ?? 0);
-                return (
-                  <ProductCard
-                    key={productId}
-                    product={product}
-                    qty={qty}
-                    onInc={() => setProductQty(product, qty + stepByUnit(product.unit))}
-                    onDec={() => setProductQty(product, qty - stepByUnit(product.unit))}
-                  />
-                );
-              })}
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={setNoLighting}
-            className="rounded-2xl border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100"
-          >
-            Без освещения
-          </button>
         </div>
       ) : null}
 
@@ -953,9 +872,7 @@ export function WizardStep1Lighting() {
               type="button"
               onClick={() => setCatalogViewAndSync("browse")}
               className={`rounded-xl px-3 py-2 text-sm font-medium ${
-                catalogView === "browse"
-                  ? "bg-slate-950 text-white"
-                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                catalogView === "browse" ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-700"
               }`}
             >
               Каталог
@@ -964,9 +881,7 @@ export function WizardStep1Lighting() {
               type="button"
               onClick={() => setCatalogViewAndSync("selected")}
               className={`rounded-xl px-3 py-2 text-sm font-medium ${
-                catalogView === "selected"
-                  ? "bg-slate-950 text-white"
-                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                catalogView === "selected" ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-700"
               }`}
             >
               Выбранное ({selectedViewItems.length})
@@ -982,27 +897,42 @@ export function WizardStep1Lighting() {
               {selectedViewItems.map(({ item, product }) => {
                 const regular = item.priceRub;
                 const discounted = getDiscountedPrice(regular);
+                const productId = toText(product.productId);
 
                 return (
-                  <div key={toText(item.sku)} className="rounded-xl border border-slate-200 bg-white p-3">
+                  <div key={productId} className="rounded-xl border border-slate-200 bg-white p-3">
                     <div className="grid grid-cols-[96px_1fr] gap-3">
                       <ProductImage
-                        src={product?.coverImage}
-                        alt={toText(item.name)}
+                        src={toText(product.coverImage)}
+                        alt={toText(product.name)}
                         containerClassName="h-24 w-24 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-2"
                         className="h-full w-full object-contain"
                       />
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-950">{toText(item.name)}</p>
+                        <p className="text-sm font-semibold text-slate-950">{item.name}</p>
                         <p className="mt-1 text-xs text-slate-600">
-                          {pickDisplayAttributes(product)
-                            .map((attr) => `${attr.label}: ${attr.value}`)
-                            .join(" • ")}
+                          {pickDisplayAttributes(product).map((a) => `${a.label}: ${a.value}`).join(" • ")}
                         </p>
                         <p className="mt-1 text-xs text-slate-500">
                           Qty: {item.qty} • {fmt(regular)} ₽ / шт • со скидкой {fmt(discounted)} ₽ / шт
                         </p>
                       </div>
+                    </div>
+                    <div className="mt-2 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCartItems((prev) => {
+                            const next = { ...prev };
+                            delete next[productId];
+                            return next;
+                          });
+                        }}
+                        aria-label={`Удалить ${item.name}`}
+                        className="rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
+                      >
+                        Удалить
+                      </button>
                     </div>
                   </div>
                 );
@@ -1011,9 +941,7 @@ export function WizardStep1Lighting() {
               {selectedViewItems.length > 0 ? (
                 <div className="rounded-xl border border-slate-200 bg-white p-3 text-sm">
                   <p>Итого без скидки: {fmt(selectedTotals.regular)} ₽</p>
-                  <p className="font-semibold text-emerald-700">
-                    Итого со скидкой: {fmt(selectedTotals.discounted)} ₽
-                  </p>
+                  <p className="font-semibold text-emerald-700">Итого со скидкой: {fmt(selectedTotals.discounted)} ₽</p>
                   <p className="text-emerald-600">Ваша выгода: {fmt(selectedTotals.benefit)} ₽</p>
                 </div>
               ) : null}
@@ -1022,161 +950,116 @@ export function WizardStep1Lighting() {
             <>
               <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCatalogSection("track-systems");
-                      setSearchQuery("");
-                    }}
-                    className={`rounded-xl px-3 py-1.5 text-sm ${
-                      catalogSection === "track-systems"
-                        ? "bg-slate-950 text-white"
-                        : "bg-white text-slate-700"
-                    }`}
-                  >
-                    Трековые системы
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCatalogSection("point-fixtures");
-                      setSearchQuery("");
-                    }}
-                    className={`rounded-xl px-3 py-1.5 text-sm ${
-                      catalogSection === "point-fixtures"
-                        ? "bg-slate-950 text-white"
-                        : "bg-white text-slate-700"
-                    }`}
-                  >
-                    Точечные
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCatalogSection("mounts-grilles");
-                      setSearchQuery("");
-                    }}
-                    className={`rounded-xl px-3 py-1.5 text-sm ${
-                      catalogSection === "mounts-grilles"
-                        ? "bg-slate-950 text-white"
-                        : "bg-white text-slate-700"
-                    }`}
-                  >
-                    Решетки и закладные
-                  </button>
+                  {CATALOG_SECTIONS.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setSection(item.id);
+                        setQuery("");
+                      }}
+                      className={`rounded-xl px-3 py-1.5 text-sm ${
+                        section === item.id ? "bg-slate-950 text-white" : "bg-white text-slate-700"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
                 </div>
 
-                {catalogSection === "track-systems" ? (
+                {section === "track-systems" ? (
                   <>
                     <div className="flex flex-wrap gap-2">
-                      {(Object.keys(TRACK_SYSTEM_LABELS) as TrackSystemUi[]).map((system) => (
+                      {TRACK_SYSTEMS.map((system) => (
                         <button
-                          key={system}
+                          key={system.id}
                           type="button"
                           onClick={() => {
-                            setTrackSystem(system);
-                            setSearchQuery("");
+                            setTrackSystem(system.id);
+                            setQuery("");
                           }}
                           className={`rounded-xl px-3 py-1.5 text-xs ${
-                            trackSystem === system
-                              ? "bg-slate-900 text-white"
-                              : "bg-white text-slate-700"
+                            trackSystem === system.id ? "bg-slate-900 text-white" : "bg-white text-slate-700"
                           }`}
                         >
-                          {TRACK_SYSTEM_LABELS[system]}
+                          {system.label}
                         </button>
                       ))}
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setTrackGroup("TRACK_FIXTURE");
-                          setSearchQuery("");
-                        }}
-                        className={`rounded-xl px-3 py-1.5 text-xs ${
-                          trackGroup === "TRACK_FIXTURE"
-                            ? "bg-slate-900 text-white"
-                            : "bg-white text-slate-700"
-                        }`}
-                      >
-                        Светильники
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setTrackGroup("TRACK_PROFILE");
-                          setSearchQuery("");
-                        }}
-                        className={`rounded-xl px-3 py-1.5 text-xs ${
-                          trackGroup === "TRACK_PROFILE"
-                            ? "bg-slate-900 text-white"
-                            : "bg-white text-slate-700"
-                        }`}
-                      >
-                        Профили/шинопроводы
-                      </button>
+                      {TRACK_GROUPS.map((group) => (
+                        <button
+                          key={group.id}
+                          type="button"
+                          onClick={() => {
+                            setTrackGroup(group.id);
+                            setQuery("");
+                          }}
+                          className={`rounded-xl px-3 py-1.5 text-xs ${
+                            trackGroup === group.id ? "bg-slate-900 text-white" : "bg-white text-slate-700"
+                          }`}
+                        >
+                          {group.label}
+                        </button>
+                      ))}
                     </div>
                   </>
                 ) : null}
 
-                {catalogSection === "point-fixtures" ? (
+                {section === "point-fixtures" ? (
                   <div className="flex flex-wrap gap-2">
-                    {(["GX53", "MR16", "PANELS"] as PointSubtype[]).map((subtype) => (
+                    {POINT_SUBTYPES.map((subtype) => (
                       <button
-                        key={subtype}
+                        key={subtype.id}
                         type="button"
                         onClick={() => {
-                          setPointSubtype(subtype);
-                          setSearchQuery("");
+                          setPointSubtype(subtype.id);
+                          setQuery("");
                         }}
                         className={`rounded-xl px-3 py-1.5 text-xs ${
-                          pointSubtype === subtype
-                            ? "bg-slate-900 text-white"
-                            : "bg-white text-slate-700"
+                          pointSubtype === subtype.id ? "bg-slate-900 text-white" : "bg-white text-slate-700"
                         }`}
                       >
-                        {subtype}
+                        {subtype.label}
                       </button>
                     ))}
                   </div>
                 ) : null}
 
                 <input
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(toText(event.target.value))}
+                  value={query}
+                  onChange={(event) => setQuery(String(event.target.value ?? ""))}
+                  placeholder="Поиск в текущем разделе"
                   className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
-                  aria-label="Поиск по текущему разделу"
-                  placeholder="Поиск внутри текущего раздела"
                 />
               </div>
 
-              {showClarusMissingMessage ? (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+              {showClarusEmptyMessage ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                   Нет данных CLARUS в snapshot
                 </div>
               ) : null}
 
               <div className="grid gap-3 sm:grid-cols-2">
-                {browseProducts.map((product) => {
-                  const productId = toText(product.productId);
-                  const qty = Number(cartItems[productId] ?? 0);
+                {scopedProducts.map((product) => {
+                  const id = toText(product.productId);
+                  const qty = toNumber(cartItems[id]);
 
                   return (
                     <ProductCard
-                      key={productId}
+                      key={id}
                       product={product}
                       qty={qty}
-                      onInc={() => setProductQty(product, qty + stepByUnit(product.unit))}
-                      onDec={() => setProductQty(product, qty - stepByUnit(product.unit))}
+                      onInc={() => setProductQty(product, qty + (product.unit === "m" ? 0.5 : 1))}
+                      onDec={() => setProductQty(product, qty - (product.unit === "m" ? 0.5 : 1))}
                     />
                   );
                 })}
               </div>
 
-              {!showClarusMissingMessage && browseProducts.length === 0 ? (
-                <p className="py-4 text-center text-sm text-slate-500">Ничего не найдено</p>
+              {!showClarusEmptyMessage && scopedProducts.length === 0 ? (
+                <p className="text-sm text-slate-500">Ничего не найдено</p>
               ) : null}
             </>
           )}
