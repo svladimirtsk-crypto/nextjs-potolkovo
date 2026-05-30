@@ -35,6 +35,10 @@ export function LightKitCtaButton({ title, items, source }: LightKitCtaButtonPro
   const handleClick = () => {
     const filteredItems = items.filter((item) => !shouldDropRemovedItem(item));
 
+    if (filteredItems.length === 0) {
+      return;
+    }
+
     const totalRub = filteredItems.reduce((sum, i) => sum + i.qty * i.priceRub, 0);
     const discountedTotalRub = applyLightingDiscount(totalRub);
 
