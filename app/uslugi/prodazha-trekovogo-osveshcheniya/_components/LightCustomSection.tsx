@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { Heading } from "@/components/ui/heading";
 import { Section } from "@/components/ui/section";
+import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
 
 export function LightCustomSection() {
   const { openCalculator } = useCalculatorModal();
@@ -36,7 +37,7 @@ export function LightCustomSection() {
                   source: "track-sale-calculator",
                   preset: {
                     ceilingType: "standard",
-                    areaDefault: 10,
+                    areaDefault: DEFAULT_CALCULATOR_AREA,
                   },
                 })
               }
