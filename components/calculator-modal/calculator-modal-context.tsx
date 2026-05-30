@@ -19,16 +19,13 @@ import type {
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 
-const CalculatorModalContext = createContext<CalculatorModalContextValue | null>(
-  null
-);
+const CalculatorModalContext = createContext<CalculatorModalContextValue | null>(null);
 
 export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState<WizardStep>(0);
   const [options, setOptions] = useState<OpenCalculatorOptions | null>(null);
-  const [lightingDraft, setLightingDraftState] =
-    useState<LightingSnapshot | null>(null);
+  const [lightingDraft, setLightingDraftState] = useState<LightingSnapshot | null>(null);
   const [step0SessionInteracted, setStep0SessionInteracted] = useState(false);
   const [step1CatalogView, setStep1CatalogView] = useState<CatalogViewMode | null>(null);
 
@@ -45,6 +42,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   const openCalculator = useCallback(
     (opts?: OpenCalculatorOptions) => {
       const resolvedOpts = opts ?? {};
+
       setOptions(resolvedOpts);
       setCurrentStep(resolvedOpts.initialStep ?? 0);
 
@@ -54,12 +52,17 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
         setLightingDraftState(null);
       }
 
-      if (resolvedOpts.source) {
-        setSnapshot((prev) => (prev ? { ...prev, leadSource: resolvedOpts.source } : prev));
+      const source = String(resolvedOpts.source ?? "");
+      if (source.length > 0) {
+        setSnapshot((prev) => (prev ? { ...prev, leadSource: source } : prev));
       }
 
+      // Сессионный флаг должен сбрасываться на каждом новом openCalculator.
       setStep0SessionInteracted(false);
+
+      // Стабильная синхронизация view для Step1 <-> Step2.
       setStep1CatalogView(resolvedOpts.initialLightingView ?? null);
+
       setIsOpen(true);
     },
     [setSnapshot]
@@ -73,19 +76,17 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
     setCurrentStep(step);
   }, []);
 
-  const ceilingTotal = snapshot?.total ?? 0;
+  const ceilingTotal = Number(snapshot?.total ?? 0);
 
   const lightingDiscountedTotal = useMemo(() => {
     if (!lightingDraft) return 0;
 
     if (Number.isFinite(lightingDraft.discountedTotalRub)) {
-      const discounted = Number(lightingDraft.discountedTotalRub ?? 0);
-      return discounted;
+      return Number(lightingDraft.discountedTotalRub ?? 0);
     }
 
     if (Number.isFinite(lightingDraft.totalRub)) {
-      const total = Number(lightingDraft.totalRub ?? 0);
-      return applyLightingDiscount(total);
+      return applyLightingDiscount(Number(lightingDraft.totalRub ?? 0));
     }
 
     return 0;
@@ -130,11 +131,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
     ]
   );
 
-  return (
-    <CalculatorModalContext.Provider value={value}>
-      {children}
-    </CalculatorModalContext.Provider>
-  );
+  return <CalculatorModalContext.Provider value={value}>{children}</CalculatorModalContext.Provider>;
 }
 
 export function useCalculatorModal(): CalculatorModalContextValue {
