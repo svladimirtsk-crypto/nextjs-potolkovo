@@ -1,21 +1,14 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 
 import type {
   CalculatorModalContextValue,
-  CatalogViewMode,
   LightingSnapshot,
   OpenCalculatorOptions,
   WizardStep,
 } from "@/lib/calculator-modal-types";
+
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
@@ -26,9 +19,13 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState<WizardStep>(0);
   const [options, setOptions] = useState<OpenCalculatorOptions | null>(null);
+
   const [lightingDraft, setLightingDraftState] = useState<LightingSnapshot | null>(null);
+
   const [step0SessionInteracted, setStep0SessionInteracted] = useState(false);
-  const [step1CatalogView, setStep1CatalogView] = useState<CatalogViewMode | null>(null);
+  const [step0AreaConfirmed, setStep0AreaConfirmed] = useState(false);
+
+  const [step1CatalogView, setStep1CatalogView] = useState<"selected" | "browse" | null>(null);
 
   const { snapshot, setSnapshot } = usePriceCalculatorBridge();
 
@@ -38,6 +35,10 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
 
   const markStep0SessionInteracted = useCallback(() => {
     setStep0SessionInteracted(true);
+  }, []);
+
+  const markStep0AreaConfirmed = useCallback(() => {
+    setStep0AreaConfirmed(true);
   }, []);
 
   const openCalculator = useCallback(
@@ -63,18 +64,18 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       setOptions(resolvedOpts);
       setCurrentStep(resolvedOpts.initialStep ?? 0);
 
-      if (resolvedOpts.initialLighting) {
-        setLightingDraftState(resolvedOpts.initialLighting);
-      } else {
-        setLightingDraftState(null);
-      }
+      if (resolvedOpts.initialLighting) setLightingDraftState(resolvedOpts.initialLighting);
+      else setLightingDraftState(null);
 
       const source = String(resolvedOpts.source ?? "");
       if (source.length > 0) {
         setSnapshot((prev) => (prev ? { ...prev, leadSource: source } : prev));
       }
 
+      // reset session flags each open
       setStep0SessionInteracted(false);
+      setStep0AreaConfirmed(false);
+
       setStep1CatalogView(resolvedOpts.initialLightingView ?? null);
       setIsOpen(true);
     },
@@ -97,15 +98,16 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
     if (Number.isFinite(lightingDraft.discountedTotalRub)) {
       return Number(lightingDraft.discountedTotalRub ?? 0);
     }
-
     if (Number.isFinite(lightingDraft.totalRub)) {
       return applyLightingDiscount(Number(lightingDraft.totalRub ?? 0));
     }
-
     return 0;
   }, [lightingDraft]);
 
-  const grandTotal = ceilingTotal + lightingDiscountedTotal;
+  const grandTotal = useMemo(() => {
+    const base = Number(snapshot?.grandTotal ?? snapshot?.total ?? 0);
+    return base + lightingDiscountedTotal;
+  }, [lightingDiscountedTotal, snapshot?.grandTotal, snapshot?.total]);
 
   const value = useMemo<CalculatorModalContextValue>(
     () => ({
@@ -115,13 +117,20 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       openCalculator,
       closeCalculator,
       goToStep,
+
       lightingDraft,
       setLightingDraft,
+
       ceilingTotal,
       lightingDiscountedTotal,
       grandTotal,
+
       step0SessionInteracted,
       markStep0SessionInteracted,
+
+      step0AreaConfirmed,
+      markStep0AreaConfirmed,
+
       step1CatalogView,
       setStep1CatalogView,
     }),
@@ -139,6 +148,8 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       grandTotal,
       step0SessionInteracted,
       markStep0SessionInteracted,
+      step0AreaConfirmed,
+      markStep0AreaConfirmed,
       step1CatalogView,
       setStep1CatalogView,
     ]
@@ -148,9 +159,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
 }
 
 export function useCalculatorModal(): CalculatorModalContextValue {
-  const context = useContext(CalculatorModalContext);
-  if (!context) {
-    throw new Error("useCalculatorModal must be used inside CalculatorModalProvider.");
-  }
-  return context;
+  const ctx = useContext(CalculatorModalContext);
+  if (!ctx) throw new Error("useCalculatorModal must be used inside CalculatorModalProvider.");
+  return ctx;
 }
