@@ -1,7 +1,6 @@
 "use client";
 
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
 
 import { homepage } from "@/content/homepage";
 import type { ServiceCalculatorPreset } from "@/content/services";
@@ -58,6 +57,43 @@ function getPerimeterSuggestion(area: number): PerimeterSuggestion {
   return { recommended };
 }
 
+function getScrollParent(node: HTMLElement | null): HTMLElement | null {
+  if (!node) return null;
+
+  let parent = node.parentElement;
+  while (parent) {
+    const style = window.getComputedStyle(parent);
+    const overflowY = style.overflowY;
+    const canScroll =
+      (overflowY === "auto" || overflowY === "scroll") &&
+      parent.scrollHeight > parent.clientHeight;
+
+    if (canScroll) return parent;
+    parent = parent.parentElement;
+  }
+
+  // fallback
+  return (document.scrollingElement as HTMLElement | null) ?? null;
+}
+
+function scrollIntoViewWithOffset(
+  el: HTMLElement,
+  offsetPx: number,
+  behavior: ScrollBehavior
+) {
+  const parent = getScrollParent(el);
+  if (!parent) {
+    el.scrollIntoView({ behavior, block: "start" });
+    return;
+  }
+
+  const parentRect = parent.getBoundingClientRect();
+  const elRect = el.getBoundingClientRect();
+  const targetTop = elRect.top - parentRect.top + parent.scrollTop - offsetPx;
+
+  parent.scrollTo({ top: targetTop, behavior });
+}
+
 function SectionCard({
   title,
   description,
@@ -77,6 +113,38 @@ function SectionCard({
       </div>
       {children}
     </section>
+  );
+}
+
+function CompactBadge({ children }: { children: ReactNode }) {
+  return (
+    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-xs font-semibold text-white">
+      {children}
+    </span>
+  );
+}
+
+function SummaryRow({
+  label,
+  value,
+  onEdit,
+}: {
+  label: string;
+  value: string;
+  onEdit: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+      <p className="flex items-center gap-2 text-sm text-slate-700">
+        <CompactBadge>✓</CompactBadge>
+        <span>
+          {label}: <span className="font-semibold text-slate-950">{value}</span>
+        </span>
+      </p>
+      <Button type="button" variant="secondary" onClick={onEdit}>
+        Изменить
+      </Button>
+    </div>
   );
 }
 
@@ -100,27 +168,6 @@ function CollapsedStep({
         </Button>
       </div>
     </SectionCard>
-  );
-}
-
-function SummaryRow({
-  label,
-  value,
-  onEdit,
-}: {
-  label: string;
-  value: string;
-  onEdit: () => void;
-}) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
-      <p className="text-sm text-slate-700">
-        {label}: <span className="font-semibold text-slate-950">{value}</span>
-      </p>
-      <Button type="button" variant="secondary" onClick={onEdit}>
-        Изменить
-      </Button>
-    </div>
   );
 }
 
@@ -208,8 +255,8 @@ function RangeField({
   };
 
   /**
-   * ВАЖНО (фикс бага “40 → стереть → прыгнуло на 10”):
-   * - во время набора НЕ clamp'им на min/max
+   * Фикс бага “40 → стереть → прыгнуло на 10”:
+   * - во время набора НЕ clamp’им на min/max
    * - clamp делаем на blur/Enter
    */
   const commitWhileTyping = (raw: string) => {
@@ -255,12 +302,9 @@ function RangeField({
             onBlur={() => {
               const parsed = parseManual(manual);
               if (parsed === null) {
-                // пустое значение -> возвращаем текущее
                 setManual(String(value));
                 return;
               }
-
-              // blur: нормализуем и clamp'им
               const clamped = normalize(parsed);
               setManual(String(clamped));
               if (clamped !== value) onChange(clamped);
@@ -398,7 +442,6 @@ export function PriceCalculatorClient({
   preset,
   compactSections = false,
 }: PriceCalculatorClientProps) {
-  const pathname = usePathname();
   const { setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
 
   const resolvedAreaDefault = preset?.areaDefault ?? calculator.areaDefault;
@@ -448,7 +491,8 @@ export function PriceCalculatorClient({
   );
 
   const selectedTrack = useMemo(
-    () => calculator.tracks.find((t) => t.slug === trackType) ?? calculator.tracks[0],
+    () =>
+      calculator.tracks.find((t) => t.slug === trackType) ?? calculator.tracks[0],
     [trackType]
   );
 
@@ -508,9 +552,7 @@ export function PriceCalculatorClient({
   const trackTotal =
     selectedTrack.ratePerMeter > 0 ? trackLength * selectedTrack.ratePerMeter : 0;
 
-  const lightsTotal = lightsEnabled
-    ? lightsCount * calculator.lights.ratePerUnit
-    : 0;
+  const lightsTotal = lightsEnabled ? lightsCount * calculator.lights.ratePerUnit : 0;
 
   const total =
     ceilingBaseTotal +
@@ -624,14 +666,15 @@ export function PriceCalculatorClient({
 
   const showSlider = !compactSections; // в модалке: без range
 
-  // ===== COMPACT (модалка Step0): один открытый шаг за раз =====
+  // ===== COMPACT (модалка Step0): один открытый шаг + подтверждения с галочкой =====
   const compactSteps: CompactStepId[] = useMemo(() => {
     return hasSpecialCeiling
       ? ["area", "ceiling", "profile", "lightLines", "cornice", "track", "lights"]
       : ["area", "ceiling", "lightLines", "cornice", "track", "lights"];
   }, [hasSpecialCeiling]);
 
-  const [activeStep, setActiveStep] = useState<CompactStepId>(compactSteps[0] ?? "area");
+  const [activeStep, setActiveStep] = useState<CompactStepId>("area");
+  const [resumeStep, setResumeStep] = useState<CompactStepId | null>(null);
 
   const [confirmed, setConfirmed] = useState<Record<CompactStepId, boolean>>({
     area: !compactSections,
@@ -644,33 +687,32 @@ export function PriceCalculatorClient({
   });
 
   // refs for scrolling
-  const stepRefs: Record<CompactStepId, React.RefObject<HTMLDivElement | null>> = {
-    area: useRef<HTMLDivElement | null>(null),
-    ceiling: useRef<HTMLDivElement | null>(null),
-    profile: useRef<HTMLDivElement | null>(null),
-    lightLines: useRef<HTMLDivElement | null>(null),
-    cornice: useRef<HTMLDivElement | null>(null),
-    track: useRef<HTMLDivElement | null>(null),
-    lights: useRef<HTMLDivElement | null>(null),
+  const areaRef = useRef<HTMLDivElement | null>(null);
+  const ceilingRef = useRef<HTMLDivElement | null>(null);
+  const profileRef = useRef<HTMLDivElement | null>(null);
+  const lightLinesRef = useRef<HTMLDivElement | null>(null);
+  const corniceRef = useRef<HTMLDivElement | null>(null);
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const lightsRef = useRef<HTMLDivElement | null>(null);
+
+  const getRef = (id: CompactStepId) => {
+    switch (id) {
+      case "area":
+        return areaRef;
+      case "ceiling":
+        return ceilingRef;
+      case "profile":
+        return profileRef;
+      case "lightLines":
+        return lightLinesRef;
+      case "cornice":
+        return corniceRef;
+      case "track":
+        return trackRef;
+      case "lights":
+        return lightsRef;
+    }
   };
-
-  // если поменяли тип потолка и профиль исчез/появился — аккуратно правим подтверждения/активный шаг
-  useEffect(() => {
-    if (!compactSections) return;
-
-    setConfirmed((prev) => {
-      const next = { ...prev };
-      // если профильный шаг больше не существует — считаем его “подтверждённым” и не блокируем цепочку
-      if (!hasSpecialCeiling) next.profile = true;
-      return next;
-    });
-
-    // если активный шаг стал несуществующим (profile при стандартном) — перекинуть на следующий доступный
-    setActiveStep((prev) => {
-      if (prev === "profile" && !hasSpecialCeiling) return "lightLines";
-      return prev;
-    });
-  }, [compactSections, hasSpecialCeiling]);
 
   const stepIndex = (id: CompactStepId) => compactSteps.indexOf(id);
 
@@ -681,51 +723,107 @@ export function PriceCalculatorClient({
     return Boolean(confirmed[prevId]);
   };
 
-  const scrollToStep = (id: CompactStepId) => {
-    const el = stepRefs[id].current;
+  const scrollToStep = (id: CompactStepId, behavior: ScrollBehavior = "smooth") => {
+    const el = getRef(id).current;
     if (!el) return;
-    el.scrollIntoView({
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-      block: "start",
-    });
+
+    // оффсет под “шапку” модалки / липкие элементы
+    const OFFSET = 92;
+    scrollIntoViewWithOffset(el, OFFSET, behavior);
   };
 
-  const unconfirmFrom = (id: CompactStepId) => {
+  const nextUnconfirmedAfter = (id: CompactStepId) => {
     const idx = stepIndex(id);
-    if (idx < 0) return;
+    if (idx < 0) return null;
 
-    setConfirmed((prev) => {
-      const next = { ...prev };
-      for (let i = idx; i < compactSteps.length; i++) {
-        next[compactSteps[i]] = false;
-      }
-      return next;
-    });
-  };
-
-  const confirmStepAndGoNext = (id: CompactStepId) => {
-    const idx = stepIndex(id);
-    const nextId = idx >= 0 ? compactSteps[idx + 1] : undefined;
-
-    // 1) подтверждаем текущий
-    setConfirmed((prev) => ({ ...prev, [id]: true }));
-
-    // 2) остаёмся на текущем (он станет summary), скроллим к следующему, и только потом открываем её
-    if (nextId) {
-      // следующая вкладка ДО перехода остаётся закрытой (т.к. activeStep не меняем сразу)
-      scrollToStep(nextId);
-
-      requestAnimationFrame(() => {
-        setActiveStep(nextId);
-      });
+    for (let i = idx + 1; i < compactSteps.length; i++) {
+      const step = compactSteps[i];
+      if (!confirmed[step]) return step;
     }
+
+    return null;
   };
 
   const openStep = (id: CompactStepId) => {
     if (!isStepEnabled(id)) return;
     setActiveStep(id);
-    scrollToStep(id);
+
+    // сначала рендер, потом корректный скролл с оффсетом
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => scrollToStep(id, "smooth"));
+    });
   };
+
+  const beginEdit = (id: CompactStepId) => {
+    // запоминаем, откуда пользователь пришёл (чтобы после подтверждения вернуться)
+    setResumeStep((prev) => prev ?? activeStep);
+
+    // делаем редактируемый шаг "не подтвержден" (но НЕ трогаем остальные)
+    setConfirmed((prev) => ({ ...prev, [id]: false }));
+
+    openStep(id);
+  };
+
+  const confirmAndNavigate = (id: CompactStepId) => {
+    // 1) подтверждаем текущий
+    setConfirmed((prev) => ({ ...prev, [id]: true }));
+
+    // 2) выбираем куда идти:
+    //    - если это редактирование, возвращаемся туда, откуда пришли
+    //    - иначе идём к следующему неподтвержденному
+    const maybeResume = resumeStep && compactSteps.includes(resumeStep) ? resumeStep : null;
+
+    const fallbackNext = nextUnconfirmedAfter(id);
+
+    const nextTarget =
+      maybeResume && maybeResume !== id
+        ? maybeResume
+        : fallbackNext;
+
+    // очищаем resumeStep, если использовали
+    if (maybeResume) setResumeStep(null);
+
+    if (!nextTarget) {
+      // всё подтверждено (или нет дальше) — просто оставляем текущий в summary
+      return;
+    }
+
+    // ВАЖНО: "следующая вкладка должна быть закрыта перед переходом":
+    // - пока activeStep остаётся текущим, следующая отрисована как CollapsedStep
+    // - скроллим к ней в закрытом виде
+    // - затем открываем
+    setTimeout(() => {
+      scrollToStep(nextTarget, "smooth");
+
+      requestAnimationFrame(() => {
+        setActiveStep(nextTarget);
+
+        // после раскрытия высота меняется -> доскролливаем повторно,
+        // чтобы верх шага не скрывался (фикс бага “уехало ниже и спряталось”)
+        requestAnimationFrame(() => {
+          scrollToStep(nextTarget, "auto");
+        });
+      });
+    }, 0);
+  };
+
+  // Если потолок стал "не special" — профильный шаг исчезает => считаем его подтверждённым
+  // Если потолок стал special — профиль появляется => делаем его неподтверждённым (важный шаг)
+  useEffect(() => {
+    if (!compactSections) return;
+
+    setConfirmed((prev) => {
+      const next = { ...prev };
+      next.profile = hasSpecialCeiling ? false : true;
+      return next;
+    });
+
+    setActiveStep((prev) => {
+      if (prev === "profile" && !hasSpecialCeiling) return "lightLines";
+      return prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasSpecialCeiling, compactSections]);
 
   if (compactSections) {
     const stepNumber = (id: CompactStepId) => {
@@ -739,22 +837,17 @@ export function PriceCalculatorClient({
         <div className="min-w-0 space-y-5">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
             <p className="font-semibold text-slate-950">Быстрый расчёт</p>
-            <p className="mt-1">
-              Идём шаг за шагом: выбрали → подтвердили → перешли дальше.
-            </p>
+            <p className="mt-1">Один шаг за раз: выбрали → подтвердили → дальше.</p>
           </div>
 
           {/* AREA */}
-          <div ref={stepRefs.area}>
+          <div ref={areaRef}>
             {confirmed.area ? (
               <SectionCard title={`${stepNumber("area")}) Площадь`}>
                 <SummaryRow
                   label="Площадь"
                   value={`${area} м²`}
-                  onEdit={() => {
-                    unconfirmFrom("area");
-                    openStep("area");
-                  }}
+                  onEdit={() => beginEdit("area")}
                 />
               </SectionCard>
             ) : activeStep === "area" ? (
@@ -774,7 +867,7 @@ export function PriceCalculatorClient({
 
                 <div className="mt-4 flex items-center justify-between gap-3">
                   <p className="text-xs text-slate-500">Можно выбрать пресет или ввести вручную.</p>
-                  <Button type="button" variant="secondary" onClick={() => confirmStepAndGoNext("area")}>
+                  <Button type="button" variant="secondary" onClick={() => confirmAndNavigate("area")}>
                     Подтвердить
                   </Button>
                 </div>
@@ -790,16 +883,13 @@ export function PriceCalculatorClient({
           </div>
 
           {/* CEILING */}
-          <div ref={stepRefs.ceiling}>
+          <div ref={ceilingRef}>
             {confirmed.ceiling ? (
               <SectionCard title={`${stepNumber("ceiling")}) Тип потолка`}>
                 <SummaryRow
                   label="Тип"
                   value={selectedCeiling.label}
-                  onEdit={() => {
-                    unconfirmFrom("ceiling");
-                    openStep("ceiling");
-                  }}
+                  onEdit={() => beginEdit("ceiling")}
                 />
               </SectionCard>
             ) : activeStep === "ceiling" ? (
@@ -831,8 +921,8 @@ export function PriceCalculatorClient({
                   <Button
                     type="button"
                     variant="secondary"
-                    onClick={() => confirmStepAndGoNext("ceiling")}
-                    disabled={!confirmed.area}
+                    onClick={() => confirmAndNavigate("ceiling")}
+                    disabled={!isStepEnabled("ceiling")}
                   >
                     Подтвердить
                   </Button>
@@ -841,7 +931,7 @@ export function PriceCalculatorClient({
             ) : (
               <CollapsedStep
                 title={`${stepNumber("ceiling")}) Тип потолка`}
-                subtitle={confirmed.area ? "Выберите тип потолка" : "Сначала подтвердите площадь"}
+                subtitle={isStepEnabled("ceiling") ? "Выберите тип потолка" : "Сначала подтвердите площадь"}
                 enabled={isStepEnabled("ceiling")}
                 onOpen={() => openStep("ceiling")}
               />
@@ -850,16 +940,13 @@ export function PriceCalculatorClient({
 
           {/* PROFILE (only when special ceiling) */}
           {hasSpecialCeiling ? (
-            <div ref={stepRefs.profile}>
+            <div ref={profileRef}>
               {confirmed.profile ? (
                 <SectionCard title={`${stepNumber("profile")}) Длина профиля`}>
                   <SummaryRow
                     label={selectedCeiling.extraLabel ?? "Профиль"}
                     value={`${ceilingLength} м.п. (${ceilingLengthAuto ? "авто 1:1" : "вручную"})`}
-                    onEdit={() => {
-                      unconfirmFrom("profile");
-                      openStep("profile");
-                    }}
+                    onEdit={() => beginEdit("profile")}
                   />
                 </SectionCard>
               ) : activeStep === "profile" ? (
@@ -892,7 +979,7 @@ export function PriceCalculatorClient({
                     <Button
                       type="button"
                       variant="secondary"
-                      onClick={() => confirmStepAndGoNext("profile")}
+                      onClick={() => confirmAndNavigate("profile")}
                       disabled={!isStepEnabled("profile")}
                     >
                       Подтвердить
@@ -902,7 +989,7 @@ export function PriceCalculatorClient({
               ) : (
                 <CollapsedStep
                   title={`${stepNumber("profile")}) Длина профиля`}
-                  subtitle={isStepEnabled("profile") ? "Настройте длину профиля" : "Сначала подтвердите тип потолка"}
+                  subtitle={isStepEnabled("profile") ? "Настройте длину профиля" : "Подтвердите предыдущий шаг"}
                   enabled={isStepEnabled("profile")}
                   onOpen={() => openStep("profile")}
                 />
@@ -911,16 +998,13 @@ export function PriceCalculatorClient({
           ) : null}
 
           {/* LIGHT LINES */}
-          <div ref={stepRefs.lightLines}>
+          <div ref={lightLinesRef}>
             {confirmed.lightLines ? (
               <SectionCard title={`${stepNumber("lightLines")}) Световые линии`}>
                 <SummaryRow
                   label="Световые линии"
                   value={lightLinesEnabled ? `${lightLinesLength} м.п.` : "нет"}
-                  onEdit={() => {
-                    unconfirmFrom("lightLines");
-                    openStep("lightLines");
-                  }}
+                  onEdit={() => beginEdit("lightLines")}
                 />
               </SectionCard>
             ) : activeStep === "lightLines" ? (
@@ -970,7 +1054,7 @@ export function PriceCalculatorClient({
                   <Button
                     type="button"
                     variant="secondary"
-                    onClick={() => confirmStepAndGoNext("lightLines")}
+                    onClick={() => confirmAndNavigate("lightLines")}
                     disabled={!isStepEnabled("lightLines")}
                   >
                     Подтвердить
@@ -988,7 +1072,7 @@ export function PriceCalculatorClient({
           </div>
 
           {/* CORNICE */}
-          <div ref={stepRefs.cornice}>
+          <div ref={corniceRef}>
             {confirmed.cornice ? (
               <SectionCard title={`${stepNumber("cornice")}) Карнизы`}>
                 <SummaryRow
@@ -998,10 +1082,7 @@ export function PriceCalculatorClient({
                       ? `${selectedCornice.label}, ${corniceLength} м.п.`
                       : "нет"
                   }
-                  onEdit={() => {
-                    unconfirmFrom("cornice");
-                    openStep("cornice");
-                  }}
+                  onEdit={() => beginEdit("cornice")}
                 />
               </SectionCard>
             ) : activeStep === "cornice" ? (
@@ -1052,7 +1133,7 @@ export function PriceCalculatorClient({
                   <Button
                     type="button"
                     variant="secondary"
-                    onClick={() => confirmStepAndGoNext("cornice")}
+                    onClick={() => confirmAndNavigate("cornice")}
                     disabled={!isStepEnabled("cornice")}
                   >
                     Подтвердить
@@ -1070,7 +1151,7 @@ export function PriceCalculatorClient({
           </div>
 
           {/* TRACK */}
-          <div ref={stepRefs.track}>
+          <div ref={trackRef}>
             {confirmed.track ? (
               <SectionCard title={`${stepNumber("track")}) Трековое освещение`}>
                 <SummaryRow
@@ -1080,10 +1161,7 @@ export function PriceCalculatorClient({
                       ? `${selectedTrack.label}, ${trackLength} м.п.`
                       : "нет"
                   }
-                  onEdit={() => {
-                    unconfirmFrom("track");
-                    openStep("track");
-                  }}
+                  onEdit={() => beginEdit("track")}
                 />
               </SectionCard>
             ) : activeStep === "track" ? (
@@ -1137,7 +1215,7 @@ export function PriceCalculatorClient({
                   <Button
                     type="button"
                     variant="secondary"
-                    onClick={() => confirmStepAndGoNext("track")}
+                    onClick={() => confirmAndNavigate("track")}
                     disabled={!isStepEnabled("track")}
                   >
                     Подтвердить
@@ -1155,16 +1233,13 @@ export function PriceCalculatorClient({
           </div>
 
           {/* LIGHTS */}
-          <div ref={stepRefs.lights}>
+          <div ref={lightsRef}>
             {confirmed.lights ? (
               <SectionCard title={`${stepNumber("lights")}) Точечные светильники`}>
                 <SummaryRow
                   label="Светильники"
                   value={lightsEnabled ? `${lightsCount} шт.` : "нет"}
-                  onEdit={() => {
-                    unconfirmFrom("lights");
-                    openStep("lights");
-                  }}
+                  onEdit={() => beginEdit("lights")}
                 />
               </SectionCard>
             ) : activeStep === "lights" ? (
@@ -1212,13 +1287,7 @@ export function PriceCalculatorClient({
 
                 <div className="mt-4 flex items-center justify-between gap-3">
                   <p className="text-xs text-slate-500">Выберите вариант и подтвердите.</p>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => {
-                      setConfirmed((prev) => ({ ...prev, lights: true }));
-                    }}
-                  >
+                  <Button type="button" variant="secondary" onClick={() => confirmAndNavigate("lights")}>
                     Подтвердить
                   </Button>
                 </div>
@@ -1238,9 +1307,7 @@ export function PriceCalculatorClient({
         <div className="lg:sticky lg:top-24 lg:self-start">
           <div className="rounded-[1.75rem] bg-slate-950 p-6 text-white shadow-2xl shadow-slate-950/10">
             <p className="text-sm text-white/70">Ориентировочная стоимость от</p>
-            <p className="mt-2 text-3xl font-semibold tracking-tight">
-              {formatCurrency(total)} ₽
-            </p>
+            <p className="mt-2 text-3xl font-semibold tracking-tight">{formatCurrency(total)} ₽</p>
 
             <p className="mt-2 text-xs text-white/70">
               Площадь {area} м² · {selectedCeiling.label}
@@ -1258,7 +1325,7 @@ export function PriceCalculatorClient({
     );
   }
 
-  // ===== NON-COMPACT (страница): оставляем с “Составом расчёта” =====
+  // ===== NON-COMPACT (страница) — обычный режим с “Составом расчёта” =====
   return (
     <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:p-8">
       <div className="min-w-0 space-y-5">
@@ -1500,9 +1567,7 @@ export function PriceCalculatorClient({
       <div className="lg:sticky lg:top-24 lg:self-start">
         <div className="rounded-[1.75rem] bg-slate-950 p-6 text-white shadow-2xl shadow-slate-950/10">
           <p className="text-sm text-white/70">Ориентировочная стоимость от</p>
-          <p className="mt-2 text-3xl font-semibold tracking-tight">
-            {formatCurrency(total)} ₽
-          </p>
+          <p className="mt-2 text-3xl font-semibold tracking-tight">{formatCurrency(total)} ₽</p>
 
           <p className="mt-2 text-xs text-white/70">
             При площади {area} м² и выбранных параметрах.
@@ -1522,10 +1587,7 @@ export function PriceCalculatorClient({
               ) : null}
 
               {lightLinesTotal > 0 ? (
-                <PriceRow
-                  label={calculator.lightLines.label}
-                  value={`${formatCurrency(lightLinesTotal)} ₽`}
-                />
+                <PriceRow label={calculator.lightLines.label} value={`${formatCurrency(lightLinesTotal)} ₽`} />
               ) : null}
 
               {corniceTotal > 0 ? (
@@ -1551,8 +1613,6 @@ export function PriceCalculatorClient({
               {homepage.price.primaryCtaLabel}
             </Button>
           </div>
-
-          <p className="mt-3 text-xs text-white/60">Маршрут: Москва и МО.</p>
         </div>
       </div>
     </div>
