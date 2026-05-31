@@ -186,7 +186,10 @@ function CollapsibleSection({
       </button>
 
       {isOpen ? (
-        <div ref={contentRef} className="border-t border-slate-200 px-4 py-4 sm:px-5">
+        <div
+          ref={contentRef}
+          className="border-t border-slate-200 px-4 py-4 sm:px-5"
+        >
           {children}
         </div>
       ) : null}
@@ -220,7 +223,9 @@ function OptionCard({
     >
       <div className="flex flex-1 items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 text-sm font-semibold leading-5">{title}</p>
+          <p className="line-clamp-2 text-sm font-semibold leading-5">
+            {title}
+          </p>
           <p
             className={[
               "mt-1 line-clamp-2 text-xs leading-5",
@@ -443,7 +448,9 @@ function PriceRow({
     <div
       className={[
         "flex items-center justify-between gap-4",
-        strong ? "text-sm font-semibold text-slate-950" : "text-sm text-slate-600",
+        strong
+          ? "text-sm font-semibold text-slate-950"
+          : "text-sm text-slate-600",
       ].join(" ")}
     >
       <span>{label}</span>
@@ -467,10 +474,12 @@ export function PriceCalculatorClient({
   const [isDesktopAccordion, setIsDesktopAccordion] = useState(false);
 
   // guided UX только в compactSections (модалка Step0)
-  const [guidedStep, setGuidedStep] = useState<0 | 1 | 2>(0);
+  const [areaConfirmed, setAreaConfirmed] = useState<boolean>(!compactSections);
+  const [ceilingConfirmed, setCeilingConfirmed] = useState<boolean>(!compactSections);
 
   const areaSectionRef = useRef<HTMLDivElement | null>(null);
   const ceilingSectionRef = useRef<HTMLDivElement | null>(null);
+  const extrasSectionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 1024px)");
@@ -491,11 +500,15 @@ export function PriceCalculatorClient({
   const [ceilingType, setCeilingType] = useState<CeilingType>(resolvedCeilingType);
 
   // Периметр (профиль) + авто-режим
-  const [ceilingLength, setCeilingLength] = useState<number>(() => getPerimeterSuggestion(resolvedAreaDefault).recommended);
+  const [ceilingLength, setCeilingLength] = useState<number>(() =>
+    getPerimeterSuggestion(resolvedAreaDefault).recommended
+  );
   const [ceilingLengthAuto, setCeilingLengthAuto] = useState<boolean>(true);
 
   const [lightLinesEnabled, setLightLinesEnabled] = useState<boolean>(false);
-  const [lightLinesLength, setLightLinesLength] = useState<number>(calculator.lightLineMeters.default);
+  const [lightLinesLength, setLightLinesLength] = useState<number>(
+    calculator.lightLineMeters.default
+  );
 
   const [corniceType, setCorniceType] = useState<CorniceType>(resolvedCorniceType);
   const [corniceLength, setCorniceLength] = useState<number>(calculator.corniceMeters.default);
@@ -509,17 +522,23 @@ export function PriceCalculatorClient({
   const perimeterSuggestion = useMemo(() => getPerimeterSuggestion(area), [area]);
 
   const selectedCeiling = useMemo(
-    () => calculator.ceilingTypes.find((c) => c.slug === ceilingType) ?? calculator.ceilingTypes[0],
+    () =>
+      calculator.ceilingTypes.find((c) => c.slug === ceilingType) ??
+      calculator.ceilingTypes[0],
     [ceilingType]
   );
 
   const selectedCornice = useMemo(
-    () => calculator.cornices.find((c) => c.slug === corniceType) ?? calculator.cornices[0],
+    () =>
+      calculator.cornices.find((c) => c.slug === corniceType) ??
+      calculator.cornices[0],
     [corniceType]
   );
 
   const selectedTrack = useMemo(
-    () => calculator.tracks.find((t) => t.slug === trackType) ?? calculator.tracks[0],
+    () =>
+      calculator.tracks.find((t) => t.slug === trackType) ??
+      calculator.tracks[0],
     [trackType]
   );
 
@@ -582,19 +601,25 @@ export function PriceCalculatorClient({
     ? lightLinesLength * calculator.lightLines.ratePerMeter
     : 0;
 
-  const corniceTotal = selectedCornice.ratePerMeter > 0
-    ? corniceLength * selectedCornice.ratePerMeter
-    : 0;
+  const corniceTotal =
+    selectedCornice.ratePerMeter > 0
+      ? corniceLength * selectedCornice.ratePerMeter
+      : 0;
 
-  const trackTotal = selectedTrack.ratePerMeter > 0
-    ? trackLength * selectedTrack.ratePerMeter
-    : 0;
+  const trackTotal =
+    selectedTrack.ratePerMeter > 0
+      ? trackLength * selectedTrack.ratePerMeter
+      : 0;
 
-  const lightsTotal = lightsEnabled
-    ? lightsCount * calculator.lights.ratePerUnit
-    : 0;
+  const lightsTotal = lightsEnabled ? lightsCount * calculator.lights.ratePerUnit : 0;
 
-  const total = ceilingBaseTotal + ceilingExtraTotal + lightLinesTotal + corniceTotal + trackTotal + lightsTotal;
+  const total =
+    ceilingBaseTotal +
+    ceilingExtraTotal +
+    lightLinesTotal +
+    corniceTotal +
+    trackTotal +
+    lightsTotal;
 
   // derived inputs
   const derivedTrackMountType: DerivedInputs["trackMountType"] =
@@ -690,6 +715,15 @@ export function PriceCalculatorClient({
 
   const markInteracted = () => setHasInteracted(true);
 
+  const scrollToRef = (ref: React.RefObject<HTMLDivElement | null>) => {
+    const el = ref.current;
+    if (!el) return;
+    el.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      block: "start",
+    });
+  };
+
   const handleAreaChange = (v: number) => {
     markInteracted();
     setArea(v);
@@ -704,13 +738,10 @@ export function PriceCalculatorClient({
     markInteracted();
     setCeilingType(slug);
 
+    // При выборе теневого/парящего — включаем авто 1:1 (но НЕ подтверждаем шаг автоматически)
     if (slug !== "standard") {
-      // при выборе теневого/парящего — включаем авто 1:1
       setCeilingLengthAuto(true);
       setCeilingLength(getPerimeterSuggestion(area).recommended);
-      if (isDesktopAccordion) {
-        setOpenSections((prev) => ({ ...prev, "ceiling-profile": true }));
-      }
     }
   };
 
@@ -768,18 +799,37 @@ export function PriceCalculatorClient({
     setLightsCount(v);
   };
 
-  const showSlider = !compactSections; // ключевая UX-правка: в модалке без range
+  const showSlider = !compactSections; // в модалке без range
+
+  const activeStep: 0 | 1 | 2 = !compactSections
+    ? 2
+    : !areaConfirmed
+      ? 0
+      : !ceilingConfirmed
+        ? 1
+        : 2;
 
   const guidedRing = (active: boolean) =>
     compactSections && active ? "ring-2 ring-blue-600 ring-offset-2 bg-blue-50/50" : "";
 
-  const scrollToRef = (ref: React.RefObject<HTMLDivElement | null>) => {
-    const el = ref.current;
-    if (!el) return;
-    el.scrollIntoView({
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-      block: "start",
-    });
+  const confirmArea = () => {
+    setAreaConfirmed(true);
+    // если пользователь вернулся редактировать площадь — пусть переподтвердит потолок тоже
+    setCeilingConfirmed(false);
+    scrollToRef(ceilingSectionRef);
+  };
+
+  const confirmCeiling = () => {
+    setCeilingConfirmed(true);
+
+    // слегка “ведём дальше”: открываем релевантный блок
+    if (hasSpecialCeiling) {
+      setOpenSections((prev) => ({ ...prev, "ceiling-profile": true }));
+    } else {
+      setOpenSections((prev) => ({ ...prev, tracks: true }));
+    }
+
+    scrollToRef(extrasSectionRef);
   };
 
   return (
@@ -789,91 +839,126 @@ export function PriceCalculatorClient({
         {compactSections ? (
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
             <p className="font-semibold text-slate-950">Быстрый расчёт</p>
-            <p className="mt-1">
-              1) Площадь → 2) Тип потолка → 3) Доп. опции (по желанию).
-            </p>
+            <p className="mt-1">1) Площадь → 2) Тип потолка → 3) Доп. опции (по желанию).</p>
           </div>
         ) : null}
 
+        {/* STEP A: AREA */}
         <div ref={areaSectionRef}>
-          <SectionCard
-            title="Площадь помещения"
-            className={guidedRing(guidedStep === 0)}
-          >
-            <RangeField
-              id="area-field"
-              label="Выберите площадь"
-              value={area}
-              min={calculator.areaMin}
-              max={calculator.areaMax}
-              step={calculator.areaStep}
-              unit="м²"
-              onChange={handleAreaChange}
-              showSlider={showSlider}
-              quickValues={[10, 15, 20, 25, 30, 40]}
-            />
-
-            {compactSections ? (
-              <div className="mt-4 flex items-center justify-between gap-3">
-                <p className="text-xs text-slate-500">
-                  Можно ввести вручную или выбрать пресет.
+          {compactSections && areaConfirmed ? (
+            <SectionCard title="Площадь помещения" className={guidedRing(activeStep === 0)}>
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+                <p className="text-sm text-slate-700">
+                  Выбрано: <span className="font-semibold text-slate-950">{area} м²</span>
                 </p>
                 <Button
                   type="button"
                   variant="secondary"
                   onClick={() => {
-                    setGuidedStep(1);
-                    scrollToRef(ceilingSectionRef);
+                    setAreaConfirmed(false);
+                    setCeilingConfirmed(false);
+                    scrollToRef(areaSectionRef);
                   }}
                 >
-                  Подтвердить площадь
+                  Изменить
                 </Button>
               </div>
-            ) : null}
-          </SectionCard>
+            </SectionCard>
+          ) : (
+            <SectionCard title="Площадь помещения" className={guidedRing(activeStep === 0)}>
+              <RangeField
+                id="area-field"
+                label="Выберите площадь"
+                value={area}
+                min={calculator.areaMin}
+                max={calculator.areaMax}
+                step={calculator.areaStep}
+                unit="м²"
+                onChange={handleAreaChange}
+                showSlider={showSlider}
+                quickValues={[10, 15, 20, 25, 30, 40]}
+              />
+
+              {compactSections ? (
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <p className="text-xs text-slate-500">Можно ввести вручную или выбрать пресет.</p>
+                  <Button type="button" variant="secondary" onClick={confirmArea}>
+                    Подтвердить площадь
+                  </Button>
+                </div>
+              ) : null}
+            </SectionCard>
+          )}
         </div>
 
+        {/* STEP B: CEILING TYPE */}
         <div ref={ceilingSectionRef}>
-          <SectionCard
-            title="Тип потолка"
-            description="Для теневого и парящего: цена полотна считается по новой ставке за м², а профиль считается отдельно (по м.п.)."
-            className={guidedRing(guidedStep === 1)}
-          >
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              {calculator.ceilingTypes.map((option) => {
-                const meta =
-                  option.slug === "standard"
-                    ? `от ${formatCurrency(option.baseRatePerSqm)} ₽ / м²`
-                    : `${formatCurrency(option.baseRatePerSqm)} ₽ / м² + ${formatCurrency(option.extraRatePerMeter)} ₽ / м.п.`;
-
-                return (
-                  <OptionCard
-                    key={option.slug}
-                    active={ceilingType === option.slug}
-                    title={option.label}
-                    meta={meta}
-                    onClick={() => {
-                      handleCeilingTypeChange(option.slug);
-                      if (compactSections) setGuidedStep(2);
-                    }}
-                  />
-                );
-              })}
-            </div>
-
-            {compactSections ? (
-              <div className="mt-4 flex justify-end">
+          {compactSections && areaConfirmed && ceilingConfirmed ? (
+            <SectionCard title="Тип потолка" className={guidedRing(activeStep === 1)}>
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+                <p className="text-sm text-slate-700">
+                  Выбрано:{" "}
+                  <span className="font-semibold text-slate-950">{selectedCeiling.label}</span>
+                </p>
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={() => setGuidedStep(2)}
+                  onClick={() => {
+                    setCeilingConfirmed(false);
+                    scrollToRef(ceilingSectionRef);
+                  }}
                 >
-                  Продолжить
+                  Изменить
                 </Button>
               </div>
-            ) : null}
-          </SectionCard>
+            </SectionCard>
+          ) : (
+            <SectionCard
+              title="Тип потолка"
+              description="Для теневого и парящего: цена полотна считается по новой ставке за м², а профиль считается отдельно (по м.п.)."
+              className={guidedRing(activeStep === 1)}
+            >
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {calculator.ceilingTypes.map((option) => {
+                  const meta =
+                    option.slug === "standard"
+                      ? `от ${formatCurrency(option.baseRatePerSqm)} ₽ / м²`
+                      : `${formatCurrency(option.baseRatePerSqm)} ₽ / м² + ${formatCurrency(option.extraRatePerMeter)} ₽ / м.п.`;
+
+                  return (
+                    <OptionCard
+                      key={option.slug}
+                      active={ceilingType === option.slug}
+                      title={option.label}
+                      meta={meta}
+                      onClick={() => {
+                        handleCeilingTypeChange(option.slug);
+                        if (compactSections) setCeilingConfirmed(false);
+                      }}
+                    />
+                  );
+                })}
+              </div>
+
+              {compactSections ? (
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <p className="text-xs text-slate-500">После выбора — подтвердите и перейдём дальше.</p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={confirmCeiling}
+                    disabled={!areaConfirmed}
+                  >
+                    Подтвердить тип потолка
+                  </Button>
+                </div>
+              ) : null}
+            </SectionCard>
+          )}
         </div>
+
+        {/* STEP C: EXTRAS */}
+        <div ref={extrasSectionRef} />
 
         {hasSpecialCeiling ? (
           <CollapsibleSection
@@ -1091,10 +1176,7 @@ export function PriceCalculatorClient({
             <p className="text-xs font-semibold text-white/80">Состав расчёта</p>
 
             <div className="mt-3 space-y-2">
-              <PriceRow
-                label="Потолок"
-                value={`${formatCurrency(ceilingBaseTotal)} ₽`}
-              />
+              <PriceRow label="Потолок" value={`${formatCurrency(ceilingBaseTotal)} ₽`} />
 
               {ceilingExtraTotal > 0 ? (
                 <PriceRow
@@ -1111,32 +1193,19 @@ export function PriceCalculatorClient({
               ) : null}
 
               {corniceTotal > 0 ? (
-                <PriceRow
-                  label={selectedCornice.label}
-                  value={`${formatCurrency(corniceTotal)} ₽`}
-                />
+                <PriceRow label={selectedCornice.label} value={`${formatCurrency(corniceTotal)} ₽`} />
               ) : null}
 
               {trackTotal > 0 ? (
-                <PriceRow
-                  label={selectedTrack.label}
-                  value={`${formatCurrency(trackTotal)} ₽`}
-                />
+                <PriceRow label={selectedTrack.label} value={`${formatCurrency(trackTotal)} ₽`} />
               ) : null}
 
               {lightsTotal > 0 ? (
-                <PriceRow
-                  label="Светильники"
-                  value={`${formatCurrency(lightsTotal)} ₽`}
-                />
+                <PriceRow label="Светильники" value={`${formatCurrency(lightsTotal)} ₽`} />
               ) : null}
 
               <div className="border-t border-white/10 pt-3">
-                <PriceRow
-                  label="Итого"
-                  value={`${formatCurrency(total)} ₽`}
-                  strong
-                />
+                <PriceRow label="Итого" value={`${formatCurrency(total)} ₽`} strong />
               </div>
             </div>
           </div>
@@ -1146,6 +1215,12 @@ export function PriceCalculatorClient({
               {homepage.price.primaryCtaLabel}
             </Button>
           </div>
+
+          {compactSections ? (
+            <p className="mt-3 text-xs text-white/60">
+              Подсказка: если вы пришли “только за светом” — параметры потолка можно пропустить и перейти к каталогу на следующем шаге.
+            </p>
+          ) : null}
         </div>
       </div>
     </div>
