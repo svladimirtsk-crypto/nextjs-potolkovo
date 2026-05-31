@@ -147,7 +147,7 @@ function matchesPointSubtype(product: FeedCatalogProduct, subtype: PointSubtypeI
 
 function pickDisplayAttributes(product: FeedCatalogProduct): { label: string; value: string }[] {
   const attrs = product.keyAttributes?.length ? product.keyAttributes : product.params;
-  return (attrs ?? []).slice(0, 4).map((attr) => ({ label: toText(attr.label), value: toText(attr.value) }));
+  return (attrs ?? []).slice(0, 3).map((attr) => ({ label: toText(attr.label), value: toText(attr.value) }));
 }
 
 function TabButton({
@@ -173,46 +173,6 @@ function TabButton({
   );
 }
 
-function ProductQtyControls({
-  qty,
-  unit,
-  onDec,
-  onInc,
-}: {
-  qty: number;
-  unit: "pcs" | "m";
-  onDec: () => void;
-  onInc: () => void;
-}) {
-  const displayQty = unit === "m" ? qty.toFixed(1) : String(qty);
-
-  return (
-    <div className="flex items-center gap-2">
-      <button
-        type="button"
-        onClick={onDec}
-        className="h-8 w-8 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-900 hover:bg-slate-50"
-        aria-label="Уменьшить количество"
-      >
-        −
-      </button>
-
-      <div className="min-w-[56px] text-center text-sm font-semibold text-slate-950">
-        {displayQty} {unit === "m" ? "м" : "шт"}
-      </div>
-
-      <button
-        type="button"
-        onClick={onInc}
-        className="h-8 w-8 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-900 hover:bg-slate-50"
-        aria-label="Увеличить количество"
-      >
-        +
-      </button>
-    </div>
-  );
-}
-
 function ProductCard({
   product,
   qty,
@@ -233,50 +193,80 @@ function ProductCard({
     .join(" • ");
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4">
-      <div className="flex gap-4">
-        <div className="h-20 w-20 shrink-0">
-          <ProductImageLightbox
-            src={product.coverImage}
-            alt={toText(product.name)}
-            thumbClassName="h-20 w-20"
-          />
+    <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <div className="p-3">
+        <ProductImageLightbox
+          src={product.coverImage}
+          alt={toText(product.name)}
+          thumbClassName="w-full aspect-[4/3]"
+        />
+      </div>
+
+      <div className="px-4 pb-4">
+        <p className="text-sm font-semibold text-slate-950 leading-snug break-words">
+          {toText(product.name)}
+        </p>
+        {toText(product.vendorCode) ? (
+          <p className="mt-1 text-xs text-slate-500">Артикул: {toText(product.vendorCode)}</p>
+        ) : null}
+        {attrs ? <p className="mt-1 text-xs text-slate-500">{attrs}</p> : null}
+
+        <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-950">{fmt(regular)} ₽</p>
+            <p className="text-xs text-emerald-700">со скидкой: {fmt(discounted)} ₽</p>
+            {benefit > 0 ? <p className="text-xs text-slate-500">выгода: {fmt(benefit)} ₽</p> : null}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onDec}
+              className="h-9 w-9 rounded-full border border-slate-200 bg-white text-base font-semibold text-slate-900 hover:bg-slate-50"
+              aria-label="Уменьшить количество"
+            >
+              −
+            </button>
+
+            <div className="min-w-[72px] text-center text-sm font-semibold text-slate-950">
+              {product.unit === "m" ? qty.toFixed(1) : qty} {product.unit === "m" ? "м" : "шт"}
+            </div>
+
+            <button
+              type="button"
+              onClick={onInc}
+              className="h-9 w-9 rounded-full border border-slate-200 bg-white text-base font-semibold text-slate-900 hover:bg-slate-50"
+              aria-label="Увеличить количество"
+            >
+              +
+            </button>
+          </div>
         </div>
 
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-slate-950">{toText(product.name)}</p>
-              {toText(product.vendorCode) ? (
-                <p className="mt-1 text-xs text-slate-500">Артикул: {toText(product.vendorCode)}</p>
-              ) : null}
-              {attrs ? <p className="mt-1 text-xs text-slate-500">{attrs}</p> : null}
-            </div>
-
-            <div className="text-right">
-              <p className="text-sm font-semibold text-slate-950">{fmt(regular)} ₽</p>
-              <p className="text-xs text-emerald-700">со скидкой: {fmt(discounted)} ₽</p>
-              {benefit > 0 ? <p className="text-xs text-slate-500">выгода: {fmt(benefit)} ₽</p> : null}
-            </div>
-          </div>
-
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-            <ProductQtyControls qty={qty} unit={product.unit} onDec={onDec} onInc={onInc} />
-            {qty > 0 ? (
-              <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-white">В корзине</span>
-            ) : (
-              <span className="text-xs text-slate-500">Не выбрано</span>
-            )}
-          </div>
+        <div className="mt-3">
+          {qty > 0 ? (
+            <span className="inline-flex rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-white">
+              В корзине
+            </span>
+          ) : (
+            <span className="text-xs text-slate-500">Не выбрано</span>
+          )}
         </div>
       </div>
-    </div>
+    </article>
   );
 }
 
 export function WizardStep1Lighting() {
   const { snapshot } = usePriceCalculatorBridge();
-  const { options, step1CatalogView, setStep1CatalogView, setLightingDraft } = useCalculatorModal();
+
+  const {
+    options,
+    currentStep,
+    step1CatalogView,
+    setStep1CatalogView,
+    setLightingDraft,
+  } = useCalculatorModal();
 
   const initialTab: Tab = options?.initialLightingTab === "catalog" ? "catalog" : "recommendations";
   const initialView: CatalogView = options?.initialLightingView === "selected" ? "selected" : "browse";
@@ -292,6 +282,7 @@ export function WizardStep1Lighting() {
 
   const [cartItems, setCartItems] = useState<CartItems>({});
   const prevInitialLightingRef = useRef<LightingSnapshot | null | undefined>(undefined);
+  const didAutoRecommendationsRef = useRef(false);
 
   const products = useMemo(() => {
     const rawProducts = (snapshotData as { products?: unknown[] })?.products ?? [];
@@ -366,6 +357,17 @@ export function WizardStep1Lighting() {
       .filter((x): x is { productId: string; product: FeedCatalogProduct; qty: number } => Boolean(x));
   }, [byProductId, cartItems]);
 
+  // auto-show recommendations when entering step1 with empty cart (one-time, не мешаем пользователю)
+  useEffect(() => {
+    if (currentStep !== 1) return;
+    if (didAutoRecommendationsRef.current) return;
+
+    if (cartEntries.length === 0) {
+      setActiveTab("recommendations");
+      didAutoRecommendationsRef.current = true;
+    }
+  }, [cartEntries.length, currentStep]);
+
   useEffect(() => {
     if (cartEntries.length === 0) {
       setLightingDraft({ mode: "none", userCustomizedLighting: false });
@@ -394,7 +396,27 @@ export function WizardStep1Lighting() {
     setLightingDraft(draft);
   }, [cartEntries, setLightingDraft, snapshot?.derivedInputs]);
 
-  // deps
+  // recommendations: status counts
+  const selectedPointQty = useMemo(() => {
+    let qty = 0;
+    for (const e of cartEntries) {
+      if (e.product.kind === "SPOT_FIXTURE" || isPanelProduct(e.product)) qty += e.qty;
+    }
+    return qty;
+  }, [cartEntries]);
+
+  const selectedTrackMeters = useMemo(() => {
+    let meters = 0;
+    for (const e of cartEntries) {
+      if (e.product.kind !== "TRACK_PROFILE") continue;
+      if (e.product.unit === "m") meters += e.qty;
+      else if (typeof e.product.pieceLengthMeters === "number") meters += e.qty * e.product.pieceLengthMeters;
+      else if (typeof e.product.lengthMeters === "number") meters += e.qty * e.product.lengthMeters;
+    }
+    return meters;
+  }, [cartEntries]);
+
+  // deps warnings
   const mountRequiredByVendor = useMemo(() => {
     const required: Record<string, number> = {};
     for (const entry of cartEntries) {
@@ -565,6 +587,21 @@ export function WizardStep1Lighting() {
 
   const totalSelectedDiscounted = useMemo(() => applyLightingDiscount(totalSelected), [totalSelected]);
 
+  const gotoTracks = () => {
+    setActiveTab("catalog");
+    setCatalogViewAndSync("browse");
+    setSection("track-systems");
+    setTrackGroup("TRACK_FIXTURE");
+    setQuery("");
+  };
+
+  const gotoPoints = () => {
+    setActiveTab("catalog");
+    setCatalogViewAndSync("browse");
+    setSection("point-fixtures");
+    setQuery("");
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
@@ -579,13 +616,49 @@ export function WizardStep1Lighting() {
       {activeTab === "recommendations" ? (
         <div className="space-y-3">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
-            По параметрам: точечных{" "}
-            <span className="font-semibold">{toNumber(snapshot?.derivedInputs?.pointSpotsQty)}</span> шт., трек{" "}
-            <span className="font-semibold">{toNumber(snapshot?.derivedInputs?.trackLengthMeters)}</span> м.
+            <p className="font-semibold text-slate-950">Подсказки по вашему расчёту</p>
+            <p className="mt-1 text-slate-600">
+              По потолку: точечных{" "}
+              <span className="font-semibold text-slate-950">{toNumber(snapshot?.derivedInputs?.pointSpotsQty)}</span>{" "}
+              шт., трек{" "}
+              <span className="font-semibold text-slate-950">{toNumber(snapshot?.derivedInputs?.trackLengthMeters)}</span>{" "}
+              м.
+            </p>
+            <p className="mt-1 text-slate-600">
+              Вы выбрали в каталоге: точечных{" "}
+              <span className="font-semibold text-slate-950">{selectedPointQty}</span>{" "}
+              шт., профиля трека примерно{" "}
+              <span className="font-semibold text-slate-950">{selectedTrackMeters.toFixed(1)}</span>{" "}
+              м.
+            </p>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={gotoTracks}
+                className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+              >
+                Выбрать треки
+              </button>
+              <button
+                type="button"
+                onClick={gotoPoints}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
+              >
+                Выбрать точечные
+              </button>
+            </div>
+
+            <p className="mt-3 text-xs text-slate-500">
+              Монтаж светильников на треке не считается — считается только монтаж погонных метров трека. Монтаж точечных считается отдельно.
+            </p>
           </div>
 
           {missingMounts.map((m) => (
-            <div key={`${m.fixtureVendorCode}-${m.mountVendorCode}`} className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+            <div
+              key={`${m.fixtureVendorCode}-${m.mountVendorCode}`}
+              className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
+            >
               <p className="font-semibold">Не хватает закладных 1:1</p>
               <p className="mt-1 text-amber-900/80">
                 Нужно: {m.requiredQty} шт., в корзине: {m.currentQty} шт.
@@ -754,7 +827,7 @@ export function WizardStep1Lighting() {
             </div>
           ) : null}
 
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {scopedProducts.map((product) => {
               const id = toText(product.productId);
               const qty = toNumber(cartItems[id]);
@@ -780,13 +853,13 @@ export function WizardStep1Lighting() {
                 />
               );
             })}
-
-            {scopedProducts.length === 0 ? (
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
-                Ничего не найдено
-              </div>
-            ) : null}
           </div>
+
+          {scopedProducts.length === 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
+              Ничего не найдено
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
