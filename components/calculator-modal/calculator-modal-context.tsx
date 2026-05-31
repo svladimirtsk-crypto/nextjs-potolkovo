@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
 import type {
   CalculatorModalContextValue,
@@ -13,19 +20,37 @@ import { applyLightingDiscount } from "@/lib/lighting-formulas";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
 
-const CalculatorModalContext = createContext<CalculatorModalContextValue | null>(null);
+const CalculatorModalContext = createContext<CalculatorModalContextValue | null>(
+  null
+);
+
+function isCeilingSnapshotReady(snapshot: any): boolean {
+  if (!snapshot) return false;
+
+  const area = Number(snapshot.area);
+  const total = Number(snapshot.total);
+
+  if (!Number.isFinite(area) || area <= 0) return false;
+  if (!Number.isFinite(total) || total < 0) return false;
+
+  return true;
+}
 
 export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState<WizardStep>(0);
   const [options, setOptions] = useState<OpenCalculatorOptions | null>(null);
 
-  const [lightingDraft, setLightingDraftState] = useState<LightingSnapshot | null>(null);
+  const [lightingDraft, setLightingDraftState] = useState<LightingSnapshot | null>(
+    null
+  );
 
   const [step0SessionInteracted, setStep0SessionInteracted] = useState(false);
   const [step0AreaConfirmed, setStep0AreaConfirmed] = useState(false);
 
-  const [step1CatalogView, setStep1CatalogView] = useState<"selected" | "browse" | null>(null);
+  const [step1CatalogView, setStep1CatalogView] = useState<
+    "selected" | "browse" | null
+  >(null);
 
   const { snapshot, setSnapshot } = usePriceCalculatorBridge();
 
@@ -35,10 +60,8 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
 
   const markStep0SessionInteracted = useCallback(() => {
     setStep0SessionInteracted(true);
-  }, []);
-
-  const markStep0AreaConfirmed = useCallback(() => {
-    setStep0AreaConfirmed(true);
+    // ВАЖНО: любое изменение на Step0 делает старое подтверждение "неактуальным"
+    setStep0AreaConfirmed(false);
   }, []);
 
   const openCalculator = useCallback(
@@ -49,8 +72,10 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       const resolvedOpts: OpenCalculatorOptions = {
         ...incoming,
         initialStep: incoming.initialStep ?? (isLightingFirst ? 1 : 0),
-        initialLightingTab: incoming.initialLightingTab ?? (isLightingFirst ? "catalog" : undefined),
-        initialLightingView: incoming.initialLightingView ?? (isLightingFirst ? "browse" : undefined),
+        initialLightingTab:
+          incoming.initialLightingTab ?? (isLightingFirst ? "catalog" : undefined),
+        initialLightingView:
+          incoming.initialLightingView ?? (isLightingFirst ? "browse" : undefined),
         preset:
           incoming.preset ??
           (isLightingFirst
@@ -72,7 +97,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
         setSnapshot((prev) => (prev ? { ...prev, leadSource: source } : prev));
       }
 
-      // reset session flags each open
+      // reset flags on each open
       setStep0SessionInteracted(false);
       setStep0AreaConfirmed(false);
 
@@ -86,9 +111,19 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
     setIsOpen(false);
   }, []);
 
-  const goToStep = useCallback((step: WizardStep) => {
-    setCurrentStep(step);
-  }, []);
+  const goToStep = useCallback(
+    (step: WizardStep) => {
+      // СТРОГО: подтверждение Step0 фиксируем на переходе 0 -> 1
+      if (currentStep === 0 && step === 1) {
+        if (isCeilingSnapshotReady(snapshot)) {
+          setStep0AreaConfirmed(true);
+        }
+      }
+
+      setCurrentStep(step);
+    },
+    [currentStep, snapshot]
+  );
 
   const ceilingTotal = Number(snapshot?.total ?? 0);
 
@@ -105,15 +140,20 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   }, [lightingDraft]);
 
   const grandTotal = useMemo(() => {
-    const base = Number(snapshot?.grandTotal ?? snapshot?.total ?? 0);
+    const base =
+      step0AreaConfirmed
+        ? Number(snapshot?.grandTotal ?? snapshot?.total ?? 0)
+        : Number(snapshot?.total ?? 0);
+
     return base + lightingDiscountedTotal;
-  }, [lightingDiscountedTotal, snapshot?.grandTotal, snapshot?.total]);
+  }, [lightingDiscountedTotal, snapshot?.grandTotal, snapshot?.total, step0AreaConfirmed]);
 
   const value = useMemo<CalculatorModalContextValue>(
     () => ({
       isOpen,
       currentStep,
       options,
+
       openCalculator,
       closeCalculator,
       goToStep,
@@ -129,7 +169,6 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       markStep0SessionInteracted,
 
       step0AreaConfirmed,
-      markStep0AreaConfirmed,
 
       step1CatalogView,
       setStep1CatalogView,
@@ -149,17 +188,22 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       step0SessionInteracted,
       markStep0SessionInteracted,
       step0AreaConfirmed,
-      markStep0AreaConfirmed,
       step1CatalogView,
       setStep1CatalogView,
     ]
   );
 
-  return <CalculatorModalContext.Provider value={value}>{children}</CalculatorModalContext.Provider>;
+  return (
+    <CalculatorModalContext.Provider value={value}>
+      {children}
+    </CalculatorModalContext.Provider>
+  );
 }
 
 export function useCalculatorModal(): CalculatorModalContextValue {
   const ctx = useContext(CalculatorModalContext);
-  if (!ctx) throw new Error("useCalculatorModal must be used inside CalculatorModalProvider.");
+  if (!ctx) {
+    throw new Error("useCalculatorModal must be used inside CalculatorModalProvider.");
+  }
   return ctx;
 }
