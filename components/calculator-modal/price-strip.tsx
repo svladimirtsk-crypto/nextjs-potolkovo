@@ -1,77 +1,73 @@
 "use client";
 
-import { useMemo } from "react";
-
 import { useCalculatorModal } from "./calculator-modal-context";
 
-function fmt(value: number): string {
-  return new Intl.NumberFormat("ru-RU").format(Math.round(value));
+function fmt(n: number) {
+  return new Intl.NumberFormat("ru-RU").format(Math.round(n));
 }
-
-type ExtendedOptions = {
-  entryMode?: "lighting-first" | string;
-};
 
 export function PriceStrip() {
   const {
     ceilingTotal,
     lightingDiscountedTotal,
     currentStep,
-    options,
     step0SessionInteracted,
+    options,
   } = useCalculatorModal();
 
-  const extendedOptions = options as (typeof options & ExtendedOptions) | null;
-  const isLightingFirst = extendedOptions?.entryMode === "lighting-first";
-  const hasStep0Interaction = Boolean(step0SessionInteracted);
+  const showCeiling = currentStep === 0 || step0SessionInteracted;
+  const displayCeiling = showCeiling ? ceilingTotal : 0;
+  const hasLighting = lightingDiscountedTotal > 0;
 
-  const hideCeilingPrice = isLightingFirst && !hasStep0Interaction;
-  const safeCeilingTotal = Number(ceilingTotal ?? 0);
-  const safeLightingTotal = Number(lightingDiscountedTotal ?? 0);
+  // Если потолок скрыт (lighting-first и Step0 не трогали), то "итого" показываем только по свету,
+  // чтобы не давить потолком/не показывать старые значения из snapshot.
+  const displayTotal = showCeiling ? displayCeiling + lightingDiscountedTotal : lightingDiscountedTotal;
 
-  const visibleCeilingTotal = hideCeilingPrice ? 0 : safeCeilingTotal;
-
-  const visibleGrandTotal = useMemo(() => {
-    return visibleCeilingTotal + safeLightingTotal;
-  }, [visibleCeilingTotal, safeLightingTotal]);
-
-  if (visibleCeilingTotal <= 0 && safeLightingTotal <= 0) {
+  // P0.3: placeholder на шаге 0 пока ничего не выбрано
+  if (displayCeiling === 0 && !hasLighting) {
     if (currentStep !== 0) return null;
 
     return (
-      <div className="flex shrink-0 items-center border-y border-slate-100 bg-slate-50 px-5 py-2.5 text-sm text-slate-400">
-        Выберите параметры - стоимость появится здесь
+      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+        Выберите параметры — стоимость появится здесь
       </div>
     );
   }
 
-  return (
-    <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-y border-slate-100 bg-slate-50 px-5 py-2.5 text-sm">
-      <span className="text-slate-600">
-        Потолок:{" "}
-        {hideCeilingPrice ? (
-          <span className="font-medium text-slate-500">
-            Укажите параметры потолка - добавим стоимость монтажа
-          </span>
-        ) : (
-          <span className="font-semibold text-slate-950">{fmt(visibleCeilingTotal)} ₽</span>
-        )}
-      </span>
+  // Lighting-first: показываем только свет, потолок — аккуратной подсказкой
+  if (!showCeiling && hasLighting) {
+    const showHint = options?.entryMode === "lighting-first";
 
-      {safeLightingTotal > 0 ? (
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm">
+        <span className="font-medium">
+          Свет: {fmt(lightingDiscountedTotal)} ₽ <span className="text-emerald-700">−15%</span>
+        </span>
+
+        <span className="text-slate-500"> · </span>
+
+        <span className="text-slate-700">Итого по свету: ~{fmt(displayTotal)} ₽</span>
+
+        {showHint ? (
+          <span className="text-slate-500"> · Потолок — после выбора параметров на шаге 1</span>
+        ) : null}
+      </div>
+    );
+  }
+
+  // Обычный режим: показываем потолок (и свет, если есть)
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm">
+      <span className="font-medium">Потолок: {fmt(displayCeiling)} ₽</span>
+
+      {hasLighting ? (
         <>
-          <span className="hidden text-slate-300 sm:inline" aria-hidden="true">
-            ·
+          <span className="text-slate-500"> · </span>
+          <span className="font-medium">
+            Свет: {fmt(lightingDiscountedTotal)} ₽ <span className="text-emerald-700">−15%</span>
           </span>
-          <span className="text-slate-600">
-            Свет:{" "}
-            <span className="font-semibold text-slate-950">{fmt(safeLightingTotal)} ₽</span>{" "}
-            <span className="text-xs font-medium text-emerald-600">-15%</span>
-          </span>
-          <span className="hidden text-slate-300 sm:inline" aria-hidden="true">
-            ·
-          </span>
-          <span className="font-semibold text-slate-950">Итого: ~{fmt(visibleGrandTotal)} ₽</span>
+          <span className="text-slate-500"> · </span>
+          <span className="font-semibold">Итого: ~{fmt(displayTotal)} ₽</span>
         </>
       ) : null}
     </div>
