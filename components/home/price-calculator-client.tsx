@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 
 import { homepage } from "@/content/homepage";
@@ -8,21 +8,21 @@ import type { ServiceCalculatorPreset } from "@/content/services";
 
 import { Button } from "@/components/ui/button";
 import {
-  CalculatorLeadSnapshot,
+  type CalculatorLeadSnapshot,
   usePriceCalculatorBridge,
 } from "./price-calculator-context";
-import {
-  calcRecommendedTrackSpots,
-} from "@/lib/lighting-formulas";
+
+import { calcRecommendedTrackSpots } from "@/lib/lighting-formulas";
 import type { DerivedInputs } from "@/lib/calculator-modal-types";
 
 const calculator = homepage.price.calculator;
 
 type CeilingType = (typeof calculator.ceilingTypes)[number]["slug"];
 type CorniceType = (typeof calculator.cornices)[number]["slug"];
-type TrackType   = (typeof calculator.tracks)[number]["slug"];
+type TrackType = (typeof calculator.tracks)[number]["slug"];
 
 type PerimeterSuggestion = { min: number; max: number; recommended: number };
+
 type AccordionSectionId =
   | "ceiling-profile"
   | "light-lines"
@@ -31,7 +31,7 @@ type AccordionSectionId =
   | "lights";
 
 function formatCurrency(value: number) {
-  return new Intl.NumberFormat("ru-RU").format(value);
+  return new Intl.NumberFormat("ru-RU").format(Math.round(value));
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -43,28 +43,18 @@ function roundToStep(value: number, step: number) {
   return Math.round(value / step) * step;
 }
 
+/**
+ * ТЗ: периметр теневого/парящего = 1:1 к площади.
+ * Значит ориентир (и recommended) = area.
+ */
 function getPerimeterSuggestion(area: number): PerimeterSuggestion {
-  const minRaw = Math.sqrt(area) * calculator.perimeterHintMinMultiplier;
-  const maxRaw = Math.sqrt(area) * calculator.perimeterHintMaxMultiplier;
-
-  const min = clamp(
-    roundToStep(minRaw, calculator.specialMeters.step),
-    calculator.specialMeters.min,
-    calculator.specialMeters.max
-  );
-  const max = clamp(
-    roundToStep(maxRaw, calculator.specialMeters.step),
-    calculator.specialMeters.min,
-    calculator.specialMeters.max
-  );
-  const normalizedMax = Math.max(min, max);
   const recommended = clamp(
-    roundToStep((min + normalizedMax) / 2, calculator.specialMeters.step),
-    min,
-    normalizedMax
+    roundToStep(area, calculator.specialMeters.step),
+    calculator.specialMeters.min,
+    calculator.specialMeters.max
   );
 
-  return { min, max: normalizedMax, recommended };
+  return { min: recommended, max: recommended, recommended };
 }
 
 function getDefaultOpenSection(pathname: string): AccordionSectionId | null {
@@ -75,6 +65,7 @@ function getDefaultOpenSection(pathname: string): AccordionSectionId | null {
     "/uslugi/trekovoe-osveshchenie": "tracks",
     "/uslugi/svetovye-linii": "light-lines",
   };
+
   return routeMap[pathname] ?? null;
 }
 
@@ -82,19 +73,27 @@ function SectionCard({
   title,
   description,
   children,
+  className,
 }: {
   title: string;
   description?: string;
   children: ReactNode;
+  className?: string;
 }) {
   return (
-    <section className="rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-4 sm:p-5">
+    <section
+      className={[
+        "rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-4 sm:p-5",
+        className ?? "",
+      ].join(" ")}
+    >
       <div className="mb-4">
         <p className="text-sm font-semibold text-slate-950">{title}</p>
         {description ? (
           <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p>
         ) : null}
       </div>
+
       {children}
     </section>
   );
@@ -152,9 +151,17 @@ function CollapsibleSection({
 
   if (!isDesktopAccordion) {
     return (
-      <SectionCard title={title} description={description}>
+      <section className="rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-4 sm:p-5">
+        <div className="mb-3">
+          <p className="text-sm font-semibold text-slate-950">{title}</p>
+          {description ? (
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              {description}
+            </p>
+          ) : null}
+        </div>
         {children}
-      </SectionCard>
+      </section>
     );
   }
 
@@ -162,33 +169,24 @@ function CollapsibleSection({
     <section className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-slate-50/80">
       <button
         type="button"
-        className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left sm:px-5"
-        aria-expanded={isOpen}
-        aria-controls={`calculator-panel-${id}`}
         onClick={() => onToggle(id)}
+        className="flex w-full items-start justify-between gap-4 px-4 py-4 text-left sm:px-5"
+        aria-expanded={isOpen}
       >
         <div className="min-w-0">
           <p className="text-sm font-semibold text-slate-950">{title}</p>
           {description ? (
-            <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p>
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              {description}
+            </p>
           ) : null}
         </div>
-        <span
-          aria-hidden="true"
-          className={`shrink-0 text-sm text-slate-500 transition-transform ${
-            isOpen ? "rotate-180" : ""
-          }`}
-        >
-          ▾
-        </span>
+
+        <span className="mt-0.5 text-sm text-slate-500">{isOpen ? "▴" : "▾"}</span>
       </button>
 
       {isOpen ? (
-        <div
-          id={`calculator-panel-${id}`}
-          ref={contentRef}
-          className="border-t border-slate-200 px-4 py-4 sm:px-5"
-        >
+        <div ref={contentRef} className="border-t border-slate-200 px-4 py-4 sm:px-5">
           {children}
         </div>
       ) : null}
@@ -232,6 +230,7 @@ function OptionCard({
             {meta}
           </p>
         </div>
+
         <span
           className={[
             "mt-0.5 h-4 w-4 shrink-0 rounded-full border",
@@ -240,14 +239,6 @@ function OptionCard({
         />
       </div>
     </button>
-  );
-}
-
-function SummaryPill({ children }: { children: ReactNode }) {
-  return (
-    <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-white/80 backdrop-blur">
-      {children}
-    </span>
   );
 }
 
@@ -260,6 +251,8 @@ function RangeField({
   step,
   unit,
   onChange,
+  showSlider = true,
+  quickValues,
 }: {
   id: string;
   label: string;
@@ -269,12 +262,11 @@ function RangeField({
   step: number;
   unit: string;
   onChange: (value: number) => void;
+  showSlider?: boolean;
+  quickValues?: number[];
 }) {
   const [manual, setManual] = useState<string>(String(value));
-
-  useEffect(() => {
-    setManual(String(value));
-  }, [value]);
+  useEffect(() => setManual(String(value)), [value]);
 
   const normalize = (num: number) => clamp(roundToStep(num, step), min, max);
 
@@ -293,15 +285,28 @@ function RangeField({
 
   const isIntegerStep = Number.isInteger(step);
 
+  const dec = () => onChange(normalize(value - step));
+  const inc = () => onChange(normalize(value + step));
+
   return (
     <div>
       <div className="flex items-center justify-between gap-4">
         <label htmlFor={id} className="text-sm font-medium text-slate-700">
           {label}
         </label>
+
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={dec}
+            className="h-8 w-8 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-900 hover:bg-slate-50"
+            aria-label="Уменьшить"
+          >
+            −
+          </button>
+
           <input
-            aria-label={label}
+            id={id}
             value={manual}
             onChange={(e) => {
               const next = e.target.value;
@@ -324,25 +329,64 @@ function RangeField({
             inputMode={isIntegerStep ? "numeric" : "decimal"}
             className="w-20 rounded-full bg-white px-3 py-1 text-sm font-semibold text-slate-950 shadow-sm ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 sm:w-24"
           />
+
           <span className="text-sm font-semibold text-slate-950">{unit}</span>
+
+          <button
+            type="button"
+            onClick={inc}
+            className="h-8 w-8 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-900 hover:bg-slate-50"
+            aria-label="Увеличить"
+          >
+            +
+          </button>
         </div>
       </div>
 
-      <input
-        id={id}
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="pc-range mt-4 h-2 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-slate-950"
-      />
+      {quickValues && quickValues.length > 0 ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {quickValues.map((q) => {
+            const active = Math.abs(value - q) < 0.0001;
+            return (
+              <button
+                key={q}
+                type="button"
+                onClick={() => onChange(normalize(q))}
+                className={[
+                  "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+                  active
+                    ? "bg-slate-950 text-white"
+                    : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50",
+                ].join(" ")}
+              >
+                {q} {unit}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
 
-      <div className="mt-2 flex justify-between text-xs text-slate-500">
-        <span>{min} {unit}</span>
-        <span>{max} {unit}</span>
-      </div>
+      {showSlider ? (
+        <>
+          <input
+            type="range"
+            min={min}
+            max={max}
+            step={step}
+            value={value}
+            onChange={(e) => onChange(Number(e.target.value))}
+            className="pc-range mt-4 h-2 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-slate-950"
+          />
+          <div className="mt-2 flex justify-between text-xs text-slate-500">
+            <span>
+              {min} {unit}
+            </span>
+            <span>
+              {max} {unit}
+            </span>
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -351,27 +395,37 @@ function PerimeterHint({
   area,
   suggestion,
   onApply,
+  isAuto,
 }: {
   area: number;
   suggestion: PerimeterSuggestion;
   onApply: () => void;
+  isAuto: boolean;
 }) {
   return (
     <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white p-4">
       <p className="text-sm leading-6 text-slate-600">
-        Для площади {area} м² ориентир по периметру —{" "}
+        Для площади <span className="font-semibold text-slate-950">{area} м²</span>{" "}
+        ориентир по профилю:{" "}
         <span className="font-semibold text-slate-950">
-          {suggestion.min}–{suggestion.max} м.п.
-        </span>
-        . Точное значение зависит от формы помещения.
+          {suggestion.recommended} м.п.
+        </span>{" "}
+        (1:1).
       </p>
-      <button
-        type="button"
-        onClick={onApply}
-        className="mt-3 text-sm font-semibold text-slate-950 underline underline-offset-4 hover:text-slate-700"
-      >
-        Подставить ориентир: {suggestion.recommended} м.п.
-      </button>
+
+      <div className="mt-2 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={onApply}
+          className="text-sm font-semibold text-slate-950 underline underline-offset-4 hover:text-slate-700"
+        >
+          Подставить 1:1
+        </button>
+
+        <span className="text-xs text-slate-500">
+          Авто: {isAuto ? "включено" : "выключено"}
+        </span>
+      </div>
     </div>
   );
 }
@@ -387,11 +441,10 @@ function PriceRow({
 }) {
   return (
     <div
-      className={`flex items-center justify-between gap-4 ${
-        strong
-          ? "text-sm font-semibold text-slate-950"
-          : "text-sm text-slate-600"
-      }`}
+      className={[
+        "flex items-center justify-between gap-4",
+        strong ? "text-sm font-semibold text-slate-950" : "text-sm text-slate-600",
+      ].join(" ")}
     >
       <span>{label}</span>
       <span className="text-right">{value}</span>
@@ -413,6 +466,12 @@ export function PriceCalculatorClient({
 
   const [isDesktopAccordion, setIsDesktopAccordion] = useState(false);
 
+  // guided UX только в compactSections (модалка Step0)
+  const [guidedStep, setGuidedStep] = useState<0 | 1 | 2>(0);
+
+  const areaSectionRef = useRef<HTMLDivElement | null>(null);
+  const ceilingSectionRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 1024px)");
     const update = () => setIsDesktopAccordion(mq.matches && compactSections);
@@ -430,15 +489,20 @@ export function PriceCalculatorClient({
 
   const [area, setArea] = useState<number>(resolvedAreaDefault);
   const [ceilingType, setCeilingType] = useState<CeilingType>(resolvedCeilingType);
-  const [ceilingLength, setCeilingLength] = useState<number>(
-    () => getPerimeterSuggestion(resolvedAreaDefault).recommended
-  );
+
+  // Периметр (профиль) + авто-режим
+  const [ceilingLength, setCeilingLength] = useState<number>(() => getPerimeterSuggestion(resolvedAreaDefault).recommended);
+  const [ceilingLengthAuto, setCeilingLengthAuto] = useState<boolean>(true);
+
   const [lightLinesEnabled, setLightLinesEnabled] = useState<boolean>(false);
   const [lightLinesLength, setLightLinesLength] = useState<number>(calculator.lightLineMeters.default);
+
   const [corniceType, setCorniceType] = useState<CorniceType>(resolvedCorniceType);
   const [corniceLength, setCorniceLength] = useState<number>(calculator.corniceMeters.default);
+
   const [trackType, setTrackType] = useState<TrackType>(resolvedTrackType);
   const [trackLength, setTrackLength] = useState<number>(calculator.trackMeters.default);
+
   const [lightsEnabled, setLightsEnabled] = useState<boolean>(resolvedLightsEnabled);
   const [lightsCount, setLightsCount] = useState<number>(resolvedLightsCount);
 
@@ -448,16 +512,19 @@ export function PriceCalculatorClient({
     () => calculator.ceilingTypes.find((c) => c.slug === ceilingType) ?? calculator.ceilingTypes[0],
     [ceilingType]
   );
+
   const selectedCornice = useMemo(
     () => calculator.cornices.find((c) => c.slug === corniceType) ?? calculator.cornices[0],
     [corniceType]
   );
+
   const selectedTrack = useMemo(
     () => calculator.tracks.find((t) => t.slug === trackType) ?? calculator.tracks[0],
     [trackType]
   );
 
   const hasSpecialCeiling = selectedCeiling.extraRatePerMeter > 0;
+
   const defaultOpenSection = getDefaultOpenSection(pathname);
 
   const [openSections, setOpenSections] = useState<Record<AccordionSectionId, boolean>>({
@@ -467,11 +534,14 @@ export function PriceCalculatorClient({
     tracks: false,
     lights: false,
   });
+
   const [lastToggledSection, setLastToggledSection] = useState<AccordionSectionId | null>(null);
 
   useEffect(() => {
     if (!isDesktopAccordion) return;
+
     setLastToggledSection(null);
+
     setOpenSections({
       "ceiling-profile": defaultOpenSection === "ceiling-profile" && hasSpecialCeiling,
       "light-lines": defaultOpenSection === "light-lines",
@@ -483,20 +553,50 @@ export function PriceCalculatorClient({
 
   const toggleSection = (id: AccordionSectionId) => {
     setLastToggledSection(id);
-    setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
+
+    setOpenSections((prev) => {
+      if (!isDesktopAccordion) return { ...prev, [id]: !prev[id] };
+
+      // desktop accordion mode: открыта одна секция
+      const next: Record<AccordionSectionId, boolean> = {
+        "ceiling-profile": false,
+        "light-lines": false,
+        cornices: false,
+        tracks: false,
+        lights: false,
+      };
+      next[id] = !prev[id];
+      return next;
+    });
   };
 
+  // totals
   const ceilingBaseRate = selectedCeiling.baseRatePerSqm;
   const ceilingBaseTotal = area * ceilingBaseRate;
-  const ceilingExtraTotal = hasSpecialCeiling ? ceilingLength * selectedCeiling.extraRatePerMeter : 0;
-  const lightLinesTotal = lightLinesEnabled ? lightLinesLength * calculator.lightLines.ratePerMeter : 0;
-  const corniceTotal = selectedCornice.ratePerMeter > 0 ? corniceLength * selectedCornice.ratePerMeter : 0;
-  const trackTotal = selectedTrack.ratePerMeter > 0 ? trackLength * selectedTrack.ratePerMeter : 0;
-  const lightsTotal = lightsEnabled ? lightsCount * calculator.lights.ratePerUnit : 0;
 
-  const total =
-    ceilingBaseTotal + ceilingExtraTotal + lightLinesTotal + corniceTotal + trackTotal + lightsTotal;
+  const ceilingExtraTotal = hasSpecialCeiling
+    ? ceilingLength * selectedCeiling.extraRatePerMeter
+    : 0;
 
+  const lightLinesTotal = lightLinesEnabled
+    ? lightLinesLength * calculator.lightLines.ratePerMeter
+    : 0;
+
+  const corniceTotal = selectedCornice.ratePerMeter > 0
+    ? corniceLength * selectedCornice.ratePerMeter
+    : 0;
+
+  const trackTotal = selectedTrack.ratePerMeter > 0
+    ? trackLength * selectedTrack.ratePerMeter
+    : 0;
+
+  const lightsTotal = lightsEnabled
+    ? lightsCount * calculator.lights.ratePerUnit
+    : 0;
+
+  const total = ceilingBaseTotal + ceilingExtraTotal + lightLinesTotal + corniceTotal + trackTotal + lightsTotal;
+
+  // derived inputs
   const derivedTrackMountType: DerivedInputs["trackMountType"] =
     trackType === "built-in" ? "built-in" : trackType === "surface" ? "surface" : "none";
 
@@ -573,15 +673,14 @@ export function PriceCalculatorClient({
     ]
   );
 
+  // keep leadSource/lighting/grandTotal/_reconciled from previous snapshot
   useEffect(() => {
-    const computedSnapshot = snapshot;
-
     setSnapshot((prev) => {
-      if (prev == null) return computedSnapshot;
+      if (prev == null) return snapshot;
 
       return {
-        ...computedSnapshot,
-        leadSource: prev.leadSource ?? computedSnapshot.leadSource,
+        ...snapshot,
+        leadSource: prev.leadSource ?? snapshot.leadSource,
         lighting: prev.lighting,
         grandTotal: prev.grandTotal,
         _reconciled: prev._reconciled,
@@ -594,17 +693,37 @@ export function PriceCalculatorClient({
   const handleAreaChange = (v: number) => {
     markInteracted();
     setArea(v);
+
+    // авто-периметр (1:1) пока пользователь не “сломал” вручную
+    if (ceilingType !== "standard" && ceilingLengthAuto) {
+      setCeilingLength(getPerimeterSuggestion(v).recommended);
+    }
   };
 
   const handleCeilingTypeChange = (slug: CeilingType) => {
     markInteracted();
     setCeilingType(slug);
-    if (slug !== "standard") setCeilingLength(perimeterSuggestion.recommended);
+
+    if (slug !== "standard") {
+      // при выборе теневого/парящего — включаем авто 1:1
+      setCeilingLengthAuto(true);
+      setCeilingLength(getPerimeterSuggestion(area).recommended);
+      if (isDesktopAccordion) {
+        setOpenSections((prev) => ({ ...prev, "ceiling-profile": true }));
+      }
+    }
   };
 
   const handleCeilingLengthChange = (v: number) => {
     markInteracted();
+    setCeilingLengthAuto(false);
     setCeilingLength(v);
+  };
+
+  const applyPerimeterSuggestion = () => {
+    markInteracted();
+    setCeilingLengthAuto(true);
+    setCeilingLength(perimeterSuggestion.recommended);
   };
 
   const handleLightLinesEnabledChange = (v: boolean) => {
@@ -649,49 +768,112 @@ export function PriceCalculatorClient({
     setLightsCount(v);
   };
 
-  const applyPerimeterSuggestion = () => {
-    markInteracted();
-    setCeilingLength(perimeterSuggestion.recommended);
+  const showSlider = !compactSections; // ключевая UX-правка: в модалке без range
+
+  const guidedRing = (active: boolean) =>
+    compactSections && active ? "ring-2 ring-blue-600 ring-offset-2 bg-blue-50/50" : "";
+
+  const scrollToRef = (ref: React.RefObject<HTMLDivElement | null>) => {
+    const el = ref.current;
+    if (!el) return;
+    el.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      block: "start",
+    });
   };
 
   return (
     <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:p-8">
+      {/* LEFT */}
       <div className="min-w-0 space-y-5">
-        <SectionCard title="Площадь помещения">
-          <RangeField
-            id="area-range"
-            label="Выберите площадь"
-            value={area}
-            min={calculator.areaMin}
-            max={calculator.areaMax}
-            step={calculator.areaStep}
-            unit="м²"
-            onChange={handleAreaChange}
-          />
-        </SectionCard>
-
-        <SectionCard
-          title="Тип потолка"
-          description="Для теневого и парящего потолка цена полотна считается по новой ставке за м², а профиль считается отдельно в погонных метрах."
-        >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {calculator.ceilingTypes.map((option) => {
-              const meta =
-                option.slug === "standard"
-                  ? `от ${formatCurrency(option.baseRatePerSqm)} ₽ / м²`
-                  : `${formatCurrency(option.baseRatePerSqm)} ₽ / м² + ${formatCurrency(option.extraRatePerMeter)} ₽ / м.п.`;
-              return (
-                <OptionCard
-                  key={option.slug}
-                  active={ceilingType === option.slug}
-                  title={option.label}
-                  meta={meta}
-                  onClick={() => handleCeilingTypeChange(option.slug)}
-                />
-              );
-            })}
+        {compactSections ? (
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+            <p className="font-semibold text-slate-950">Быстрый расчёт</p>
+            <p className="mt-1">
+              1) Площадь → 2) Тип потолка → 3) Доп. опции (по желанию).
+            </p>
           </div>
-        </SectionCard>
+        ) : null}
+
+        <div ref={areaSectionRef}>
+          <SectionCard
+            title="Площадь помещения"
+            className={guidedRing(guidedStep === 0)}
+          >
+            <RangeField
+              id="area-field"
+              label="Выберите площадь"
+              value={area}
+              min={calculator.areaMin}
+              max={calculator.areaMax}
+              step={calculator.areaStep}
+              unit="м²"
+              onChange={handleAreaChange}
+              showSlider={showSlider}
+              quickValues={[10, 15, 20, 25, 30, 40]}
+            />
+
+            {compactSections ? (
+              <div className="mt-4 flex items-center justify-between gap-3">
+                <p className="text-xs text-slate-500">
+                  Можно ввести вручную или выбрать пресет.
+                </p>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setGuidedStep(1);
+                    scrollToRef(ceilingSectionRef);
+                  }}
+                >
+                  Подтвердить площадь
+                </Button>
+              </div>
+            ) : null}
+          </SectionCard>
+        </div>
+
+        <div ref={ceilingSectionRef}>
+          <SectionCard
+            title="Тип потолка"
+            description="Для теневого и парящего: цена полотна считается по новой ставке за м², а профиль считается отдельно (по м.п.)."
+            className={guidedRing(guidedStep === 1)}
+          >
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {calculator.ceilingTypes.map((option) => {
+                const meta =
+                  option.slug === "standard"
+                    ? `от ${formatCurrency(option.baseRatePerSqm)} ₽ / м²`
+                    : `${formatCurrency(option.baseRatePerSqm)} ₽ / м² + ${formatCurrency(option.extraRatePerMeter)} ₽ / м.п.`;
+
+                return (
+                  <OptionCard
+                    key={option.slug}
+                    active={ceilingType === option.slug}
+                    title={option.label}
+                    meta={meta}
+                    onClick={() => {
+                      handleCeilingTypeChange(option.slug);
+                      if (compactSections) setGuidedStep(2);
+                    }}
+                  />
+                );
+              })}
+            </div>
+
+            {compactSections ? (
+              <div className="mt-4 flex justify-end">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setGuidedStep(2)}
+                >
+                  Продолжить
+                </Button>
+              </div>
+            ) : null}
+          </SectionCard>
+        </div>
 
         {hasSpecialCeiling ? (
           <CollapsibleSection
@@ -704,19 +886,23 @@ export function PriceCalculatorClient({
             lastToggledId={lastToggledSection}
           >
             <RangeField
-              id="ceiling-length-range"
-              label={`Длина: ${selectedCeiling.extraLabel}`}
+              id="ceiling-length-field"
+              label={`Длина: ${selectedCeiling.extraLabel ?? "профиль"}`}
               value={ceilingLength}
               min={calculator.specialMeters.min}
               max={calculator.specialMeters.max}
               step={calculator.specialMeters.step}
               unit="м.п."
               onChange={handleCeilingLengthChange}
+              showSlider={showSlider}
+              quickValues={compactSections ? [perimeterSuggestion.recommended] : undefined}
             />
+
             <PerimeterHint
               area={area}
               suggestion={perimeterSuggestion}
               onApply={applyPerimeterSuggestion}
+              isAuto={ceilingLengthAuto}
             />
           </CollapsibleSection>
         ) : null}
@@ -743,10 +929,11 @@ export function PriceCalculatorClient({
               onClick={() => handleLightLinesEnabledChange(true)}
             />
           </div>
+
           {lightLinesEnabled ? (
             <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
               <RangeField
-                id="light-lines-length-range"
+                id="light-lines-length"
                 label="Длина световых линий"
                 value={lightLinesLength}
                 min={calculator.lightLineMeters.min}
@@ -754,6 +941,7 @@ export function PriceCalculatorClient({
                 step={calculator.lightLineMeters.step}
                 unit="м.п."
                 onChange={handleLightLinesLengthChange}
+                showSlider={showSlider}
               />
             </div>
           ) : null}
@@ -782,10 +970,11 @@ export function PriceCalculatorClient({
               />
             ))}
           </div>
+
           {selectedCornice.ratePerMeter > 0 ? (
             <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
               <RangeField
-                id="cornice-length-range"
+                id="cornice-length"
                 label="Длина карниза"
                 value={corniceLength}
                 min={calculator.corniceMeters.min}
@@ -793,6 +982,7 @@ export function PriceCalculatorClient({
                 step={calculator.corniceMeters.step}
                 unit="м.п."
                 onChange={handleCorniceLengthChange}
+                showSlider={showSlider}
               />
             </div>
           ) : null}
@@ -806,7 +996,7 @@ export function PriceCalculatorClient({
           onToggle={toggleSection}
           lastToggledId={lastToggledSection}
         >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2">
             {calculator.tracks.map((option) => (
               <OptionCard
                 key={option.slug}
@@ -821,10 +1011,11 @@ export function PriceCalculatorClient({
               />
             ))}
           </div>
+
           {selectedTrack.ratePerMeter > 0 ? (
             <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
               <RangeField
-                id="track-length-range"
+                id="track-length"
                 label="Длина трека"
                 value={trackLength}
                 min={calculator.trackMeters.min}
@@ -832,10 +1023,11 @@ export function PriceCalculatorClient({
                 step={calculator.trackMeters.step}
                 unit="м.п."
                 onChange={handleTrackLengthChange}
+                showSlider={showSlider}
               />
+
               <p className="mt-3 text-xs text-slate-500">
-                Ориентировочно: ~{calcRecommendedTrackSpots(trackLength)} спотов.
-                Точный подбор — на следующем шаге.
+                Ориентировочно: ~{calcRecommendedTrackSpots(trackLength)} спотов. Точный подбор — на следующем шаге.
               </p>
             </div>
           ) : null}
@@ -859,141 +1051,98 @@ export function PriceCalculatorClient({
             <OptionCard
               active={lightsEnabled}
               title="Добавить светильники"
-              meta={`от ${formatCurrency(calculator.lights.ratePerUnit)} ₽ / шт.`}
+              meta={`от ${formatCurrency(calculator.lights.ratePerUnit)} ₽ / шт`}
               onClick={() => handleLightsEnabledChange(true)}
             />
           </div>
+
           {lightsEnabled ? (
             <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
               <RangeField
-                id="lights-count-range"
-                label="Количество точечных светильников"
+                id="lights-count"
+                label="Количество светильников"
                 value={lightsCount}
                 min={calculator.lights.countMin}
                 max={calculator.lights.countMax}
                 step={calculator.lights.countStep}
                 unit="шт."
                 onChange={handleLightsCountChange}
+                showSlider={showSlider}
+                quickValues={compactSections ? [4, 6, 8, 10, 12] : undefined}
               />
             </div>
           ) : null}
         </CollapsibleSection>
-
-        <SectionCard title="Состав расчёта">
-          <div className="space-y-3">
-            <PriceRow
-              label="Потолок"
-              value={`${area} м² × ${formatCurrency(ceilingBaseRate)} ₽`}
-            />
-            {ceilingExtraTotal > 0 ? (
-              <PriceRow
-                label={selectedCeiling.extraLabel ?? "Профиль"}
-                value={`${ceilingLength} м.п. × ${formatCurrency(selectedCeiling.extraRatePerMeter)} ₽`}
-              />
-            ) : null}
-            {lightLinesTotal > 0 ? (
-              <PriceRow
-                label={calculator.lightLines.label}
-                value={`${lightLinesLength} м.п. × ${formatCurrency(calculator.lightLines.ratePerMeter)} ₽`}
-              />
-            ) : null}
-            {corniceTotal > 0 ? (
-              <PriceRow
-                label={selectedCornice.label}
-                value={`${corniceLength} м.п. × ${formatCurrency(selectedCornice.ratePerMeter)} ₽`}
-              />
-            ) : null}
-            {trackTotal > 0 ? (
-              <PriceRow
-                label={selectedTrack.label}
-                value={`${trackLength} м.п. × ${formatCurrency(selectedTrack.ratePerMeter)} ₽`}
-              />
-            ) : null}
-            {lightsTotal > 0 ? (
-              <PriceRow
-                label="Точечные светильники"
-                value={`${lightsCount} шт. × ${formatCurrency(calculator.lights.ratePerUnit)} ₽`}
-              />
-            ) : null}
-            <div className="border-t border-slate-200 pt-3">
-              <PriceRow
-                label="Цена полотна за 1 м²"
-                value={`${formatCurrency(ceilingBaseRate)} ₽ / м²`}
-                strong
-              />
-            </div>
-          </div>
-        </SectionCard>
       </div>
 
-      <div className="hidden lg:sticky lg:top-24 lg:block lg:self-start">
+      {/* RIGHT summary */}
+      <div className="lg:sticky lg:top-24 lg:self-start">
         <div className="rounded-[1.75rem] bg-slate-950 p-6 text-white shadow-2xl shadow-slate-950/10">
-          <p className="text-sm text-white/60">Ориентировочная стоимость от</p>
-          <div className="mt-4 flex items-end gap-2">
-            <p className="text-5xl font-bold tracking-tight">{formatCurrency(total)}</p>
-            <span className="pb-2 text-lg font-medium text-white/70">₽</span>
-          </div>
-          <p className="mt-3 text-sm leading-6 text-white/70">
+          <p className="text-sm text-white/70">Ориентировочная стоимость от</p>
+          <p className="mt-2 text-3xl font-semibold tracking-tight">
+            {formatCurrency(total)} ₽
+          </p>
+
+          <p className="mt-2 text-xs text-white/70">
             При площади {area} м² и выбранных параметрах.
           </p>
 
-          <div className="mt-5 flex flex-wrap gap-2">
-            <SummaryPill>{selectedCeiling.label}</SummaryPill>
-            {lightLinesTotal > 0 ? <SummaryPill>{calculator.lightLines.label}</SummaryPill> : null}
-            {selectedCornice.ratePerMeter > 0 ? <SummaryPill>{selectedCornice.label}</SummaryPill> : null}
-            {selectedTrack.ratePerMeter > 0 ? <SummaryPill>{selectedTrack.label}</SummaryPill> : null}
-            {lightsEnabled ? <SummaryPill>Светильники {lightsCount} шт.</SummaryPill> : null}
+          <div className="mt-6 rounded-2xl bg-white/5 p-4">
+            <p className="text-xs font-semibold text-white/80">Состав расчёта</p>
+
+            <div className="mt-3 space-y-2">
+              <PriceRow
+                label="Потолок"
+                value={`${formatCurrency(ceilingBaseTotal)} ₽`}
+              />
+
+              {ceilingExtraTotal > 0 ? (
+                <PriceRow
+                  label={selectedCeiling.extraLabel ?? "Профиль"}
+                  value={`${formatCurrency(ceilingExtraTotal)} ₽`}
+                />
+              ) : null}
+
+              {lightLinesTotal > 0 ? (
+                <PriceRow
+                  label={calculator.lightLines.label}
+                  value={`${formatCurrency(lightLinesTotal)} ₽`}
+                />
+              ) : null}
+
+              {corniceTotal > 0 ? (
+                <PriceRow
+                  label={selectedCornice.label}
+                  value={`${formatCurrency(corniceTotal)} ₽`}
+                />
+              ) : null}
+
+              {trackTotal > 0 ? (
+                <PriceRow
+                  label={selectedTrack.label}
+                  value={`${formatCurrency(trackTotal)} ₽`}
+                />
+              ) : null}
+
+              {lightsTotal > 0 ? (
+                <PriceRow
+                  label="Светильники"
+                  value={`${formatCurrency(lightsTotal)} ₽`}
+                />
+              ) : null}
+
+              <div className="border-t border-white/10 pt-3">
+                <PriceRow
+                  label="Итого"
+                  value={`${formatCurrency(total)} ₽`}
+                  strong
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="mt-8 space-y-3 text-sm text-white/75">
-            <div className="flex items-center justify-between gap-4">
-              <span>Потолок</span>
-              <span>{formatCurrency(ceilingBaseTotal)} ₽</span>
-            </div>
-            {ceilingExtraTotal > 0 ? (
-              <div className="flex items-center justify-between gap-4">
-                <span>{selectedCeiling.extraLabel}</span>
-                <span>{formatCurrency(ceilingExtraTotal)} ₽</span>
-              </div>
-            ) : null}
-            {lightLinesTotal > 0 ? (
-              <div className="flex items-center justify-between gap-4">
-                <span>{calculator.lightLines.label}</span>
-                <span>{formatCurrency(lightLinesTotal)} ₽</span>
-              </div>
-            ) : null}
-            {corniceTotal > 0 ? (
-              <div className="flex items-center justify-between gap-4">
-                <span>{selectedCornice.label}</span>
-                <span>{formatCurrency(corniceTotal)} ₽</span>
-              </div>
-            ) : null}
-            {trackTotal > 0 ? (
-              <div className="flex items-center justify-between gap-4">
-                <span>{selectedTrack.label}</span>
-                <span>{formatCurrency(trackTotal)} ₽</span>
-              </div>
-            ) : null}
-            {lightsTotal > 0 ? (
-              <div className="flex items-center justify-between gap-4">
-                <span>Светильники</span>
-                <span>{formatCurrency(lightsTotal)} ₽</span>
-              </div>
-            ) : null}
-            <div className="border-t border-white/10 pt-3 text-base font-semibold text-white">
-              <div className="flex items-center justify-between gap-4">
-                <span>Итого</span>
-                <span>{formatCurrency(total)} ₽</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8">
-            <Button
-              href="#action"
-              variant="secondary"
-              className="w-full justify-center py-6 text-base"
-            >
+          <div className="mt-6">
+            <Button type="button" className="w-full">
               {homepage.price.primaryCtaLabel}
             </Button>
           </div>
