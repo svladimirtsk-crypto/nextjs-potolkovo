@@ -145,7 +145,11 @@ function sumPointQtyFromLightingItems(
   return qtyTotal;
 }
 
-export function WizardStep2Summary() {
+type WizardStep2SummaryProps = {
+  onConfirm?: () => void;
+};
+
+export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
   const {
     goToStep,
     setStep1CatalogView,
@@ -212,10 +216,9 @@ export function WizardStep2Summary() {
     | "surface"
     | "none";
 
-  // СТРОГО: досчёт только если Step0 подтверждён
+  // СТРОГО: досчёт только если Step0 подтверждён (0->1)
   const canReconcileInstall = step0AreaConfirmed;
 
-  // rates
   const trackRates = homepage.price.calculator.tracks;
   const builtInRate = trackRates.find((t) => t.slug === "built-in")?.ratePerMeter ?? 0;
   const surfaceRate = trackRates.find((t) => t.slug === "surface")?.ratePerMeter ?? 0;
@@ -226,15 +229,22 @@ export function WizardStep2Summary() {
   const includedTrackInstall = toNumber(snapshot?.trackTotal);
   const includedSpotInstall = toNumber(snapshot?.lightsTotal);
 
-  // “досчитываем” только если реально выбраны позиции в каталоге
+  // досчитываем только если реально выбрали позиции в каталоге
   const desiredTrackInstallMeters = selectedTrackMeters > 0 ? selectedTrackMeters : 0;
   const desiredSpotInstallQty = selectedPointQty > 0 ? selectedPointQty : 0;
 
-  const desiredTrackInstallCost = desiredTrackInstallMeters > 0 ? desiredTrackInstallMeters * resolvedTrackRate : 0;
-  const desiredSpotInstallCost = desiredSpotInstallQty > 0 ? desiredSpotInstallQty * spotInstallRate : 0;
+  const desiredTrackInstallCost =
+    desiredTrackInstallMeters > 0 ? desiredTrackInstallMeters * resolvedTrackRate : 0;
 
-  const extraTrackInstall = desiredTrackInstallMeters > 0 ? Math.max(0, desiredTrackInstallCost - includedTrackInstall) : 0;
-  const extraSpotInstall = desiredSpotInstallQty > 0 ? Math.max(0, desiredSpotInstallCost - includedSpotInstall) : 0;
+  const desiredSpotInstallCost =
+    desiredSpotInstallQty > 0 ? desiredSpotInstallQty * spotInstallRate : 0;
+
+  const extraTrackInstall =
+    desiredTrackInstallMeters > 0 ? Math.max(0, desiredTrackInstallCost - includedTrackInstall) : 0;
+
+  const extraSpotInstall =
+    desiredSpotInstallQty > 0 ? Math.max(0, desiredSpotInstallCost - includedSpotInstall) : 0;
+
   const extraInstallTotal = extraTrackInstall + extraSpotInstall;
 
   useEffect(() => {
@@ -242,10 +252,8 @@ export function WizardStep2Summary() {
 
     setSnapshot((prev) => {
       if (!prev) return prev;
-
       const base = toNumber(prev.total);
       const nextGrand = base + extraInstallTotal;
-
       return { ...prev, grandTotal: nextGrand };
     });
   }, [canReconcileInstall, extraInstallTotal, setSnapshot]);
@@ -276,6 +284,13 @@ export function WizardStep2Summary() {
   };
 
   const handleAction = () => {
+    // совместимость: если родитель передал onConfirm — делаем как раньше
+    if (onConfirm) {
+      onConfirm();
+      return;
+    }
+
+    // fallback
     closeCalculator();
     setTimeout(() => {
       const el = document.getElementById("action");
@@ -292,7 +307,8 @@ export function WizardStep2Summary() {
           {canReconcileInstall ? (
             <>
               <p className="text-slate-700">
-                Потолок: <span className="font-semibold text-slate-950">{fmt(ceilingTotal)} ₽</span>
+                Потолок:{" "}
+                <span className="font-semibold text-slate-950">{fmt(ceilingTotal)} ₽</span>
               </p>
 
               {extraInstallTotal > 0 ? (
@@ -304,7 +320,8 @@ export function WizardStep2Summary() {
             </>
           ) : (
             <p className="text-slate-700">
-              Потолок: <span className="font-semibold text-slate-950">{fmt(ceilingTotal)} ₽</span>{" "}
+              Потолок:{" "}
+              <span className="font-semibold text-slate-950">{fmt(ceilingTotal)} ₽</span>{" "}
               <span className="text-xs text-slate-500">
                 (досчёт монтажа — только после подтверждения шага 1)
               </span>
@@ -391,13 +408,13 @@ export function WizardStep2Summary() {
               </li>
             ))}
             {lightingItems.length > 8 ? (
-              <li className="text-xs text-slate-500">…и ещё {lightingItems.length - 8} поз.</li>
+              <li className="text-xs text-slate-500">
+                …и ещё {lightingItems.length - 8} поз.
+              </li>
             ) : null}
           </ul>
         ) : (
-          <p className="mt-3 text-sm text-slate-600">
-            Освещение не выбрано — можно продолжить.
-          </p>
+          <p className="mt-3 text-sm text-slate-600">Освещение не выбрано — можно продолжить.</p>
         )}
       </div>
 
