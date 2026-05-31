@@ -11,7 +11,7 @@ type WizardStep0CalculatorProps = {
 };
 
 export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
-  const { markStep0SessionInteracted, markStep0AreaConfirmed, options } = useCalculatorModal();
+  const { markStep0SessionInteracted, options } = useCalculatorModal();
 
   const forcePreset = Boolean(options?.forcePreset);
 
@@ -19,7 +19,9 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
     ceilingType: String(preset?.ceilingType ?? "standard") as ServiceCalculatorPreset["ceilingType"],
 
     // ТЗ: первый запуск в модалке = 10 м² (если не forcePreset)
-    areaDefault: forcePreset ? Number(preset?.areaDefault ?? DEFAULT_CALCULATOR_AREA) : DEFAULT_CALCULATOR_AREA,
+    areaDefault: forcePreset
+      ? Number(preset?.areaDefault ?? DEFAULT_CALCULATOR_AREA)
+      : DEFAULT_CALCULATOR_AREA,
 
     corniceType: preset?.corniceType,
     trackType: preset?.trackType,
@@ -35,11 +37,7 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
       onKeyDown={markStep0SessionInteracted}
       onChange={markStep0SessionInteracted}
     >
-      <PriceCalculatorClient
-        preset={resolvedPreset}
-        compactSections
-        onAreaConfirmed={markStep0AreaConfirmed}
-      />
+      <PriceCalculatorClient preset={resolvedPreset} compactSections />
     </div>
   );
 }
