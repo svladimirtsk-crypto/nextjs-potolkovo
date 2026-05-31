@@ -89,24 +89,6 @@ function isPanelProduct(product: FeedCatalogProduct): boolean {
   );
 }
 
-/**
- * Локальная “валидность” потолочного снапшота, чтобы:
- * - не тянуть несуществующие импорты
- * - дозачёт делать только когда Step0 реально трогали
- */
-function isCeilingSnapshotReady(snapshot: any): boolean {
-  if (!snapshot) return false;
-
-  const area = Number(snapshot.area);
-  const total = Number(snapshot.total);
-
-  // area может быть 10 по дефолту — это ок.
-  if (!Number.isFinite(area) || area <= 0) return false;
-  if (!Number.isFinite(total) || total < 0) return false;
-
-  return true;
-}
-
 function sumTrackMetersFromLightingItems(
   items: Array<{ sku: string; qty: number }>,
   byId: Map<string, FeedCatalogProduct>,
@@ -126,7 +108,7 @@ function sumTrackMetersFromLightingItems(
     const product = byId.get(resolvedId);
     if (!product) continue;
 
-    // монтаж трека считаем ТОЛЬКО по профилю/шинопроводу (TRACK_PROFILE)
+    // монтаж трека считаем только по TRACK_PROFILE
     if (product.kind !== "TRACK_PROFILE") continue;
 
     if (product.unit === "m") meters += qty;
@@ -168,15 +150,12 @@ export function WizardStep2Summary() {
     goToStep,
     setStep1CatalogView,
     closeCalculator,
-    step0SessionInteracted,
+    step0AreaConfirmed,
     lightingDraft,
   } = useCalculatorModal();
 
   const { snapshot, setSnapshot } = usePriceCalculatorBridge();
 
-  // источник “выбранного света”:
-  // - если snapshot.lighting уже синхронизирован, используем его
-  // - иначе берём lightingDraft из модалки (надёжнее при любых дрейфах)
   const lighting = snapshot?.lighting ?? lightingDraft ?? null;
   const lightingItems = lighting?.mode === "catalog" ? (lighting.items ?? []) : [];
 
@@ -233,34 +212,21 @@ export function WizardStep2Summary() {
     | "surface"
     | "none";
 
-  /**
-   * ТЗ: досчитываем в Step3 треки и точечные ТОЛЬКО если лид был в шаге 1
-   * и подтвердил (в текущей архитектуре — Step0 реально трогали + снапшот “живой”).
-   */
-  const canReconcileInstall = useMemo(() => {
-    return Boolean(step0SessionInteracted) && isCeilingSnapshotReady(snapshot);
-  }, [snapshot, step0SessionInteracted]);
+  // СТРОГО: досчёт только если Step0 подтверждён
+  const canReconcileInstall = step0AreaConfirmed;
 
-  // rates: трек = по метрам, точечные = поштучно
+  // rates
   const trackRates = homepage.price.calculator.tracks;
   const builtInRate = trackRates.find((t) => t.slug === "built-in")?.ratePerMeter ?? 0;
   const surfaceRate = trackRates.find((t) => t.slug === "surface")?.ratePerMeter ?? 0;
 
-  // если тип трека неизвестен, берём built-in как “ориентир”
-  const resolvedTrackRate =
-    trackMountType === "surface" ? surfaceRate : builtInRate;
-
+  const resolvedTrackRate = trackMountType === "surface" ? surfaceRate : builtInRate;
   const spotInstallRate = homepage.price.calculator.lights.ratePerUnit;
 
   const includedTrackInstall = toNumber(snapshot?.trackTotal);
   const includedSpotInstall = toNumber(snapshot?.lightsTotal);
 
-  /**
-   * Логика дозачёта:
-   * - если выбрали позиции в каталоге, считаем монтаж по выбранному (точнее)
-   * - если НЕ выбрали, но указали в Step0 — НЕ досчитываем, только мягко напоминаем
-   * - если выбрали больше, чем было в Step0 — досчитываем разницу вверх (не уменьшаем)
-   */
+  // “досчитываем” только если реально выбраны позиции в каталоге
   const desiredTrackInstallMeters = selectedTrackMeters > 0 ? selectedTrackMeters : 0;
   const desiredSpotInstallQty = selectedPointQty > 0 ? selectedPointQty : 0;
 
@@ -277,14 +243,10 @@ export function WizardStep2Summary() {
     setSnapshot((prev) => {
       if (!prev) return prev;
 
-      // grandTotal = потолок + досчет монтажа (если есть)
       const base = toNumber(prev.total);
       const nextGrand = base + extraInstallTotal;
 
-      return {
-        ...prev,
-        grandTotal: nextGrand,
-      };
+      return { ...prev, grandTotal: nextGrand };
     });
   }, [canReconcileInstall, extraInstallTotal, setSnapshot]);
 
@@ -294,7 +256,6 @@ export function WizardStep2Summary() {
     return base + extraInstallTotal + lightingDiscountedRub;
   }, [canReconcileInstall, ceilingTotal, extraInstallTotal, lightingDiscountedRub]);
 
-  // reminders
   const showReminderMissingSelectedButSpecified =
     canReconcileInstall &&
     ((derivedPointFromStep0 > 0 && selectedPointQty === 0) ||
@@ -324,7 +285,6 @@ export function WizardStep2Summary() {
 
   return (
     <div className="space-y-4">
-      {/* Totals */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4">
         <p className="text-sm text-slate-600">Итог расчёта</p>
 
@@ -332,8 +292,7 @@ export function WizardStep2Summary() {
           {canReconcileInstall ? (
             <>
               <p className="text-slate-700">
-                Потолок:{" "}
-                <span className="font-semibold text-slate-950">{fmt(ceilingTotal)} ₽</span>
+                Потолок: <span className="font-semibold text-slate-950">{fmt(ceilingTotal)} ₽</span>
               </p>
 
               {extraInstallTotal > 0 ? (
@@ -345,10 +304,9 @@ export function WizardStep2Summary() {
             </>
           ) : (
             <p className="text-slate-700">
-              Потолок:{" "}
-              <span className="font-semibold text-slate-950">{fmt(ceilingTotal)} ₽</span>{" "}
+              Потолок: <span className="font-semibold text-slate-950">{fmt(ceilingTotal)} ₽</span>{" "}
               <span className="text-xs text-slate-500">
-                (монтаж по свету посчитаем после шага 1)
+                (досчёт монтажа — только после подтверждения шага 1)
               </span>
             </p>
           )}
@@ -368,12 +326,11 @@ export function WizardStep2Summary() {
         </p>
       </div>
 
-      {/* Gentle reminders */}
       {!canReconcileInstall && (selectedPointQty > 0 || selectedTrackMeters > 0) ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
           <p className="font-semibold">Похоже, вы уже выбрали освещение.</p>
           <p className="mt-1 text-amber-900/80">
-            Чтобы корректно посчитать монтаж трека (по метрам) и установку точечных, подтвердите параметры потолка на шаге 1.
+            Чтобы корректно посчитать монтаж трека (по метрам) и установку точечных, подтвердите шаг 1 (параметры потолка).
           </p>
           <button
             type="button"
@@ -405,12 +362,11 @@ export function WizardStep2Summary() {
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800">
           <p className="font-semibold">Подсказка</p>
           <p className="mt-1 text-slate-600">
-            Вы выбрали треки/точечные в каталоге. Мы досчитаем монтаж на этом шаге (если параметры потолка были указаны на шаге 1).
+            Вы выбрали треки/точечные в каталоге. Мы досчитаем монтаж на этом шаге (после подтверждения шага 1).
           </p>
         </div>
       ) : null}
 
-      {/* Mini-cart */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4">
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm font-semibold text-slate-950">
@@ -445,7 +401,6 @@ export function WizardStep2Summary() {
         )}
       </div>
 
-      {/* Action */}
       <button
         type="button"
         onClick={handleAction}
