@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import snapshotData from "@/data/eks-feed2-snapshot.json";
+
 import type { FeedCatalogParam, FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
+
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
 import {
   buildProductsIndex,
@@ -13,6 +15,7 @@ import {
   getDiscountedPrice,
   getRequiredLampSocket,
 } from "@/lib/feed2-products";
+
 import {
   CATALOG_SECTIONS,
   POINT_SUBTYPES,
@@ -28,6 +31,7 @@ import {
   type TrackSystemId,
   type LampSocket,
 } from "@/lib/catalog-ui-config";
+
 import { ProductImage } from "@/components/feed2/ProductImage";
 import { useCalculatorModal } from "./calculator-modal-context";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
@@ -59,10 +63,7 @@ function toParams(input: unknown): FeedCatalogParam[] {
   return input
     .map((item) => {
       const x = item as { label?: unknown; value?: unknown };
-      return {
-        label: toText(x?.label),
-        value: toText(x?.value),
-      };
+      return { label: toText(x?.label), value: toText(x?.value) };
     })
     .filter((item) => item.label.length > 0 && item.value.length > 0);
 }
@@ -73,6 +74,7 @@ function normalizeProduct(raw: unknown): FeedCatalogProduct | null {
   const vendorCode = toText(p.vendorCode);
   const offerId = toText(p.offerId);
   const name = toText(p.name);
+
   if (!name || (!vendorCode && !offerId)) return null;
 
   const productIdRaw = toText(p.productId);
@@ -110,18 +112,43 @@ function normalizeQty(nextQtyRaw: number, unit: "pcs" | "m"): number {
   return Math.max(0, Number.isFinite(normalized) ? normalized : 0);
 }
 
+function pickDisplayAttributes(product: FeedCatalogProduct): { label: string; value: string }[] {
+  const attrs = product.keyAttributes?.length ? product.keyAttributes : product.params;
+  return (attrs ?? [])
+    .slice(0, 4)
+    .map((attr) => ({ label: toText(attr.label), value: toText(attr.value) }));
+}
+
 function isMountsOrGrilles(product: FeedCatalogProduct): boolean {
   const text = `${toText(product.name)} ${toText(product.vendorCode)} ${toText(product.categoryPath)}`.toLowerCase();
   if (product.kind === "CEILING_COMPONENT") return true;
   return text.includes("заклад") || text.includes("решетк") || text.includes("решётк");
 }
 
+/**
+ * PANELS: делаем более широкое распознавание.
+ * Причина бага “панели не отображаются”: у панелей иногда kind отличается от SPOT_FIXTURE.
+ */
 function isPanelProduct(product: FeedCatalogProduct): boolean {
-  const text = `${toText(product.name)} ${toText(product.categoryPath)}`.toLowerCase();
-  return text.includes("панел") || text.includes("led-панел") || text.includes("led панел");
+  const attrs = pickDisplayAttributes(product)
+    .map((a) => `${a.label} ${a.value}`)
+    .join(" ");
+
+  const text = `${toText(product.name)} ${toText(product.categoryPath)} ${attrs}`.toLowerCase();
+
+  return (
+    text.includes("панел") ||
+    text.includes("panel") ||
+    text.includes("led панел") ||
+    text.includes("led-panel") ||
+    text.includes("лед панел") ||
+    text.includes("600x600") ||
+    text.includes("595x595")
+  );
 }
 
 function getPointSocketByProduct(product: FeedCatalogProduct): LampSocket | null {
+  // legacy точечные корпуса с предсказуемым vendorCode (оставляем как есть)
   const vendorCode = toText(product.vendorCode);
 
   if (vendorCode === "0У-00007177" || vendorCode === "0У-00007176") return "GX53";
@@ -130,6 +157,7 @@ function getPointSocketByProduct(product: FeedCatalogProduct): LampSocket | null
   const detected = detectSocket(product);
   if (detected === "GX53") return "GX53";
   if (detected === "MR16") return "MR16";
+
   return null;
 }
 
@@ -138,36 +166,17 @@ function isPointFixture(product: FeedCatalogProduct): boolean {
 }
 
 function matchesPointSubtype(product: FeedCatalogProduct, subtype: PointSubtypeId): boolean {
-  if (!isPointFixture(product)) return false;
+  // ВАЖНО: PANELS — не требуем SPOT_FIXTURE, иначе панели “пропадают”
   if (subtype === "PANELS") return isPanelProduct(product);
+
+  if (!isPointFixture(product)) return false;
+
   const socket = getPointSocketByProduct(product);
   return socket === subtype;
 }
 
 function isLamp(product: FeedCatalogProduct): boolean {
   return product.kind === "LAMP" && toNumber(product.priceRub) > 0 && product.available !== false;
-}
-
-function ProductQtyControls({
-  qty,
-  onDec,
-  onInc,
-}: {
-  qty: number;
-  onDec: () => void;
-  onInc: () => void;
-}) {
-  return (
-    <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-1">
-      <button type="button" onClick={onDec} className="h-8 w-8 rounded-lg text-base font-semibold text-slate-700 hover:bg-slate-100">
-        -
-      </button>
-      <span className="min-w-14 text-center text-sm font-semibold text-slate-900">{qty}</span>
-      <button type="button" onClick={onInc} className="h-8 w-8 rounded-lg text-base font-semibold text-slate-700 hover:bg-slate-100">
-        +
-      </button>
-    </div>
-  );
 }
 
 function TabButton({
@@ -183,21 +192,54 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex-1 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
-        active ? "bg-slate-950 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-      }`}
+      className={[
+        "rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+        active ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200",
+      ].join(" ")}
     >
       {children}
     </button>
   );
 }
 
-function pickDisplayAttributes(product: FeedCatalogProduct): { label: string; value: string }[] {
-  const attrs = product.keyAttributes?.length ? product.keyAttributes : product.params;
-  return (attrs ?? []).slice(0, 4).map((attr) => ({
-    label: toText(attr.label),
-    value: toText(attr.value),
-  }));
+function ProductQtyControls({
+  qty,
+  onDec,
+  onInc,
+  unit,
+}: {
+  qty: number;
+  unit: "pcs" | "m";
+  onDec: () => void;
+  onInc: () => void;
+}) {
+  const displayQty = unit === "m" ? qty.toFixed(1) : String(qty);
+
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={onDec}
+        className="h-8 w-8 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-900 hover:bg-slate-50"
+        aria-label="Уменьшить количество"
+      >
+        −
+      </button>
+
+      <div className="min-w-[56px] text-center text-sm font-semibold text-slate-950">
+        {displayQty} {unit === "m" ? "м" : "шт"}
+      </div>
+
+      <button
+        type="button"
+        onClick={onInc}
+        className="h-8 w-8 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-900 hover:bg-slate-50"
+        aria-label="Увеличить количество"
+      >
+        +
+      </button>
+    </div>
+  );
 }
 
 function ProductCard({
@@ -215,35 +257,55 @@ function ProductCard({
   const discounted = getDiscountedPrice(regular);
   const benefit = computeBenefit(regular, discounted);
 
+  const attrs = pickDisplayAttributes(product)
+    .map((a) => `${a.label}: ${a.value}`)
+    .join(" • ");
+
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-3">
-      <ProductImage src={toText(product.coverImage)} alt={toText(product.name)} />
-      <div className="mt-3 space-y-1">
-        <p className="line-clamp-2 text-sm font-semibold text-slate-950">{toText(product.name)}</p>
-        <p className="text-xs text-slate-500">Артикул: {toText(product.vendorCode)}</p>
-        <ul className="space-y-0.5">
-          {pickDisplayAttributes(product).map((attr) => (
-            <li key={`${toText(product.productId)}-${attr.label}-${attr.value}`} className="text-xs text-slate-600">
-              {attr.label}: {attr.value}
-            </li>
-          ))}
-        </ul>
+    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="flex gap-4">
+        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+          <ProductImage src={product.coverImage} alt={toText(product.name)} className="object-cover" />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-slate-950">{toText(product.name)}</p>
+              {toText(product.vendorCode) ? (
+                <p className="mt-1 text-xs text-slate-500">Артикул: {toText(product.vendorCode)}</p>
+              ) : null}
+              {attrs ? <p className="mt-1 text-xs text-slate-500">{attrs}</p> : null}
+            </div>
+
+            <div className="text-right">
+              <p className="text-sm font-semibold text-slate-950">{fmt(regular)} ₽</p>
+              <p className="text-xs text-emerald-700">со скидкой: {fmt(discounted)} ₽</p>
+              {benefit > 0 ? <p className="text-xs text-slate-500">выгода: {fmt(benefit)} ₽</p> : null}
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <ProductQtyControls qty={qty} unit={product.unit} onDec={onDec} onInc={onInc} />
+
+            {qty > 0 ? (
+              <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-white">
+                В корзине
+              </span>
+            ) : (
+              <span className="text-xs text-slate-500">Не выбрано</span>
+            )}
+          </div>
+        </div>
       </div>
-      <div className="mt-3 space-y-1">
-        <p className="text-xs text-slate-500">Цена: {fmt(regular)} ₽</p>
-        <p className="text-xs font-semibold text-emerald-700">Со скидкой: {fmt(discounted)} ₽</p>
-        <p className="text-xs text-emerald-600">Выгода: {fmt(benefit)} ₽</p>
-      </div>
-      <div className="mt-3">
-        <ProductQtyControls qty={qty} onDec={onDec} onInc={onInc} />
-      </div>
-    </article>
+    </div>
   );
 }
 
 export function WizardStep1Lighting() {
   const { snapshot } = usePriceCalculatorBridge();
-  const { lightingDraft, setLightingDraft, options, step1CatalogView, setStep1CatalogView } = useCalculatorModal();
+  const { lightingDraft, setLightingDraft, options, step1CatalogView, setStep1CatalogView } =
+    useCalculatorModal();
 
   const initialTab: Tab = options?.initialLightingTab === "catalog" ? "catalog" : "recommendations";
   const initialCatalogView: CatalogView = options?.initialLightingView === "selected" ? "selected" : "browse";
@@ -255,7 +317,8 @@ export function WizardStep1Lighting() {
   const [trackSystem, setTrackSystem] = useState<TrackSystemId>("COLIBRI_220");
   const [trackGroup, setTrackGroup] = useState<TrackGroupId>("TRACK_FIXTURE");
   const [pointSubtype, setPointSubtype] = useState<PointSubtypeId>("GX53");
-  const [query, setQuery] = useState("");
+
+  const [query, setQuery] = useState<string>("");
 
   const [selectedLampBySocket, setSelectedLampBySocket] = useState<Record<LampSocket, string | null>>({
     GX53: null,
@@ -267,7 +330,7 @@ export function WizardStep1Lighting() {
 
   const prevInitialLightingRef = useRef<LightingSnapshot | null | undefined>(undefined);
 
-  const products = useMemo<FeedCatalogProduct[]>(() => {
+  const products = useMemo(() => {
     const rawProducts = (snapshotData as { products?: unknown[] })?.products ?? [];
     return rawProducts
       .map((item) => normalizeProduct(item))
@@ -287,17 +350,20 @@ export function WizardStep1Lighting() {
     return map;
   }, [products]);
 
+  // внешняя синхронизация view (из Step2 “Редактировать”)
   useEffect(() => {
     if (!step1CatalogView) return;
     setCatalogView(step1CatalogView);
   }, [step1CatalogView]);
 
+  // применяем initialLighting (перенос с страницы продажи / готовые комплекты)
   useEffect(() => {
     const incoming = options?.initialLighting;
     if (incoming === undefined) return;
     if (incoming === prevInitialLightingRef.current) return;
 
     prevInitialLightingRef.current = incoming;
+
     if (!incoming) return;
 
     if (incoming.mode === "catalog" && incoming.items?.length) {
@@ -306,8 +372,10 @@ export function WizardStep1Lighting() {
 
       for (const item of incoming.items) {
         const incomingSku = toText(item.sku);
+
         const byProductId = productsById.get(incomingSku);
         const byVendorCodeId = productIdByVendorCode.get(incomingSku);
+
         const resolvedId = byProductId ? incomingSku : toText(byVendorCodeId ?? "");
 
         if (!resolvedId) {
@@ -350,6 +418,7 @@ export function WizardStep1Lighting() {
       .filter((entry) => !REMOVED_COLIBRI_VENDOR_CODES.has(toText(entry.product.vendorCode)));
   }, [cartItems, productsById]);
 
+  // если из снапшота/каталога исчезло — чистим
   useEffect(() => {
     setCartItems((prev) => {
       const next: CartItems = { ...prev };
@@ -375,7 +444,7 @@ export function WizardStep1Lighting() {
         name: toText(entry.product.name),
         qty: entry.qty,
         priceRub: toNumber(entry.product.priceRub),
-      },
+      } satisfies LightingItem,
     }));
   }, [cartEntries]);
 
@@ -415,26 +484,31 @@ export function WizardStep1Lighting() {
     return required;
   }, [cartEntries]);
 
+  // синхронизация 1:1 (закладные и лампы) + взаимоисключение ламп по сокету
   useEffect(() => {
     setCartItems((prev) => {
       const next: CartItems = { ...prev };
       let changed = false;
 
+      // mounts: если mount уже выбран — подгоняем qty под required
       for (const [mountVendor, requiredQty] of Object.entries(mountRequiredByVendor)) {
         const mountId = productIdByVendorCode.get(toText(mountVendor));
         if (!mountId) continue;
 
         const currentQty = toNumber(next[mountId]);
+
         if (requiredQty > 0 && currentQty > 0 && currentQty !== requiredQty) {
           next[mountId] = requiredQty;
           changed = true;
         }
+
         if (requiredQty <= 0 && currentQty > 0) {
           delete next[mountId];
           changed = true;
         }
       }
 
+      // lamps: если лампы уже выбраны — оставляем одну модель и подгоняем qty под required
       for (const socket of ["GX53", "MR16"] as LampSocket[]) {
         const requiredQty = toNumber(lampRequiredBySocket[socket]);
         const lampIds = lampOptionsBySocket[socket].map((lamp) => toText(lamp.productId));
@@ -470,6 +544,7 @@ export function WizardStep1Lighting() {
     });
   }, [lampOptionsBySocket, lampRequiredBySocket, mountRequiredByVendor, productIdByVendorCode, selectedLampBySocket]);
 
+  // собираем lightingDraft
   useEffect(() => {
     if (cartEntries.length === 0) {
       setLightingDraft({ mode: "none", userCustomizedLighting: false });
@@ -498,15 +573,23 @@ export function WizardStep1Lighting() {
     setLightingDraft(draft);
   }, [cartEntries, setLightingDraft, snapshot?.derivedInputs]);
 
-  const hasClarusInSnapshot = useMemo(() => products.some((product) => product.system === "CLARUS_48"), [products]);
+  const hasClarusInSnapshot = useMemo(
+    () => products.some((product) => product.system === "CLARUS_48"),
+    [products]
+  );
 
-  const hasClarusInCart = useMemo(() => {
-    return cartEntries.some((entry) => entry.product.system === "CLARUS_48");
-  }, [cartEntries]);
+  const hasClarusInCart = useMemo(
+    () => cartEntries.some((entry) => entry.product.system === "CLARUS_48"),
+    [cartEntries]
+  );
 
   const clarusPsuQty = useMemo(() => {
     return cartEntries
-      .filter((entry) => CLARUS_PSU_VENDOR_CODES.includes(toText(entry.product.vendorCode) as (typeof CLARUS_PSU_VENDOR_CODES)[number]))
+      .filter((entry) =>
+        CLARUS_PSU_VENDOR_CODES.includes(
+          toText(entry.product.vendorCode) as (typeof CLARUS_PSU_VENDOR_CODES)[number]
+        )
+      )
       .reduce((sum, entry) => sum + entry.qty, 0);
   }, [cartEntries]);
 
@@ -523,10 +606,12 @@ export function WizardStep1Lighting() {
     for (const [fixtureVendor, mountVendor] of Object.entries(POINT_TO_MOUNT_VENDOR_CODE)) {
       const fixtureId = productIdByVendorCode.get(fixtureVendor);
       const mountId = productIdByVendorCode.get(mountVendor);
+
       if (!fixtureId || !mountId) continue;
 
       const fixtureProduct = productsById.get(fixtureId);
       const mountProduct = productsById.get(mountId);
+
       if (!fixtureProduct || !mountProduct) continue;
 
       const fixtureQty = toNumber(cartItems[fixtureId]);
@@ -575,11 +660,8 @@ export function WizardStep1Lighting() {
 
     setCartItems((prev) => {
       const next = { ...prev };
-      if (qty <= 0) {
-        delete next[id];
-      } else {
-        next[id] = qty;
-      }
+      if (qty <= 0) delete next[id];
+      else next[id] = qty;
       return next;
     });
   };
@@ -587,10 +669,13 @@ export function WizardStep1Lighting() {
   const addMountOneToOne = (fixtureVendor: string) => {
     const mountVendor = POINT_TO_MOUNT_VENDOR_CODE[toText(fixtureVendor)];
     if (!mountVendor) return;
+
     const mountId = productIdByVendorCode.get(mountVendor);
     if (!mountId) return;
+
     const required = toNumber(mountRequiredByVendor[mountVendor]);
     if (required <= 0) return;
+
     setCartItems((prev) => ({ ...prev, [mountId]: required }));
   };
 
@@ -602,11 +687,13 @@ export function WizardStep1Lighting() {
 
     setCartItems((prev) => {
       const next = { ...prev };
+
       const lampIds = lampOptionsBySocket[socket].map((lamp) => toText(lamp.productId));
       for (const id of lampIds) {
         if (id !== lampId) delete next[id];
       }
       next[lampId] = required;
+
       return next;
     });
   };
@@ -614,11 +701,13 @@ export function WizardStep1Lighting() {
   const setClarusPsu = (productId: string) => {
     setCartItems((prev) => {
       const next = { ...prev };
+
       for (const vendor of CLARUS_PSU_VENDOR_CODES) {
         const id = productIdByVendorCode.get(vendor);
         if (!id) continue;
         if (id !== productId) delete next[id];
       }
+
       next[productId] = Math.max(1, toNumber(next[productId]));
       return next;
     });
@@ -635,12 +724,16 @@ export function WizardStep1Lighting() {
       const hasFixture = cartEntries.some(
         (entry) => entry.product.system === system && entry.product.kind === "TRACK_FIXTURE"
       );
+
       const profileWhitelist = new Set(TRACK_PROFILE_WHITELIST[system]);
+
       const hasProfile = cartEntries.some(
         (entry) =>
           entry.product.system === system &&
+          entry.product.kind === "TRACK_PROFILE" &&
           profileWhitelist.has(toText(entry.product.vendorCode))
       );
+
       result[system] = hasFixture && hasProfile;
     }
 
@@ -658,6 +751,7 @@ export function WizardStep1Lighting() {
     if (fixtures.length === 0) return false;
 
     const lampQtyBySocket: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
+
     for (const socket of ["GX53", "MR16"] as LampSocket[]) {
       const lampIds = lampOptionsBySocket[socket].map((lamp) => toText(lamp.productId));
       lampQtyBySocket[socket] = lampIds.reduce((sum, id) => sum + toNumber(cartItems[id]), 0);
@@ -665,8 +759,8 @@ export function WizardStep1Lighting() {
 
     return fixtures.every((entry) => {
       const vendorCode = toText(entry.product.vendorCode);
-
       const mountVendor = POINT_TO_MOUNT_VENDOR_CODE[vendorCode];
+
       const mountOk = mountVendor
         ? toNumber(cartItems[toText(productIdByVendorCode.get(mountVendor) ?? "")]) >= entry.qty
         : true;
@@ -693,9 +787,7 @@ export function WizardStep1Lighting() {
             whitelist.has(toText(product.vendorCode))
         );
       } else {
-        scoped = products.filter(
-          (product) => product.system === trackSystem && product.kind === trackGroup
-        );
+        scoped = products.filter((product) => product.system === trackSystem && product.kind === trackGroup);
       }
     } else if (section === "point-fixtures") {
       scoped = products.filter((product) => matchesPointSubtype(product, pointSubtype));
@@ -707,8 +799,12 @@ export function WizardStep1Lighting() {
     if (!q) return scoped;
 
     return scoped.filter((product) => {
-      const attrs = pickDisplayAttributes(product).map((a) => `${a.label} ${a.value}`).join(" ");
+      const attrs = pickDisplayAttributes(product)
+        .map((a) => `${a.label} ${a.value}`)
+        .join(" ");
+
       const haystack = `${toText(product.name)} ${toText(product.vendorCode)} ${toText(product.categoryPath)} ${attrs}`.toLowerCase();
+
       return haystack.includes(q);
     });
   }, [catalogView, pointSubtype, products, query, section, selectedViewItems, trackGroup, trackSystem]);
@@ -718,7 +814,8 @@ export function WizardStep1Lighting() {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
+      {/* Tabs */}
+      <div className="flex flex-wrap gap-2">
         <TabButton active={activeTab === "recommendations"} onClick={() => setActiveTab("recommendations")}>
           Рекомендации
         </TabButton>
@@ -728,18 +825,22 @@ export function WizardStep1Lighting() {
       </div>
 
       {removedHint ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
           Некоторые позиции удалены из ассортимента и автоматически убраны из выбранного.
         </div>
       ) : null}
 
+      {/* Recommendations */}
       {activeTab === "recommendations" ? (
         <div className="space-y-4">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-sm text-slate-600">
-              По параметрам: точечных {toNumber(snapshot?.derivedInputs?.pointSpotsQty)} шт., трек {toNumber(snapshot?.derivedInputs?.trackLengthMeters)} м.
-            </p>
-            <ul className="mt-2 space-y-1 text-sm text-slate-700">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+            По параметрам: точечных <span className="font-semibold">{toNumber(snapshot?.derivedInputs?.pointSpotsQty)}</span>{" "}
+            шт., трек{" "}
+            <span className="font-semibold">{toNumber(snapshot?.derivedInputs?.trackLengthMeters)}</span> м.
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+            <ul className="space-y-1">
               <li>COLIBRI: {trackAssembled.COLIBRI_220 ? "собрано" : "не собрано"}</li>
               <li>CLARUS: {trackAssembled.CLARUS_48 ? "собрано" : "не собрано"}</li>
               <li>ART: {trackAssembled.TRACK_220 ? "собрано" : "не собрано"}</li>
@@ -748,17 +849,18 @@ export function WizardStep1Lighting() {
           </div>
 
           {missingMounts.map((item) => (
-            <div key={`${item.fixtureVendorCode}-${item.mountVendorCode}`} className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-              <p className="text-sm font-medium text-amber-900">
+            <div key={`${item.fixtureVendorCode}-${item.mountVendorCode}`} className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+              <p className="font-medium">
                 Для {item.fixtureName} нужна закладная {item.mountName}
               </p>
-              <p className="mt-1 text-xs text-amber-700">
+              <p className="mt-1 text-amber-900/80">
                 Нужно: {item.requiredQty} шт., в корзине: {item.currentQty} шт.
               </p>
+
               <button
                 type="button"
                 onClick={() => addMountOneToOne(item.fixtureVendorCode)}
-                className="mt-2 rounded-xl bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-800"
+                className="mt-3 rounded-xl bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-800"
               >
                 Добавить 1:1
               </button>
@@ -766,25 +868,24 @@ export function WizardStep1Lighting() {
           ))}
 
           {missingLamps.map((missing) => (
-            <div key={missing.socket} className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
-              <p className="text-sm font-medium text-blue-900">
-                Для светильников с цоколем {missing.socket} не хватает ламп.
-              </p>
-              <p className="mt-1 text-xs text-blue-700">
+            <div key={missing.socket} className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+              <p className="font-medium">Для светильников с цоколем {missing.socket} не хватает ламп.</p>
+              <p className="mt-1 text-blue-900/80">
                 Нужно: {missing.requiredQty} шт., в корзине: {missing.currentQty} шт.
               </p>
 
-              <div className="mt-2 space-y-2">
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
                 {lampOptionsBySocket[missing.socket].slice(0, 4).map((lamp) => {
                   const lampId = toText(lamp.productId);
+                  const lampAttrs = pickDisplayAttributes(lamp)
+                    .map((attr) => `${attr.label}: ${attr.value}`)
+                    .join(" • ");
+
                   return (
-                    <div key={lampId} className="rounded-xl border border-blue-100 bg-white p-3">
-                      <p className="text-xs font-semibold text-slate-900">{toText(lamp.name)}</p>
-                      <p className="mt-1 text-xs text-slate-600">
-                        {pickDisplayAttributes(lamp)
-                          .map((attr) => `${attr.label}: ${attr.value}`)
-                          .join(" • ")}
-                      </p>
+                    <div key={lampId} className="rounded-xl border border-blue-200 bg-white p-3">
+                      <p className="text-xs font-semibold text-slate-950">{toText(lamp.name)}</p>
+                      {lampAttrs ? <p className="mt-1 text-[11px] text-slate-500">{lampAttrs}</p> : null}
+
                       <button
                         type="button"
                         onClick={() => addLampOneToOne(missing.socket, lampId)}
@@ -800,16 +901,17 @@ export function WizardStep1Lighting() {
           ))}
 
           {hasClarusInCart && clarusPsuQty < 1 ? (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
-              <p className="text-sm font-semibold text-rose-900">
-                Для системы CLARUS обязателен минимум 1 блок питания.
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-950">
+              <p className="font-medium">Для системы CLARUS обязателен минимум 1 блок питания.</p>
+
+              <div className="mt-3 flex flex-wrap gap-2">
                 {CLARUS_PSU_VENDOR_CODES.map((vendor) => {
                   const id = productIdByVendorCode.get(vendor);
                   if (!id) return null;
+
                   const product = productsById.get(id);
                   if (!product) return null;
+
                   return (
                     <button
                       key={vendor}
@@ -827,33 +929,24 @@ export function WizardStep1Lighting() {
         </div>
       ) : null}
 
+      {/* Catalog */}
       {activeTab === "catalog" ? (
         <div className="space-y-4">
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setCatalogViewAndSync("browse")}
-              className={`rounded-xl px-3 py-2 text-sm font-medium ${
-                catalogView === "browse" ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-700"
-              }`}
-            >
+          <div className="flex flex-wrap gap-2">
+            <TabButton active={catalogView === "browse"} onClick={() => setCatalogViewAndSync("browse")}>
               Каталог
-            </button>
-            <button
-              type="button"
-              onClick={() => setCatalogViewAndSync("selected")}
-              className={`rounded-xl px-3 py-2 text-sm font-medium ${
-                catalogView === "selected" ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-700"
-              }`}
-            >
+            </TabButton>
+            <TabButton active={catalogView === "selected"} onClick={() => setCatalogViewAndSync("selected")}>
               Выбранное ({selectedViewItems.length})
-            </button>
+            </TabButton>
           </div>
 
           {catalogView === "selected" ? (
-            <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="space-y-3">
               {selectedViewItems.length === 0 ? (
-                <p className="text-sm text-slate-500">Пока ничего не выбрано.</p>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
+                  Пока ничего не выбрано.
+                </div>
               ) : null}
 
               {selectedViewItems.map(({ item, product }) => {
@@ -862,38 +955,34 @@ export function WizardStep1Lighting() {
                 const productId = toText(product.productId);
 
                 return (
-                  <div key={productId} className="rounded-xl border border-slate-200 bg-white p-3">
-                    <div className="grid grid-cols-[96px_1fr] gap-3">
-                      <ProductImage
-                        src={toText(product.coverImage)}
-                        alt={toText(product.name)}
-                        containerClassName="h-24 w-24 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-2"
-                        className="h-full w-full object-contain"
-                      />
+                  <div key={productId} className="rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-950">{item.name}</p>
-                        <p className="mt-1 text-xs text-slate-600">
+                        <p className="truncate text-sm font-semibold text-slate-950">{item.name}</p>
+                        <p className="mt-1 text-xs text-slate-500">
                           {pickDisplayAttributes(product).map((a) => `${a.label}: ${a.value}`).join(" • ")}
                         </p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          Qty: {item.qty} • {fmt(regular)} ₽ / шт • со скидкой {fmt(discounted)} ₽ / шт
+                        <p className="mt-2 text-xs text-slate-600">
+                          Кол-во: <span className="font-semibold">{item.qty}</span> • {fmt(regular)} ₽ / шт • со скидкой{" "}
+                          {fmt(discounted)} ₽ / шт
                         </p>
                       </div>
-                    </div>
-                    <div className="mt-2 flex justify-end">
+
+                      {/* незаметно, но понятно */}
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={() =>
                           setCartItems((prev) => {
                             const next = { ...prev };
                             delete next[productId];
                             return next;
-                          });
-                        }}
+                          })
+                        }
                         aria-label={`Удалить ${item.name}`}
-                        className="rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100"
+                        title="Удалить"
+                        className="h-8 w-8 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50"
                       >
-                        Удалить
+                        ×
                       </button>
                     </div>
                   </div>
@@ -901,129 +990,140 @@ export function WizardStep1Lighting() {
               })}
 
               {selectedViewItems.length > 0 ? (
-                <div className="rounded-xl border border-slate-200 bg-white p-3 text-sm">
-                  <p>Итого без скидки: {fmt(selectedTotals.regular)} ₽</p>
-                  <p className="font-semibold text-emerald-700">Итого со скидкой: {fmt(selectedTotals.discounted)} ₽</p>
-                  <p className="text-emerald-600">Ваша выгода: {fmt(selectedTotals.benefit)} ₽</p>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm">
+                  <p className="text-slate-700">
+                    Итого без скидки: <span className="font-semibold text-slate-950">{fmt(selectedTotals.regular)} ₽</span>
+                  </p>
+                  <p className="mt-1 text-emerald-700">
+                    Итого со скидкой: <span className="font-semibold">{fmt(selectedTotals.discounted)} ₽</span>
+                  </p>
+                  <p className="mt-1 text-slate-600">Ваша выгода: {fmt(selectedTotals.benefit)} ₽</p>
                 </div>
               ) : null}
             </div>
           ) : (
-            <>
-              <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="flex flex-wrap gap-2">
-                  {CATALOG_SECTIONS.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => {
-                        setSection(item.id);
-                        setQuery("");
-                      }}
-                      className={`rounded-xl px-3 py-1.5 text-sm ${
-                        section === item.id ? "bg-slate-950 text-white" : "bg-white text-slate-700"
-                      }`}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
+            <div className="space-y-4">
+              {/* sections */}
+              <div className="flex flex-wrap gap-2">
+                {CATALOG_SECTIONS.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      setSection(item.id);
+                      setQuery("");
+                    }}
+                    className={[
+                      "rounded-xl px-3 py-1.5 text-sm transition-colors",
+                      section === item.id ? "bg-slate-950 text-white" : "bg-white text-slate-700 hover:bg-slate-50 border border-slate-200",
+                    ].join(" ")}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
 
-                {section === "track-systems" ? (
-                  <>
-                    <div className="flex flex-wrap gap-2">
-                      {TRACK_SYSTEMS.map((system) => (
-                        <button
-                          key={system.id}
-                          type="button"
-                          onClick={() => {
-                            setTrackSystem(system.id);
-                            setQuery("");
-                          }}
-                          className={`rounded-xl px-3 py-1.5 text-xs ${
-                            trackSystem === system.id ? "bg-slate-900 text-white" : "bg-white text-slate-700"
-                          }`}
-                        >
-                          {system.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      {TRACK_GROUPS.map((group) => (
-                        <button
-                          key={group.id}
-                          type="button"
-                          onClick={() => {
-                            setTrackGroup(group.id);
-                            setQuery("");
-                          }}
-                          className={`rounded-xl px-3 py-1.5 text-xs ${
-                            trackGroup === group.id ? "bg-slate-900 text-white" : "bg-white text-slate-700"
-                          }`}
-                        >
-                          {group.label}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                ) : null}
-
-                {section === "point-fixtures" ? (
+              {/* section sub-filters */}
+              {section === "track-systems" ? (
+                <div className="space-y-2">
                   <div className="flex flex-wrap gap-2">
-                    {POINT_SUBTYPES.map((subtype) => (
+                    {TRACK_SYSTEMS.map((system) => (
                       <button
-                        key={subtype.id}
+                        key={system.id}
                         type="button"
                         onClick={() => {
-                          setPointSubtype(subtype.id);
+                          setTrackSystem(system.id);
                           setQuery("");
                         }}
-                        className={`rounded-xl px-3 py-1.5 text-xs ${
-                          pointSubtype === subtype.id ? "bg-slate-900 text-white" : "bg-white text-slate-700"
-                        }`}
+                        className={[
+                          "rounded-xl px-3 py-1.5 text-xs transition-colors",
+                          trackSystem === system.id ? "bg-slate-900 text-white" : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50",
+                        ].join(" ")}
                       >
-                        {subtype.label}
+                        {system.label}
                       </button>
                     ))}
                   </div>
-                ) : null}
 
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(String(event.target.value ?? ""))}
-                  placeholder="Поиск в текущем разделе"
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
-                />
-              </div>
+                  <div className="flex flex-wrap gap-2">
+                    {TRACK_GROUPS.map((group) => (
+                      <button
+                        key={group.id}
+                        type="button"
+                        onClick={() => {
+                          setTrackGroup(group.id);
+                          setQuery("");
+                        }}
+                        className={[
+                          "rounded-xl px-3 py-1.5 text-xs transition-colors",
+                          trackGroup === group.id ? "bg-slate-900 text-white" : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50",
+                        ].join(" ")}
+                      >
+                        {group.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {section === "point-fixtures" ? (
+                <div className="flex flex-wrap gap-2">
+                  {POINT_SUBTYPES.map((subtype) => (
+                    <button
+                      key={subtype.id}
+                      type="button"
+                      onClick={() => {
+                        setPointSubtype(subtype.id);
+                        setQuery("");
+                      }}
+                      className={[
+                        "rounded-xl px-3 py-1.5 text-xs transition-colors",
+                        pointSubtype === subtype.id ? "bg-slate-900 text-white" : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50",
+                      ].join(" ")}
+                    >
+                      {subtype.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+
+              <input
+                value={query}
+                onChange={(event) => setQuery(String(event.target.value ?? ""))}
+                placeholder="Поиск в текущем разделе"
+                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
+              />
 
               {showClarusEmptyMessage ? (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
                   Нет данных CLARUS в snapshot
                 </div>
               ) : null}
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-3">
                 {scopedProducts.map((product) => {
                   const id = toText(product.productId);
                   const qty = toNumber(cartItems[id]);
+                  const step = product.unit === "m" ? 0.5 : 1;
 
                   return (
                     <ProductCard
                       key={id}
                       product={product}
                       qty={qty}
-                      onInc={() => setProductQty(product, qty + (product.unit === "m" ? 0.5 : 1))}
-                      onDec={() => setProductQty(product, qty - (product.unit === "m" ? 0.5 : 1))}
+                      onInc={() => setProductQty(product, qty + step)}
+                      onDec={() => setProductQty(product, qty - step)}
                     />
                   );
                 })}
-              </div>
 
-              {!showClarusEmptyMessage && scopedProducts.length === 0 ? (
-                <p className="text-sm text-slate-500">Ничего не найдено</p>
-              ) : null}
-            </>
+                {!showClarusEmptyMessage && scopedProducts.length === 0 ? (
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
+                    Ничего не найдено
+                  </div>
+                ) : null}
+              </div>
+            </div>
           )}
         </div>
       ) : null}
