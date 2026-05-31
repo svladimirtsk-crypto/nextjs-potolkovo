@@ -1,289 +1,285 @@
+import Image from "next/image";
+
 import snapshotData from "@/data/eks-feed2-snapshot.json";
-import type { LightingItem } from "@/lib/calculator-modal-types";
+
+import { Container } from "@/components/ui/container";
+import { Heading } from "@/components/ui/heading";
+import { Section } from "@/components/ui/section";
+
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
+import { detectSocket } from "@/lib/feed2-products";
+import { isRemovedColibriVendorCode } from "@/lib/catalog-ui-config";
+
+import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
+import type { LightingItem } from "@/lib/calculator-modal-types";
+
 import { LightKitCtaButton } from "./LightKitCtaButton";
-import {
-  REMOVED_COLIBRI_VENDOR_CODES,
-  TRACK_PROFILE_WHITELIST,
-} from "@/lib/catalog-ui-config";
 
-type SnapshotParam = {
-  label?: unknown;
-  value?: unknown;
-};
+type SnapshotCatalogShape = { products?: FeedCatalogProduct[] };
 
-type SnapshotProduct = {
-  productId?: unknown;
-  offerId?: unknown;
-  vendorCode?: unknown;
-  name?: unknown;
-  coverImage?: unknown;
-  images?: unknown;
-  priceRub?: unknown;
-  available?: unknown;
-  kind?: unknown;
-  system?: unknown;
-  params?: unknown;
-  keyAttributes?: unknown;
-};
-
-type KitCard = {
-  title: string;
-  subtitle: string;
-  imageUrl: string;
-  items: LightingItem[];
-};
+function fmtRub(n: number) {
+  return new Intl.NumberFormat("ru-RU").format(Math.round(n));
+}
 
 function toText(value: unknown): string {
   return String(value ?? "").trim();
 }
 
 function toNumber(value: unknown): number {
-  const num = Number(value ?? 0);
-  return Number.isFinite(num) ? num : 0;
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
 }
 
-function normalizeProducts(): SnapshotProduct[] {
-  const raw = (snapshotData as { products?: unknown[] })?.products ?? [];
-  return raw
-    .map((item) => item as SnapshotProduct)
-    .filter((item) => {
-      const vendorCode = toText(item.vendorCode);
-      if (REMOVED_COLIBRI_VENDOR_CODES.has(vendorCode)) return false;
-      return true;
-    });
+function getProducts(): FeedCatalogProduct[] {
+  const catalog = snapshotData as unknown as SnapshotCatalogShape;
+  const products = Array.isArray(catalog.products) ? catalog.products : [];
+  return products.filter((p) => toNumber(p.priceRub) > 0 && p.available !== false);
 }
 
-function getProductImage(product: SnapshotProduct | null): string {
-  if (!product) return "";
-  const cover = toText(product.coverImage);
-  if (cover) return cover;
+function findByVendorCode(products: FeedCatalogProduct[], vendorCode: string): FeedCatalogProduct | null {
+  const code = toText(vendorCode);
+  if (!code) return null;
 
-  if (Array.isArray(product.images)) {
-    const first = product.images.map((img) => toText(img)).find(Boolean);
-    return String(first ?? "");
-  }
-
-  return "";
+  return (
+    products.find((p) => toText(p.vendorCode) === code) ??
+    products.find((p) => toText(p.productId) === code) ??
+    null
+  );
 }
 
-function findByVendor(products: SnapshotProduct[], vendorCode: string): SnapshotProduct | null {
-  const safeVendorCode = toText(vendorCode);
-  return products.find((product) => toText(product.vendorCode) === safeVendorCode) ?? null;
-}
-
-function inferLengthMm(product: SnapshotProduct): number {
-  const name = toText(product.name).toLowerCase();
-
-  const mmMatch = name.match(/(\d{3,4})\s*мм/i);
-  if (mmMatch) return Number(mmMatch[1]);
-
-  const mMatch = name.match(/(\d(?:[.,]\d)?)\s*м(?!м)/i);
-  if (mMatch) return Number(String(mMatch[1]).replace(",", ".")) * 1000;
-
-  return 0;
-}
-
-function findColibriProfileByLength(products: SnapshotProduct[], targetMm: 1000 | 2000): SnapshotProduct | null {
-  const whitelist = new Set(TRACK_PROFILE_WHITELIST.COLIBRI_220);
-
-  const candidates = products.filter((product) => {
-    const vendorCode = toText(product.vendorCode);
-    if (!whitelist.has(vendorCode)) return false;
-    if (toText(product.system) !== "COLIBRI_220") return false;
-    if (toText(product.kind) !== "TRACK_PROFILE") return false;
-    if (product.available === false) return false;
-    if (toNumber(product.priceRub) <= 0) return false;
-    return true;
-  });
-
-  const scored = candidates.map((product) => {
-    const inferred = inferLengthMm(product);
-    const diff = Math.abs(inferred - targetMm);
-    return { product, diff };
-  });
-
-  scored.sort((a, b) => a.diff - b.diff);
-  return scored[0]?.product ?? null;
-}
-
-function isMR16Lamp(product: SnapshotProduct): boolean {
-  if (toText(product.kind) !== "LAMP") return false;
-  if (toNumber(product.priceRub) <= 0) return false;
-  if (product.available === false) return false;
-
-  const textParts: string[] = [toText(product.name), toText(product.vendorCode)];
-
-  const params = Array.isArray(product.params) ? (product.params as SnapshotParam[]) : [];
-  for (const p of params) {
-    textParts.push(`${toText(p.label)} ${toText(p.value)}`);
-  }
-
-  const attrs = Array.isArray(product.keyAttributes) ? (product.keyAttributes as SnapshotParam[]) : [];
-  for (const a of attrs) {
-    textParts.push(`${toText(a.label)} ${toText(a.value)}`);
-  }
-
-  const text = textParts.join(" ").toLowerCase();
-  return text.includes("mr16") || text.includes("gu5.3");
-}
-
-function toLightingItem(product: SnapshotProduct | null, qty: number, fallbackVendor: string): LightingItem {
-  if (!product) {
-    return {
-      sku: String(fallbackVendor ?? ""),
-      name: `Позиция ${String(fallbackVendor ?? "")}`,
-      qty,
-      priceRub: 0,
-    };
-  }
-
+function itemFromProduct(product: FeedCatalogProduct, qty: number): LightingItem {
   return {
-    sku: toText(product.productId) || toText(product.vendorCode) || toText(fallbackVendor),
-    name: toText(product.name) || `Позиция ${String(fallbackVendor ?? "")}`,
+    sku: toText(product.productId),
+    name: toText(product.name),
     qty,
     priceRub: toNumber(product.priceRub),
   };
 }
 
-function buildKits(products: SnapshotProduct[]): KitCard[] {
-  const colibri2000 = findColibriProfileByLength(products, 2000);
-  const colibri1000 = findColibriProfileByLength(products, 1000);
+function pickColibriProfileByLength(
+  products: FeedCatalogProduct[],
+  pieceLengthMeters: 1 | 2
+): FeedCatalogProduct | null {
+  const candidates = products
+    .filter((p) => p.system === "COLIBRI_220")
+    .filter((p) => p.kind === "TRACK_PROFILE")
+    .filter((p) => !isRemovedColibriVendorCode(p.vendorCode))
+    .filter((p) => p.available !== false);
 
-  const kitchenItems: LightingItem[] = [
-    toLightingItem(colibri2000, 1, "COLIBRI_PROFILE_2000"),
-    toLightingItem(colibri1000, 1, "COLIBRI_PROFILE_1000"),
-    toLightingItem(findByVendor(products, "0У-00001335"), 2, "0У-00001335"),
-    toLightingItem(findByVendor(products, "0У-00001338"), 3, "0У-00001338"),
-    toLightingItem(findByVendor(products, "0У-00006095"), 1, "0У-00006095"),
-    toLightingItem(findByVendor(products, "0У-00001342"), 1, "0У-00001342"),
-  ];
+  // 1) Prefer exact pieceLengthMeters from snapshot
+  const exact = candidates.find((p) => {
+    const len = p.pieceLengthMeters;
+    return typeof len === "number" && Math.abs(len - pieceLengthMeters) < 0.001;
+  });
+  if (exact) return exact;
 
-  const livingItems: LightingItem[] = [
-    toLightingItem(colibri2000, 4, "COLIBRI_PROFILE_2000"),
-    toLightingItem(colibri1000, 2, "COLIBRI_PROFILE_1000"),
-    toLightingItem(findByVendor(products, "0У-00001335"), 2, "0У-00001335"),
-    toLightingItem(findByVendor(products, "0У-00001339"), 4, "0У-00001339"),
-    toLightingItem(findByVendor(products, "0У-00001336"), 2, "0У-00001336"),
-    toLightingItem(findByVendor(products, "0У-00006095"), 4, "0У-00006095"),
-    toLightingItem(findByVendor(products, "0У-00001342"), 4, "0У-00001342"),
-  ];
-
-  const bestMr16Lamp = products.find((product) => isMR16Lamp(product)) ?? null;
-
-  const hallwayItems: LightingItem[] = [
-    toLightingItem(findByVendor(products, "0У-00001355"), 1, "0У-00001355"),
-    toLightingItem(findByVendor(products, "0У-00006327"), 4, "0У-00006327"),
-    toLightingItem(bestMr16Lamp, 4, "MR16_LAMP"),
-  ];
-
-  return [
-    {
-      title: "Для кухни",
-      subtitle: "Сбалансированный свет для рабочей и обеденной зоны.",
-      imageUrl:
-        getProductImage(findByVendor(products, "0У-00001338")) ||
-        getProductImage(colibri2000),
-      items: kitchenItems,
-    },
-    {
-      title: "Для гостиной",
-      subtitle: "Сценарное освещение для общего и акцентного света.",
-      imageUrl:
-        getProductImage(findByVendor(products, "0У-00001339")) ||
-        getProductImage(colibri2000),
-      items: livingItems,
-    },
-    {
-      title: "Для прихожей",
-      subtitle: "Компактный ART-набор с лампами MR16 1:1.",
-      imageUrl:
-        getProductImage(findByVendor(products, "0У-00006327")) ||
-        getProductImage(findByVendor(products, "0У-00001355")),
-      items: hallwayItems,
-    },
-  ];
+  // 2) Fallback: parse name
+  const mm = pieceLengthMeters === 2 ? 2000 : 1000;
+  const nameMatch = candidates.find((p) => toText(p.name).includes(`${mm}`));
+  return nameMatch ?? candidates[0] ?? null;
 }
 
-function fmt(n: number): string {
-  return new Intl.NumberFormat("ru-RU").format(Math.round(n));
+function pickLampBySocket(products: FeedCatalogProduct[], socket: "MR16" | "GX53"): FeedCatalogProduct | null {
+  const lamps = products
+    .filter((p) => p.kind === "LAMP")
+    .filter((p) => p.available !== false)
+    .filter((p) => detectSocket(p) === socket)
+    .sort((a, b) => toNumber(a.priceRub) - toNumber(b.priceRub));
+
+  return lamps[0] ?? null;
+}
+
+type KitCard = {
+  title: string;
+  subtitle: string;
+  imageSrc: string;
+  imageAlt: string;
+  items: LightingItem[];
+};
+
+function buildKitKitchen(products: FeedCatalogProduct[]): KitCard | null {
+  const profile2000 = pickColibriProfileByLength(products, 2);
+  const profile1000 = pickColibriProfileByLength(products, 1);
+
+  const f1335 = findByVendorCode(products, "0У-00001335");
+  const f1338 = findByVendorCode(products, "0У-00001338");
+  const cornerJoin = findByVendorCode(products, "0У-00006095");
+  const cornerConn = findByVendorCode(products, "0У-00001342");
+
+  if (!profile2000 || !profile1000 || !f1335 || !f1338 || !cornerJoin || !cornerConn) return null;
+
+  const items: LightingItem[] = [
+    itemFromProduct(profile2000, 1),
+    itemFromProduct(profile1000, 1),
+    itemFromProduct(f1335, 2),
+    itemFromProduct(f1338, 3),
+    itemFromProduct(cornerJoin, 1),
+    itemFromProduct(cornerConn, 1),
+  ];
+
+  const imageSrc = toText(f1335.coverImage) || "/svc-tracksale.jpeg";
+
+  return {
+    title: "Для кухни — COLIBRI",
+    subtitle: "Профиль 2 м + 1 м, 5 светильников и угол",
+    imageSrc,
+    imageAlt: "Комплект трекового освещения для кухни (COLIBRI)",
+    items,
+  };
+}
+
+function buildKitLiving(products: FeedCatalogProduct[]): KitCard | null {
+  const profile2000 = pickColibriProfileByLength(products, 2);
+  const profile1000 = pickColibriProfileByLength(products, 1);
+
+  const f1335 = findByVendorCode(products, "0У-00001335");
+  const f1339 = findByVendorCode(products, "0У-00001339");
+  const f1336 = findByVendorCode(products, "0У-00001336");
+  const cornerJoin = findByVendorCode(products, "0У-00006095");
+  const cornerConn = findByVendorCode(products, "0У-00001342");
+
+  if (!profile2000 || !profile1000 || !f1335 || !f1339 || !f1336 || !cornerJoin || !cornerConn) return null;
+
+  const items: LightingItem[] = [
+    itemFromProduct(profile2000, 4),
+    itemFromProduct(profile1000, 2),
+    itemFromProduct(f1335, 2),
+    itemFromProduct(f1339, 4),
+    itemFromProduct(f1336, 2),
+    itemFromProduct(cornerJoin, 4),
+    itemFromProduct(cornerConn, 4),
+  ];
+
+  const imageSrc = toText(f1339.coverImage) || "/svc-tracksale.jpeg";
+
+  return {
+    title: "Для гостиной — COLIBRI",
+    subtitle: "6 м профиля, 8 светильников и 4 угла",
+    imageSrc,
+    imageAlt: "Комплект трекового освещения для гостиной (COLIBRI)",
+    items,
+  };
+}
+
+function buildKitHallway(products: FeedCatalogProduct[]): KitCard | null {
+  const profileArt = findByVendorCode(products, "0У-00001355");
+  const fixtureArt = findByVendorCode(products, "0У-00006327");
+  const lampMr16 = pickLampBySocket(products, "MR16");
+
+  if (!profileArt || !fixtureArt || !lampMr16) return null;
+
+  const items: LightingItem[] = [
+    itemFromProduct(profileArt, 1),
+    itemFromProduct(fixtureArt, 4),
+    itemFromProduct(lampMr16, 4),
+  ];
+
+  const imageSrc = toText(fixtureArt.coverImage) || "/svc-tracksale.jpeg";
+
+  return {
+    title: "Для прихожей — ART",
+    subtitle: "1 профиль, 4 светильника + лампы MR16 (1:1)",
+    imageSrc,
+    imageAlt: "Комплект трекового освещения для прихожей (ART)",
+    items,
+  };
+}
+
+function calcTotals(items: LightingItem[]) {
+  const totalRub = items.reduce((sum, i) => sum + i.qty * i.priceRub, 0);
+  const discountedTotalRub = applyLightingDiscount(totalRub);
+  const benefitRub = Math.max(0, Math.round(totalRub - discountedTotalRub));
+  return { totalRub, discountedTotalRub, benefitRub };
 }
 
 export function LightKitShowcase() {
-  const products = normalizeProducts();
-  const kits = buildKits(products);
+  const products = getProducts();
+
+  const kits = [
+    buildKitKitchen(products),
+    buildKitLiving(products),
+    buildKitHallway(products),
+  ].filter((x): x is KitCard => x !== null);
 
   return (
-    <section className="space-y-6">
-      <div className="max-w-3xl">
-        <p className="text-sm font-medium uppercase tracking-[0.16em] text-slate-500">
-          Готовые комплекты
-        </p>
-        <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
-          Подберите комплект под комнату и сразу откройте его в калькуляторе
-        </h2>
-        <p className="mt-2 text-sm text-slate-600">
-          Нажмите на подходящий вариант, и он откроется в калькуляторе в готовом виде для быстрого редактирования.
-        </p>
-      </div>
+    <Section className="bg-white">
+      <Container>
+        <Heading
+          eyebrow="Готовые комплекты"
+          title="Быстрый старт: самые популярные наборы"
+          description="Можно взять готовый комплект и дальше настроить его под ваш интерьер в калькуляторе."
+        />
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {kits.map((kit) => {
-          const totalRub = kit.items.reduce((sum, item) => sum + item.qty * item.priceRub, 0);
-          const discounted = applyLightingDiscount(totalRub);
+        <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {kits.map((kit) => {
+            const { totalRub, discountedTotalRub, benefitRub } = calcTotals(kit.items);
 
-          return (
-            <article
-              key={kit.title}
-              className="flex h-full flex-col overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-sm"
-            >
-              <div className="aspect-[16/10] w-full overflow-hidden bg-slate-100">
-                {kit.imageUrl ? (
-                  <img
-                    src={String(kit.imageUrl ?? "")}
-                    alt={kit.title}
-                    className="h-full w-full object-cover"
-                    loading="lazy"
+            return (
+              <article
+                key={kit.title}
+                className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.04)]"
+              >
+                <div className="relative aspect-[16/10] w-full bg-slate-100">
+                  <Image
+                    src={kit.imageSrc}
+                    alt={kit.imageAlt}
+                    fill
+                    sizes="(max-width: 1280px) 100vw, 520px"
+                    className="object-cover"
                   />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-sm text-slate-500">
-                    Фото комплекта
-                  </div>
-                )}
-              </div>
+                </div>
 
-              <div className="flex flex-1 flex-col p-6">
-                <div className="mb-4 flex-grow">
-                  <h3 className="mb-1 text-lg font-semibold text-slate-950">{kit.title}</h3>
-                  <p className="mb-3 text-sm text-slate-600">{kit.subtitle}</p>
-                  <ul className="space-y-1.5">
+                <div className="p-6">
+                  <div>
+                    <h3 className="text-lg font-semibold tracking-tight text-slate-950">
+                      {kit.title}
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-600">{kit.subtitle}</p>
+                  </div>
+
+                  <ul className="mt-5 space-y-2 text-sm text-slate-700">
                     {kit.items.map((item) => (
-                      <li key={`${kit.title}-${item.sku}`} className="flex justify-between gap-2 text-sm text-slate-700">
-                        <span className="line-clamp-2">{item.name}</span>
-                        <span className="shrink-0 text-slate-500">x {item.qty}</span>
+                      <li key={`${item.sku}-${item.name}`} className="flex items-start gap-2">
+                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-900" />
+                        <span className="leading-snug">
+                          {item.name} × <span className="font-semibold">{item.qty}</span>
+                        </span>
                       </li>
                     ))}
                   </ul>
-                </div>
 
-                <div className="border-t border-slate-100 pt-4">
-                  <p className="text-sm text-slate-400 line-through">{fmt(totalRub)} ₽</p>
-                  <p className="text-2xl font-bold text-emerald-600">{fmt(discounted)} ₽</p>
-                  <p className="mt-0.5 text-xs font-medium text-emerald-700">-15% при заказе потолка</p>
+                  <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                      <p className="text-sm text-slate-600">
+                        Сумма: <span className="font-semibold text-slate-950">{fmtRub(totalRub)} ₽</span>
+                      </p>
+                      <p className="text-sm text-emerald-700">
+                        Со скидкой:{" "}
+                        <span className="font-semibold">{fmtRub(discountedTotalRub)} ₽</span>
+                      </p>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Экономия {fmtRub(benefitRub)} ₽ (−15% при заказе потолка)
+                    </p>
+                  </div>
 
-                  <div className="mt-4">
+                  <div className="mt-5">
                     <LightKitCtaButton
                       title={kit.title}
                       items={kit.items}
-                      source="track-sale-ready-kit"
+                      source="track-sale-ready-kits"
                     />
                   </div>
+
+                  <p className="mt-4 text-xs text-slate-500">
+                    Точечные светильники и дополнительные позиции можно выбрать ниже в каталоге.
+                  </p>
                 </div>
-              </div>
-            </article>
-          );
-        })}
-      </div>
-    </section>
+              </article>
+            );
+          })}
+        </div>
+      </Container>
+    </Section>
   );
 }
