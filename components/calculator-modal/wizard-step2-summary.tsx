@@ -8,11 +8,10 @@ import type { FeedCatalogParam, FeedCatalogProduct } from "@/lib/eks-feed2-catal
 import { homepage } from "@/content/homepage";
 
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
+import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
+
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
-
-import { isSnapshotValid } from "@/lib/price-calculator-logic"; // если нет этого файла/экспорта, см. примечание ниже
-import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
 
 function toText(value: unknown): string {
   return String(value ?? "").trim();
@@ -90,6 +89,24 @@ function isPanelProduct(product: FeedCatalogProduct): boolean {
   );
 }
 
+/**
+ * Локальная “валидность” потолочного снапшота, чтобы:
+ * - не тянуть несуществующие импорты
+ * - дозачёт делать только когда Step0 реально трогали
+ */
+function isCeilingSnapshotReady(snapshot: any): boolean {
+  if (!snapshot) return false;
+
+  const area = Number(snapshot.area);
+  const total = Number(snapshot.total);
+
+  // area может быть 10 по дефолту — это ок.
+  if (!Number.isFinite(area) || area <= 0) return false;
+  if (!Number.isFinite(total) || total < 0) return false;
+
+  return true;
+}
+
 function sumTrackMetersFromLightingItems(
   items: Array<{ sku: string; qty: number }>,
   byId: Map<string, FeedCatalogProduct>,
@@ -109,6 +126,7 @@ function sumTrackMetersFromLightingItems(
     const product = byId.get(resolvedId);
     if (!product) continue;
 
+    // монтаж трека считаем ТОЛЬКО по профилю/шинопроводу (TRACK_PROFILE)
     if (product.kind !== "TRACK_PROFILE") continue;
 
     if (product.unit === "m") meters += qty;
@@ -139,9 +157,7 @@ function sumPointQtyFromLightingItems(
     if (!product) continue;
 
     // точечные = SPOT_FIXTURE + панели
-    if (product.kind === "SPOT_FIXTURE" || isPanelProduct(product)) {
-      qtyTotal += qty;
-    }
+    if (product.kind === "SPOT_FIXTURE" || isPanelProduct(product)) qtyTotal += qty;
   }
 
   return qtyTotal;
@@ -153,11 +169,15 @@ export function WizardStep2Summary() {
     setStep1CatalogView,
     closeCalculator,
     step0SessionInteracted,
+    lightingDraft,
   } = useCalculatorModal();
 
   const { snapshot, setSnapshot } = usePriceCalculatorBridge();
 
-  const lighting = snapshot?.lighting;
+  // источник “выбранного света”:
+  // - если snapshot.lighting уже синхронизирован, используем его
+  // - иначе берём lightingDraft из модалки (надёжнее при любых дрейфах)
+  const lighting = snapshot?.lighting ?? lightingDraft ?? null;
   const lightingItems = lighting?.mode === "catalog" ? (lighting.items ?? []) : [];
 
   const catalogProducts = useMemo(() => {
@@ -201,24 +221,32 @@ export function WizardStep2Summary() {
   }, [byId, byVendor, lightingItems]);
 
   const ceilingTotal = toNumber(snapshot?.total);
-  const lightingTotalRub = toNumber(snapshot?.lighting?.totalRub);
+  const lightingTotalRub = toNumber(lighting?.totalRub);
   const lightingDiscountedRub = toNumber(
-    snapshot?.lighting?.discountedTotalRub ?? applyLightingDiscount(lightingTotalRub)
+    lighting?.discountedTotalRub ?? applyLightingDiscount(lightingTotalRub)
   );
 
   const derivedPointFromStep0 = toNumber(snapshot?.derivedInputs?.pointSpotsQty);
   const derivedTrackFromStep0 = toNumber(snapshot?.derivedInputs?.trackLengthMeters);
-  const trackMountType = snapshot?.derivedInputs?.trackMountType ?? "none";
+  const trackMountType = (snapshot?.derivedInputs?.trackMountType ?? "none") as
+    | "built-in"
+    | "surface"
+    | "none";
 
+  /**
+   * ТЗ: досчитываем в Step3 треки и точечные ТОЛЬКО если лид был в шаге 1
+   * и подтвердил (в текущей архитектуре — Step0 реально трогали + снапшот “живой”).
+   */
   const canReconcileInstall = useMemo(() => {
-    // критерий “лид реально был на Step0”: step0SessionInteracted + snapshot валиден
-    return Boolean(step0SessionInteracted) && isSnapshotValid(snapshot);
+    return Boolean(step0SessionInteracted) && isCeilingSnapshotReady(snapshot);
   }, [snapshot, step0SessionInteracted]);
 
+  // rates: трек = по метрам, точечные = поштучно
   const trackRates = homepage.price.calculator.tracks;
   const builtInRate = trackRates.find((t) => t.slug === "built-in")?.ratePerMeter ?? 0;
   const surfaceRate = trackRates.find((t) => t.slug === "surface")?.ratePerMeter ?? 0;
 
+  // если тип трека неизвестен, берём built-in как “ориентир”
   const resolvedTrackRate =
     trackMountType === "surface" ? surfaceRate : builtInRate;
 
@@ -227,28 +255,32 @@ export function WizardStep2Summary() {
   const includedTrackInstall = toNumber(snapshot?.trackTotal);
   const includedSpotInstall = toNumber(snapshot?.lightsTotal);
 
-  const desiredTrackInstallMeters = selectedTrackMeters > 0 ? selectedTrackMeters : derivedTrackFromStep0;
-  const desiredSpotInstallQty = selectedPointQty > 0 ? selectedPointQty : derivedPointFromStep0;
+  /**
+   * Логика дозачёта:
+   * - если выбрали позиции в каталоге, считаем монтаж по выбранному (точнее)
+   * - если НЕ выбрали, но указали в Step0 — НЕ досчитываем, только мягко напоминаем
+   * - если выбрали больше, чем было в Step0 — досчитываем разницу вверх (не уменьшаем)
+   */
+  const desiredTrackInstallMeters = selectedTrackMeters > 0 ? selectedTrackMeters : 0;
+  const desiredSpotInstallQty = selectedPointQty > 0 ? selectedPointQty : 0;
 
   const desiredTrackInstallCost = desiredTrackInstallMeters > 0 ? desiredTrackInstallMeters * resolvedTrackRate : 0;
   const desiredSpotInstallCost = desiredSpotInstallQty > 0 ? desiredSpotInstallQty * spotInstallRate : 0;
 
-  // добавляем только вверх (досчёт), не уменьшаем
-  const extraTrackInstall = selectedTrackMeters > 0 ? Math.max(0, desiredTrackInstallCost - includedTrackInstall) : 0;
-  const extraSpotInstall = selectedPointQty > 0 ? Math.max(0, desiredSpotInstallCost - includedSpotInstall) : 0;
+  const extraTrackInstall = desiredTrackInstallMeters > 0 ? Math.max(0, desiredTrackInstallCost - includedTrackInstall) : 0;
+  const extraSpotInstall = desiredSpotInstallQty > 0 ? Math.max(0, desiredSpotInstallCost - includedSpotInstall) : 0;
   const extraInstallTotal = extraTrackInstall + extraSpotInstall;
 
   useEffect(() => {
     if (!canReconcileInstall) return;
 
-    // фиксируем “досчёт” в snapshot.grandTotal, чтобы было единое место правды (Step2)
     setSnapshot((prev) => {
       if (!prev) return prev;
 
+      // grandTotal = потолок + досчет монтажа (если есть)
       const base = toNumber(prev.total);
       const nextGrand = base + extraInstallTotal;
 
-      // если ничего не добавляем — всё равно очищаем старое значение grandTotal, чтобы не было “залипания”
       return {
         ...prev,
         grandTotal: nextGrand,
@@ -262,6 +294,7 @@ export function WizardStep2Summary() {
     return base + extraInstallTotal + lightingDiscountedRub;
   }, [canReconcileInstall, ceilingTotal, extraInstallTotal, lightingDiscountedRub]);
 
+  // reminders
   const showReminderMissingSelectedButSpecified =
     canReconcileInstall &&
     ((derivedPointFromStep0 > 0 && selectedPointQty === 0) ||
@@ -283,7 +316,6 @@ export function WizardStep2Summary() {
 
   const handleAction = () => {
     closeCalculator();
-    // мягко скроллим к форме
     setTimeout(() => {
       const el = document.getElementById("action");
       if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -300,7 +332,8 @@ export function WizardStep2Summary() {
           {canReconcileInstall ? (
             <>
               <p className="text-slate-700">
-                Потолок: <span className="font-semibold text-slate-950">{fmt(ceilingTotal)} ₽</span>
+                Потолок:{" "}
+                <span className="font-semibold text-slate-950">{fmt(ceilingTotal)} ₽</span>
               </p>
 
               {extraInstallTotal > 0 ? (
@@ -312,8 +345,11 @@ export function WizardStep2Summary() {
             </>
           ) : (
             <p className="text-slate-700">
-              Потолок: <span className="font-semibold text-slate-950">{fmt(ceilingTotal)} ₽</span>{" "}
-              <span className="text-xs text-slate-500">(монтаж по свету посчитаем после шага 1)</span>
+              Потолок:{" "}
+              <span className="font-semibold text-slate-950">{fmt(ceilingTotal)} ₽</span>{" "}
+              <span className="text-xs text-slate-500">
+                (монтаж по свету посчитаем после шага 1)
+              </span>
             </p>
           )}
 
@@ -353,7 +389,7 @@ export function WizardStep2Summary() {
         <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
           <p className="font-semibold">Небольшая проверка</p>
           <p className="mt-1 text-blue-900/80">
-            В расчёте потолка указаны треки/точечные, но в каталоге вы их пока не выбрали. Можно продолжить без суеты — или добавить сейчас.
+            В расчёте потолка указаны треки/точечные, но в каталоге вы их пока не выбрали. Можно продолжить — или добавить сейчас.
           </p>
           <button
             type="button"
@@ -369,7 +405,7 @@ export function WizardStep2Summary() {
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800">
           <p className="font-semibold">Подсказка</p>
           <p className="mt-1 text-slate-600">
-            Вы выбрали треки/точечные в каталоге. Если на шаге 1 они не были указаны — мы досчитаем монтаж на этом шаге (только если шаг 1 был пройден).
+            Вы выбрали треки/точечные в каталоге. Мы досчитаем монтаж на этом шаге (если параметры потолка были указаны на шаге 1).
           </p>
         </div>
       ) : null}
@@ -403,7 +439,9 @@ export function WizardStep2Summary() {
             ) : null}
           </ul>
         ) : (
-          <p className="mt-3 text-sm text-slate-600">Освещение не выбрано — можно продолжить.</p>
+          <p className="mt-3 text-sm text-slate-600">
+            Освещение не выбрано — можно продолжить.
+          </p>
         )}
       </div>
 
