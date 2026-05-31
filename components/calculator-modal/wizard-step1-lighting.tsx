@@ -26,10 +26,12 @@ import {
   type LampSocket,
 } from "@/lib/catalog-ui-config";
 
-import { ProductImage } from "@/components/feed2/ProductImage";
+import { ProductImageLightbox } from "@/components/feed2/ProductImageLightbox";
 
 import { useCalculatorModal } from "./calculator-modal-context";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
+
+import { ART_TRACK_PROFILE_VENDOR_WHITELIST, applyVendorOverrides } from "@/lib/vendor-code-overrides";
 
 type Tab = "recommendations" | "catalog";
 type CatalogView = "selected" | "browse";
@@ -137,11 +139,8 @@ function getPointSocketByProduct(product: FeedCatalogProduct): LampSocket | null
 }
 
 function matchesPointSubtype(product: FeedCatalogProduct, subtype: PointSubtypeId): boolean {
-  // FIX: PANELS до проверки kind
   if (subtype === "PANELS") return isPanelProduct(product);
-
   if (product.kind !== "SPOT_FIXTURE") return false;
-
   const socket = getPointSocketByProduct(product);
   return socket === subtype;
 }
@@ -227,7 +226,6 @@ function ProductCard({
 }) {
   const regular = toNumber(product.priceRub);
   const discounted = getDiscountedPrice(regular);
-
   const benefit = Math.max(0, Math.round(regular - discounted));
 
   const attrs = pickDisplayAttributes(product)
@@ -237,8 +235,12 @@ function ProductCard({
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
       <div className="flex gap-4">
-        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-slate-100">
-          <ProductImage src={product.coverImage} alt={toText(product.name)} className="object-cover" />
+        <div className="h-20 w-20 shrink-0">
+          <ProductImageLightbox
+            src={product.coverImage}
+            alt={toText(product.name)}
+            thumbClassName="h-20 w-20"
+          />
         </div>
 
         <div className="min-w-0 flex-1">
@@ -274,14 +276,7 @@ function ProductCard({
 
 export function WizardStep1Lighting() {
   const { snapshot } = usePriceCalculatorBridge();
-
-  const {
-    options,
-    step1CatalogView,
-    setStep1CatalogView,
-    lightingDraft,
-    setLightingDraft,
-  } = useCalculatorModal();
+  const { options, step1CatalogView, setStep1CatalogView, setLightingDraft } = useCalculatorModal();
 
   const initialTab: Tab = options?.initialLightingTab === "catalog" ? "catalog" : "recommendations";
   const initialView: CatalogView = options?.initialLightingView === "selected" ? "selected" : "browse";
@@ -293,7 +288,6 @@ export function WizardStep1Lighting() {
   const [trackSystem, setTrackSystem] = useState<TrackSystemId>("COLIBRI_220");
   const [trackGroup, setTrackGroup] = useState<TrackGroupId>("TRACK_FIXTURE");
   const [pointSubtype, setPointSubtype] = useState<PointSubtypeId>("GX53");
-
   const [query, setQuery] = useState<string>("");
 
   const [cartItems, setCartItems] = useState<CartItems>({});
@@ -304,7 +298,8 @@ export function WizardStep1Lighting() {
     return rawProducts
       .map((item) => normalizeProduct(item))
       .filter((item): item is FeedCatalogProduct => Boolean(item))
-      .filter((p) => !REMOVED_COLIBRI_VENDOR_CODES.has(toText(p.vendorCode)));
+      .filter((p) => !REMOVED_COLIBRI_VENDOR_CODES.has(toText(p.vendorCode)))
+      .map((p) => applyVendorOverrides(p));
   }, []);
 
   const byProductId = useMemo(() => {
@@ -323,13 +318,11 @@ export function WizardStep1Lighting() {
     return map;
   }, [products]);
 
-  // sync from Step2 "Редактировать"
   useEffect(() => {
     if (!step1CatalogView) return;
     setCatalogView(step1CatalogView);
   }, [step1CatalogView]);
 
-  // apply initialLighting (из страницы продажи / готовых комплектов)
   useEffect(() => {
     const incoming = options?.initialLighting;
     if (incoming === undefined) return;
@@ -343,7 +336,6 @@ export function WizardStep1Lighting() {
     for (const item of incoming.items) {
       const incomingSku = toText(item.sku);
 
-      // sku может быть productId или vendorCode — пробуем оба
       const byId = byProductId.get(incomingSku);
       const byVendor = productIdByVendorCode.get(incomingSku);
 
@@ -374,7 +366,6 @@ export function WizardStep1Lighting() {
       .filter((x): x is { productId: string; product: FeedCatalogProduct; qty: number } => Boolean(x));
   }, [byProductId, cartItems]);
 
-  // build lightingDraft
   useEffect(() => {
     if (cartEntries.length === 0) {
       setLightingDraft({ mode: "none", userCustomizedLighting: false });
@@ -448,19 +439,16 @@ export function WizardStep1Lighting() {
 
   const lampRequiredBySocket = useMemo(() => {
     const required: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
-
     for (const entry of cartEntries) {
       const socket = getRequiredLampSocket(entry.product);
       if (!socket) continue;
       required[socket] = (required[socket] ?? 0) + entry.qty;
     }
-
     return required;
   }, [cartEntries]);
 
   const missingLamps = useMemo(() => {
     const out: Array<{ socket: LampSocket; requiredQty: number; currentQty: number }> = [];
-
     for (const socket of ["GX53", "MR16"] as LampSocket[]) {
       const required = toNumber(lampRequiredBySocket[socket]);
       if (required <= 0) continue;
@@ -470,7 +458,6 @@ export function WizardStep1Lighting() {
 
       if (current < required) out.push({ socket, requiredQty: required, currentQty: current });
     }
-
     return out;
   }, [cartItems, lampOptionsBySocket, lampRequiredBySocket]);
 
@@ -508,13 +495,8 @@ export function WizardStep1Lighting() {
 
     setCartItems((prev) => {
       const next = { ...prev };
-
-      // убираем другие лампы того же сокета
       const allIds = lampOptionsBySocket[socket].map((l) => toText(l.productId));
-      for (const id of allIds) {
-        if (id !== lampId) delete next[id];
-      }
-
+      for (const id of allIds) if (id !== lampId) delete next[id];
       next[lampId] = required;
       return next;
     });
@@ -547,10 +529,17 @@ export function WizardStep1Lighting() {
       scoped = cartEntries.map((e) => e.product);
     } else if (section === "track-systems") {
       if (trackGroup === "TRACK_PROFILE") {
-        const whitelist = new Set(TRACK_PROFILE_WHITELIST[trackSystem]);
-        scoped = products.filter(
-          (p) => p.system === trackSystem && p.kind === "TRACK_PROFILE" && whitelist.has(toText(p.vendorCode))
-        );
+        const base = TRACK_PROFILE_WHITELIST[trackSystem] ?? [];
+        const allowed =
+          trackSystem === "TRACK_220"
+            ? new Set<string>([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST])
+            : new Set<string>(base);
+
+        scoped = products.filter((p) => {
+          if (p.system !== trackSystem) return false;
+          if (p.kind !== "TRACK_PROFILE") return false;
+          return allowed.has(toText(p.vendorCode));
+        });
       } else {
         scoped = products.filter((p) => p.system === trackSystem && p.kind === trackGroup);
       }
@@ -800,9 +789,6 @@ export function WizardStep1Lighting() {
           </div>
         </div>
       ) : null}
-
-      {/* sanity: keep current lightingDraft */}
-      {lightingDraft?.mode === "catalog" && lightingDraft.items?.length ? null : null}
     </div>
   );
 }
