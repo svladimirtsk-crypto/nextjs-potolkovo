@@ -64,29 +64,37 @@ export type CalculatorModalContextValue = {
   lightingDiscountedTotal: number;
 
   /**
-   * Может отличаться от ceilingTotal + lightingDiscountedTotal,
-   * если Step3 сделал "досчет" работ и записал snapshot.grandTotal.
+   * Единая "итоговая" цифра калькулятора:
+   * - потолок = snapshot.total
+   * - доп. досчёт работ (Step3) = snapshot.grandTotal (если подтверждён Step0)
+   * - свет (со скидкой) добавляется сверху в контексте
    */
   grandTotal: number;
 
   step0SessionInteracted: boolean;
   markStep0SessionInteracted: () => void;
 
-  /** НОВОЕ: площадь подтверждена на шаге 1 */
+  /**
+   * СТРОГОЕ правило: досчёт монтажа в Step3 делаем только если Step0 был подтверждён
+   * (в нашем протоколе — пользователь реально перешёл с Step0 на Step1).
+   */
   step0AreaConfirmed: boolean;
-  markStep0AreaConfirmed: () => void;
 
   step1CatalogView: CatalogViewMode | null;
   setStep1CatalogView: (view: CatalogViewMode | null) => void;
 };
 
-export function getKitDisplayName(lighting: LightingSnapshot | null | undefined): string | null {
+export function getKitDisplayName(
+  lighting: LightingSnapshot | null | undefined
+): string | null {
   if (!lighting) return null;
   if (lighting.mode !== "kit") return null;
 
   if (lighting.kitBaseName) {
     const qty = lighting.scaledSpotsQty;
-    return qty != null ? `${lighting.kitBaseName} · ${qty} шт.` : lighting.kitBaseName;
+    return qty != null
+      ? `${lighting.kitBaseName} · ${qty} шт.`
+      : lighting.kitBaseName;
   }
 
   return lighting.kitName ?? null;
