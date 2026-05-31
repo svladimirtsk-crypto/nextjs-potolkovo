@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 
-import { ProductImage } from "@/components/feed2/ProductImage";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
+import { ProductImageLightbox } from "@/components/feed2/ProductImageLightbox";
 
 import { Container } from "@/components/ui/container";
 import { Heading } from "@/components/ui/heading";
@@ -30,6 +30,8 @@ import {
   type TrackSystemId,
   type LampSocket,
 } from "@/lib/catalog-ui-config";
+
+import { ART_TRACK_PROFILE_VENDOR_WHITELIST, applyVendorOverrides } from "@/lib/vendor-code-overrides";
 
 type CartItems = Record<string, number>;
 
@@ -81,7 +83,7 @@ function getPointSocket(product: FeedCatalogProduct): LampSocket | null {
 }
 
 function matchesPointSubtype(product: FeedCatalogProduct, subtype: PointSubtypeId): boolean {
-  // ВАЖНО: панели определяем ДО проверки kind (иначе “Панели” пустые)
+  // FIX: панели определяем до kind-check
   if (subtype === "PANELS") return isPanelProduct(product);
 
   if (product.kind !== "SPOT_FIXTURE") return false;
@@ -117,7 +119,9 @@ export function CatalogSectionClient({ data }: Props) {
   const { openCalculator } = useCalculatorModal();
 
   const products = useMemo(() => {
-    return (data.products ?? []).filter((product) => !isRemovedColibriVendorCode(product.vendorCode));
+    return (data.products ?? [])
+      .filter((product) => !isRemovedColibriVendorCode(product.vendorCode))
+      .map((p) => applyVendorOverrides(p));
   }, [data.products]);
 
   const byProductId = useMemo(() => {
@@ -154,10 +158,6 @@ export function CatalogSectionClient({ data }: Props) {
       .filter((x): x is { productId: string; product: FeedCatalogProduct; qty: number } => Boolean(x));
   }, [byProductId, cartItems]);
 
-  const selectedProducts = useMemo(() => {
-    return selectedEntries.map((entry) => ({ product: entry.product, qty: entry.qty }));
-  }, [selectedEntries]);
-
   const selectedTotal = useMemo(() => {
     return selectedEntries.reduce((sum, entry) => sum + entry.qty * toNumber(entry.product.priceRub), 0);
   }, [selectedEntries]);
@@ -168,14 +168,12 @@ export function CatalogSectionClient({ data }: Props) {
 
   const mountRequiredByVendor = useMemo(() => {
     const required: Record<string, number> = {};
-
     for (const entry of selectedEntries) {
       const fixtureVendor = toText(entry.product.vendorCode);
       const mountVendor = POINT_TO_MOUNT_VENDOR_CODE[fixtureVendor];
       if (!mountVendor) continue;
       required[mountVendor] = (required[mountVendor] ?? 0) + entry.qty;
     }
-
     return required;
   }, [selectedEntries]);
 
@@ -227,25 +225,19 @@ export function CatalogSectionClient({ data }: Props) {
 
   const lampRequiredBySocket = useMemo(() => {
     const required: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
-
     for (const entry of selectedEntries) {
       const socket = getRequiredLampSocket(entry.product);
       if (!socket) continue;
       required[socket] = (required[socket] ?? 0) + entry.qty;
     }
-
     return required;
   }, [selectedEntries]);
 
   const lampCurrentBySocket = useMemo(() => {
     const current: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
 
-    for (const lamp of lampProductsBySocket.GX53) {
-      current.GX53 += toNumber(cartItems[toText(lamp.productId)]);
-    }
-    for (const lamp of lampProductsBySocket.MR16) {
-      current.MR16 += toNumber(cartItems[toText(lamp.productId)]);
-    }
+    for (const lamp of lampProductsBySocket.GX53) current.GX53 += toNumber(cartItems[toText(lamp.productId)]);
+    for (const lamp of lampProductsBySocket.MR16) current.MR16 += toNumber(cartItems[toText(lamp.productId)]);
 
     return current;
   }, [cartItems, lampProductsBySocket]);
@@ -316,13 +308,8 @@ export function CatalogSectionClient({ data }: Props) {
 
     setCartItems((prev) => {
       const next = { ...prev };
-
-      // убираем другие лампы того же сокета, чтобы не плодить “две модели”
       const allLampIds = lampProductsBySocket[socket].map((p) => toText(p.productId));
-      for (const id of allLampIds) {
-        if (id !== lampId) delete next[id];
-      }
-
+      for (const id of allLampIds) if (id !== lampId) delete next[id];
       next[lampId] = required;
       return next;
     });
@@ -372,7 +359,12 @@ export function CatalogSectionClient({ data }: Props) {
 
     if (section === "track-systems") {
       if (trackGroup === "TRACK_PROFILE") {
-        const allowed = new Set(TRACK_PROFILE_WHITELIST[trackSystem]);
+        const base = TRACK_PROFILE_WHITELIST[trackSystem] ?? [];
+        const allowed =
+          trackSystem === "TRACK_220"
+            ? new Set<string>([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST])
+            : new Set<string>(base);
+
         scoped = products.filter((product) => {
           if (product.system !== trackSystem) return false;
           if (product.kind !== "TRACK_PROFILE") return false;
@@ -402,7 +394,7 @@ export function CatalogSectionClient({ data }: Props) {
         <Heading
           eyebrow="Каталог"
           title="Выберите позиции — и откройте в калькуляторе"
-          description="Разделы каталога здесь и в калькуляторе совпадают. Скидка −15% на освещение применяется при заказе потолка."
+          description="Нажмите на фото товара, чтобы увеличить изображение."
         />
 
         <div className="mt-8 space-y-4">
@@ -562,10 +554,10 @@ export function CatalogSectionClient({ data }: Props) {
           </div>
 
           {/* Selected mini-bar */}
-          {selectedProducts.length > 0 ? (
+          {selectedEntries.length > 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <div className="mb-3 flex items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-slate-950">Выбрано: {selectedProducts.length} поз.</p>
+                <p className="text-sm font-semibold text-slate-950">Выбрано: {selectedEntries.length} поз.</p>
 
                 <button
                   type="button"
@@ -577,7 +569,7 @@ export function CatalogSectionClient({ data }: Props) {
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {selectedProducts.map((entry) => {
+                {selectedEntries.map((entry) => {
                   const productId = toText(entry.product.productId);
                   return (
                     <div
@@ -629,8 +621,12 @@ export function CatalogSectionClient({ data }: Props) {
               return (
                 <div key={id} className="rounded-2xl border border-slate-200 bg-white p-4">
                   <div className="flex gap-4">
-                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-slate-100">
-                      <ProductImage src={product.coverImage} alt={toText(product.name)} className="object-cover" />
+                    <div className="h-20 w-20 shrink-0">
+                      <ProductImageLightbox
+                        src={product.coverImage}
+                        alt={toText(product.name)}
+                        thumbClassName="h-20 w-20"
+                      />
                     </div>
 
                     <div className="min-w-0 flex-1">
