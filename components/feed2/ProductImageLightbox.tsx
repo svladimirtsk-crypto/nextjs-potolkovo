@@ -50,9 +50,8 @@ export function ProductImageLightbox({ src, alt, thumbClassName }: Props) {
           className="relative max-h-[86vh] w-[min(94vw,1100px)] overflow-hidden rounded-2xl bg-black shadow-2xl"
           onMouseDown={(e) => e.stopPropagation()}
         >
-          {/* ВАЖНО: без фиксированного aspect ratio, чтобы не обрезать */}
+          {/* без фиксированного aspect ratio -> ничего не обрезается */}
           <div className="flex max-h-[86vh] items-center justify-center p-3">
-            {/* img + object-contain = всегда видно целиком */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={safeSrc}
