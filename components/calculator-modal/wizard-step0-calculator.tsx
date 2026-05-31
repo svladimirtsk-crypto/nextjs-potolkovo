@@ -1,6 +1,7 @@
 "use client";
 
 import type { ServiceCalculatorPreset } from "@/content/services";
+
 import { PriceCalculatorClient } from "@/components/home/price-calculator-client";
 import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
 import { useCalculatorModal } from "./calculator-modal-context";
@@ -10,11 +11,19 @@ type WizardStep0CalculatorProps = {
 };
 
 export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
-  const { markStep0SessionInteracted } = useCalculatorModal();
+  const { markStep0SessionInteracted, options } = useCalculatorModal();
+
+  const forcePreset = Boolean(options?.forcePreset);
 
   const resolvedPreset: ServiceCalculatorPreset = {
     ceilingType: String(preset?.ceilingType ?? "standard") as ServiceCalculatorPreset["ceilingType"],
-    areaDefault: Number(preset?.areaDefault ?? DEFAULT_CALCULATOR_AREA),
+
+    // ВАЖНО: по ТЗ — первый запуск потолочного калькулятора = 10 м², не 25.
+    // Поэтому в модалке игнорируем areaDefault из preset, если forcePreset не задан.
+    areaDefault: forcePreset
+      ? Number(preset?.areaDefault ?? DEFAULT_CALCULATOR_AREA)
+      : DEFAULT_CALCULATOR_AREA,
+
     corniceType: preset?.corniceType,
     trackType: preset?.trackType,
     lightsEnabled: preset?.lightsEnabled,
@@ -27,7 +36,7 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
     <div
       onPointerDown={markStep0SessionInteracted}
       onKeyDown={markStep0SessionInteracted}
-      onChangeCapture={markStep0SessionInteracted}
+      onChange={markStep0SessionInteracted}
     >
       <PriceCalculatorClient preset={resolvedPreset} compactSections />
     </div>
