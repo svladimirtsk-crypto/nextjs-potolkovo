@@ -9,18 +9,13 @@ type Props = {
   src: string;
   alt: string;
   thumbClassName?: string;
-  imageClassName?: string;
 };
 
-export function ProductImageLightbox({
-  src,
-  alt,
-  thumbClassName,
-  imageClassName,
-}: Props) {
+export function ProductImageLightbox({ src, alt, thumbClassName }: Props) {
   const [open, setOpen] = useState(false);
 
-  const hasSrc = Boolean(String(src ?? "").trim());
+  const safeSrc = String(src ?? "").trim();
+  const hasSrc = safeSrc.length > 0;
 
   useEffect(() => {
     if (!open) return;
@@ -52,15 +47,19 @@ export function ProductImageLightbox({
         onMouseDown={() => setOpen(false)}
       >
         <div
-          className="relative w-[min(92vw,960px)] overflow-hidden rounded-2xl bg-black shadow-2xl"
-          style={{ aspectRatio: "16 / 10" }}
+          className="relative max-h-[86vh] w-[min(94vw,1100px)] overflow-hidden rounded-2xl bg-black shadow-2xl"
           onMouseDown={(e) => e.stopPropagation()}
         >
-          <ProductImage
-            src={src}
-            alt={alt}
-            className={["object-contain", imageClassName ?? ""].join(" ")}
-          />
+          {/* ВАЖНО: без фиксированного aspect ratio, чтобы не обрезать */}
+          <div className="flex max-h-[86vh] items-center justify-center p-3">
+            {/* img + object-contain = всегда видно целиком */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={safeSrc}
+              alt={alt}
+              className="max-h-[80vh] w-auto max-w-[90vw] object-contain"
+            />
+          </div>
 
           <button
             type="button"
@@ -75,7 +74,7 @@ export function ProductImageLightbox({
       </div>,
       document.body
     );
-  }, [alt, imageClassName, open, src]);
+  }, [alt, open, safeSrc]);
 
   if (!hasSrc) {
     return (
@@ -103,7 +102,7 @@ export function ProductImageLightbox({
         aria-label="Открыть фото"
         title="Нажмите, чтобы увеличить"
       >
-        <ProductImage src={src} alt={alt} className="object-cover" />
+        <ProductImage src={safeSrc} alt={alt} className="object-cover" />
       </button>
 
       {portal}
