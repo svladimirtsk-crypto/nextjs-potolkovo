@@ -1,7 +1,11 @@
-export type CatalogSectionId = "track-systems" | "point-fixtures" | "mounts-grilles";
+export type CatalogSectionId = "track-systems" | "point-fixtures" | "mounts-grilles" | "lamps";
+
 export type TrackSystemId = "COLIBRI_220" | "CLARUS_48" | "TRACK_220";
+
 export type TrackGroupId = "TRACK_FIXTURE" | "TRACK_PROFILE" | "TRACK_ACCESSORY";
+
 export type PointSubtypeId = "GX53" | "MR16" | "PANELS";
+
 export type LampSocket = "GX53" | "MR16";
 
 export const DEFAULT_CALCULATOR_AREA = 10;
@@ -11,6 +15,7 @@ export const CATALOG_SECTIONS: { id: CatalogSectionId; label: string }[] = [
   { id: "track-systems", label: "Трековые системы" },
   { id: "point-fixtures", label: "Точечные светильники" },
   { id: "mounts-grilles", label: "Закладные и решетки" },
+  { id: "lamps", label: "Лампы" },
 ];
 
 export const TRACK_SYSTEMS: { id: TrackSystemId; label: string }[] = [
@@ -31,10 +36,7 @@ export const POINT_SUBTYPES: { id: PointSubtypeId; label: string }[] = [
   { id: "PANELS", label: "Панели" },
 ];
 
-export const REMOVED_COLIBRI_VENDOR_CODES = new Set<string>([
-  "0У-00002967",
-  "0У-00001345",
-]);
+export const REMOVED_COLIBRI_VENDOR_CODES = new Set<string>(["0У-00002967", "0У-00001345"]);
 
 export function isRemovedColibriVendorCode(vendorCode: unknown): boolean {
   return REMOVED_COLIBRI_VENDOR_CODES.has(String(vendorCode ?? "").trim());
