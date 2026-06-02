@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 import { ProductImageLightbox } from "@/components/feed2/ProductImageLightbox";
-
 import { Container } from "@/components/ui/container";
 import { Heading } from "@/components/ui/heading";
 import { Section } from "@/components/ui/section";
@@ -38,12 +37,10 @@ type CartItems = Record<string, number>;
 function toText(value: unknown): string {
   return String(value ?? "").trim();
 }
-
 function toNumber(value: unknown): number {
   const n = Number(value ?? 0);
   return Number.isFinite(n) ? n : 0;
 }
-
 function fmt(value: number): string {
   return new Intl.NumberFormat("ru-RU").format(Math.round(value));
 }
@@ -56,7 +53,6 @@ function isMountsOrGrilles(product: FeedCatalogProduct): boolean {
 
 function isPanelProduct(product: FeedCatalogProduct): boolean {
   const text = `${toText(product.name)} ${toText(product.categoryPath)}`.toLowerCase();
-
   return (
     text.includes("панел") ||
     text.includes("panel") ||
@@ -78,16 +74,13 @@ function getPointSocket(product: FeedCatalogProduct): LampSocket | null {
   const fromDetect = detectSocket(product);
   if (fromDetect === "GX53") return "GX53";
   if (fromDetect === "MR16") return "MR16";
-
   return null;
 }
 
 function matchesPointSubtype(product: FeedCatalogProduct, subtype: PointSubtypeId): boolean {
   // FIX: панели определяем до kind-check
   if (subtype === "PANELS") return isPanelProduct(product);
-
   if (product.kind !== "SPOT_FIXTURE") return false;
-
   const socket = getPointSocket(product);
   return socket === subtype;
 }
@@ -132,75 +125,68 @@ function ProductCard({
     .join(" • ");
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-      <div className="p-3">
-        <ProductImageLightbox
-          src={product.coverImage}
-          alt={toText(product.name)}
-          thumbClassName="w-full aspect-[4/3]"
-        />
-      </div>
-
-      <div className="px-4 pb-4">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-slate-950 leading-snug break-words">
-            {toText(product.name)}
-          </p>
-          {toText(product.vendorCode) ? (
-            <p className="mt-1 text-xs text-slate-500">Артикул: {toText(product.vendorCode)}</p>
-          ) : null}
-          {attrs ? <p className="mt-1 text-xs text-slate-500">{attrs}</p> : null}
+    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="grid grid-cols-[8rem_1fr] gap-4">
+        <div className="cursor-zoom-in">
+          <ProductImageLightbox src={toText(product.coverImage)} alt={toText(product.name)} />
         </div>
 
-        <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-slate-950">{fmt(regular)} ₽</p>
-            <p className="text-xs text-emerald-700">со скидкой: {fmt(discounted)} ₽</p>
-            {benefit > 0 ? <p className="text-xs text-slate-500">выгода: {fmt(benefit)} ₽</p> : null}
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-slate-950 break-words">{toText(product.name)}</p>
+
+          {toText(product.vendorCode) ? (
+            <p className="mt-1 text-xs text-slate-500 break-words">Артикул: {toText(product.vendorCode)}</p>
+          ) : null}
+
+          {attrs ? <p className="mt-2 text-xs text-slate-600 break-words">{attrs}</p> : null}
+
+          <div className="mt-3 text-xs text-slate-700">
+            <p>
+              {fmt(regular)} ₽ <span className="text-slate-500">· со скидкой:</span>{" "}
+              <span className="font-semibold text-emerald-700">{fmt(discounted)} ₽</span>
+            </p>
+            {benefit > 0 ? <p className="text-slate-500">выгода: {fmt(benefit)} ₽</p> : null}
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onDec}
-              className="h-9 w-9 rounded-full border border-slate-200 bg-white text-base font-semibold text-slate-900 hover:bg-slate-50"
-              aria-label="Уменьшить количество"
-            >
-              −
-            </button>
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onDec}
+                className="h-9 w-9 rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
+              >
+                −
+              </button>
 
-            <div className="min-w-[72px] text-center text-sm font-semibold text-slate-950">
-              {product.unit === "m" ? qty.toFixed(1) : qty} {product.unit === "m" ? "м" : "шт"}
+              <div className="min-w-[4.5rem] text-center text-sm font-semibold text-slate-950">
+                {product.unit === "m" ? qty.toFixed(1) : qty} {product.unit === "m" ? "м" : "шт"}
+              </div>
+
+              <button
+                type="button"
+                onClick={onInc}
+                className="h-9 w-9 rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
+              >
+                +
+              </button>
             </div>
 
-            <button
-              type="button"
-              onClick={onInc}
-              className="h-9 w-9 rounded-full border border-slate-200 bg-white text-base font-semibold text-slate-900 hover:bg-slate-50"
-              aria-label="Увеличить количество"
+            <span
+              className={[
+                "rounded-full px-3 py-1 text-xs font-semibold",
+                qty > 0 ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600",
+              ].join(" ")}
             >
-              +
-            </button>
+              {qty > 0 ? "В корзине" : "Не выбрано"}
+            </span>
           </div>
         </div>
-
-        <div className="mt-3">
-          {qty > 0 ? (
-            <span className="inline-flex rounded-full bg-slate-950 px-3 py-1 text-xs font-semibold text-white">
-              В корзине
-            </span>
-          ) : (
-            <span className="text-xs text-slate-500">Не выбрано</span>
-          )}
-        </div>
       </div>
-    </article>
+    </div>
   );
 }
 
-type Props = {
-  data: FeedCatalogResult;
-};
+type Props = { data: FeedCatalogResult };
 
 export function CatalogSectionClient({ data }: Props) {
   const { openCalculator } = useCalculatorModal();
@@ -231,6 +217,7 @@ export function CatalogSectionClient({ data }: Props) {
   const [trackSystem, setTrackSystem] = useState<TrackSystemId>("COLIBRI_220");
   const [trackGroup, setTrackGroup] = useState<TrackGroupId>("TRACK_FIXTURE");
   const [pointSubtype, setPointSubtype] = useState<PointSubtypeId>("GX53");
+  const [lampSocket, setLampSocket] = useState<LampSocket>("GX53");
 
   const [query, setQuery] = useState("");
   const [cartItems, setCartItems] = useState<CartItems>({});
@@ -264,7 +251,13 @@ export function CatalogSectionClient({ data }: Props) {
   }, [selectedEntries]);
 
   const missingMounts = useMemo(() => {
-    const out: Array<{ fixtureVendorCode: string; mountVendorCode: string; requiredQty: number; currentQty: number; mountName?: string }> = [];
+    const out: Array<{
+      fixtureVendorCode: string;
+      mountVendorCode: string;
+      requiredQty: number;
+      currentQty: number;
+      mountName?: string;
+    }> = [];
 
     for (const [fixtureVendor, mountVendor] of Object.entries(POINT_TO_MOUNT_VENDOR_CODE)) {
       const fixtureId = productIdByVendorCode.get(fixtureVendor);
@@ -290,15 +283,12 @@ export function CatalogSectionClient({ data }: Props) {
   }, [byProductId, cartItems, productIdByVendorCode]);
 
   const lampProductsBySocket = useMemo(() => {
-    const gx53 = products
+    const base = products
       .filter((p) => p.kind === "LAMP" && p.available !== false && toNumber(p.priceRub) > 0)
-      .filter((p) => detectSocket(p) === "GX53")
       .sort((a, b) => toNumber(a.priceRub) - toNumber(b.priceRub));
 
-    const mr16 = products
-      .filter((p) => p.kind === "LAMP" && p.available !== false && toNumber(p.priceRub) > 0)
-      .filter((p) => detectSocket(p) === "MR16")
-      .sort((a, b) => toNumber(a.priceRub) - toNumber(b.priceRub));
+    const gx53 = base.filter((p) => detectSocket(p) === "GX53");
+    const mr16 = base.filter((p) => detectSocket(p) === "MR16");
 
     return { GX53: gx53, MR16: mr16 };
   }, [products]);
@@ -322,6 +312,7 @@ export function CatalogSectionClient({ data }: Props) {
 
   const missingLamps = useMemo(() => {
     const out: Array<{ socket: LampSocket; requiredQty: number; currentQty: number; cheapestLampId: string | null }> = [];
+
     for (const socket of ["GX53", "MR16"] as LampSocket[]) {
       const required = toNumber(lampRequiredBySocket[socket]);
       if (required <= 0) continue;
@@ -337,6 +328,7 @@ export function CatalogSectionClient({ data }: Props) {
         cheapestLampId: cheapest ? toText(cheapest.productId) : null,
       });
     }
+
     return out;
   }, [lampCurrentBySocket, lampProductsBySocket, lampRequiredBySocket]);
 
@@ -353,13 +345,11 @@ export function CatalogSectionClient({ data }: Props) {
   const setClarusPsu = (productId: string) => {
     setCartItems((prev) => {
       const next = { ...prev };
-
       for (const vendor of CLARUS_PSU_VENDOR_CODES) {
         const id = productIdByVendorCode.get(vendor);
         if (!id) continue;
         if (id !== productId) delete next[id];
       }
-
       next[productId] = Math.max(1, toNumber(next[productId]));
       return next;
     });
@@ -368,7 +358,6 @@ export function CatalogSectionClient({ data }: Props) {
   const addMountOneToOne = (fixtureVendor: string) => {
     const mountVendor = POINT_TO_MOUNT_VENDOR_CODE[toText(fixtureVendor)];
     if (!mountVendor) return;
-
     const mountId = productIdByVendorCode.get(mountVendor);
     if (!mountId) return;
 
@@ -435,9 +424,7 @@ export function CatalogSectionClient({ data }: Props) {
       if (trackGroup === "TRACK_PROFILE") {
         const base = TRACK_PROFILE_WHITELIST[trackSystem] ?? [];
         const allowed =
-          trackSystem === "TRACK_220"
-            ? new Set<string>([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST])
-            : new Set<string>(base);
+          trackSystem === "TRACK_220" ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST]) : new Set(base);
 
         scoped = products.filter((product) => {
           if (product.system !== trackSystem) return false;
@@ -449,6 +436,10 @@ export function CatalogSectionClient({ data }: Props) {
       }
     } else if (section === "point-fixtures") {
       scoped = products.filter((product) => matchesPointSubtype(product, pointSubtype));
+    } else if (section === "lamps") {
+      scoped = products
+        .filter((p) => p.kind === "LAMP" && p.available !== false && toNumber(p.priceRub) > 0)
+        .filter((p) => detectSocket(p) === lampSocket);
     } else {
       scoped = products.filter((product) => isMountsOrGrilles(product));
     }
@@ -460,269 +451,299 @@ export function CatalogSectionClient({ data }: Props) {
       const haystack = `${toText(product.name)} ${toText(product.vendorCode)} ${toText(product.categoryPath)}`.toLowerCase();
       return haystack.includes(q);
     });
-  }, [pointSubtype, products, query, section, trackGroup, trackSystem]);
+  }, [lampSocket, pointSubtype, products, query, section, trackGroup, trackSystem]);
 
   return (
-    <Section className="bg-white">
+    <Section className="py-10">
       <Container>
-        <Heading
-          eyebrow="Каталог"
-          title="Выберите позиции — и откройте в калькуляторе"
-          description="Нажмите на фото товара, чтобы увеличить изображение. На мобильном всё в одну колонку — так легче выбирать."
-        />
+        <div className="flex items-start justify-between gap-6">
+          <Heading level={2}>Каталог освещения</Heading>
 
-        <div className="mt-8 space-y-4">
-          {/* Dependencies / warnings */}
-          {selectedEntries.length > 0 ? (
-            <div className="space-y-3">
-              {hasClarusFixtures && clarusPsuQty < 1 ? (
-                <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-950">
-                  <p className="font-semibold">Для системы CLARUS обязателен минимум 1 блок питания.</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {CLARUS_PSU_VENDOR_CODES.map((vendor) => {
-                      const id = productIdByVendorCode.get(vendor);
-                      if (!id) return null;
-                      const product = byProductId.get(id);
-                      if (!product) return null;
+          <button
+            type="button"
+            onClick={openInCalculator}
+            className="rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+          >
+            Открыть каталог в калькуляторе →
+          </button>
+        </div>
 
-                      return (
-                        <button
-                          key={vendor}
-                          type="button"
-                          onClick={() => setClarusPsu(id)}
-                          className="rounded-xl bg-rose-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-800"
-                        >
-                          Добавить: {toText(product.name)}
-                        </button>
-                      );
-                    })}
-                  </div>
+        {/* Dependencies / warnings */}
+        {selectedEntries.length > 0 ? (
+          <div className="mt-6 space-y-3">
+            {hasClarusFixtures && clarusPsuQty < 1 ? (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-950">
+                <p className="font-semibold">Для системы CLARUS обязателен минимум 1 блок питания.</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {CLARUS_PSU_VENDOR_CODES.map((vendor) => {
+                    const id = productIdByVendorCode.get(vendor);
+                    if (!id) return null;
+                    const product = byProductId.get(id);
+                    if (!product) return null;
+
+                    return (
+                      <button
+                        key={vendor}
+                        type="button"
+                        onClick={() => setClarusPsu(id)}
+                        className="rounded-xl bg-rose-700 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-800"
+                      >
+                        Добавить: {toText(product.name)}
+                      </button>
+                    );
+                  })}
                 </div>
-              ) : null}
+              </div>
+            ) : null}
 
-              {missingMounts.map((m) => (
-                <div
-                  key={`${m.fixtureVendorCode}-${m.mountVendorCode}`}
-                  className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
-                >
-                  <p className="font-semibold">Не хватает закладных 1:1</p>
-                  <p className="mt-1 text-amber-900/80">
-                    Нужно: {m.requiredQty} шт., в корзине: {m.currentQty} шт.
-                    {m.mountName ? ` · Закладная: ${toText(m.mountName)}` : ""}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => addMountOneToOne(m.fixtureVendorCode)}
-                    className="mt-3 rounded-xl bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-800"
-                  >
-                    Добавить 1:1
-                  </button>
-                </div>
-              ))}
+            {missingMounts.map((m) => (
+              <div key={`${m.fixtureVendorCode}-${m.mountVendorCode}`} className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+                <p className="font-semibold">Не хватает закладных 1:1</p>
+                <p className="mt-2">
+                  Нужно: <span className="font-semibold">{m.requiredQty}</span> шт., в корзине:{" "}
+                  <span className="font-semibold">{m.currentQty}</span> шт.
+                  {m.mountName ? ` · Закладная: ${toText(m.mountName)}` : ""}
+                </p>
 
-              {missingLamps.map((m) => (
-                <div key={m.socket} className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
-                  <p className="font-semibold">Не хватает ламп {m.socket} (1:1)</p>
-                  <p className="mt-1 text-blue-900/80">
-                    Нужно: {m.requiredQty} шт., в корзине: {m.currentQty} шт.
-                  </p>
-                  <button
-                    type="button"
-                    disabled={!m.cheapestLampId}
-                    onClick={() => {
-                      if (!m.cheapestLampId) return;
-                      addLampOneToOneCheapest(m.socket, m.cheapestLampId);
-                    }}
-                    className="mt-3 rounded-xl bg-blue-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
-                  >
-                    Добавить 1:1 (самые доступные)
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : null}
-
-          {/* Controls */}
-          <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <div className="flex flex-wrap gap-2">
-              {CATALOG_SECTIONS.map((item) => (
                 <button
-                  key={item.id}
                   type="button"
+                  onClick={() => addMountOneToOne(m.fixtureVendorCode)}
+                  className="mt-3 rounded-xl bg-amber-700 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-800"
+                >
+                  Добавить 1:1
+                </button>
+              </div>
+            ))}
+
+            {missingLamps.map((m) => (
+              <div key={m.socket} className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+                <p className="font-semibold">Не хватает ламп {m.socket} (1:1)</p>
+                <p className="mt-2">
+                  Нужно: <span className="font-semibold">{m.requiredQty}</span> шт., в корзине:{" "}
+                  <span className="font-semibold">{m.currentQty}</span> шт.
+                </p>
+
+                <button
+                  type="button"
+                  disabled={!m.cheapestLampId}
                   onClick={() => {
-                    setSection(item.id);
+                    if (!m.cheapestLampId) return;
+                    addLampOneToOneCheapest(m.socket, m.cheapestLampId);
+                    setSection("lamps");
+                    setLampSocket(m.socket);
                     setQuery("");
                   }}
-                  className={`rounded-xl px-3 py-2 text-sm font-medium ${
-                    section === item.id ? "bg-slate-950 text-white" : "bg-white text-slate-700 hover:bg-slate-50"
-                  }`}
+                  className="mt-3 rounded-xl bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
                 >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-
-            {section === "track-systems" ? (
-              <>
-                <div className="flex flex-wrap gap-2">
-                  {TRACK_SYSTEMS.map((system) => (
-                    <button
-                      key={system.id}
-                      type="button"
-                      onClick={() => {
-                        setTrackSystem(system.id);
-                        setQuery("");
-                      }}
-                      className={`rounded-xl px-3 py-1.5 text-xs ${
-                        trackSystem === system.id ? "bg-slate-900 text-white" : "bg-white text-slate-700"
-                      }`}
-                    >
-                      {system.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {TRACK_GROUPS.map((group) => (
-                    <button
-                      key={group.id}
-                      type="button"
-                      onClick={() => {
-                        setTrackGroup(group.id);
-                        setQuery("");
-                      }}
-                      className={`rounded-xl px-3 py-1.5 text-xs ${
-                        trackGroup === group.id ? "bg-slate-900 text-white" : "bg-white text-slate-700"
-                      }`}
-                    >
-                      {group.label}
-                    </button>
-                  ))}
-                </div>
-              </>
-            ) : null}
-
-            {section === "point-fixtures" ? (
-              <div className="flex flex-wrap gap-2">
-                {POINT_SUBTYPES.map((subtype) => (
-                  <button
-                    key={subtype.id}
-                    type="button"
-                    onClick={() => {
-                      setPointSubtype(subtype.id);
-                      setQuery("");
-                    }}
-                    className={`rounded-xl px-3 py-1.5 text-xs ${
-                      pointSubtype === subtype.id ? "bg-slate-900 text-white" : "bg-white text-slate-700"
-                    }`}
-                  >
-                    {subtype.label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-
-            <input
-              value={query}
-              onChange={(event) => setQuery(String(event.target.value ?? ""))}
-              placeholder="Поиск в текущем разделе"
-              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
-            />
-          </div>
-
-          {/* Selected mini-bar */}
-          {selectedEntries.length > 0 ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-slate-950">Выбрано: {selectedEntries.length} поз.</p>
-
-                <button
-                  type="button"
-                  onClick={openInCalculator}
-                  className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
-                >
-                  Открыть в калькуляторе
+                  Добавить 1:1 (самые доступные)
                 </button>
               </div>
-
-              <div className="flex flex-wrap gap-2">
-                {selectedEntries.map((entry) => {
-                  const productId = toText(entry.product.productId);
-                  return (
-                    <div
-                      key={productId}
-                      className="inline-flex max-w-full items-center gap-2 rounded-full border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs"
-                    >
-                      <span className="max-w-[240px] truncate">
-                        {toText(entry.product.name)} × {entry.qty}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => removeFromSelected(productId)}
-                        aria-label={`Удалить ${toText(entry.product.name)}`}
-                        className="rounded-full px-1 text-slate-500 hover:bg-slate-200 hover:text-slate-900"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="mt-3 text-sm text-slate-700">
-                <p>Итого: {fmt(selectedTotal)} ₽</p>
-                <p className="text-emerald-700">
-                  Со скидкой: {fmt(discountedSelectedTotal)} ₽ <span className="text-xs font-semibold">−15%</span>
-                </p>
-              </div>
-            </div>
-          ) : null}
-
-          {/* Products grid */}
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {filteredProducts.map((product) => {
-              const id = toText(product.productId);
-              const qty = toNumber(cartItems[id]);
-              const step = product.unit === "m" ? 0.5 : 1;
-
-              return (
-                <ProductCard
-                  key={id}
-                  product={product}
-                  qty={qty}
-                  onDec={() =>
-                    setCartItems((prev) => {
-                      const next = { ...prev };
-                      const nextQty = normalizeQty(qty - step, product.unit);
-                      if (nextQty <= 0) delete next[id];
-                      else next[id] = nextQty;
-                      return next;
-                    })
-                  }
-                  onInc={() =>
-                    setCartItems((prev) => {
-                      const next = { ...prev };
-                      next[id] = normalizeQty(qty + step, product.unit);
-                      return next;
-                    })
-                  }
-                />
-              );
-            })}
+            ))}
           </div>
+        ) : null}
 
-          {filteredProducts.length === 0 ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
-              Ничего не найдено
-            </div>
-          ) : null}
-
-          {!data.ok && data.errorMessage ? (
-            <p className="text-xs text-rose-600">
-              Каталог: ошибка загрузки ({data.source}). {data.errorMessage}
-            </p>
-          ) : null}
+        {/* Controls */}
+        <div className="mt-8 flex flex-wrap gap-2">
+          {CATALOG_SECTIONS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => {
+                setSection(item.id);
+                setQuery("");
+              }}
+              className={[
+                "rounded-xl px-3 py-2 text-sm font-medium",
+                section === item.id ? "bg-slate-950 text-white" : "bg-white text-slate-700 hover:bg-slate-50",
+                "border border-slate-200",
+              ].join(" ")}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
+
+        {section === "track-systems" ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {TRACK_SYSTEMS.map((system) => (
+              <button
+                key={system.id}
+                type="button"
+                onClick={() => {
+                  setTrackSystem(system.id);
+                  setQuery("");
+                }}
+                className={[
+                  "rounded-xl px-3 py-1.5 text-xs",
+                  trackSystem === system.id ? "bg-slate-900 text-white" : "bg-white text-slate-700",
+                  "border border-slate-200",
+                ].join(" ")}
+              >
+                {system.label}
+              </button>
+            ))}
+
+            {TRACK_GROUPS.map((group) => (
+              <button
+                key={group.id}
+                type="button"
+                onClick={() => {
+                  setTrackGroup(group.id);
+                  setQuery("");
+                }}
+                className={[
+                  "rounded-xl px-3 py-1.5 text-xs",
+                  trackGroup === group.id ? "bg-slate-900 text-white" : "bg-white text-slate-700",
+                  "border border-slate-200",
+                ].join(" ")}
+              >
+                {group.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {section === "point-fixtures" ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {POINT_SUBTYPES.map((subtype) => (
+              <button
+                key={subtype.id}
+                type="button"
+                onClick={() => {
+                  setPointSubtype(subtype.id);
+                  setQuery("");
+                }}
+                className={[
+                  "rounded-xl px-3 py-1.5 text-xs",
+                  pointSubtype === subtype.id ? "bg-slate-900 text-white" : "bg-white text-slate-700",
+                  "border border-slate-200",
+                ].join(" ")}
+              >
+                {subtype.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {section === "lamps" ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {(["GX53", "MR16"] as LampSocket[]).map((socket) => (
+              <button
+                key={socket}
+                type="button"
+                onClick={() => {
+                  setLampSocket(socket);
+                  setQuery("");
+                }}
+                className={[
+                  "rounded-xl px-3 py-1.5 text-xs",
+                  lampSocket === socket ? "bg-slate-900 text-white" : "bg-white text-slate-700",
+                  "border border-slate-200",
+                ].join(" ")}
+              >
+                {socket}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        <input
+          value={query}
+          onChange={(event) => setQuery(String(event.target.value ?? ""))}
+          placeholder="Поиск в текущем разделе"
+          className="mt-4 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
+        />
+
+        {/* Selected mini-bar */}
+        {selectedEntries.length > 0 ? (
+          <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-slate-950">Выбрано: {selectedEntries.length} поз.</p>
+
+              <button
+                type="button"
+                onClick={openInCalculator}
+                className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+              >
+                Открыть в калькуляторе →
+              </button>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              {selectedEntries.map((entry) => {
+                const productId = toText(entry.product.productId);
+                return (
+                  <div
+                    key={productId}
+                    className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700"
+                  >
+                    <span className="max-w-[16rem] truncate">{toText(entry.product.name)} × {entry.qty}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeFromSelected(productId)}
+                      aria-label={`Удалить ${toText(entry.product.name)}`}
+                      className="rounded-full px-1 text-slate-500 hover:bg-slate-200 hover:text-slate-900"
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-3 text-sm text-slate-800">
+              <p>Итого: {fmt(selectedTotal)} ₽</p>
+              <p className="text-emerald-700">
+                Со скидкой: {fmt(discountedSelectedTotal)} ₽ <span className="text-xs">−15%</span>
+              </p>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Products grid */}
+        <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {filteredProducts.map((product) => {
+            const id = toText(product.productId);
+            const qty = toNumber(cartItems[id]);
+            const step = product.unit === "m" ? 0.5 : 1;
+
+            return (
+              <ProductCard
+                key={id}
+                product={product}
+                qty={qty}
+                onDec={() =>
+                  setCartItems((prev) => {
+                    const next = { ...prev };
+                    const nextQty = normalizeQty(qty - step, product.unit);
+                    if (nextQty <= 0) delete next[id];
+                    else next[id] = nextQty;
+                    return next;
+                  })
+                }
+                onInc={() =>
+                  setCartItems((prev) => {
+                    const next = { ...prev };
+                    next[id] = normalizeQty(qty + step, product.unit);
+                    return next;
+                  })
+                }
+              />
+            );
+          })}
+        </div>
+
+        {filteredProducts.length === 0 ? (
+          <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+            Ничего не найдено
+          </div>
+        ) : null}
+
+        {!data.ok && data.errorMessage ? (
+          <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-950">
+            Каталог: ошибка загрузки ({data.source}). {data.errorMessage}
+          </div>
+        ) : null}
       </Container>
     </Section>
   );
