@@ -51,6 +51,13 @@ function toNumber(value: unknown): number {
 function fmt(value: number): string {
   return new Intl.NumberFormat("ru-RU").format(Math.round(value));
 }
+function fmtMeters(value: number): string {
+  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 }).format(value);
+}
+function clamp01(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(1, value));
+}
 function toNumberOrNull(value: unknown): number | null {
   const n = Number(value ?? NaN);
   return Number.isFinite(n) ? n : null;
@@ -139,7 +146,7 @@ function getPointSocketByProduct(product: FeedCatalogProduct): LampSocket | null
 }
 
 function matchesPointSubtype(product: FeedCatalogProduct, subtype: PointSubtypeId): boolean {
-  // FIX (важно): панели определяем до kind-check, чтобы работало даже если kind != SPOT_FIXTURE
+  // панели определяем до kind-check, чтобы не дрейфовало относительно страницы продажи
   if (subtype === "PANELS") return isPanelProduct(product);
 
   if (product.kind !== "SPOT_FIXTURE") return false;
@@ -266,9 +273,78 @@ function ProductCard({
   );
 }
 
+function ProgressRow({
+  label,
+  unit,
+  current,
+  required,
+  emphasize,
+}: {
+  label: string;
+  unit: string;
+  current: number;
+  required: number | null;
+  emphasize?: boolean;
+}) {
+  const hasTarget = required !== null && required > 0;
+  const ratio = hasTarget ? clamp01(current / required) : null;
+  const done = hasTarget ? current >= required : false;
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <p className={["text-sm font-semibold", emphasize ? "text-slate-950" : "text-slate-900"].join(" ")}>
+          {label}
+        </p>
+
+        {hasTarget ? (
+          <p className="text-sm text-slate-700">
+            <span className="font-semibold text-slate-950">
+              {unit === "м" ? fmtMeters(current) : fmt(current)}
+            </span>{" "}
+            / {unit === "м" ? fmtMeters(required) : fmt(required)} {unit}
+          </p>
+        ) : (
+          <p className="text-sm text-slate-700">
+            В корзине:{" "}
+            <span className="font-semibold text-slate-950">
+              {unit === "м" ? fmtMeters(current) : fmt(current)}
+            </span>{" "}
+            {unit}
+          </p>
+        )}
+      </div>
+
+      {hasTarget ? (
+        <div className="mt-3">
+          <div className="h-2 w-full rounded-full bg-slate-200">
+            <div
+              className={["h-2 rounded-full", done ? "bg-emerald-600" : "bg-slate-950"].join(" ")}
+              style={{ width: `${Math.round((ratio ?? 0) * 100)}%` }}
+            />
+          </div>
+
+          <p className="mt-2 text-xs text-slate-500">
+            {done ? "Готово по расчёту." : "Можно продолжать — или добрать до расчёта."}
+          </p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function WizardStep1Lighting() {
   const { snapshot } = usePriceCalculatorBridge();
-  const { lightingDraft, setLightingDraft, options, step1CatalogView, setStep1CatalogView } = useCalculatorModal();
+
+  const {
+    lightingDraft,
+    setLightingDraft,
+    options,
+    step1CatalogView,
+    setStep1CatalogView,
+    goToStep,
+    step0AreaConfirmed,
+  } = useCalculatorModal();
 
   const initialTab: Tab = options?.initialLightingTab === "catalog" ? "catalog" : "recommendations";
   const initialCatalogView: CatalogView = options?.initialLightingView === "selected" ? "selected" : "browse";
@@ -421,6 +497,49 @@ export function WizardStep1Lighting() {
     const benefit = Math.max(0, regular - discounted);
     return { regular, discounted, benefit };
   }, [selectedViewItems]);
+
+  // ===== Progress numbers (ключевое) =====
+  const selectedTrackMeters = useMemo(() => {
+    let meters = 0;
+
+    for (const entry of cartEntries) {
+      const p = entry.product;
+      if (p.kind !== "TRACK_PROFILE") continue;
+
+      if (p.unit === "m") meters += entry.qty;
+      else if (typeof p.pieceLengthMeters === "number") meters += entry.qty * p.pieceLengthMeters;
+      else if (typeof p.lengthMeters === "number") meters += entry.qty * p.lengthMeters;
+      // если длины нет — метры не считаем (это честнее, чем "шт=м")
+    }
+
+    return meters;
+  }, [cartEntries]);
+
+  const selectedPointQty = useMemo(() => {
+    let qty = 0;
+
+    for (const entry of cartEntries) {
+      const p = entry.product;
+      if (p.kind === "SPOT_FIXTURE" || isPanelProduct(p)) qty += entry.qty;
+    }
+
+    return qty;
+  }, [cartEntries]);
+
+  // Требуемое показываем только после подтверждения Step0 (чтобы не давить потолком в lighting-first)
+  const requiredTrackMeters = step0AreaConfirmed ? toNumber(snapshot?.derivedInputs?.trackLengthMeters) : 0;
+  const requiredPointQty = step0AreaConfirmed ? toNumber(snapshot?.derivedInputs?.pointSpotsQty) : 0;
+
+  const progressHasTargets = requiredTrackMeters > 0 || requiredPointQty > 0;
+
+  const EPS_METERS = 0.05;
+  const trackDone = requiredTrackMeters > 0 ? selectedTrackMeters + EPS_METERS >= requiredTrackMeters : true;
+  const pointsDone = requiredPointQty > 0 ? selectedPointQty >= requiredPointQty : true;
+
+  const progressDone = progressHasTargets ? trackDone && pointsDone : false;
+
+  const remainingTrackMeters = Math.max(0, requiredTrackMeters - selectedTrackMeters);
+  const remainingPointQty = Math.max(0, requiredPointQty - selectedPointQty);
 
   const lampOptionsBySocket = useMemo(() => {
     const lamps = products.filter((product) => isLamp(product));
@@ -696,6 +815,14 @@ export function WizardStep1Lighting() {
     setQuery("");
   };
 
+  const gotoTrackProfiles = () => {
+    setActiveTab("catalog");
+    setCatalogViewAndSync("browse");
+    setSection("track-systems");
+    setTrackGroup("TRACK_PROFILE");
+    setQuery("");
+  };
+
   const gotoPoints = () => {
     setActiveTab("catalog");
     setCatalogViewAndSync("browse");
@@ -719,14 +846,19 @@ export function WizardStep1Lighting() {
     };
 
     for (const system of ["COLIBRI_220", "CLARUS_48", "TRACK_220"] as TrackSystemId[]) {
-      const hasFixture = cartEntries.some((entry) => entry.product.system === system && entry.product.kind === "TRACK_FIXTURE");
+      const hasFixture = cartEntries.some(
+        (entry) => entry.product.system === system && entry.product.kind === "TRACK_FIXTURE"
+      );
 
       const base = TRACK_PROFILE_WHITELIST[system] ?? [];
       const allowed =
         system === "TRACK_220" ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST]) : new Set(base);
 
       const hasProfile = cartEntries.some(
-        (entry) => entry.product.system === system && entry.product.kind === "TRACK_PROFILE" && allowed.has(toText(entry.product.vendorCode))
+        (entry) =>
+          entry.product.system === system &&
+          entry.product.kind === "TRACK_PROFILE" &&
+          allowed.has(toText(entry.product.vendorCode))
       );
 
       result[system] = hasFixture && hasProfile;
@@ -800,7 +932,8 @@ export function WizardStep1Lighting() {
 
     return scoped.filter((product) => {
       const attrs = pickDisplayAttributes(product).map((a) => `${a.label} ${a.value}`).join(" ");
-      const haystack = `${toText(product.name)} ${toText(product.vendorCode)} ${toText(product.categoryPath)} ${attrs}`.toLowerCase();
+      const haystack =
+        `${toText(product.name)} ${toText(product.vendorCode)} ${toText(product.categoryPath)} ${attrs}`.toLowerCase();
       return haystack.includes(q);
     });
   }, [catalogView, lampSocket, pointSubtype, products, query, section, selectedViewItems, trackGroup, trackSystem]);
@@ -810,6 +943,109 @@ export function WizardStep1Lighting() {
 
   return (
     <div className="space-y-4">
+      {/* Progress block (всегда виден) */}
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-950">Прогресс по сборке</p>
+            <p className="mt-1 text-xs text-slate-600">
+              Для трека учитываем метры <span className="font-semibold">профиля/шинопровода</span> (не светильники).
+            </p>
+          </div>
+
+          {progressHasTargets && progressDone ? (
+            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+              Собрано по расчёту
+            </span>
+          ) : null}
+        </div>
+
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <ProgressRow
+            label="Профиль трека"
+            unit="м"
+            current={selectedTrackMeters}
+            required={progressHasTargets ? requiredTrackMeters : null}
+          />
+          <ProgressRow
+            label="Точечные"
+            unit="шт."
+            current={selectedPointQty}
+            required={progressHasTargets ? requiredPointQty : null}
+          />
+        </div>
+
+        {progressHasTargets && !progressDone ? (
+          <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-800">
+            <p className="font-semibold text-slate-950">Осталось добрать (если хотите ровно по расчёту)</p>
+            <p className="mt-1 text-slate-700">
+              {requiredTrackMeters > 0 ? (
+                <>
+                  Профиль трека: <span className="font-semibold">{fmtMeters(remainingTrackMeters)}</span> м
+                </>
+              ) : (
+                <>Профиль трека: —</>
+              )}
+              {" · "}
+              {requiredPointQty > 0 ? (
+                <>
+                  Точечные: <span className="font-semibold">{fmt(remainingPointQty)}</span> шт.
+                </>
+              ) : (
+                <>Точечные: —</>
+              )}
+            </p>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={gotoTrackProfiles}
+                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Добавить профиль трека
+              </button>
+              <button
+                type="button"
+                onClick={gotoPoints}
+                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Добавить точечные
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {progressHasTargets && progressDone ? (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+            <div className="text-sm text-emerald-950">
+              <p className="font-semibold">Отлично — комплект собран по расчёту.</p>
+              <p className="mt-1 text-xs text-emerald-900/80">Можно переходить к завершению.</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => goToStep(2)}
+              className="rounded-xl bg-emerald-700 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-800"
+            >
+              Готово, к итогу →
+            </button>
+          </div>
+        ) : null}
+
+        {!step0AreaConfirmed && (toNumber(snapshot?.derivedInputs?.trackLengthMeters) > 0 || toNumber(snapshot?.derivedInputs?.pointSpotsQty) > 0) ? (
+          <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+            <p className="font-semibold">Чтобы сверить прогресс с расчётом, подтвердите шаг 1 (параметры потолка).</p>
+            <button
+              type="button"
+              onClick={() => goToStep(0)}
+              className="mt-3 rounded-xl bg-amber-700 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-800"
+            >
+              Перейти к параметрам потолка
+            </button>
+          </div>
+        ) : null}
+      </div>
+
       <div className="flex flex-wrap gap-2">
         <TabButton active={activeTab === "recommendations"} onClick={() => setActiveTab("recommendations")}>
           Рекомендации
@@ -828,11 +1064,7 @@ export function WizardStep1Lighting() {
       {activeTab === "recommendations" ? (
         <div className="space-y-3">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-800">
-            <p className="font-semibold text-slate-950">По параметрам потолка</p>
-            <p className="mt-1 text-slate-700">
-              Точечных: <span className="font-semibold">{toNumber(snapshot?.derivedInputs?.pointSpotsQty)}</span> шт. ·
-              Трек: <span className="font-semibold">{toNumber(snapshot?.derivedInputs?.trackLengthMeters)}</span> м.
-            </p>
+            <p className="font-semibold text-slate-950">Комплектация (треки/точечные)</p>
 
             <ul className="mt-3 list-disc space-y-1 pl-5 text-slate-700">
               <li>COLIBRI: {trackAssembled.COLIBRI_220 ? "собрано" : "не собрано"}</li>
@@ -856,11 +1088,21 @@ export function WizardStep1Lighting() {
               >
                 Перейти к точечным
               </button>
+              <button
+                type="button"
+                onClick={gotoTrackProfiles}
+                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Профиль трека (м)
+              </button>
             </div>
           </div>
 
           {missingMounts.map((item) => (
-            <div key={`${item.fixtureVendorCode}-${item.mountVendorCode}`} className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+            <div
+              key={`${item.fixtureVendorCode}-${item.mountVendorCode}`}
+              className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
+            >
               <p className="font-semibold">Не хватает закладных 1:1</p>
               <p className="mt-1 text-amber-900/80">
                 Для <span className="font-semibold">{item.fixtureName}</span> нужна закладная{" "}
