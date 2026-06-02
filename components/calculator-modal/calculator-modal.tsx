@@ -55,7 +55,7 @@ function createEmptySnapshot(source: string): CalculatorLeadSnapshot {
     lightsRatePerUnit: 0,
     lightsTotal: 0,
     total: 0,
-    // ВАЖНО: grandTotal = потолок (+досчёт монтажа), без света.
+    // grandTotal — потолочная часть (+досчёт монтажа), без света
     grandTotal: 0,
     derivedInputs: {
       pointSpotsQty: 0,
@@ -181,8 +181,6 @@ export function CalculatorModal() {
 
   const handleConfirm = useCallback(() => {
     const source: string = String(options?.source ?? "");
-
-    // Если потолочный snapshot не создан (lighting-first) — создаём пустой, но не подмешиваем свет в grandTotal.
     const baseSnapshot = snapshot ?? createEmptySnapshot(source);
 
     setSnapshot({
@@ -209,7 +207,10 @@ export function CalculatorModal() {
   const modalActive = isOpen && visible;
 
   return createPortal(
-    <div aria-hidden={!isOpen} className={`fixed inset-0 z-[120] ${modalActive ? "pointer-events-auto" : "pointer-events-none"}`}>
+    <div
+      aria-hidden={!isOpen}
+      className={`fixed inset-0 z-[120] ${modalActive ? "pointer-events-auto" : "pointer-events-none"}`}
+    >
       <div
         ref={overlayRef}
         onClick={handleOverlayClick}
