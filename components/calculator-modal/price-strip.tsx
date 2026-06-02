@@ -10,6 +10,7 @@ export function PriceStrip() {
   const {
     ceilingTotal,
     lightingDiscountedTotal,
+    grandTotal,
     currentStep,
     step0SessionInteracted,
     options,
@@ -19,11 +20,12 @@ export function PriceStrip() {
   const displayCeiling = showCeiling ? ceilingTotal : 0;
   const hasLighting = lightingDiscountedTotal > 0;
 
-  // Если потолок скрыт (lighting-first и Step0 не трогали), то "итого" показываем только по свету,
-  // чтобы не давить потолком/не показывать старые значения из snapshot.
-  const displayTotal = showCeiling ? displayCeiling + lightingDiscountedTotal : lightingDiscountedTotal;
+  // Важно:
+  // - если потолок скрыт (lighting-first и Step0 не трогали) → показываем только свет
+  // - если потолок показан → используем единый grandTotal из контекста
+  const displayTotal = showCeiling ? grandTotal : lightingDiscountedTotal;
 
-  // P0.3: placeholder на шаге 0 пока ничего не выбрано
+  // placeholder на шаге 0 пока ничего не выбрано
   if (displayCeiling === 0 && !hasLighting) {
     if (currentStep !== 0) return null;
 
@@ -63,10 +65,13 @@ export function PriceStrip() {
       {hasLighting ? (
         <>
           <span className="text-slate-500"> · </span>
+
           <span className="font-medium">
             Свет: {fmt(lightingDiscountedTotal)} ₽ <span className="text-emerald-700">−15%</span>
           </span>
+
           <span className="text-slate-500"> · </span>
+
           <span className="font-semibold">Итого: ~{fmt(displayTotal)} ₽</span>
         </>
       ) : null}
