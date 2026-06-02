@@ -87,6 +87,51 @@ function isPanelProduct(product: FeedCatalogProduct): boolean {
   );
 }
 
+function parseMetersFromValue(raw: string): number | null {
+  const s = toText(raw).toLowerCase().replace(/\s+/g, " ");
+
+  const mm = s.match(/(\d+(?:[.,]\d+)?)\s*(мм|mm)\b/);
+  if (mm) {
+    const v = Number(mm[1].replace(",", "."));
+    if (Number.isFinite(v) && v > 0) return v / 1000;
+  }
+
+  const cm = s.match(/(\d+(?:[.,]\d+)?)\s*(см|cm)\b/);
+  if (cm) {
+    const v = Number(cm[1].replace(",", "."));
+    if (Number.isFinite(v) && v > 0) return v / 100;
+  }
+
+  const m = s.match(/(\d+(?:[.,]\d+)?)\s*(м|m)\b/);
+  if (m) {
+    const v = Number(m[1].replace(",", "."));
+    if (Number.isFinite(v) && v > 0) return v;
+  }
+
+  return null;
+}
+
+function tryGetTrackProfilePieceMeters(product: FeedCatalogProduct): number | null {
+  if (typeof product.pieceLengthMeters === "number" && product.pieceLengthMeters > 0) return product.pieceLengthMeters;
+  if (typeof product.lengthMeters === "number" && product.lengthMeters > 0) return product.lengthMeters;
+
+  const attrs = [...(product.keyAttributes ?? []), ...(product.params ?? [])];
+  for (const a of attrs) {
+    const label = toText(a.label).toLowerCase();
+    if (!label) continue;
+    const looksLikeLength = label.includes("длина") || label.includes("length") || label.includes("размер");
+    if (!looksLikeLength) continue;
+
+    const v = parseMetersFromValue(toText(a.value));
+    if (v && v > 0) return v;
+  }
+
+  const fromName = parseMetersFromValue(toText(product.name));
+  if (fromName && fromName > 0) return fromName;
+
+  return null;
+}
+
 function sumTrackMetersFromLightingItems(
   items: Array<{ sku: string; qty: number }>,
   byId: Map<string, FeedCatalogProduct>,
@@ -106,12 +151,13 @@ function sumTrackMetersFromLightingItems(
     const product = byId.get(resolvedId);
     if (!product) continue;
 
-    // монтаж трека считаем только по TRACK_PROFILE
     if (product.kind !== "TRACK_PROFILE") continue;
 
     if (product.unit === "m") meters += qty;
-    else if (typeof product.pieceLengthMeters === "number") meters += qty * product.pieceLengthMeters;
-    else if (typeof product.lengthMeters === "number") meters += qty * product.lengthMeters;
+    else {
+      const piece = tryGetTrackProfilePieceMeters(product);
+      if (piece && piece > 0) meters += qty * piece;
+    }
   }
 
   return meters;
@@ -136,7 +182,6 @@ function sumPointQtyFromLightingItems(
     const product = byId.get(resolvedId);
     if (!product) continue;
 
-    // точечные = SPOT_FIXTURE + панели
     if (product.kind === "SPOT_FIXTURE" || isPanelProduct(product)) qtyTotal += qty;
   }
 
@@ -152,12 +197,25 @@ type Step3Tab = "summary" | "full";
 export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
   const [tab, setTab] = useState<Step3Tab>("summary");
 
-  const { goToStep, setStep1CatalogView, closeCalculator, step0AreaConfirmed, lightingDraft } =
-    useCalculatorModal();
+  const {
+    goToStep,
+    setStep1CatalogView,
+    closeCalculator,
+    step0AreaConfirmed,
+    lightingDraft,
+    step0SessionInteracted,
+    options,
+  } = useCalculatorModal();
+
   const { snapshot, setSnapshot } = usePriceCalculatorBridge();
 
   const lighting = snapshot?.lighting ?? lightingDraft ?? null;
   const lightingItems = lighting?.mode === "catalog" ? (lighting.items ?? []) : [];
+
+  const discountEligible = step0AreaConfirmed;
+
+  // lighting-first gating для потолка на Step3
+  const showCeiling = options?.entryMode !== "lighting-first" || step0SessionInteracted;
 
   const catalogProducts = useMemo(() => {
     const rawProducts = (snapshotData as { products?: unknown[] })?.products ?? [];
@@ -199,22 +257,18 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
     );
   }, [byId, byVendor, lightingItems]);
 
-  const ceilingTotal = toNumber(snapshot?.total);
+  const ceilingTotalRaw = toNumber(snapshot?.total);
+  const ceilingTotal = showCeiling ? ceilingTotalRaw : 0;
 
   const lightingTotalRub = toNumber(lighting?.totalRub);
-  const lightingDiscountedRub = toNumber(
-    lighting?.discountedTotalRub ?? applyLightingDiscount(lightingTotalRub)
-  );
+  const lightingDiscountedRub = applyLightingDiscount(lightingTotalRub);
+  const lightingEffectiveRub = discountEligible ? lightingDiscountedRub : lightingTotalRub;
 
   const derivedPointFromStep0 = toNumber(snapshot?.derivedInputs?.pointSpotsQty);
   const derivedTrackFromStep0 = toNumber(snapshot?.derivedInputs?.trackLengthMeters);
 
-  const trackMountType = (snapshot?.derivedInputs?.trackMountType ?? "none") as
-    | "built-in"
-    | "surface"
-    | "none";
+  const trackMountType = (snapshot?.derivedInputs?.trackMountType ?? "none") as "built-in" | "surface" | "none";
 
-  // СТРОГО: досчёт только если Step0 подтверждён (0->1)
   const canReconcileInstall = step0AreaConfirmed;
 
   const trackRates = homepage.price.calculator.tracks;
@@ -227,7 +281,6 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
   const includedTrackInstall = toNumber(snapshot?.trackTotal);
   const includedSpotInstall = toNumber(snapshot?.lightsTotal);
 
-  // досчитываем только если реально выбрали позиции в каталоге
   const desiredTrackInstallMeters = selectedTrackMeters > 0 ? selectedTrackMeters : 0;
   const desiredSpotInstallQty = selectedPointQty > 0 ? selectedPointQty : 0;
 
@@ -254,15 +307,14 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
   }, [canReconcileInstall, extraInstallTotal, setSnapshot]);
 
   const grandTotal = useMemo(() => {
-    const base = ceilingTotal;
-    if (!canReconcileInstall) return base + lightingDiscountedRub;
-    return base + extraInstallTotal + lightingDiscountedRub;
-  }, [canReconcileInstall, ceilingTotal, extraInstallTotal, lightingDiscountedRub]);
+    const ceilingPart = showCeiling
+      ? canReconcileInstall
+        ? ceilingTotalRaw + extraInstallTotal
+        : ceilingTotalRaw
+      : 0;
 
-  const showReminderSelectedButNotSpecified =
-    canReconcileInstall &&
-    ((selectedPointQty > 0 && derivedPointFromStep0 === 0) ||
-      (selectedTrackMeters > 0 && derivedTrackFromStep0 === 0));
+    return ceilingPart + lightingEffectiveRub;
+  }, [canReconcileInstall, ceilingTotalRaw, extraInstallTotal, lightingEffectiveRub, showCeiling]);
 
   const handleEditLighting = () => {
     setStep1CatalogView("selected");
@@ -274,60 +326,17 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
   };
 
   const handleAction = () => {
-    // совместимость: если родитель передал onConfirm — делаем как раньше
     if (onConfirm) {
       onConfirm();
       return;
     }
 
-    // fallback
     closeCalculator();
     setTimeout(() => {
       const el = document.getElementById("action");
       if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 50);
   };
-
-  const lightingRegularFromItems = useMemo(() => {
-    return lightingItems.reduce((sum, item) => {
-      const qty = toNumber(item.qty);
-      const price = toNumber(item.priceRub);
-      return sum + qty * price;
-    }, 0);
-  }, [lightingItems]);
-
-  const lightingDiscountedFromItems = useMemo(() => {
-    return applyLightingDiscount(lightingRegularFromItems);
-  }, [lightingRegularFromItems]);
-
-  const ceilingDetails = useMemo(() => {
-    const s = snapshot;
-    if (!s) return [];
-
-    const lines: Array<{ label: string; value: number | string }> = [];
-
-    if (toNumber(s.area) > 0) lines.push({ label: "Площадь", value: `${fmt(toNumber(s.area))} м²` });
-    if (toText(s.ceilingTypeLabel)) lines.push({ label: "Тип потолка", value: toText(s.ceilingTypeLabel) });
-
-    if (toNumber(s.ceilingBaseTotal) > 0) lines.push({ label: "База", value: toNumber(s.ceilingBaseTotal) });
-
-    if (toNumber(s.ceilingExtraTotal) > 0) {
-      const extraLabel = toText(s.ceilingExtraLabel);
-      lines.push({
-        label: extraLabel ? `Дополнительно (${extraLabel})` : "Дополнительно",
-        value: toNumber(s.ceilingExtraTotal),
-      });
-    }
-
-    if (toNumber(s.lightLinesTotal) > 0) lines.push({ label: "Световые линии", value: toNumber(s.lightLinesTotal) });
-    if (toNumber(s.corniceTotal) > 0) lines.push({ label: "Карниз", value: toNumber(s.corniceTotal) });
-
-    if (toNumber(s.trackTotal) > 0) lines.push({ label: "Монтаж трека (по потолку)", value: toNumber(s.trackTotal) });
-    if (toNumber(s.lightsTotal) > 0)
-      lines.push({ label: "Монтаж точечных (по потолку)", value: toNumber(s.lightsTotal) });
-
-    return lines;
-  }, [snapshot]);
 
   function TabButton({ id, label }: { id: Step3Tab; label: string }) {
     const active = tab === id;
@@ -354,18 +363,34 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
         <TabButton id="full" label="Полный расчёт" />
       </div>
 
+      {!discountEligible ? (
+        <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+          <p className="font-semibold">Сейчас свет посчитан без скидки.</p>
+          <p className="mt-1 text-blue-900/80">
+            Скидка −15% применяется при заказе потолка — подтвердите шаг 1, и мы применим скидку к итоговой сумме света.
+          </p>
+          <button
+            type="button"
+            onClick={handleGoToCeiling}
+            className="mt-3 rounded-xl bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800"
+          >
+            Рассчитать потолок и получить скидку →
+          </button>
+        </div>
+      ) : null}
+
       {tab === "summary" ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
           <p className="text-base font-semibold text-slate-950">Итог расчёта</p>
 
           <div className="mt-3 space-y-1 text-sm">
-            {canReconcileInstall ? (
+            {showCeiling ? (
               <>
                 <p className="text-slate-800">
-                  Потолок: <span className="font-semibold text-slate-950">{fmt(ceilingTotal)} ₽</span>
+                  Потолок: <span className="font-semibold text-slate-950">{fmt(ceilingTotalRaw)} ₽</span>
                 </p>
 
-                {extraInstallTotal > 0 ? (
+                {canReconcileInstall && extraInstallTotal > 0 ? (
                   <p className="text-slate-800">
                     Монтаж по свету (досчёт):{" "}
                     <span className="font-semibold text-slate-950">{fmt(extraInstallTotal)} ₽</span>
@@ -374,176 +399,115 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
               </>
             ) : (
               <p className="text-slate-800">
-                Потолок: <span className="font-semibold text-slate-950">{fmt(ceilingTotal)} ₽</span>{" "}
-                <span className="text-xs text-slate-500">(досчёт монтажа — только после подтверждения шага 1)</span>
+                Потолок: <span className="font-semibold text-slate-950">—</span>{" "}
+                <span className="text-xs text-slate-500">(расчёт появится после шага 1)</span>
               </p>
             )}
 
-            <p className="text-emerald-700">
-              Свет (со скидкой −15%):{" "}
-              <span className="font-semibold">{fmt(lightingDiscountedRub)} ₽</span>
-            </p>
+            {discountEligible ? (
+              <p className="text-emerald-700">
+                Свет (со скидкой −15%): <span className="font-semibold">{fmt(lightingEffectiveRub)} ₽</span>
+              </p>
+            ) : (
+              <p className="text-slate-800">
+                Свет: <span className="font-semibold text-slate-950">{fmt(lightingEffectiveRub)} ₽</span>{" "}
+                <span className="text-xs text-slate-500">(без скидки)</span>
+              </p>
+            )}
 
             <p className="mt-2 text-base font-semibold text-slate-950">Итого: ~{fmt(grandTotal)} ₽</p>
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="flex items-start justify-between gap-3">
-              <p className="text-base font-semibold text-slate-950">Полный расчёт</p>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-base font-semibold text-slate-950">Полный расчёт</p>
 
-              <button
-                type="button"
-                onClick={handleEditLighting}
-                className="shrink-0 rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-              >
-                Редактировать свет
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleEditLighting}
+              className="shrink-0 rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+            >
+              Редактировать свет
+            </button>
+          </div>
 
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-semibold text-slate-950">Потолок</p>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-slate-950">Потолок</p>
 
-                {ceilingDetails.length > 0 ? (
-                  <ul className="mt-2 space-y-1 text-sm text-slate-700">
-                    {ceilingDetails.map((line) => (
-                      <li key={line.label} className="flex items-baseline justify-between gap-3">
-                        <span className="text-slate-600">{line.label}</span>
-                        <span className="text-slate-900">
-                          {typeof line.value === "number" ? `${fmt(line.value)} ₽` : line.value}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="mt-2 text-sm text-slate-600">
-                    Детали появятся после выбора параметров потолка на шаге 1.
-                  </p>
-                )}
-
-                <div className="mt-3 border-t border-slate-200 pt-3 text-sm">
-                  <p className="flex items-baseline justify-between gap-3">
-                    <span className="font-semibold text-slate-900">Потолок итого</span>
-                    <span className="font-semibold text-slate-900">{fmt(ceilingTotal)} ₽</span>
-                  </p>
-
-                  {canReconcileInstall && extraInstallTotal > 0 ? (
-                    <p className="mt-1 flex items-baseline justify-between gap-3 text-slate-800">
-                      <span>Досчёт монтажа по свету</span>
-                      <span className="font-semibold">{fmt(extraInstallTotal)} ₽</span>
-                    </p>
-                  ) : null}
-
-                  {!canReconcileInstall ? (
-                    <p className="mt-2 text-xs text-slate-500">
-                      Досчёт монтажа (по метрам профиля трека и количеству точечных) включим только после подтверждения
-                      шага 1.
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-semibold text-slate-950">Освещение (товары)</p>
-
-                {lightingItems.length > 0 ? (
+              <p className="mt-2 text-sm text-slate-700">
+                {showCeiling ? (
                   <>
-                    <ul className="mt-2 space-y-2 text-sm text-slate-800">
-                      {lightingItems.map((item) => {
-                        const qty = toNumber(item.qty);
-                        const price = toNumber(item.priceRub);
-                        const subtotal = qty * price;
-
-                        return (
-                          <li key={toText(item.sku)} className="rounded-xl border border-slate-200 bg-white p-3">
-                            <p className="font-medium text-slate-950 break-words">{toText(item.name)}</p>
-                            <p className="mt-1 text-xs text-slate-500 break-words">SKU: {toText(item.sku)}</p>
-
-                            <div className="mt-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-xs text-slate-700">
-                              <span>
-                                Кол-во: <span className="font-semibold text-slate-900">{qty}</span>
-                              </span>
-                              <span>
-                                Цена: <span className="font-semibold text-slate-900">{fmt(price)} ₽</span>
-                              </span>
-                              <span>
-                                Сумма: <span className="font-semibold text-slate-900">{fmt(subtotal)} ₽</span>
-                              </span>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-
-                    <div className="mt-3 border-t border-slate-200 pt-3 text-sm">
-                      <p className="flex items-baseline justify-between gap-3 text-slate-800">
-                        <span>Товары итого (по корзине)</span>
-                        <span className="font-semibold text-slate-900">{fmt(lightingRegularFromItems)} ₽</span>
-                      </p>
-                      <p className="mt-1 flex items-baseline justify-between gap-3 text-emerald-700">
-                        <span>Со скидкой −15%</span>
-                        <span className="font-semibold">{fmt(lightingDiscountedFromItems)} ₽</span>
-                      </p>
-
-                      {/* Для согласованности с тем, что уйдёт в заявку: показываем “официальные” totals из snapshot/lighting */}
-                      <p className="mt-2 text-xs text-slate-500">
-                        В расчёт “Итого” берём: {fmt(lightingDiscountedRub)} ₽ (со скидкой).
-                      </p>
-                    </div>
+                    Потолок: <span className="font-semibold text-slate-950">{fmt(ceilingTotalRaw)} ₽</span>
                   </>
                 ) : (
-                  <p className="mt-2 text-sm text-slate-600">Освещение не выбрано — можно продолжить.</p>
+                  <>
+                    Потолок: <span className="font-semibold text-slate-950">—</span>{" "}
+                    <span className="text-xs text-slate-500">(после шага 1)</span>
+                  </>
+                )}
+              </p>
+
+              {canReconcileInstall && extraInstallTotal > 0 ? (
+                <p className="mt-1 text-sm text-slate-700">
+                  Досчёт монтажа: <span className="font-semibold text-slate-950">{fmt(extraInstallTotal)} ₽</span>
+                </p>
+              ) : null}
+
+              <p className="mt-3 text-xs text-slate-500">
+                В корзине: профиль трека ~{selectedTrackMeters.toFixed(1)} м · точечные {selectedPointQty} шт.
+              </p>
+
+              <p className="mt-1 text-xs text-slate-500">
+                По потолку (если указано): трек {derivedTrackFromStep0} м · точечные {derivedPointFromStep0} шт.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-slate-950">Освещение (товары)</p>
+
+              {lightingItems.length > 0 ? (
+                <ul className="mt-2 space-y-2 text-sm text-slate-800">
+                  {lightingItems.map((item) => (
+                    <li key={toText(item.sku)} className="rounded-xl border border-slate-200 bg-white p-3">
+                      <p className="font-medium text-slate-950 break-words">{toText(item.name)}</p>
+                      <p className="mt-1 text-xs text-slate-500 break-words">SKU: {toText(item.sku)}</p>
+                      <p className="mt-2 text-xs text-slate-700">
+                        Кол-во: <span className="font-semibold">{toNumber(item.qty)}</span> · Цена:{" "}
+                        <span className="font-semibold">{fmt(toNumber(item.priceRub))} ₽</span>
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-2 text-sm text-slate-600">Освещение не выбрано — можно продолжить.</p>
+              )}
+
+              <div className="mt-3 border-t border-slate-200 pt-3 text-sm">
+                <p className="flex items-baseline justify-between gap-3 text-slate-800">
+                  <span>Итого по свету</span>
+                  <span className="font-semibold text-slate-950">{fmt(lightingEffectiveRub)} ₽</span>
+                </p>
+                {!discountEligible ? (
+                  <p className="mt-1 text-xs text-slate-500">Без скидки. Скидка −15% — при заказе потолка.</p>
+                ) : (
+                  <p className="mt-1 text-xs text-emerald-700">Со скидкой −15%.</p>
                 )}
               </div>
             </div>
+          </div>
 
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
-              <p className="text-sm font-semibold text-slate-950">Итого</p>
-              <p className="mt-2 text-base font-semibold text-slate-950">~{fmt(grandTotal)} ₽</p>
-
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
-                <span>Профиль трека в корзине: ~{selectedTrackMeters.toFixed(1)} м</span>
-                <span>Точечные в корзине: {selectedPointQty} шт.</span>
-                <span>По потолку указано: трек {derivedTrackFromStep0} м, точечные {derivedPointFromStep0} шт.</span>
-              </div>
-            </div>
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+            <p className="text-sm font-semibold text-slate-950">Итого</p>
+            <p className="mt-2 text-base font-semibold text-slate-950">~{fmt(grandTotal)} ₽</p>
           </div>
         </div>
       )}
 
-      {!canReconcileInstall && (selectedPointQty > 0 || selectedTrackMeters > 0) ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-          <p className="font-semibold">Похоже, вы уже выбрали освещение.</p>
-          <p className="mt-1 text-amber-900/80">
-            Чтобы корректно посчитать монтаж трека (по метрам) и установку точечных, подтвердите шаг 1 (параметры
-            потолка).
-          </p>
-          <button
-            type="button"
-            onClick={handleGoToCeiling}
-            className="mt-3 rounded-xl bg-amber-700 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-800"
-          >
-            Перейти к параметрам потолка
-          </button>
-        </div>
-      ) : null}
-
-      {showReminderSelectedButNotSpecified ? (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800">
-          <p className="font-semibold">Подсказка</p>
-          <p className="mt-1 text-slate-600">
-            Вы выбрали треки/точечные в каталоге. Мы досчитаем монтаж на этом шаге (после подтверждения шага 1).
-          </p>
-        </div>
-      ) : null}
-
       <div className="rounded-2xl border border-slate-200 bg-white p-4">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-sm font-semibold text-slate-950">
-            Вы выбрали ({lightingItems.length} поз.)
-          </p>
+          <p className="text-sm font-semibold text-slate-950">Вы выбрали ({lightingItems.length} поз.)</p>
 
           <button
             type="button"
@@ -562,9 +526,7 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
                   {toText(item.name)} × {toNumber(item.qty)}
                 </li>
               ))}
-              {lightingItems.length > 8 ? (
-                <li className="text-slate-500">…и ещё {lightingItems.length - 8} поз.</li>
-              ) : null}
+              {lightingItems.length > 8 ? <li className="text-slate-500">…и ещё {lightingItems.length - 8} поз.</li> : null}
             </ul>
           ) : (
             <p className="text-slate-600">Освещение не выбрано — можно продолжить.</p>
@@ -581,9 +543,7 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
         Записаться на бесплатный замер →
       </button>
 
-      <p className="text-xs text-slate-500">
-        Это ориентировочный расчёт. Точную стоимость определим на бесплатном замере.
-      </p>
+      <p className="text-xs text-slate-500">Это ориентировочный расчёт. Точную стоимость определим на бесплатном замере.</p>
     </div>
   );
 }
