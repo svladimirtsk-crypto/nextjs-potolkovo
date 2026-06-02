@@ -434,11 +434,16 @@ function PriceRow({
 type PriceCalculatorClientProps = {
   preset?: ServiceCalculatorPreset;
   compactSections?: boolean;
+  // NEW: prefill из выбранного освещения (используется в модалке Step0)
+  prefillFromLighting?: { trackProfileMeters: number; pointSpotsQty: number } | null;
+  prefillFromLightingTrigger?: number;
 };
 
 export function PriceCalculatorClient({
   preset,
   compactSections = false,
+  prefillFromLighting = null,
+  prefillFromLightingTrigger = 0,
 }: PriceCalculatorClientProps) {
   const { setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
 
@@ -478,6 +483,37 @@ export function PriceCalculatorClient({
   const [lightsEnabled, setLightsEnabled] =
     useState<boolean>(resolvedLightsEnabled);
   const [lightsCount, setLightsCount] = useState<number>(resolvedLightsCount);
+
+    useEffect(() => {
+    if (!compactSections) return;
+    if (!prefillFromLighting) return;
+    if (!prefillFromLightingTrigger) return;
+
+    // помечаем, что пользователь реально взаимодействовал с калькулятором
+    setHasInteracted(true);
+
+    const points = Math.max(0, Math.round(Number(prefillFromLighting.pointSpotsQty ?? 0)));
+    if (points > 0) {
+      setLightsEnabled(true);
+      setLightsCount(points);
+    }
+
+    const metersRaw = Number(prefillFromLighting.trackProfileMeters ?? 0);
+    if (Number.isFinite(metersRaw) && metersRaw > 0) {
+      // нормализуем под шаг/границы треков из calculator.trackMeters
+      const normalized = clamp(
+        roundToStep(metersRaw, calculator.trackMeters.step),
+        calculator.trackMeters.min,
+        calculator.trackMeters.max
+      );
+
+      setTrackLength(normalized);
+
+      // чтобы трек реально учитывался в derivedInputs/total,
+      // если тип был "none" — ставим дефолт "built-in" (пользователь может поменять)
+      setTrackType((prev) => (prev === "none" ? ("built-in" as TrackType) : prev));
+    }
+  }, [compactSections, prefillFromLighting, prefillFromLightingTrigger, setHasInteracted]);
 
   const selectedCeiling = useMemo(
     () =>
