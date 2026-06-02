@@ -7,7 +7,6 @@ import type { CalculatorLeadSnapshot } from "@/components/home/price-calculator-
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 import type { WizardStep } from "@/lib/calculator-modal-types";
 import { isSnapshotValid } from "@/lib/calculator-snapshot-guard";
-import { calcRequiredWorksFromLighting } from "@/lib/lighting-formulas";
 import { scrollToAnchorTarget } from "@/lib/scroll-to-anchor";
 
 import { useCalculatorModal } from "./calculator-modal-context";
@@ -28,7 +27,7 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll<HTMLElement>(selector));
 }
 
-function createEmptySnapshot(source: string, lightingDiscountedTotal: number): CalculatorLeadSnapshot {
+function createEmptySnapshot(source: string): CalculatorLeadSnapshot {
   return {
     area: 0,
     ceilingTypeLabel: "Не выбрано",
@@ -56,7 +55,8 @@ function createEmptySnapshot(source: string, lightingDiscountedTotal: number): C
     lightsRatePerUnit: 0,
     lightsTotal: 0,
     total: 0,
-    grandTotal: lightingDiscountedTotal,
+    // ВАЖНО: grandTotal = потолок (+досчёт монтажа), без света.
+    grandTotal: 0,
     derivedInputs: {
       pointSpotsQty: 0,
       trackMountType: "none",
@@ -68,15 +68,7 @@ function createEmptySnapshot(source: string, lightingDiscountedTotal: number): C
 }
 
 export function CalculatorModal() {
-  const {
-    isOpen,
-    currentStep,
-    closeCalculator,
-    goToStep,
-    options,
-    lightingDraft,
-    lightingDiscountedTotal,
-  } = useCalculatorModal();
+  const { isOpen, currentStep, closeCalculator, goToStep, options, lightingDraft } = useCalculatorModal();
 
   const { snapshot, setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
 
@@ -190,40 +182,13 @@ export function CalculatorModal() {
   const handleConfirm = useCallback(() => {
     const source: string = String(options?.source ?? "");
 
-    const baseSnapshot = snapshot ?? createEmptySnapshot(source, lightingDiscountedTotal);
-    const { requiredLightsCount } = calcRequiredWorksFromLighting(lightingDraft?.items);
-
-    const currentLightsCount = baseSnapshot.lightsCount ?? 0;
-    const needsReconcile = requiredLightsCount !== null && requiredLightsCount !== currentLightsCount;
-
-    const reconciledLightsCount = needsReconcile ? requiredLightsCount : currentLightsCount;
-    const reconciledLightsTotal = needsReconcile
-      ? reconciledLightsCount * baseSnapshot.lightsRatePerUnit
-      : baseSnapshot.lightsTotal;
-
-    const reconciledTotal = needsReconcile
-      ? baseSnapshot.ceilingBaseTotal +
-        baseSnapshot.ceilingExtraTotal +
-        baseSnapshot.lightLinesTotal +
-        baseSnapshot.corniceTotal +
-        baseSnapshot.trackTotal +
-        reconciledLightsTotal
-      : baseSnapshot.total;
-
-    const finalLightingDiscounted = Number(
-      lightingDraft?.discountedTotalRub ?? lightingDiscountedTotal ?? 0
-    );
+    // Если потолочный snapshot не создан (lighting-first) — создаём пустой, но не подмешиваем свет в grandTotal.
+    const baseSnapshot = snapshot ?? createEmptySnapshot(source);
 
     setSnapshot({
       ...baseSnapshot,
-      lightsEnabled: needsReconcile ? reconciledLightsCount > 0 : baseSnapshot.lightsEnabled,
-      lightsCount: needsReconcile ? reconciledLightsCount : baseSnapshot.lightsCount,
-      lightsTotal: reconciledLightsTotal,
-      total: reconciledTotal,
       lighting: lightingDraft ?? undefined,
-      grandTotal: reconciledTotal + finalLightingDiscounted,
       leadSource: String(baseSnapshot.leadSource ?? source),
-      _reconciled: needsReconcile,
     });
 
     if (snapshotValid) {
@@ -234,16 +199,7 @@ export function CalculatorModal() {
     requestAnimationFrame(() => {
       scrollToAnchorTarget("#action", { focus: true, highlight: true });
     });
-  }, [
-    options?.source,
-    snapshot,
-    lightingDraft,
-    lightingDiscountedTotal,
-    setSnapshot,
-    snapshotValid,
-    setHasInteracted,
-    requestClose,
-  ]);
+  }, [options?.source, snapshot, lightingDraft, setSnapshot, snapshotValid, setHasInteracted, requestClose]);
 
   if (!mounted) return null;
 
@@ -253,10 +209,7 @@ export function CalculatorModal() {
   const modalActive = isOpen && visible;
 
   return createPortal(
-    <div
-      aria-hidden={!isOpen}
-      className={`fixed inset-0 z-[120] ${modalActive ? "pointer-events-auto" : "pointer-events-none"}`}
-    >
+    <div aria-hidden={!isOpen} className={`fixed inset-0 z-[120] ${modalActive ? "pointer-events-auto" : "pointer-events-none"}`}>
       <div
         ref={overlayRef}
         onClick={handleOverlayClick}
