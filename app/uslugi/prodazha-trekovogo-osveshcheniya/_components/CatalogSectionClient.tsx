@@ -311,7 +311,8 @@ export function CatalogSectionClient({ data }: Props) {
   }, [cartItems, lampProductsBySocket]);
 
   const missingLamps = useMemo(() => {
-    const out: Array<{ socket: LampSocket; requiredQty: number; currentQty: number; cheapestLampId: string | null }> = [];
+    const out: Array<{ socket: LampSocket; requiredQty: number; currentQty: number; cheapestLampId: string | null }> =
+      [];
 
     for (const socket of ["GX53", "MR16"] as LampSocket[]) {
       const required = toNumber(lampRequiredBySocket[socket]);
@@ -457,7 +458,7 @@ export function CatalogSectionClient({ data }: Props) {
     <Section className="py-10">
       <Container>
         <div className="flex items-start justify-between gap-6">
-          <Heading level={2}>Каталог освещения</Heading>
+          <Heading title="Каталог освещения" />
 
           <button
             type="button"
@@ -497,7 +498,10 @@ export function CatalogSectionClient({ data }: Props) {
             ) : null}
 
             {missingMounts.map((m) => (
-              <div key={`${m.fixtureVendorCode}-${m.mountVendorCode}`} className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+              <div
+                key={`${m.fixtureVendorCode}-${m.mountVendorCode}`}
+                className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
+              >
                 <p className="font-semibold">Не хватает закладных 1:1</p>
                 <p className="mt-2">
                   Нужно: <span className="font-semibold">{m.requiredQty}</span> шт., в корзине:{" "}
@@ -677,7 +681,9 @@ export function CatalogSectionClient({ data }: Props) {
                     key={productId}
                     className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700"
                   >
-                    <span className="max-w-[16rem] truncate">{toText(entry.product.name)} × {entry.qty}</span>
+                    <span className="max-w-[16rem] truncate">
+                      {toText(entry.product.name)} × {entry.qty}
+                    </span>
                     <button
                       type="button"
                       onClick={() => removeFromSelected(productId)}
