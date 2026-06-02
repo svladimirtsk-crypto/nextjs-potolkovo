@@ -1,5 +1,6 @@
 "use client";
 
+import { applyLightingDiscount } from "@/lib/lighting-formulas";
 import { useCalculatorModal } from "./calculator-modal-context";
 
 function fmt(n: number) {
@@ -10,25 +11,28 @@ export function PriceStrip() {
   const {
     ceilingTotal,
     lightingDiscountedTotal,
-    grandTotal,
+    lightingDraft,
+    step0AreaConfirmed,
     currentStep,
     step0SessionInteracted,
     options,
+    grandTotal,
   } = useCalculatorModal();
 
   const showCeiling = currentStep === 0 || step0SessionInteracted;
-  const displayCeiling = showCeiling ? ceilingTotal : 0;
-  const hasLighting = lightingDiscountedTotal > 0;
 
-  // Важно:
-  // - если потолок скрыт (lighting-first и Step0 не трогали) → показываем только свет
-  // - если потолок показан → используем единый grandTotal из контекста
-  const displayTotal = showCeiling ? grandTotal : lightingDiscountedTotal;
+  const items = lightingDraft?.mode === "catalog" ? (lightingDraft.items ?? []) : [];
+  const lightingRegular = items.reduce((sum, it) => sum + Number(it.qty ?? 0) * Number(it.priceRub ?? 0), 0);
+  const lightingDiscounted = applyLightingDiscount(lightingRegular);
 
-  // placeholder на шаге 0 пока ничего не выбрано
-  if (displayCeiling === 0 && !hasLighting) {
+  const discountEligible = step0AreaConfirmed;
+  const lightingEffective = discountEligible ? lightingDiscounted : lightingRegular;
+
+  const ceilingPartFromContext = showCeiling ? Math.max(0, grandTotal - (lightingDiscountedTotal ?? 0)) : 0;
+  const displayTotal = showCeiling ? ceilingPartFromContext + lightingEffective : lightingEffective;
+
+  if (ceilingTotal === 0 && lightingEffective === 0) {
     if (currentStep !== 0) return null;
-
     return (
       <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
         Выберите параметры — стоимость появится здесь
@@ -36,42 +40,42 @@ export function PriceStrip() {
     );
   }
 
-  // Lighting-first: показываем только свет, потолок — аккуратной подсказкой
-  if (!showCeiling && hasLighting) {
+  // lighting-first: потолок скрываем до интеракции Step0
+  if (!showCeiling && lightingEffective > 0) {
     const showHint = options?.entryMode === "lighting-first";
 
     return (
       <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm">
         <span className="font-medium">
-          Свет: {fmt(lightingDiscountedTotal)} ₽ <span className="text-emerald-700">−15%</span>
+          Свет: {fmt(lightingEffective)} ₽
+          {discountEligible ? <span className="text-emerald-700"> −15%</span> : null}
         </span>
 
-        <span className="text-slate-500"> · </span>
+        {!discountEligible ? <span className="text-slate-500"> · скидка −15% при заказе потолка</span> : null}
 
+        <span className="text-slate-500"> · </span>
         <span className="text-slate-700">Итого по свету: ~{fmt(displayTotal)} ₽</span>
 
-        {showHint ? (
-          <span className="text-slate-500"> · Потолок — после выбора параметров на шаге 1</span>
-        ) : null}
+        {showHint ? <span className="text-slate-500"> · Потолок — после шага 1</span> : null}
       </div>
     );
   }
 
-  // Обычный режим: показываем потолок (и свет, если есть)
   return (
     <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm">
-      <span className="font-medium">Потолок: {fmt(displayCeiling)} ₽</span>
+      <span className="font-medium">Потолок: {fmt(ceilingTotal)} ₽</span>
 
-      {hasLighting ? (
+      {lightingEffective > 0 ? (
         <>
           <span className="text-slate-500"> · </span>
-
           <span className="font-medium">
-            Свет: {fmt(lightingDiscountedTotal)} ₽ <span className="text-emerald-700">−15%</span>
+            Свет: {fmt(lightingEffective)} ₽
+            {discountEligible ? <span className="text-emerald-700"> −15%</span> : null}
           </span>
 
-          <span className="text-slate-500"> · </span>
+          {!discountEligible ? <span className="text-slate-500"> · скидка −15% при заказе потолка</span> : null}
 
+          <span className="text-slate-500"> · </span>
           <span className="font-semibold">Итого: ~{fmt(displayTotal)} ₽</span>
         </>
       ) : null}
