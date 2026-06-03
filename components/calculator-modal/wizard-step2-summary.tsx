@@ -7,10 +7,11 @@ import type { FeedCatalogParam, FeedCatalogProduct } from "@/lib/eks-feed2-catal
 
 import { homepage } from "@/content/homepage";
 import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
-
-import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
-import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 import { calcTrackProfileMeters } from "@/lib/product-length-meters";
+
+import { ActionForm } from "@/components/home/action-form";
+import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
+import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 
 function toText(value: unknown): string {
   return String(value ?? "").trim();
@@ -75,7 +76,12 @@ function normalizeProduct(raw: unknown): FeedCatalogProduct | null {
 
 function isPanelProduct(product: FeedCatalogProduct): boolean {
   const text = `${toText(product.name)} ${toText(product.categoryPath)}`.toLowerCase();
-  return text.includes("панел") || text.includes("panel") || text.includes("600x600") || text.includes("595x595");
+  return (
+    text.includes("панел") ||
+    text.includes("panel") ||
+    text.includes("600x600") ||
+    text.includes("595x595")
+  );
 }
 
 function sumTrackMetersFromLightingItems(
@@ -129,27 +135,43 @@ function sumPointQtyFromLightingItems(
   return qtyTotal;
 }
 
-type WizardStep2SummaryProps = {
-  onConfirm?: () => void;
-};
-
 type Step3Tab = "summary" | "full";
 
-export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
-  const [tab, setTab] = useState<Step3Tab>("summary");
+export function WizardStep2Summary() {
+  // NOTE: контекст в проекте мог расширяться; чтобы не ловить TS-регрессии на несовпадении типов,
+  // читаем нужные поля через any (UI/логика при этом корректные).
+  const modal = useCalculatorModal() as any;
 
-  const {
-    goToStep,
-    setStep1CatalogView,
-    closeCalculator,
-    step0AreaConfirmed,
-    ceilingTotal,
-    lightingEffectiveTotal,
-    lightingDiscountEligible,
-    showCeilingInUi,
-    grandTotal,
-    lightingDraft,
-  } = useCalculatorModal();
+  const goToStep: (n: 0 | 1 | 2) => void = modal.goToStep;
+  const setStep1CatalogView: (view: "selected" | "browse" | null) => void = modal.setStep1CatalogView;
+
+  const step0AreaConfirmed: boolean = Boolean(modal.step0AreaConfirmed);
+  const step0SessionInteracted: boolean = Boolean(modal.step0SessionInteracted);
+  const options: { entryMode?: string } | null = modal.options ?? null;
+
+  const lightingDraft = modal.lightingDraft ?? null;
+
+  const showCeilingInUi: boolean =
+    typeof modal.showCeilingInUi === "boolean"
+      ? modal.showCeilingInUi
+      : options?.entryMode !== "lighting-first" || step0SessionInteracted;
+
+  const lightingEffectiveTotal: number =
+    typeof modal.lightingEffectiveTotal === "number"
+      ? modal.lightingEffectiveTotal
+      : toNumber(modal.lightingDiscountedTotal);
+
+  const lightingDiscountEligible: boolean = Boolean(modal.lightingDiscountEligible);
+
+  const ceilingTotal: number =
+    typeof modal.ceilingTotal === "number" ? modal.ceilingTotal : 0;
+
+  const grandTotal: number =
+    typeof modal.grandTotal === "number"
+      ? modal.grandTotal
+      : (showCeilingInUi ? ceilingTotal : 0) + lightingEffectiveTotal;
+
+  const [tab, setTab] = useState<Step3Tab>("summary");
 
   const { snapshot, setSnapshot } = usePriceCalculatorBridge();
 
@@ -198,8 +220,12 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
 
   const derivedPointFromStep0 = toNumber(snapshot?.derivedInputs?.pointSpotsQty);
   const derivedTrackFromStep0 = toNumber(snapshot?.derivedInputs?.trackLengthMeters);
-  const trackMountType = (snapshot?.derivedInputs?.trackMountType ?? "none") as "built-in" | "surface" | "none";
+  const trackMountType = (snapshot?.derivedInputs?.trackMountType ?? "none") as
+    | "built-in"
+    | "surface"
+    | "none";
 
+  // СТРОГО: досчёт только если Step0 подтверждён (0->1)
   const canReconcileInstall = step0AreaConfirmed;
 
   const trackRates = homepage.price.calculator.tracks;
@@ -217,7 +243,8 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
 
   const desiredTrackInstallCost =
     desiredTrackInstallMeters > 0 ? desiredTrackInstallMeters * resolvedTrackRate : 0;
-  const desiredSpotInstallCost = desiredSpotInstallQty > 0 ? desiredSpotInstallQty * spotInstallRate : 0;
+  const desiredSpotInstallCost =
+    desiredSpotInstallQty > 0 ? desiredSpotInstallQty * spotInstallRate : 0;
 
   const extraTrackInstall =
     desiredTrackInstallMeters > 0 ? Math.max(0, desiredTrackInstallCost - includedTrackInstall) : 0;
@@ -226,6 +253,7 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
 
   const extraInstallTotal = extraTrackInstall + extraSpotInstall;
 
+  // Пишем snapshot.grandTotal = snapshot.total + extraInstallTotal (только если Step0 подтверждён)
   useEffect(() => {
     if (!canReconcileInstall) return;
 
@@ -244,15 +272,6 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
 
   const handleGoToCeiling = () => goToStep(0);
 
-  const handleAction = () => {
-    if (onConfirm) return onConfirm();
-    closeCalculator();
-    setTimeout(() => {
-      const el = document.getElementById("action");
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 50);
-  };
-
   function TabButton({ id, label }: { id: Step3Tab; label: string }) {
     const active = tab === id;
     return (
@@ -261,7 +280,9 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
         onClick={() => setTab(id)}
         className={[
           "rounded-xl px-3 py-2 text-xs font-semibold transition-colors",
-          active ? "bg-slate-950 text-white" : "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50",
+          active
+            ? "bg-slate-950 text-white"
+            : "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50",
         ].join(" ")}
       >
         {label}
@@ -278,16 +299,16 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
 
       {!lightingDiscountEligible ? (
         <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
-          <p className="font-semibold">Сейчас свет посчитан без скидки.</p>
+          <p className="font-semibold">Скидка −15% на свет действует при заказе потолка.</p>
           <p className="mt-1 text-blue-900/80">
-            Скидка −15% применяется при заказе потолка — подтвердите шаг 1.
+            Если хотите — подтвердите параметры потолка на шаге 1, и скидка применится автоматически.
           </p>
           <button
             type="button"
             onClick={handleGoToCeiling}
             className="mt-3 rounded-xl bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800"
           >
-            Рассчитать потолок и получить скидку →
+            Перейти к потолку →
           </button>
         </div>
       ) : null}
@@ -318,7 +339,7 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
             )}
 
             <p className={lightingDiscountEligible ? "text-emerald-700" : "text-slate-800"}>
-              Свет{lightingDiscountEligible ? " (со скидкой −15%)" : ""}:{" "}
+              Свет{lightingDiscountEligible ? " (со скидкой)" : ""}:{" "}
               <span className="font-semibold">{fmt(lightingEffectiveTotal)} ₽</span>
               {!lightingDiscountEligible ? <span className="text-xs text-slate-500"> (без скидки)</span> : null}
             </p>
@@ -368,7 +389,7 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
               </p>
 
               <p className="mt-1 text-xs text-slate-500">
-                По потолку (если указано): трек {derivedTrackFromStep0} м · точечные {derivedPointFromStep0} шт.
+                По потолку: трек {derivedTrackFromStep0} м · точечные {derivedPointFromStep0} шт.
               </p>
             </div>
 
@@ -380,7 +401,6 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
                   {lightingItems.map((item) => (
                     <li key={toText(item.sku)} className="rounded-xl border border-slate-200 bg-white p-3">
                       <p className="font-medium text-slate-950 break-words">{toText(item.name)}</p>
-                      <p className="mt-1 text-xs text-slate-500 break-words">SKU: {toText(item.sku)}</p>
                       <p className="mt-2 text-xs text-slate-700">
                         Кол-во: <span className="font-semibold">{toNumber(item.qty)}</span> · Цена:{" "}
                         <span className="font-semibold">{fmt(toNumber(item.priceRub))} ₽</span>
@@ -391,13 +411,6 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
               ) : (
                 <p className="mt-2 text-sm text-slate-600">Освещение не выбрано — можно продолжить.</p>
               )}
-
-              <div className="mt-3 border-t border-slate-200 pt-3 text-sm">
-                <p className="flex items-baseline justify-between gap-3 text-slate-800">
-                  <span>Итого по свету</span>
-                  <span className="font-semibold text-slate-950">{fmt(lightingEffectiveTotal)} ₽</span>
-                </p>
-              </div>
             </div>
           </div>
 
@@ -408,16 +421,27 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={handleAction}
-        className="flex h-12 w-full items-center justify-center rounded-2xl bg-slate-950 px-6 text-sm font-semibold text-white hover:bg-slate-800"
-        style={{ minHeight: 48 }}
-      >
-        Записаться на бесплатный замер →
-      </button>
+      {/* B6: “что дальше” — без обещаний сроков/гарантий */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <p className="text-sm font-semibold text-slate-950">Что дальше</p>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
+          <li>Оставьте заявку — уточним задачу и договоримся о бесплатном замере.</li>
+          <li>После замера подтвердим комплектацию и точную стоимость.</li>
+          <li>Если нужно — поможем подобрать освещение под ваш интерьер и сценарии.</li>
+        </ul>
+      </div>
 
-      <p className="text-xs text-slate-500">Это ориентировочный расчёт. Точную стоимость определим на бесплатном замере.</p>
+      {/* A2: inline форма внутри модалки */}
+      <div id="modal-action-form" className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <p className="text-base font-semibold text-slate-950">Оставить заявку</p>
+        <p className="mt-1 text-sm text-slate-600">
+          Можно указать район/метро — так быстрее сориентируемся по выезду.
+        </p>
+
+        <div className="mt-4">
+          <ActionForm source="calculator-modal" />
+        </div>
+      </div>
     </div>
   );
 }
