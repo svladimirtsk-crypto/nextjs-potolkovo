@@ -5,9 +5,11 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TextLink } from "@/components/ui/text-link";
+
 import { legal } from "@/content/legal";
 import { trackFormSubmitSuccess } from "@/lib/analytics";
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
+
 import {
   getCalculatorSummaryLines,
   getLightingSummaryLines,
@@ -25,53 +27,39 @@ function normalizePhone(value: string): string {
   if (digits.length >= 10 && digits.length <= 15) return `+${digits}`;
   return value.trim();
 }
-
 function isValidPhone(value: string): boolean {
   return /^\+\d{10,15}$/.test(value);
 }
 
-function buildMessage(
-  ceilingLines: string[],
-  lightingLines: string[],
-  address: string,
-  source: string
-): string {
+function buildMessage(ceilingLines: string[], lightingLines: string[], address: string, source: string): string {
   const parts: string[] = ["Заявка с трековой страницы ПОТОЛКОВО"];
-
   if (source) parts.push(`Источник: ${source}`);
   if (address.trim()) parts.push("", `Адрес / район: ${address.trim()}`);
   if (ceilingLines.length) parts.push("", "Потолок:", ...ceilingLines.map((x) => `- ${x}`));
   if (lightingLines.length) parts.push("", "Освещение:", ...lightingLines.map((x) => `- ${x}`));
-
   return parts.join("\n");
 }
 
-type TrackSaleActionFormProps = {
-  source?: string;
-};
+type TrackSaleActionFormProps = { source?: string };
 
 export function TrackSaleActionForm({ source }: TrackSaleActionFormProps) {
   const { snapshot, hasInteracted } = usePriceCalculatorBridge();
-
   const effectiveSource: string = String(snapshot?.leadSource ?? source ?? "catalog_trek_page");
 
-  const ceilingLines = useMemo(
-    () => (hasInteracted ? getCalculatorSummaryLines(snapshot) : []),
-    [hasInteracted, snapshot]
-  );
+  const ceilingLines = useMemo(() => (hasInteracted ? getCalculatorSummaryLines(snapshot) : []), [hasInteracted, snapshot]);
   const lightingLines = useMemo(() => getLightingSummaryLines(snapshot), [snapshot]);
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
+
   const [status, setStatus] = useState<FormStatus>("idle");
   const [message, setMessage] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
   const [isPending, setIsPending] = useState(false);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-
     setStatus("idle");
     setMessage("");
     setErrors({});
@@ -105,34 +93,42 @@ export function TrackSaleActionForm({ source }: TrackSaleActionFormProps) {
 
     const lightingTotalRub = Number(snapshot?.lighting?.totalRub ?? 0);
     const lightingDiscountedRub = Number(
-      snapshot?.lighting?.discountedTotalRub ??
-        applyLightingDiscount(Number(snapshot?.lighting?.totalRub ?? 0))
+      snapshot?.lighting?.discountedTotalRub ?? applyLightingDiscount(Number(snapshot?.lighting?.totalRub ?? 0))
     );
+
+    const discountApplied = Boolean(snapshot?.lightingDiscountApplied);
+    const discountPercentApplied = Number(snapshot?.lightingDiscountPercentApplied ?? 0);
 
     const formData = new FormData();
     formData.append("access_key", String(accessKey));
     formData.append("subject", String("Новая заявка с трековой страницы ПОТОЛКОВО"));
     formData.append("from_name", String("ПОТОЛКОВО - Трековая страница"));
+
     formData.append("name", String(trimmedName));
     formData.append("phone", String(normalizedPhone));
     formData.append("address", String(trimmedAddress));
-    formData.append(
-      "message",
-      String(buildMessage(ceilingLines, lightingLines, trimmedAddress, effectiveSource))
-    );
+
+    formData.append("message", String(buildMessage(ceilingLines, lightingLines, trimmedAddress, effectiveSource)));
+
     formData.append("botcheck", String(""));
     formData.append("company", String(""));
 
     formData.append("lighting_mode", String(snapshot?.lighting?.mode ?? "none"));
     formData.append("lighting_items_count", String(snapshot?.lighting?.items?.length ?? 0));
+
     formData.append("lighting_total_rub", String(lightingTotalRub));
     formData.append("lighting_discounted_total_rub", String(lightingDiscountedRub));
+
+    formData.append("lighting_discount_applied", String(discountApplied));
+    formData.append("lighting_discount_percent_applied", String(discountPercentApplied));
+
+    // legacy
     formData.append("lighting_total", String(lightingTotalRub));
     formData.append("lighting_discounted_total", String(lightingDiscountedRub));
+
     formData.append("calculator_source", String(effectiveSource));
 
     setIsPending(true);
-
     try {
       const response = await fetch("https://api.web3forms.com/submit", {
         method: "POST",
@@ -140,7 +136,6 @@ export function TrackSaleActionForm({ source }: TrackSaleActionFormProps) {
       });
 
       const result = await response.json().catch(() => null);
-
       if (!response.ok || !result?.success) {
         const errorText: string = String(result?.message ?? result?.error ?? `HTTP ${response.status}`);
         setStatus("error");
@@ -150,7 +145,8 @@ export function TrackSaleActionForm({ source }: TrackSaleActionFormProps) {
 
       trackFormSubmitSuccess(effectiveSource);
       setStatus("success");
-      setMessage("Спасибо. Мы свяжемся с вами для уточнения деталей и замера.");
+      setMessage("Спасибо.\nМы свяжемся с вами для уточнения деталей и замера.");
+
       setName("");
       setPhone("");
       setAddress("");
@@ -164,73 +160,41 @@ export function TrackSaleActionForm({ source }: TrackSaleActionFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {status === "success" ? (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950 whitespace-pre-line">
           {message}
         </div>
       ) : null}
 
       {status === "error" ? (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-950 whitespace-pre-line">
           {message}
         </div>
       ) : null}
 
-      <Input
-        label="Имя"
-        name="name"
-        type="text"
-        placeholder="Как к вам обращаться"
-        autoComplete="name"
-        required
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
-      {errors.name ? <p className="text-sm text-rose-700">{errors.name}</p> : null}
+      <div>
+        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Имя" />
+        {errors.name ? <p className="mt-1 text-xs text-rose-600">{errors.name}</p> : null}
+      </div>
 
-      <Input
-        label="Телефон"
-        name="phone"
-        type="tel"
-        placeholder="+7 (___) ___-__-__"
-        autoComplete="tel"
-        inputMode="tel"
-        required
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-      />
-      {errors.phone ? <p className="text-sm text-rose-700">{errors.phone}</p> : null}
+      <div>
+        <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Телефон (например, +7905…)" />
+        {errors.phone ? <p className="mt-1 text-xs text-rose-600">{errors.phone}</p> : null}
+      </div>
 
-      <Input
-        label="Адрес или район"
-        name="address"
-        type="text"
-        placeholder="Например: Химки, Люберцы"
-        autoComplete="street-address"
-        value={address}
-        onChange={(e) => setAddress(e.target.value)}
-      />
-      {errors.address ? <p className="text-sm text-rose-700">{errors.address}</p> : null}
+      <div>
+        <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Район / ближайшее метро (необязательно)" />
+        {errors.address ? <p className="mt-1 text-xs text-rose-600">{errors.address}</p> : null}
+      </div>
 
-      <input
-        type="text"
-        name="company"
-        tabIndex={-1}
-        autoComplete="off"
-        className="hidden"
-        aria-hidden="true"
-      />
-
-      <Button type="submit" className="w-full justify-center" disabled={isPending}>
+      <Button type="submit" className="w-full" disabled={isPending}>
         {isPending ? "Отправляю..." : "Отправить заявку"}
       </Button>
 
-      <p className="text-xs leading-5 text-slate-500">
+      <p className="text-xs text-slate-500">
         {legal.consentTextPrefix}{" "}
-        <TextLink href="/privacy" className="font-medium">
-          {legal.privacyLabel}
-        </TextLink>{" "}
+        <TextLink href={legal.privacyHref}>{legal.privacyLabel}</TextLink>{" "}
         {legal.consentTextSuffix}
       </p>
     </form>
