@@ -31,7 +31,10 @@ import {
   type LampSocket,
 } from "@/lib/catalog-ui-config";
 
-import { ART_TRACK_PROFILE_VENDOR_WHITELIST, applyVendorOverrides } from "@/lib/vendor-code-overrides";
+import {
+  ART_TRACK_PROFILE_VENDOR_WHITELIST,
+  applyVendorOverrides,
+} from "@/lib/vendor-code-overrides";
 import { calcTrackProfileMeters, inferPieceLengthMeters } from "@/lib/product-length-meters";
 
 import { ProductImage } from "@/components/feed2/ProductImage";
@@ -256,7 +259,11 @@ function ProductCard({
           </div>
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-            <ProductQtyControls qty={product.unit === "m" ? Number(qty.toFixed(1)) : qty} onDec={onDec} onInc={onInc} />
+            <ProductQtyControls
+              qty={product.unit === "m" ? Number(qty.toFixed(1)) : qty}
+              onDec={onDec}
+              onInc={onInc}
+            />
 
             <span
               className={[
@@ -368,7 +375,8 @@ export function WizardStep1Lighting() {
             ? "catalog"
             : "recommendations";
 
-    const nextView: CatalogView = options?.initialLightingView === "selected" ? "selected" : "browse";
+    const nextView: CatalogView =
+      options?.initialLightingView === "selected" ? "selected" : "browse";
 
     setActiveTab(nextTab);
     setCatalogView(nextView);
@@ -382,11 +390,6 @@ export function WizardStep1Lighting() {
   const [lampSocket, setLampSocket] = useState<LampSocket>("GX53");
 
   const [query, setQuery] = useState("");
-  const [selectedLampBySocket, setSelectedLampBySocket] = useState<Record<LampSocket, string | null>>({
-    GX53: null,
-    MR16: null,
-  });
-
   const [cartItems, setCartItems] = useState<CartItems>({});
   const [removedHint, setRemovedHint] = useState(false);
 
@@ -461,7 +464,8 @@ export function WizardStep1Lighting() {
 
       setActiveTab("catalog");
 
-      const nextView: CatalogView = options?.initialLightingView === "selected" ? "selected" : "browse";
+      const nextView: CatalogView =
+        options?.initialLightingView === "selected" ? "selected" : "browse";
       setCatalogView(nextView);
       setStep1CatalogView(nextView);
     }
@@ -480,7 +484,10 @@ export function WizardStep1Lighting() {
         const product = productsById.get(productId);
         return product ? { productId, product, qty } : null;
       })
-      .filter((entry): entry is { productId: string; product: FeedCatalogProduct; qty: number } => Boolean(entry))
+      .filter(
+        (entry): entry is { productId: string; product: FeedCatalogProduct; qty: number } =>
+          Boolean(entry)
+      )
       .filter((entry) => !REMOVED_COLIBRI_VENDOR_CODES.has(toText(entry.product.vendorCode)));
   }, [cartItems, productsById]);
 
@@ -505,13 +512,18 @@ export function WizardStep1Lighting() {
   }, [cartEntries]);
 
   // targets показываем только если потолок “разрешён к показу” (чтобы не давить в lighting-first)
-  const requiredTrackMeters = showCeilingInUi ? toNumber(snapshot?.derivedInputs?.trackLengthMeters) : 0;
-  const requiredPointQty = showCeilingInUi ? toNumber(snapshot?.derivedInputs?.pointSpotsQty) : 0;
+  const requiredTrackMeters = showCeilingInUi
+    ? toNumber(snapshot?.derivedInputs?.trackLengthMeters)
+    : 0;
+  const requiredPointQty = showCeilingInUi
+    ? toNumber(snapshot?.derivedInputs?.pointSpotsQty)
+    : 0;
 
   const progressHasTargets = requiredTrackMeters > 0 || requiredPointQty > 0;
 
   const EPS_METERS = 0.05;
-  const trackDone = requiredTrackMeters > 0 ? selectedTrackMeters + EPS_METERS >= requiredTrackMeters : true;
+  const trackDone =
+    requiredTrackMeters > 0 ? selectedTrackMeters + EPS_METERS >= requiredTrackMeters : true;
   const pointsDone = requiredPointQty > 0 ? selectedPointQty >= requiredPointQty : true;
   const progressDone = progressHasTargets ? trackDone && pointsDone : false;
 
@@ -531,14 +543,16 @@ export function WizardStep1Lighting() {
   }, [cartEntries]);
 
   const selectedTotals = useMemo(() => {
-    const regular = selectedViewItems.reduce((sum, x) => sum + x.item.qty * x.item.priceRub, 0);
+    const regular = selectedViewItems.reduce(
+      (sum, x) => sum + x.item.qty * x.item.priceRub,
+      0
+    );
     const discounted = applyLightingDiscount(regular);
     const benefit = Math.max(0, regular - discounted);
     return { regular, discounted, benefit };
   }, [selectedViewItems]);
 
-  // ===== dependencies (лампы/закладные) — оставляю как есть в вашей текущей ветке,
-  // здесь прогресс метража уже будет работать =====
+  // ===== dependencies =====
   const mountRequiredByVendor = useMemo(() => {
     const required: Record<string, number> = {};
     for (const entry of cartEntries) {
@@ -552,7 +566,8 @@ export function WizardStep1Lighting() {
 
   const lampOptionsBySocket = useMemo(() => {
     const lamps = products.filter((product) => isLamp(product));
-    const byPriceAsc = (a: FeedCatalogProduct, b: FeedCatalogProduct) => toNumber(a.priceRub) - toNumber(b.priceRub);
+    const byPriceAsc = (a: FeedCatalogProduct, b: FeedCatalogProduct) =>
+      toNumber(a.priceRub) - toNumber(b.priceRub);
 
     return {
       GX53: lamps.filter((lamp) => detectSocket(lamp) === "GX53").sort(byPriceAsc),
@@ -571,12 +586,13 @@ export function WizardStep1Lighting() {
     return required;
   }, [cartEntries]);
 
+  // IMPORTANT: закладные можно “подтягивать”, а лампы — НЕТ (свободный выбор).
   useEffect(() => {
     setCartItems((prev) => {
       const next: CartItems = { ...prev };
       let changed = false;
 
-      // mounts
+      // mounts (авто-синк только если mount уже в корзине)
       for (const [mountVendor, requiredQty] of Object.entries(mountRequiredByVendor)) {
         const mountId = productIdByVendorCode.get(toText(mountVendor));
         if (!mountId) continue;
@@ -593,42 +609,9 @@ export function WizardStep1Lighting() {
         }
       }
 
-      // lamps (если уже выбраны)
-      for (const socket of ["GX53", "MR16"] as LampSocket[]) {
-        const requiredQty = toNumber(lampRequiredBySocket[socket]);
-
-        const lampIds = lampOptionsBySocket[socket].map((lamp) => toText(lamp.productId));
-        const lampsInCart = lampIds.filter((id) => toNumber(next[id]) > 0);
-
-        if (requiredQty <= 0) {
-          for (const id of lampsInCart) {
-            delete next[id];
-            changed = true;
-          }
-          continue;
-        }
-
-        if (lampsInCart.length > 0) {
-          const selectedId = toText(selectedLampBySocket[socket] ?? "");
-          const chosenId = lampsInCart.includes(selectedId) ? selectedId : lampsInCart[0];
-
-          for (const id of lampsInCart) {
-            if (id !== chosenId) {
-              delete next[id];
-              changed = true;
-            }
-          }
-
-          if (toNumber(next[chosenId]) !== requiredQty) {
-            next[chosenId] = requiredQty;
-            changed = true;
-          }
-        }
-      }
-
       return changed ? next : prev;
     });
-  }, [lampOptionsBySocket, lampRequiredBySocket, mountRequiredByVendor, productIdByVendorCode, selectedLampBySocket]);
+  }, [mountRequiredByVendor, productIdByVendorCode]);
 
   useEffect(() => {
     if (cartEntries.length === 0) {
@@ -658,14 +641,22 @@ export function WizardStep1Lighting() {
     setLightingDraft(draft);
   }, [cartEntries, setLightingDraft, snapshot?.derivedInputs]);
 
-  const hasClarusInSnapshot = useMemo(() => products.some((product) => product.system === "CLARUS_48"), [products]);
+  const hasClarusInSnapshot = useMemo(
+    () => products.some((product) => product.system === "CLARUS_48"),
+    [products]
+  );
 
-  const hasClarusInCart = useMemo(() => cartEntries.some((entry) => entry.product.system === "CLARUS_48"), [cartEntries]);
+  const hasClarusInCart = useMemo(
+    () => cartEntries.some((entry) => entry.product.system === "CLARUS_48"),
+    [cartEntries]
+  );
 
   const clarusPsuQty = useMemo(() => {
     return cartEntries
       .filter((entry) =>
-        CLARUS_PSU_VENDOR_CODES.includes(toText(entry.product.vendorCode) as (typeof CLARUS_PSU_VENDOR_CODES)[number])
+        CLARUS_PSU_VENDOR_CODES.includes(
+          toText(entry.product.vendorCode) as (typeof CLARUS_PSU_VENDOR_CODES)[number]
+        )
       )
       .reduce((sum, entry) => sum + entry.qty, 0);
   }, [cartEntries]);
@@ -753,6 +744,28 @@ export function WizardStep1Lighting() {
     setCartItems((prev) => ({ ...prev, [mountId]: required }));
   };
 
+  // NEW: optional helper — добавить недостающее количество самых дешёвых ламп (без удаления других ламп)
+  const addCheapestLampsOneToOne = (socket: LampSocket) => {
+    const required = toNumber(lampRequiredBySocket[socket]);
+    if (required <= 0) return;
+
+    const ids = lampOptionsBySocket[socket].map((lamp) => toText(lamp.productId));
+    const current = ids.reduce((sum, id) => sum + toNumber(cartItems[id]), 0);
+    const missing = Math.max(0, required - current);
+    if (missing <= 0) return;
+
+    const cheapest = lampOptionsBySocket[socket][0];
+    if (!cheapest) return;
+
+    const id = toText(cheapest.productId);
+    if (!id) return;
+
+    setCartItems((prev) => ({
+      ...prev,
+      [id]: toNumber(prev[id]) + missing,
+    }));
+  };
+
   const setClarusPsu = (productId: string) => {
     setCartItems((prev) => {
       const next = { ...prev };
@@ -812,7 +825,9 @@ export function WizardStep1Lighting() {
 
       const base = TRACK_PROFILE_WHITELIST[system] ?? [];
       const allowed =
-        system === "TRACK_220" ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST]) : new Set(base);
+        system === "TRACK_220"
+          ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST])
+          : new Set(base);
 
       const hasProfile = cartEntries.some(
         (entry) =>
@@ -838,6 +853,7 @@ export function WizardStep1Lighting() {
 
     if (fixtures.length === 0) return false;
 
+    // свободный выбор: считаем суммой по всем лампам сокета
     const lampQtyBySocket: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
     for (const socket of ["GX53", "MR16"] as LampSocket[]) {
       const lampIds = lampOptionsBySocket[socket].map((lamp) => toText(lamp.productId));
@@ -853,7 +869,9 @@ export function WizardStep1Lighting() {
         : true;
 
       const socket = getRequiredLampSocket(entry.product);
-      const lampOk = socket ? lampQtyBySocket[socket] >= toNumber(lampRequiredBySocket[socket]) : true;
+      const lampOk = socket
+        ? lampQtyBySocket[socket] >= toNumber(lampRequiredBySocket[socket])
+        : true;
 
       return mountOk && lampOk;
     });
@@ -868,7 +886,9 @@ export function WizardStep1Lighting() {
       if (trackGroup === "TRACK_PROFILE") {
         const base = TRACK_PROFILE_WHITELIST[trackSystem] ?? [];
         const allowed =
-          trackSystem === "TRACK_220" ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST]) : new Set(base);
+          trackSystem === "TRACK_220"
+            ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST])
+            : new Set(base);
 
         scoped = products.filter(
           (product) =>
@@ -921,8 +941,18 @@ export function WizardStep1Lighting() {
         </div>
 
         <div className="mt-3 grid gap-3 md:grid-cols-2">
-          <ProgressRow label="Профиль трека" unit="м" current={selectedTrackMeters} required={progressHasTargets ? requiredTrackMeters : null} />
-          <ProgressRow label="Точечные" unit="шт." current={selectedPointQty} required={progressHasTargets ? requiredPointQty : null} />
+          <ProgressRow
+            label="Профиль трека"
+            unit="м"
+            current={selectedTrackMeters}
+            required={progressHasTargets ? requiredTrackMeters : null}
+          />
+          <ProgressRow
+            label="Точечные"
+            unit="шт."
+            current={selectedPointQty}
+            required={progressHasTargets ? requiredPointQty : null}
+          />
         </div>
 
         {progressHasTargets && !progressDone ? (
@@ -999,15 +1029,67 @@ export function WizardStep1Lighting() {
         </div>
       ) : null}
 
+      {/* мягкая напоминалка про лампы прямо в табе "Каталог" */}
+      {activeTab === "catalog" && missingLamps.length > 0 ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          <p className="font-semibold">Напоминание про лампы</p>
+          <p className="mt-1 text-amber-900/80">
+            Вы выбрали светильники, которым нужны лампы (1:1), но лампы пока не добавлены в нужном количестве.
+          </p>
+
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            {missingLamps.map((m) => (
+              <li key={m.socket}>
+                Не хватает <span className="font-semibold">{m.socket}</span>: нужно{" "}
+                <span className="font-semibold">{m.requiredQty}</span> шт., в корзине{" "}
+                <span className="font-semibold">{m.currentQty}</span> шт.
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            {missingLamps.map((m) => (
+              <button
+                key={`goto-lamps-${m.socket}`}
+                type="button"
+                onClick={() => gotoLamps(m.socket)}
+                className="rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+              >
+                Выбрать лампы {m.socket} →
+              </button>
+            ))}
+
+            {missingLamps.map((m) => (
+              <button
+                key={`autoadd-lamps-${m.socket}`}
+                type="button"
+                onClick={() => addCheapestLampsOneToOne(m.socket)}
+                className="rounded-xl bg-amber-700 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-800"
+              >
+                Добавить 1:1 (самые доступные) {m.socket}
+              </button>
+            ))}
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("recommendations")}
+              className="rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+            >
+              Показать рекомендации →
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {activeTab === "recommendations" ? (
         <div className="space-y-3">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-800">
             <p className="font-semibold text-slate-950">Комплектация (треки/точечные)</p>
 
             <ul className="mt-3 list-disc space-y-1 pl-5 text-slate-700">
-              <li>COLIBRI: {trackAssembled.COLIBRI_220 ? "собрано" : "не собрано"}</li>
-              <li>CLARUS: {trackAssembled.CLARUS_48 ? "собрано" : "не собрано"}</li>
-              <li>ART: {trackAssembled.TRACK_220 ? "собрано" : "не собрано"}</li>
+              <li>COLIBRI: {String(trackAssembled.COLIBRI_220) === "true" ? "собрано" : "не собрано"}</li>
+              <li>CLARUS: {String(trackAssembled.CLARUS_48) === "true" ? "собрано" : "не собрано"}</li>
+              <li>ART: {String(trackAssembled.TRACK_220) === "true" ? "собрано" : "не собрано"}</li>
               <li>Точечные: {pointCompleted ? "укомплектовано" : "не укомплектовано"}</li>
             </ul>
 
@@ -1068,13 +1150,23 @@ export function WizardStep1Lighting() {
                 <span className="font-semibold">{m.currentQty}</span> шт.
               </p>
 
-              <button
-                type="button"
-                onClick={() => gotoLamps(m.socket)}
-                className="mt-3 rounded-xl border border-blue-300 bg-white px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-100"
-              >
-                Показать лампы
-              </button>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => gotoLamps(m.socket)}
+                  className="rounded-xl border border-blue-300 bg-white px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-100"
+                >
+                  Выбрать лампы →
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => addCheapestLampsOneToOne(m.socket)}
+                  className="rounded-xl bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800"
+                >
+                  Добавить 1:1 (самые доступные)
+                </button>
+              </div>
             </div>
           ))}
 
