@@ -68,7 +68,15 @@ function createEmptySnapshot(source: string): CalculatorLeadSnapshot {
 }
 
 export function CalculatorModal() {
-  const { isOpen, currentStep, closeCalculator, goToStep, options, lightingDraft } = useCalculatorModal();
+  const {
+    isOpen,
+    currentStep,
+    closeCalculator,
+    goToStep,
+    options,
+    lightingDraft,
+    lightingDiscountEligible,
+  } = useCalculatorModal();
 
   const { snapshot, setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
 
@@ -181,12 +189,25 @@ export function CalculatorModal() {
 
   const handleConfirm = useCallback(() => {
     const source: string = String(options?.source ?? "");
+
     const baseSnapshot = snapshot ?? createEmptySnapshot(source);
+
+    // ВАЖНО: если скидка ещё не “разрешена” (не прошли потолок),
+    // то сохраняем свет так, чтобы downstream (заявка) не увидел “скидочную” цифру как факт.
+    const lightingToSave =
+      lightingDraft && lightingDraft.mode !== "none"
+        ? {
+            ...lightingDraft,
+            discountedTotalRub: lightingDiscountEligible
+              ? lightingDraft.discountedTotalRub
+              : lightingDraft.totalRub,
+          }
+        : lightingDraft ?? null;
 
     setSnapshot({
       ...baseSnapshot,
-      lighting: lightingDraft ?? undefined,
-      leadSource: String(baseSnapshot.leadSource ?? source),
+      lighting: lightingToSave ?? undefined,
+      leadSource: String((baseSnapshot as any).leadSource ?? source),
     });
 
     if (snapshotValid) {
@@ -197,7 +218,16 @@ export function CalculatorModal() {
     requestAnimationFrame(() => {
       scrollToAnchorTarget("#action", { focus: true, highlight: true });
     });
-  }, [options?.source, snapshot, lightingDraft, setSnapshot, snapshotValid, setHasInteracted, requestClose]);
+  }, [
+    options?.source,
+    snapshot,
+    lightingDraft,
+    lightingDiscountEligible,
+    setSnapshot,
+    snapshotValid,
+    setHasInteracted,
+    requestClose,
+  ]);
 
   if (!mounted) return null;
 
