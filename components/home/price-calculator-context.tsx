@@ -1,10 +1,20 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import {
+  createContext,
+  useContext,
+  useMemo,
+  useState,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+} from "react";
+
 import { getKitDisplayName, type DerivedInputs, type LightingSnapshot } from "@/lib/calculator-modal-types";
 
 export type CalculatorLeadSnapshot = {
   area: number;
+
   ceilingTypeLabel: string;
   ceilingBaseRate: number;
   ceilingBaseTotal: number;
@@ -40,13 +50,19 @@ export type CalculatorLeadSnapshot = {
 
   derivedInputs: DerivedInputs;
   lighting?: LightingSnapshot;
+
   leadSource?: string;
   _reconciled?: boolean;
+
+  // NEW: аналитика по скидке на свет
+  lightingDiscountApplied?: boolean;
+  lightingDiscountPercentApplied?: number; // например 15
 };
 
 type PriceCalculatorContextValue = {
   snapshot: CalculatorLeadSnapshot | null;
   setSnapshot: Dispatch<SetStateAction<CalculatorLeadSnapshot | null>>;
+
   hasInteracted: boolean;
   setHasInteracted: Dispatch<SetStateAction<boolean>>;
 };
@@ -97,7 +113,9 @@ export function getCalculatorSummaryLines(snapshot: CalculatorLeadSnapshot | nul
     snapshot.ceilingExtraRatePerMeter !== null
   ) {
     lines.push(
-      `${snapshot.ceilingExtraLabel}: ${snapshot.ceilingLength} м.п. × ${formatCurrency(snapshot.ceilingExtraRatePerMeter)} ₽`
+      `${snapshot.ceilingExtraLabel}: ${snapshot.ceilingLength} м.п. × ${formatCurrency(
+        snapshot.ceilingExtraRatePerMeter
+      )} ₽`
     );
   }
 
@@ -109,7 +127,9 @@ export function getCalculatorSummaryLines(snapshot: CalculatorLeadSnapshot | nul
     snapshot.lightLinesRatePerMeter !== null
   ) {
     lines.push(
-      `${snapshot.lightLinesLabel}: ${snapshot.lightLinesLength} м.п. × ${formatCurrency(snapshot.lightLinesRatePerMeter)} ₽`
+      `${snapshot.lightLinesLabel}: ${snapshot.lightLinesLength} м.п. × ${formatCurrency(
+        snapshot.lightLinesRatePerMeter
+      )} ₽`
     );
   }
 
@@ -136,10 +156,13 @@ export function getCalculatorSummaryLines(snapshot: CalculatorLeadSnapshot | nul
   }
 
   if (snapshot.lightsEnabled && snapshot.lightsTotal > 0 && snapshot.lightsCount !== null) {
-    lines.push(`Светильники: ${snapshot.lightsCount} шт. × ${formatCurrency(snapshot.lightsRatePerUnit)} ₽`);
+    lines.push(
+      `Светильники: ${snapshot.lightsCount} шт. × ${formatCurrency(snapshot.lightsRatePerUnit)} ₽`
+    );
   }
 
   lines.push(`Потолок (работы): ${formatCurrency(snapshot.total)} ₽`);
+
   return lines;
 }
 
@@ -148,20 +171,28 @@ export function getLightingSummaryLines(snapshot: CalculatorLeadSnapshot | null)
   if (!lighting || lighting.mode === "none") return [];
 
   const lines: string[] = [];
-  const displayName = lighting.mode === "kit" ? getKitDisplayName(lighting) : null;
 
+  const displayName = lighting.mode === "kit" ? getKitDisplayName(lighting) : null;
   lines.push(displayName ? `Освещение - ${displayName}:` : "Освещение (из каталога):");
 
   for (const item of lighting.items ?? []) {
-    lines.push(`  - ${item.name} × ${item.qty} × ${formatCurrency(item.priceRub)} ₽`);
+    lines.push(` - ${item.name} × ${item.qty} × ${formatCurrency(item.priceRub)} ₽`);
   }
 
-  if (lighting.totalRub != null) {
-    lines.push(`  Оборудование: ${formatCurrency(lighting.totalRub)} ₽`);
-  }
+  const total = lighting.totalRub;
+  const discounted = lighting.discountedTotalRub;
 
-  if (lighting.discountedTotalRub != null) {
-    lines.push(`  Со скидкой 15%: ${formatCurrency(lighting.discountedTotalRub)} ₽`);
+  if (total != null) lines.push(` Оборудование: ${formatCurrency(total)} ₽`);
+
+  const discountApplied = Boolean(snapshot?.lightingDiscountApplied);
+  const hasRealDiscount =
+    total != null && discounted != null && Math.abs(Number(total) - Number(discounted)) >= 1;
+
+  if (discountApplied || hasRealDiscount) {
+    if (discounted != null) {
+      const percent = snapshot?.lightingDiscountPercentApplied ?? 15;
+      lines.push(` Со скидкой ${percent}%: ${formatCurrency(discounted)} ₽`);
+    }
   }
 
   return lines;
