@@ -16,6 +16,8 @@ import type { DerivedInputs } from "@/lib/calculator-modal-types";
 
 const calculator = homepage.price.calculator;
 
+const CHANDELIERS_INSTALL_RATE_PER_UNIT = 1000;
+
 type CeilingType = (typeof calculator.ceilingTypes)[number]["slug"];
 type CorniceType = (typeof calculator.cornices)[number]["slug"];
 type TrackType = (typeof calculator.tracks)[number]["slug"];
@@ -29,6 +31,7 @@ type CompactStepId =
   | "lightLines"
   | "cornice"
   | "track"
+  | "chandeliers"
   | "lights";
 
 function formatCurrency(value: number) {
@@ -484,6 +487,10 @@ export function PriceCalculatorClient({
     calculator.trackMeters.default
   );
 
+  // NEW: Установка люстр
+  const [chandeliersEnabled, setChandeliersEnabled] = useState<boolean>(false);
+  const [chandeliersCount, setChandeliersCount] = useState<number>(1);
+
   const [lightsEnabled, setLightsEnabled] =
     useState<boolean>(resolvedLightsEnabled);
   const [lightsCount, setLightsCount] = useState<number>(resolvedLightsCount);
@@ -491,6 +498,7 @@ export function PriceCalculatorClient({
   // чтобы prefill не перетирал ручные правки
   const [trackTypeTouched, setTrackTypeTouched] = useState(false);
   const [trackLengthTouched, setTrackLengthTouched] = useState(false);
+  const [chandeliersTouched, setChandeliersTouched] = useState(false);
   const [lightsTouched, setLightsTouched] = useState(false);
 
   useEffect(() => {
@@ -505,9 +513,17 @@ export function PriceCalculatorClient({
       0,
       Math.round(Number(prefillFromLighting.pointSpotsQty ?? 0))
     );
-    if (points > 0 && !lightsTouched) {
-      setLightsEnabled(true);
-      setLightsCount(points);
+
+    // синк “в обе стороны”:
+    // - если есть точки → подставим и включим
+    // - если точек нет → выключим (если пользователь сам не трогал это поле)
+    if (!lightsTouched) {
+      if (points > 0) {
+        setLightsEnabled(true);
+        setLightsCount(points);
+      } else {
+        setLightsEnabled(false);
+      }
     }
 
     const metersRaw = Number(prefillFromLighting.trackProfileMeters ?? 0);
@@ -618,6 +634,10 @@ export function PriceCalculatorClient({
       ? trackLength * selectedTrack.ratePerMeter
       : 0;
 
+  const chandeliersTotal = chandeliersEnabled
+    ? chandeliersCount * CHANDELIERS_INSTALL_RATE_PER_UNIT
+    : 0;
+
   const lightsTotal = lightsEnabled
     ? lightsCount * calculator.lights.ratePerUnit
     : 0;
@@ -628,6 +648,7 @@ export function PriceCalculatorClient({
     lightLinesTotal +
     corniceTotal +
     trackTotal +
+    chandeliersTotal +
     lightsTotal;
 
   // derived inputs
@@ -689,6 +710,11 @@ export function PriceCalculatorClient({
         selectedTrack.ratePerMeter > 0 ? selectedTrack.ratePerMeter : null,
       trackTotal,
 
+      chandeliersEnabled,
+      chandeliersCount: chandeliersEnabled ? chandeliersCount : null,
+      chandeliersRatePerUnit: CHANDELIERS_INSTALL_RATE_PER_UNIT,
+      chandeliersTotal,
+
       lightsEnabled,
       lightsCount: lightsEnabled ? lightsCount : null,
       lightsRatePerUnit: calculator.lights.ratePerUnit,
@@ -714,6 +740,9 @@ export function PriceCalculatorClient({
       selectedTrack,
       trackLength,
       trackTotal,
+      chandeliersEnabled,
+      chandeliersCount,
+      chandeliersTotal,
       lightsEnabled,
       lightsCount,
       lightsTotal,
@@ -742,8 +771,8 @@ export function PriceCalculatorClient({
   // ===== compact guided flow: один шаг открыт, остальные закрыты =====
   const compactSteps: CompactStepId[] = useMemo(() => {
     return hasSpecialCeiling
-      ? ["area", "ceiling", "profile", "lightLines", "cornice", "track", "lights"]
-      : ["area", "ceiling", "lightLines", "cornice", "track", "lights"];
+      ? ["area", "ceiling", "profile", "lightLines", "cornice", "track", "chandeliers", "lights"]
+      : ["area", "ceiling", "lightLines", "cornice", "track", "chandeliers", "lights"];
   }, [hasSpecialCeiling]);
 
   const [activeStep, setActiveStep] = useState<CompactStepId>("area");
@@ -756,6 +785,7 @@ export function PriceCalculatorClient({
     lightLines: !compactSections,
     cornice: !compactSections,
     track: !compactSections,
+    chandeliers: !compactSections,
     lights: !compactSections,
   });
 
@@ -765,6 +795,7 @@ export function PriceCalculatorClient({
   const lightLinesRef = useRef<HTMLDivElement | null>(null);
   const corniceRef = useRef<HTMLDivElement | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
+  const chandeliersRef = useRef<HTMLDivElement | null>(null);
   const lightsRef = useRef<HTMLDivElement | null>(null);
 
   const getRef = (id: CompactStepId) => {
@@ -781,6 +812,8 @@ export function PriceCalculatorClient({
         return corniceRef;
       case "track":
         return trackRef;
+      case "chandeliers":
+        return chandeliersRef;
       case "lights":
         return lightsRef;
     }
@@ -888,8 +921,8 @@ export function PriceCalculatorClient({
         ? `${selectedTrack.label}, ${trackLength} м.п.`
         : "нет";
 
+    const chandeliersValue = chandeliersEnabled ? `${chandeliersCount} шт.` : "нет";
     const lightsValue = lightsEnabled ? `${lightsCount} шт.` : "нет";
-
     const lightLinesValue = lightLinesEnabled ? `${lightLinesLength} м.п.` : "нет";
 
     return (
@@ -1269,7 +1302,6 @@ export function PriceCalculatorClient({
                       }}
                       showSlider={showSlider}
                     />
-                    {/* подсказку “~N спотов” убрали */}
                   </div>
                 ) : null}
 
@@ -1291,6 +1323,89 @@ export function PriceCalculatorClient({
                 subtitle={isStepEnabled("track") ? "Выберите: нужен или нет" : "Подтвердите предыдущий шаг"}
                 enabled={isStepEnabled("track")}
                 onOpen={() => openStep("track")}
+              />
+            )}
+          </div>
+
+          {/* CHANDELIERS */}
+          <div ref={chandeliersRef}>
+            {confirmed.chandeliers ? (
+              <SectionCard title={`${stepNumber("chandeliers")}) Установка люстр`}>
+                <SummaryRow
+                  label="Установка люстр"
+                  value={chandeliersValue}
+                  onEdit={() => beginEdit("chandeliers")}
+                />
+              </SectionCard>
+            ) : activeStep === "chandeliers" ? (
+              <SectionCard title={`${stepNumber("chandeliers")}) Установка люстр`}>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <OptionCard
+                    active={!chandeliersEnabled}
+                    title="Не нужно"
+                    meta="Без поштучного расчёта"
+                    onClick={() => {
+                      markInteracted();
+                      setChandeliersTouched(true);
+                      setChandeliersEnabled(false);
+                    }}
+                  />
+                  <OptionCard
+                    active={chandeliersEnabled}
+                    title="Добавить установку"
+                    meta={`${formatCurrency(CHANDELIERS_INSTALL_RATE_PER_UNIT)} ₽ / шт`}
+                    onClick={() => {
+                      markInteracted();
+                      setChandeliersTouched(true);
+                      setChandeliersEnabled(true);
+                      setChandeliersCount((prev) => Math.max(1, Math.round(prev || 1)));
+                    }}
+                  />
+                </div>
+
+                {chandeliersEnabled ? (
+                  <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+                    <RangeField
+                      id="chandeliers-count"
+                      label="Количество люстр"
+                      value={chandeliersCount}
+                      min={1}
+                      max={40}
+                      step={1}
+                      unit="шт."
+                      onChange={(v) => {
+                        markInteracted();
+                        setChandeliersTouched(true);
+                        setChandeliersCount(v);
+                      }}
+                      showSlider={showSlider}
+                      quickValues={[1, 2, 3]}
+                    />
+                  </div>
+                ) : null}
+
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <p className="text-xs text-slate-500">Выберите вариант и подтвердите.</p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => confirmAndNavigate("chandeliers")}
+                    disabled={!isStepEnabled("chandeliers")}
+                  >
+                    Подтвердить
+                  </Button>
+                </div>
+              </SectionCard>
+            ) : (
+              <CollapsedStep
+                title={`${stepNumber("chandeliers")}) Установка люстр`}
+                subtitle={
+                  isStepEnabled("chandeliers")
+                    ? "Выберите: нужна или нет"
+                    : "Подтвердите предыдущий шаг"
+                }
+                enabled={isStepEnabled("chandeliers")}
+                onOpen={() => openStep("chandeliers")}
               />
             )}
           </div>
@@ -1602,6 +1717,53 @@ export function PriceCalculatorClient({
           ) : null}
         </SectionCard>
 
+        {/* NEW: CHANDELIERS */}
+        <SectionCard title="Установка люстр">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <OptionCard
+              active={!chandeliersEnabled}
+              title="Не нужно"
+              meta="Без поштучного расчёта"
+              onClick={() => {
+                markInteracted();
+                setChandeliersTouched(true);
+                setChandeliersEnabled(false);
+              }}
+            />
+            <OptionCard
+              active={chandeliersEnabled}
+              title="Добавить установку"
+              meta={`${formatCurrency(CHANDELIERS_INSTALL_RATE_PER_UNIT)} ₽ / шт`}
+              onClick={() => {
+                markInteracted();
+                setChandeliersTouched(true);
+                setChandeliersEnabled(true);
+                setChandeliersCount((prev) => Math.max(1, Math.round(prev || 1)));
+              }}
+            />
+          </div>
+
+          {chandeliersEnabled ? (
+            <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+              <RangeField
+                id="chandeliers-count-noncompact"
+                label="Количество люстр"
+                value={chandeliersCount}
+                min={1}
+                max={40}
+                step={1}
+                unit="шт."
+                onChange={(v) => {
+                  markInteracted();
+                  setChandeliersTouched(true);
+                  setChandeliersCount(v);
+                }}
+                showSlider
+              />
+            </div>
+          ) : null}
+        </SectionCard>
+
         <SectionCard title="Точечные светильники">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <OptionCard
@@ -1679,6 +1841,9 @@ export function PriceCalculatorClient({
               ) : null}
               {trackTotal > 0 ? (
                 <PriceRow label={selectedTrack.label} value={`${formatCurrency(trackTotal)} ₽`} />
+              ) : null}
+              {chandeliersTotal > 0 ? (
+                <PriceRow label="Установка люстр" value={`${formatCurrency(chandeliersTotal)} ₽`} />
               ) : null}
               {lightsTotal > 0 ? (
                 <PriceRow label="Светильники" value={`${formatCurrency(lightsTotal)} ₽`} />
