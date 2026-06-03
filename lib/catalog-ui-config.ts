@@ -1,4 +1,4 @@
-export type CatalogSectionId = "track-systems" | "point-fixtures" | "mounts-grilles";
+export type CatalogSectionId = "track-systems" | "point-fixtures" | "mounts-grilles" | "lamps";
 export type TrackSystemId = "COLIBRI_220" | "CLARUS_48" | "TRACK_220";
 export type TrackGroupId = "TRACK_FIXTURE" | "TRACK_PROFILE" | "TRACK_ACCESSORY";
 export type PointSubtypeId = "GX53" | "MR16" | "PANELS";
@@ -11,6 +11,7 @@ export const CATALOG_SECTIONS: { id: CatalogSectionId; label: string }[] = [
   { id: "track-systems", label: "Трековые системы" },
   { id: "point-fixtures", label: "Точечные светильники" },
   { id: "mounts-grilles", label: "Закладные и решетки" },
+  { id: "lamps", label: "Лампы" },
 ];
 
 export const TRACK_SYSTEMS: { id: TrackSystemId; label: string }[] = [
