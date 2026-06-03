@@ -586,6 +586,18 @@ export function WizardStep1Lighting() {
     return required;
   }, [cartEntries]);
 
+  // NEW: текущее кол-во ламп в корзине по сокетам (свободный выбор)
+  const lampCurrentBySocket = useMemo(() => {
+    const current: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
+
+    for (const socket of ["GX53", "MR16"] as LampSocket[]) {
+      const ids = lampOptionsBySocket[socket].map((lamp) => toText(lamp.productId));
+      current[socket] = ids.reduce((sum, id) => sum + toNumber(cartItems[id]), 0);
+    }
+
+    return current;
+  }, [cartItems, lampOptionsBySocket]);
+
   // IMPORTANT: закладные можно “подтягивать”, а лампы — НЕТ (свободный выбор).
   useEffect(() => {
     setCartItems((prev) => {
@@ -706,13 +718,12 @@ export function WizardStep1Lighting() {
       const required = toNumber(lampRequiredBySocket[socket]);
       if (required <= 0) continue;
 
-      const ids = lampOptionsBySocket[socket].map((lamp) => toText(lamp.productId));
-      const current = ids.reduce((sum, id) => sum + toNumber(cartItems[id]), 0);
+      const current = toNumber(lampCurrentBySocket[socket]);
 
       if (current < required) out.push({ socket, requiredQty: required, currentQty: current });
     }
     return out;
-  }, [cartItems, lampOptionsBySocket, lampRequiredBySocket]);
+  }, [lampCurrentBySocket, lampRequiredBySocket]);
 
   const setCatalogViewAndSync = (view: CatalogView) => {
     setCatalogView(view);
@@ -744,13 +755,12 @@ export function WizardStep1Lighting() {
     setCartItems((prev) => ({ ...prev, [mountId]: required }));
   };
 
-  // NEW: optional helper — добавить недостающее количество самых дешёвых ламп (без удаления других ламп)
+  // optional helper — добавить недостающее количество самых дешёвых ламп (без удаления других ламп)
   const addCheapestLampsOneToOne = (socket: LampSocket) => {
     const required = toNumber(lampRequiredBySocket[socket]);
     if (required <= 0) return;
 
-    const ids = lampOptionsBySocket[socket].map((lamp) => toText(lamp.productId));
-    const current = ids.reduce((sum, id) => sum + toNumber(cartItems[id]), 0);
+    const current = toNumber(lampCurrentBySocket[socket]);
     const missing = Math.max(0, required - current);
     if (missing <= 0) return;
 
@@ -853,12 +863,10 @@ export function WizardStep1Lighting() {
 
     if (fixtures.length === 0) return false;
 
-    // свободный выбор: считаем суммой по всем лампам сокета
-    const lampQtyBySocket: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
-    for (const socket of ["GX53", "MR16"] as LampSocket[]) {
-      const lampIds = lampOptionsBySocket[socket].map((lamp) => toText(lamp.productId));
-      lampQtyBySocket[socket] = lampIds.reduce((sum, id) => sum + toNumber(cartItems[id]), 0);
-    }
+    const lampQtyBySocket: Record<LampSocket, number> = {
+      GX53: toNumber(lampCurrentBySocket.GX53),
+      MR16: toNumber(lampCurrentBySocket.MR16),
+    };
 
     return fixtures.every((entry) => {
       const vendorCode = toText(entry.product.vendorCode);
@@ -875,7 +883,7 @@ export function WizardStep1Lighting() {
 
       return mountOk && lampOk;
     });
-  }, [cartEntries, lampOptionsBySocket, lampRequiredBySocket, cartItems, productIdByVendorCode]);
+  }, [cartEntries, cartItems, lampCurrentBySocket, lampRequiredBySocket, productIdByVendorCode]);
 
   const scopedProducts = useMemo(() => {
     let scoped: FeedCatalogProduct[] = [];
@@ -1087,9 +1095,9 @@ export function WizardStep1Lighting() {
             <p className="font-semibold text-slate-950">Комплектация (треки/точечные)</p>
 
             <ul className="mt-3 list-disc space-y-1 pl-5 text-slate-700">
-              <li>COLIBRI: {String(trackAssembled.COLIBRI_220) === "true" ? "собрано" : "не собрано"}</li>
-              <li>CLARUS: {String(trackAssembled.CLARUS_48) === "true" ? "собрано" : "не собрано"}</li>
-              <li>ART: {String(trackAssembled.TRACK_220) === "true" ? "собрано" : "не собрано"}</li>
+              <li>COLIBRI: {trackAssembled.COLIBRI_220 ? "собрано" : "не собрано"}</li>
+              <li>CLARUS: {trackAssembled.CLARUS_48 ? "собрано" : "не собрано"}</li>
+              <li>ART: {trackAssembled.TRACK_220 ? "собрано" : "не собрано"}</li>
               <li>Точечные: {pointCompleted ? "укомплектовано" : "не укомплектовано"}</li>
             </ul>
 
@@ -1381,24 +1389,54 @@ export function WizardStep1Lighting() {
               ) : null}
 
               {section === "lamps" ? (
-                <div className="flex flex-wrap gap-2">
-                  {(["GX53", "MR16"] as LampSocket[]).map((socket) => (
-                    <button
-                      key={socket}
-                      type="button"
-                      onClick={() => {
-                        setLampSocket(socket);
-                        setQuery("");
-                      }}
-                      className={[
-                        "rounded-xl px-3 py-1.5 text-xs",
-                        lampSocket === socket ? "bg-slate-900 text-white" : "bg-white text-slate-700",
-                        "border border-slate-200",
-                      ].join(" ")}
-                    >
-                      {socket}
-                    </button>
-                  ))}
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    {(["GX53", "MR16"] as LampSocket[]).map((socket) => (
+                      <button
+                        key={socket}
+                        type="button"
+                        onClick={() => {
+                          setLampSocket(socket);
+                          setQuery("");
+                        }}
+                        className={[
+                          "rounded-xl px-3 py-1.5 text-xs",
+                          lampSocket === socket ? "bg-slate-900 text-white" : "bg-white text-slate-700",
+                          "border border-slate-200",
+                        ].join(" ")}
+                      >
+                        {socket}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* NEW: мини-прогресс рядом с переключателем сокетов */}
+                  <div className="flex flex-wrap gap-2">
+                    {(["GX53", "MR16"] as LampSocket[]).map((socket) => {
+                      const required = toNumber(lampRequiredBySocket[socket]);
+                      const current = toNumber(lampCurrentBySocket[socket]);
+                      const ok = required <= 0 ? true : current >= required;
+                      const isActive = lampSocket === socket;
+
+                      return (
+                        <div
+                          key={`lamp-progress-${socket}`}
+                          className={[
+                            "rounded-xl px-3 py-2 text-xs",
+                            isActive ? "border" : "border border-transparent",
+                            ok
+                              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                              : "bg-amber-50 text-amber-900 border-amber-200",
+                          ].join(" ")}
+                        >
+                          <span className="font-semibold">{socket}</span>
+                          <span className="ml-2">
+                            Нужно {required} · В корзине {current}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               ) : null}
 
