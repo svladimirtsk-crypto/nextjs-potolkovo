@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { ServiceCalculatorPreset } from "@/content/services";
 import { PriceCalculatorClient } from "@/components/home/price-calculator-client";
@@ -10,23 +10,21 @@ import type { FeedCatalogParam, FeedCatalogProduct } from "@/lib/eks-feed2-catal
 
 import snapshotData from "@/data/eks-feed2-snapshot.json";
 import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
+import { calcTrackProfileMeters } from "@/lib/product-length-meters";
 
 import { useCalculatorModal } from "./calculator-modal-context";
 
 function toText(value: unknown): string {
   return String(value ?? "").trim();
 }
-
 function toNumber(value: unknown): number {
   const n = Number(value ?? 0);
   return Number.isFinite(n) ? n : 0;
 }
-
 function toNumberOrNull(value: unknown): number | null {
   const n = Number(value ?? NaN);
   return Number.isFinite(n) ? n : null;
 }
-
 function toParams(input: unknown): FeedCatalogParam[] {
   if (!Array.isArray(input)) return [];
   return input
@@ -74,30 +72,6 @@ function normalizeProduct(raw: unknown): FeedCatalogProduct | null {
   };
 }
 
-function parseMetersFromValue(raw: string): number | null {
-  const s = toText(raw).toLowerCase().replace(/\s+/g, " ");
-
-  const mm = s.match(/(\d+(?:[.,]\d+)?)\s*(мм|mm)\b/);
-  if (mm) {
-    const v = Number(mm[1].replace(",", "."));
-    if (Number.isFinite(v) && v > 0) return v / 1000;
-  }
-
-  const cm = s.match(/(\d+(?:[.,]\d+)?)\s*(см|cm)\b/);
-  if (cm) {
-    const v = Number(cm[1].replace(",", "."));
-    if (Number.isFinite(v) && v > 0) return v / 100;
-  }
-
-  const m = s.match(/(\d+(?:[.,]\d+)?)\s*(м|m)\b/);
-  if (m) {
-    const v = Number(m[1].replace(",", "."));
-    if (Number.isFinite(v) && v > 0) return v;
-  }
-
-  return null;
-}
-
 function isPanelProduct(product: FeedCatalogProduct): boolean {
   const text = `${toText(product.name)} ${toText(product.categoryPath)}`.toLowerCase();
   return (
@@ -108,41 +82,22 @@ function isPanelProduct(product: FeedCatalogProduct): boolean {
   );
 }
 
-function tryGetTrackProfilePieceMeters(product: FeedCatalogProduct): number | null {
-  if (typeof product.pieceLengthMeters === "number" && product.pieceLengthMeters > 0) return product.pieceLengthMeters;
-  if (typeof product.lengthMeters === "number" && product.lengthMeters > 0) return product.lengthMeters;
-
-  const attrs = [...(product.keyAttributes ?? []), ...(product.params ?? [])];
-  for (const a of attrs) {
-    const label = toText(a.label).toLowerCase();
-    if (!label) continue;
-    const looksLikeLength = label.includes("длина") || label.includes("length") || label.includes("размер");
-    if (!looksLikeLength) continue;
-
-    const v = parseMetersFromValue(toText(a.value));
-    if (v && v > 0) return v;
-  }
-
-  const fromName = parseMetersFromValue(toText(product.name));
-  if (fromName && fromName > 0) return fromName;
-
-  return null;
-}
-
 type WizardStep0CalculatorProps = {
   preset?: ServiceCalculatorPreset;
 };
 
 export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
-  const { markStep0SessionInteracted, options, lightingDraft } = useCalculatorModal();
+  const {
+    markStep0SessionInteracted,
+    options,
+    lightingDraft,
+    step0SessionInteracted,
+  } = useCalculatorModal();
 
   const forcePreset = Boolean(options?.forcePreset);
   const resolvedPreset: ServiceCalculatorPreset = {
     ceilingType: String(preset?.ceilingType ?? "standard") as ServiceCalculatorPreset["ceilingType"],
-
-    // ТЗ: первый запуск в модалке = 10 м² (если не forcePreset)
     areaDefault: forcePreset ? Number(preset?.areaDefault ?? DEFAULT_CALCULATOR_AREA) : DEFAULT_CALCULATOR_AREA,
-
     corniceType: preset?.corniceType,
     trackType: preset?.trackType,
     lightsEnabled: preset?.lightsEnabled,
@@ -152,6 +107,23 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
   };
 
   const [prefillTrigger, setPrefillTrigger] = useState(0);
+
+  // сброс “авто-подстановки” при смене options (новое открытие)
+  const optionsKeyRef = useRef<string | null>(null);
+  const autoPrefilledRef = useRef(false);
+  useEffect(() => {
+    const key = JSON.stringify({
+      entryMode: options?.entryMode ?? null,
+      source: options?.source ?? null,
+      preset: options?.preset ?? null,
+      forcePreset: options?.forcePreset ?? null,
+      initialStep: options?.initialStep ?? null,
+    });
+    if (optionsKeyRef.current !== key) {
+      optionsKeyRef.current = key;
+      autoPrefilledRef.current = false;
+    }
+  }, [options]);
 
   const feedProducts = useMemo(() => {
     const rawProducts = (snapshotData as { products?: unknown[] })?.products ?? [];
@@ -182,6 +154,10 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
     let trackProfileMeters = 0;
     let pointSpotsQty = 0;
 
+    let metersArt = 0;
+    let metersClarus = 0;
+    let metersColibri = 0;
+
     for (const item of lightingItems) {
       const sku = toText(item.sku);
       const qty = toNumber(item.qty);
@@ -189,27 +165,46 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
       const product = byProductId.get(sku) ?? byVendorCode.get(sku);
       if (!product) continue;
 
-      // TRACK: только по профилю (погонные метры)
       if (product.kind === "TRACK_PROFILE") {
-        if (product.unit === "m") trackProfileMeters += qty;
-        else {
-          const piece = tryGetTrackProfilePieceMeters(product);
-          if (piece && piece > 0) trackProfileMeters += qty * piece;
-        }
+        const meters = calcTrackProfileMeters(product, qty);
+        trackProfileMeters += meters;
+
+        if (product.system === "TRACK_220") metersArt += meters;
+        if (product.system === "CLARUS_48") metersClarus += meters;
+        if (product.system === "COLIBRI_220") metersColibri += meters;
       }
 
-      // POINT: SPOT_FIXTURE + PANELS
       if (product.kind === "SPOT_FIXTURE" || isPanelProduct(product)) {
         pointSpotsQty += qty;
       }
     }
 
+    const hasAny = trackProfileMeters > 0 || pointSpotsQty > 0;
+
+    // preferred mount by chosen system
+    const hasArt = metersArt > 0;
+    const hasBuiltIn = metersClarus > 0 || metersColibri > 0;
+
+    const preferredTrackType =
+      hasArt && !hasBuiltIn ? "surface" : !hasArt && hasBuiltIn ? "built-in" : null;
+
     return {
       trackProfileMeters,
       pointSpotsQty,
-      hasAny: trackProfileMeters > 0 || pointSpotsQty > 0,
+      preferredTrackType,
+      hasAny,
     };
   }, [byProductId, byVendorCode, lightingItems]);
+
+  // Автоподстановка: если свет уже выбран и Step0 ещё не трогали — подставляем один раз.
+  useEffect(() => {
+    if (autoPrefilledRef.current) return;
+    if (step0SessionInteracted) return;
+    if (!prefillMetrics.hasAny) return;
+
+    autoPrefilledRef.current = true;
+    setPrefillTrigger((x) => x + 1);
+  }, [prefillMetrics.hasAny, step0SessionInteracted]);
 
   return (
     <div
@@ -219,14 +214,11 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
     >
       {prefillMetrics.hasAny ? (
         <div className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
-          <p className="font-semibold">Подставить из выбранного освещения</p>
+          <p className="font-semibold">Синхронизация со светом</p>
           <p className="mt-1 text-blue-900/80">
             В каталоге уже выбрано: профиль трека ~
             <span className="font-semibold"> {prefillMetrics.trackProfileMeters.toFixed(1)} м</span>, точечные{" "}
             <span className="font-semibold">{Math.round(prefillMetrics.pointSpotsQty)} шт.</span>
-          </p>
-          <p className="mt-1 text-xs text-blue-900/70">
-            Мы подставим эти значения в расчёт потолка. Тип трека (встроенный/накладной) можно будет поменять.
           </p>
 
           <button
@@ -234,7 +226,7 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
             onClick={() => setPrefillTrigger((x) => x + 1)}
             className="mt-3 rounded-xl bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800"
           >
-            Подставить по выбранному свету →
+            Обновить по выбранному свету →
           </button>
         </div>
       ) : null}
@@ -242,12 +234,12 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
       <PriceCalculatorClient
         preset={resolvedPreset}
         compactSections
-        // новый API, см. патч ниже
         prefillFromLighting={
           prefillMetrics.hasAny
             ? {
                 trackProfileMeters: prefillMetrics.trackProfileMeters,
                 pointSpotsQty: prefillMetrics.pointSpotsQty,
+                preferredTrackType: prefillMetrics.preferredTrackType ?? undefined,
               }
             : null
         }
