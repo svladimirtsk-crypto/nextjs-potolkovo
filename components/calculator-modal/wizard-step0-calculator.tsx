@@ -101,7 +101,6 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
 
   const [prefillTrigger, setPrefillTrigger] = useState(0);
 
-  // сброс “авто-подстановки” при смене options (новое открытие)
   const optionsKeyRef = useRef<string | null>(null);
   const autoPrefilledRef = useRef(false);
   useEffect(() => {
@@ -188,7 +187,6 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
     };
   }, [byProductId, byVendorCode, lightingItems]);
 
-  // Автоподстановка: если свет уже выбран и Step0 ещё не трогали — подставляем один раз.
   useEffect(() => {
     if (autoPrefilledRef.current) return;
     if (step0SessionInteracted) return;
