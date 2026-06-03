@@ -434,6 +434,7 @@ type PriceCalculatorClientProps = {
   preset?: ServiceCalculatorPreset;
   compactSections?: boolean;
 
+  // NEW: prefill из выбранного освещения (используется в модалке Step0)
   prefillFromLighting?: {
     trackProfileMeters: number;
     pointSpotsQty: number;
@@ -487,6 +488,7 @@ export function PriceCalculatorClient({
     useState<boolean>(resolvedLightsEnabled);
   const [lightsCount, setLightsCount] = useState<number>(resolvedLightsCount);
 
+  // чтобы prefill не перетирал ручные правки
   const [trackTypeTouched, setTrackTypeTouched] = useState(false);
   const [trackLengthTouched, setTrackLengthTouched] = useState(false);
   const [lightsTouched, setLightsTouched] = useState(false);
@@ -496,7 +498,13 @@ export function PriceCalculatorClient({
     if (!prefillFromLighting) return;
     if (!prefillFromLightingTrigger) return;
 
-    const points = Math.max(0, Math.round(Number(prefillFromLighting.pointSpotsQty ?? 0)));
+    // ВАЖНО: prefill — это не “взаимодействие пользователя”
+    // setHasInteracted(true) здесь не ставим.
+
+    const points = Math.max(
+      0,
+      Math.round(Number(prefillFromLighting.pointSpotsQty ?? 0))
+    );
     if (points > 0 && !lightsTouched) {
       setLightsEnabled(true);
       setLightsCount(points);
@@ -509,6 +517,7 @@ export function PriceCalculatorClient({
         calculator.trackMeters.min,
         calculator.trackMeters.max
       );
+
       setTrackLength(normalized);
     }
 
@@ -587,6 +596,7 @@ export function PriceCalculatorClient({
     setCeilingLength(perimeterSuggestion.recommended);
   };
 
+  // ---- totals ----
   const ceilingBaseRate = selectedCeiling.baseRatePerSqm;
   const ceilingBaseTotal = area * ceilingBaseRate;
 
@@ -620,6 +630,7 @@ export function PriceCalculatorClient({
     trackTotal +
     lightsTotal;
 
+  // derived inputs
   const derivedTrackMountType: DerivedInputs["trackMountType"] =
     trackType === "built-in"
       ? "built-in"
@@ -715,6 +726,7 @@ export function PriceCalculatorClient({
     setSnapshot((prev) => {
       if (prev == null) return snapshot;
 
+      // сохраняем leadSource/lighting/grandTotal/_reconciled
       return {
         ...snapshot,
         leadSource: prev.leadSource ?? snapshot.leadSource,
@@ -727,6 +739,7 @@ export function PriceCalculatorClient({
 
   const showSlider = !compactSections;
 
+  // ===== compact guided flow: один шаг открыт, остальные закрыты =====
   const compactSteps: CompactStepId[] = useMemo(() => {
     return hasSpecialCeiling
       ? ["area", "ceiling", "profile", "lightLines", "cornice", "track", "lights"]
@@ -876,10 +889,12 @@ export function PriceCalculatorClient({
         : "нет";
 
     const lightsValue = lightsEnabled ? `${lightsCount} шт.` : "нет";
+
     const lightLinesValue = lightLinesEnabled ? `${lightLinesLength} м.п.` : "нет";
 
     return (
       <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:p-8">
+        {/* LEFT */}
         <div className="min-w-0 space-y-5">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
             <p className="font-semibold text-slate-950">Быстрый расчёт</p>
@@ -983,7 +998,7 @@ export function PriceCalculatorClient({
             )}
           </div>
 
-          {/* PROFILE */}
+          {/* PROFILE (only special ceiling) */}
           {hasSpecialCeiling ? (
             <div ref={profileRef}>
               {confirmed.profile ? (
@@ -1212,16 +1227,17 @@ export function PriceCalculatorClient({
                           ? " · ART"
                           : "";
 
+                    const meta =
+                      option.ratePerMeter > 0
+                        ? `от ${formatCurrency(option.ratePerMeter)} ₽ / м.п.${systemHint}`
+                        : `Без доп. расчёта${systemHint}`;
+
                     return (
                       <OptionCard
                         key={option.slug}
                         active={trackType === option.slug}
                         title={option.label}
-                        meta={
-                          option.ratePerMeter > 0
-                            ? `от ${formatCurrency(option.ratePerMeter)} ₽ / м.п.${systemHint}`
-                            : `Без доп. расчёта${systemHint}`
-                        }
+                        meta={meta}
                         onClick={() => {
                           markInteracted();
                           setTrackTypeTouched(true);
@@ -1253,6 +1269,7 @@ export function PriceCalculatorClient({
                       }}
                       showSlider={showSlider}
                     />
+                    {/* подсказку “~N спотов” убрали */}
                   </div>
                 ) : null}
 
@@ -1357,6 +1374,7 @@ export function PriceCalculatorClient({
           </div>
         </div>
 
+        {/* RIGHT summary */}
         <div className="lg:sticky lg:top-24 lg:self-start">
           <div className="rounded-[1.75rem] bg-slate-950 p-6 text-white shadow-2xl shadow-slate-950/10">
             <p className="text-sm text-white/70">Ориентировочная стоимость от</p>
@@ -1380,12 +1398,254 @@ export function PriceCalculatorClient({
     );
   }
 
-  // NON-COMPACT
+  // ===== NON-COMPACT (страница): обычный режим с breakdown =====
   return (
     <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:p-8">
       <div className="min-w-0 space-y-5">
-        {/* ... остальная non-compact часть без изменений по смыслу ... */}
-        {/* (оставляю как у вас; если нужно — отдельно синхронизируем также meta подсказки) */}
+        <SectionCard title="Площадь помещения">
+          <RangeField
+            id="area-field"
+            label="Выберите площадь"
+            value={area}
+            min={calculator.areaMin}
+            max={calculator.areaMax}
+            step={calculator.areaStep}
+            unit="м²"
+            onChange={handleAreaChange}
+            showSlider
+            quickValues={[10, 15, 20, 25, 30, 40]}
+          />
+        </SectionCard>
+
+        <SectionCard
+          title="Тип потолка"
+          description="Для теневого и парящего профиль считается отдельно (по м.п.)."
+        >
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {calculator.ceilingTypes.map((option) => {
+              const meta =
+                option.slug === "standard"
+                  ? `от ${formatCurrency(option.baseRatePerSqm)} ₽ / м²`
+                  : `${formatCurrency(option.baseRatePerSqm)} ₽ / м² + ${formatCurrency(option.extraRatePerMeter)} ₽ / м.п.`;
+
+              return (
+                <OptionCard
+                  key={option.slug}
+                  active={ceilingType === option.slug}
+                  title={option.label}
+                  meta={meta}
+                  onClick={() => handleCeilingTypeChange(option.slug)}
+                />
+              );
+            })}
+          </div>
+        </SectionCard>
+
+        {hasSpecialCeiling ? (
+          <SectionCard
+            title="Длина профиля"
+            description={selectedCeiling.extraLabel ?? "Профиль по периметру"}
+          >
+            <RangeField
+              id="ceiling-length-field"
+              label={`Длина: ${selectedCeiling.extraLabel ?? "профиль"}`}
+              value={ceilingLength}
+              min={calculator.specialMeters.min}
+              max={calculator.specialMeters.max}
+              step={calculator.specialMeters.step}
+              unit="м.п."
+              onChange={handleCeilingLengthChange}
+              showSlider
+            />
+
+            <PerimeterHint
+              area={area}
+              recommended={perimeterSuggestion.recommended}
+              onApply={applyPerimeterSuggestion}
+              isAuto={ceilingLengthAuto}
+            />
+          </SectionCard>
+        ) : null}
+
+        <SectionCard title="Световые линии">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <OptionCard
+              active={!lightLinesEnabled}
+              title="Без световых линий"
+              meta="Без доп. расчёта"
+              onClick={() => {
+                markInteracted();
+                setLightLinesEnabled(false);
+              }}
+            />
+            <OptionCard
+              active={lightLinesEnabled}
+              title="Добавить световые линии"
+              meta={`от ${formatCurrency(calculator.lightLines.ratePerMeter)} ₽ / м.п.`}
+              onClick={() => {
+                markInteracted();
+                setLightLinesEnabled(true);
+              }}
+            />
+          </div>
+
+          {lightLinesEnabled ? (
+            <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+              <RangeField
+                id="light-lines-length"
+                label="Длина световых линий"
+                value={lightLinesLength}
+                min={calculator.lightLineMeters.min}
+                max={calculator.lightLineMeters.max}
+                step={calculator.lightLineMeters.step}
+                unit="м.п."
+                onChange={(v) => {
+                  markInteracted();
+                  setLightLinesLength(v);
+                }}
+                showSlider
+              />
+            </div>
+          ) : null}
+        </SectionCard>
+
+        <SectionCard title="Карнизы">
+          <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2">
+            {calculator.cornices.map((option) => (
+              <OptionCard
+                key={option.slug}
+                active={corniceType === option.slug}
+                title={option.label}
+                meta={
+                  option.ratePerMeter > 0
+                    ? `от ${formatCurrency(option.ratePerMeter)} ₽ / м.п.`
+                    : "Без доп. расчёта"
+                }
+                onClick={() => {
+                  markInteracted();
+                  setCorniceType(option.slug);
+                  if (option.slug !== "none") setCorniceLength(calculator.corniceMeters.default);
+                }}
+              />
+            ))}
+          </div>
+
+          {selectedCornice.ratePerMeter > 0 ? (
+            <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+              <RangeField
+                id="cornice-length"
+                label="Длина карниза"
+                value={corniceLength}
+                min={calculator.corniceMeters.min}
+                max={calculator.corniceMeters.max}
+                step={calculator.corniceMeters.step}
+                unit="м.п."
+                onChange={(v) => {
+                  markInteracted();
+                  setCorniceLength(v);
+                }}
+                showSlider
+              />
+            </div>
+          ) : null}
+        </SectionCard>
+
+        <SectionCard title="Трековое освещение">
+          <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2">
+            {calculator.tracks.map((option) => {
+              const systemHint =
+                option.slug === "built-in"
+                  ? " · CLARUS, COLIBRI"
+                  : option.slug === "surface"
+                    ? " · ART"
+                    : "";
+
+              return (
+                <OptionCard
+                  key={option.slug}
+                  active={trackType === option.slug}
+                  title={option.label}
+                  meta={
+                    option.ratePerMeter > 0
+                      ? `от ${formatCurrency(option.ratePerMeter)} ₽ / м.п.${systemHint}`
+                      : `Без доп. расчёта${systemHint}`
+                  }
+                  onClick={() => {
+                    markInteracted();
+                    setTrackTypeTouched(true);
+                    setTrackType(option.slug);
+                    if (option.slug !== "none") setTrackLength(calculator.trackMeters.default);
+                  }}
+                />
+              );
+            })}
+          </div>
+
+          {selectedTrack.ratePerMeter > 0 ? (
+            <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+              <RangeField
+                id="track-length"
+                label="Длина трека"
+                value={trackLength}
+                min={calculator.trackMeters.min}
+                max={calculator.trackMeters.max}
+                step={calculator.trackMeters.step}
+                unit="м.п."
+                onChange={(v) => {
+                  markInteracted();
+                  setTrackLengthTouched(true);
+                  setTrackLength(v);
+                }}
+                showSlider
+              />
+            </div>
+          ) : null}
+        </SectionCard>
+
+        <SectionCard title="Точечные светильники">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <OptionCard
+              active={!lightsEnabled}
+              title="Без светильников"
+              meta="Без поштучного расчёта"
+              onClick={() => {
+                markInteracted();
+                setLightsTouched(true);
+                setLightsEnabled(false);
+              }}
+            />
+            <OptionCard
+              active={lightsEnabled}
+              title="Добавить светильники"
+              meta={`от ${formatCurrency(calculator.lights.ratePerUnit)} ₽ / шт`}
+              onClick={() => {
+                markInteracted();
+                setLightsTouched(true);
+                setLightsEnabled(true);
+              }}
+            />
+          </div>
+
+          {lightsEnabled ? (
+            <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+              <RangeField
+                id="lights-count"
+                label="Количество светильников"
+                value={lightsCount}
+                min={calculator.lights.countMin}
+                max={calculator.lights.countMax}
+                step={calculator.lights.countStep}
+                unit="шт."
+                onChange={(v) => {
+                  markInteracted();
+                  setLightsTouched(true);
+                  setLightsCount(v);
+                }}
+                showSlider
+              />
+            </div>
+          ) : null}
+        </SectionCard>
       </div>
 
       <div className="lg:sticky lg:top-24 lg:self-start">
