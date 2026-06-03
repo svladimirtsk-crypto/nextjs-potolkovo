@@ -13,6 +13,13 @@ import { ActionForm } from "@/components/home/action-form";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 
+type CatalogLightingItem = {
+  sku: string;
+  name: string;
+  qty: number;
+  priceRub: number;
+};
+
 function toText(value: unknown): string {
   return String(value ?? "").trim();
 }
@@ -138,8 +145,7 @@ function sumPointQtyFromLightingItems(
 type Step3Tab = "summary" | "full";
 
 export function WizardStep2Summary() {
-  // NOTE: контекст в проекте мог расширяться; чтобы не ловить TS-регрессии на несовпадении типов,
-  // читаем нужные поля через any (UI/логика при этом корректные).
+  // в проекте контекст расширялся; избегаем расхождения типов
   const modal = useCalculatorModal() as any;
 
   const goToStep: (n: 0 | 1 | 2) => void = modal.goToStep;
@@ -163,8 +169,7 @@ export function WizardStep2Summary() {
 
   const lightingDiscountEligible: boolean = Boolean(modal.lightingDiscountEligible);
 
-  const ceilingTotal: number =
-    typeof modal.ceilingTotal === "number" ? modal.ceilingTotal : 0;
+  const ceilingTotal: number = typeof modal.ceilingTotal === "number" ? modal.ceilingTotal : 0;
 
   const grandTotal: number =
     typeof modal.grandTotal === "number"
@@ -176,7 +181,17 @@ export function WizardStep2Summary() {
   const { snapshot, setSnapshot } = usePriceCalculatorBridge();
 
   const lighting = snapshot?.lighting ?? lightingDraft ?? null;
-  const lightingItems = lighting?.mode === "catalog" ? (lighting.items ?? []) : [];
+
+  const lightingItems: CatalogLightingItem[] = useMemo(() => {
+    const items = lighting?.mode === "catalog" ? (lighting.items ?? []) : [];
+    // нормализуем до нужных типов, чтобы не было implicit any в map и дальше по цепочке
+    return (items as any[]).map((x) => ({
+      sku: toText((x as any)?.sku),
+      name: toText((x as any)?.name),
+      qty: toNumber((x as any)?.qty),
+      priceRub: toNumber((x as any)?.priceRub),
+    }));
+  }, [lighting]);
 
   const catalogProducts = useMemo(() => {
     const rawProducts = (snapshotData as { products?: unknown[] })?.products ?? [];
@@ -204,7 +219,7 @@ export function WizardStep2Summary() {
 
   const selectedTrackMeters = useMemo(() => {
     return sumTrackMetersFromLightingItems(
-      lightingItems.map((i) => ({ sku: i.sku, qty: i.qty })),
+      lightingItems.map((i: CatalogLightingItem) => ({ sku: i.sku, qty: i.qty })),
       byId,
       byVendor
     );
@@ -212,7 +227,7 @@ export function WizardStep2Summary() {
 
   const selectedPointQty = useMemo(() => {
     return sumPointQtyFromLightingItems(
-      lightingItems.map((i) => ({ sku: i.sku, qty: i.qty })),
+      lightingItems.map((i: CatalogLightingItem) => ({ sku: i.sku, qty: i.qty })),
       byId,
       byVendor
     );
@@ -220,10 +235,7 @@ export function WizardStep2Summary() {
 
   const derivedPointFromStep0 = toNumber(snapshot?.derivedInputs?.pointSpotsQty);
   const derivedTrackFromStep0 = toNumber(snapshot?.derivedInputs?.trackLengthMeters);
-  const trackMountType = (snapshot?.derivedInputs?.trackMountType ?? "none") as
-    | "built-in"
-    | "surface"
-    | "none";
+  const trackMountType = (snapshot?.derivedInputs?.trackMountType ?? "none") as "built-in" | "surface" | "none";
 
   // СТРОГО: досчёт только если Step0 подтверждён (0->1)
   const canReconcileInstall = step0AreaConfirmed;
@@ -253,7 +265,6 @@ export function WizardStep2Summary() {
 
   const extraInstallTotal = extraTrackInstall + extraSpotInstall;
 
-  // Пишем snapshot.grandTotal = snapshot.total + extraInstallTotal (только если Step0 подтверждён)
   useEffect(() => {
     if (!canReconcileInstall) return;
 
@@ -280,9 +291,7 @@ export function WizardStep2Summary() {
         onClick={() => setTab(id)}
         className={[
           "rounded-xl px-3 py-2 text-xs font-semibold transition-colors",
-          active
-            ? "bg-slate-950 text-white"
-            : "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50",
+          active ? "bg-slate-950 text-white" : "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50",
         ].join(" ")}
       >
         {label}
@@ -398,7 +407,7 @@ export function WizardStep2Summary() {
 
               {lightingItems.length > 0 ? (
                 <ul className="mt-2 space-y-2 text-sm text-slate-800">
-                  {lightingItems.map((item) => (
+                  {lightingItems.map((item: CatalogLightingItem) => (
                     <li key={toText(item.sku)} className="rounded-xl border border-slate-200 bg-white p-3">
                       <p className="font-medium text-slate-950 break-words">{toText(item.name)}</p>
                       <p className="mt-2 text-xs text-slate-700">
@@ -421,7 +430,6 @@ export function WizardStep2Summary() {
         </div>
       )}
 
-      {/* B6: “что дальше” — без обещаний сроков/гарантий */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4">
         <p className="text-sm font-semibold text-slate-950">Что дальше</p>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
@@ -431,7 +439,6 @@ export function WizardStep2Summary() {
         </ul>
       </div>
 
-      {/* A2: inline форма внутри модалки */}
       <div id="modal-action-form" className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
         <p className="text-base font-semibold text-slate-950">Оставить заявку</p>
         <p className="mt-1 text-sm text-slate-600">
