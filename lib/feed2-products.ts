@@ -1,4 +1,5 @@
 import type { FeedCatalogKind, FeedCatalogProduct, FeedCatalogSystem } from "@/lib/eks-feed2-catalog";
+
 import {
   ART_GX53_REQUIRED_VENDOR_CODES,
   ART_MR16_REQUIRED_VENDOR_CODES,
@@ -7,6 +8,7 @@ import {
 } from "@/lib/catalog-ui-config";
 
 export type UiCatalogSystem = "COLIBRI_220" | "CLARUS_48" | "ART_220" | "NONE";
+
 export type UiCatalogKind =
   | "TRACK_FIXTURE"
   | "TRACK_PROFILE"
@@ -22,6 +24,7 @@ function toText(value: unknown): string {
 function getText(product: FeedCatalogProduct): string {
   const attrs = (product.keyAttributes ?? []).map((a) => `${a.label} ${a.value}`).join(" ");
   const params = (product.params ?? []).map((p) => `${p.label} ${p.value}`).join(" ");
+
   return `${product.name} ${product.vendorCode} ${attrs} ${params}`.toLowerCase();
 }
 
@@ -32,20 +35,26 @@ export function buildProductsIndex(products: FeedCatalogProduct[]): Map<string, 
 export function getDiscountedPrice(priceRub: number, discountPercent = 15): number {
   const value = Number(priceRub ?? 0);
   const discount = Number(discountPercent ?? 15);
+
   if (!Number.isFinite(value) || value <= 0) return 0;
+
   if (!Number.isFinite(discount) || discount <= 0) return Math.round(value);
+
   return Math.round(value * (1 - discount / 100));
 }
 
 export function computeBenefit(priceRub: number, discounted: number): number {
   const full = Number(priceRub ?? 0);
   const disc = Number(discounted ?? 0);
+
   if (!Number.isFinite(full) || !Number.isFinite(disc)) return 0;
+
   return Math.max(0, Math.round(full - disc));
 }
 
 export function detectSmart(product: FeedCatalogProduct): boolean {
   const text = getText(product);
+
   return (
     text.includes("smart") ||
     text.includes("умн") ||
@@ -58,8 +67,10 @@ export function detectSmart(product: FeedCatalogProduct): boolean {
 
 export function detectSocket(product: FeedCatalogProduct): LampSocket | null {
   const text = getText(product);
+
   if (text.includes("gx53")) return "GX53";
   if (text.includes("mr16") || text.includes("gu5.3")) return "MR16";
+
   return null;
 }
 
@@ -69,10 +80,14 @@ export function detectSocket(product: FeedCatalogProduct): LampSocket | null {
  * 2) fallback на обычное определение detectSocket
  */
 export function getRequiredLampSocket(product: FeedCatalogProduct): LampSocket | null {
+  // ВАЖНО: лампы НЕ требуют ламп (иначе легко получить “бесконечное” добивание 1:1)
+  if (product.kind === "LAMP") return null;
+
   const vendorCode = toText(product.vendorCode);
 
   if (ART_NO_LAMP_VENDOR_CODES.has(vendorCode)) return null;
   if (ART_GX53_REQUIRED_VENDOR_CODES.has(vendorCode)) return "GX53";
+
   if (ART_MR16_REQUIRED_VENDOR_CODES.has(vendorCode)) return "MR16";
 
   return detectSocket(product);
