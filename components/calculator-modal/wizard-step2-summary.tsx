@@ -4,14 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 
 import snapshotData from "@/data/eks-feed2-snapshot.json";
 import type { FeedCatalogParam, FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
-
 import { homepage } from "@/content/homepage";
+
 import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
 import { calcTrackProfileMeters } from "@/lib/product-length-meters";
 
 import { ActionForm } from "@/components/home/action-form";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
+
+import { detectSocket, getRequiredLampSocket } from "@/lib/feed2-products";
+import type { LampSocket } from "@/lib/catalog-ui-config";
 
 type CatalogLightingItem = {
   sku: string;
@@ -23,17 +26,21 @@ type CatalogLightingItem = {
 function toText(value: unknown): string {
   return String(value ?? "").trim();
 }
+
 function toNumber(value: unknown): number {
   const n = Number(value ?? 0);
   return Number.isFinite(n) ? n : 0;
 }
+
 function fmt(value: number): string {
   return new Intl.NumberFormat("ru-RU").format(Math.round(value));
 }
+
 function toNumberOrNull(value: unknown): number | null {
   const n = Number(value ?? NaN);
   return Number.isFinite(n) ? n : null;
 }
+
 function toParams(input: unknown): FeedCatalogParam[] {
   if (!Array.isArray(input)) return [];
   return input
@@ -46,7 +53,6 @@ function toParams(input: unknown): FeedCatalogParam[] {
 
 function normalizeProduct(raw: unknown): FeedCatalogProduct | null {
   const p = raw as Record<string, unknown>;
-
   const vendorCode = toText((p as any).vendorCode);
   const offerId = toText((p as any).offerId);
   const name = toText((p as any).name);
@@ -91,29 +97,39 @@ function isPanelProduct(product: FeedCatalogProduct): boolean {
   );
 }
 
+function resolveProductFromSku(
+  skuRaw: string,
+  byId: Map<string, FeedCatalogProduct>,
+  byVendor: Map<string, string>
+): FeedCatalogProduct | null {
+  const sku = toText(skuRaw);
+  if (!sku) return null;
+
+  const direct = byId.get(sku);
+  if (direct) return direct;
+
+  const resolvedId = toText(byVendor.get(sku) ?? "");
+  if (!resolvedId) return null;
+
+  return byId.get(resolvedId) ?? null;
+}
+
 function sumTrackMetersFromLightingItems(
   items: Array<{ sku: string; qty: number }>,
   byId: Map<string, FeedCatalogProduct>,
   byVendor: Map<string, string>
 ): number {
   let meters = 0;
-
   for (const item of items) {
-    const sku = toText(item.sku);
     const qty = toNumber(item.qty);
+    if (qty <= 0) continue;
 
-    const byProduct = byId.get(sku);
-    const byVendorId = byVendor.get(sku);
-    const resolvedId = byProduct ? sku : toText(byVendorId ?? "");
-    if (!resolvedId) continue;
-
-    const product = byId.get(resolvedId);
+    const product = resolveProductFromSku(item.sku, byId, byVendor);
     if (!product) continue;
-
     if (product.kind !== "TRACK_PROFILE") continue;
+
     meters += calcTrackProfileMeters(product, qty);
   }
-
   return meters;
 }
 
@@ -123,22 +139,15 @@ function sumPointQtyFromLightingItems(
   byVendor: Map<string, string>
 ): number {
   let qtyTotal = 0;
-
   for (const item of items) {
-    const sku = toText(item.sku);
     const qty = toNumber(item.qty);
+    if (qty <= 0) continue;
 
-    const byProduct = byId.get(sku);
-    const byVendorId = byVendor.get(sku);
-    const resolvedId = byProduct ? sku : toText(byVendorId ?? "");
-    if (!resolvedId) continue;
-
-    const product = byId.get(resolvedId);
+    const product = resolveProductFromSku(item.sku, byId, byVendor);
     if (!product) continue;
 
     if (product.kind === "SPOT_FIXTURE" || isPanelProduct(product)) qtyTotal += qty;
   }
-
   return qtyTotal;
 }
 
@@ -149,12 +158,13 @@ export function WizardStep2Summary() {
   const modal = useCalculatorModal() as any;
 
   const goToStep: (n: 0 | 1 | 2) => void = modal.goToStep;
-  const setStep1CatalogView: (view: "selected" | "browse" | null) => void = modal.setStep1CatalogView;
+  const setStep1CatalogView: (view: "selected" | "browse" | null) => void =
+    modal.setStep1CatalogView;
 
   const step0AreaConfirmed: boolean = Boolean(modal.step0AreaConfirmed);
   const step0SessionInteracted: boolean = Boolean(modal.step0SessionInteracted);
-  const options: { entryMode?: string } | null = modal.options ?? null;
 
+  const options: { entryMode?: string } | null = modal.options ?? null;
   const lightingDraft = modal.lightingDraft ?? null;
 
   const showCeilingInUi: boolean =
@@ -184,7 +194,7 @@ export function WizardStep2Summary() {
 
   const lightingItems: CatalogLightingItem[] = useMemo(() => {
     const items = lighting?.mode === "catalog" ? (lighting.items ?? []) : [];
-    // нормализуем до нужных типов, чтобы не было implicit any в map и дальше по цепочке
+    // нормализуем до нужных типов
     return (items as any[]).map((x) => ({
       sku: toText((x as any)?.sku),
       name: toText((x as any)?.name),
@@ -219,7 +229,7 @@ export function WizardStep2Summary() {
 
   const selectedTrackMeters = useMemo(() => {
     return sumTrackMetersFromLightingItems(
-      lightingItems.map((i: CatalogLightingItem) => ({ sku: i.sku, qty: i.qty })),
+      lightingItems.map((i) => ({ sku: i.sku, qty: i.qty })),
       byId,
       byVendor
     );
@@ -227,15 +237,57 @@ export function WizardStep2Summary() {
 
   const selectedPointQty = useMemo(() => {
     return sumPointQtyFromLightingItems(
-      lightingItems.map((i: CatalogLightingItem) => ({ sku: i.sku, qty: i.qty })),
+      lightingItems.map((i) => ({ sku: i.sku, qty: i.qty })),
       byId,
       byVendor
     );
   }, [byId, byVendor, lightingItems]);
 
+  // ===== Reminder: lamps 1:1 =====
+  const missingLamps = useMemo(() => {
+    const required: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
+    const current: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
+
+    for (const item of lightingItems) {
+      const qty = toNumber(item.qty);
+      if (qty <= 0) continue;
+
+      const product = resolveProductFromSku(item.sku, byId, byVendor);
+      if (!product) continue;
+
+      // (1) лампы в корзине
+      if (product.kind === "LAMP" && product.available !== false && toNumber(product.priceRub) > 0) {
+        const sock = detectSocket(product);
+        if (sock === "GX53" || sock === "MR16") current[sock] += qty;
+      }
+
+      // (2) светильники, которым нужны лампы
+      const requiredSocket = getRequiredLampSocket(product);
+      if (requiredSocket === "GX53" || requiredSocket === "MR16") {
+        required[requiredSocket] += qty;
+      }
+    }
+
+    const out: Array<{ socket: LampSocket; requiredQty: number; currentQty: number }> = [];
+    (["GX53", "MR16"] as LampSocket[]).forEach((socket) => {
+      const req = toNumber(required[socket]);
+      if (req <= 0) return;
+
+      const cur = toNumber(current[socket]);
+      if (cur >= req) return;
+
+      out.push({ socket, requiredQty: req, currentQty: cur });
+    });
+
+    return out;
+  }, [byId, byVendor, lightingItems]);
+
   const derivedPointFromStep0 = toNumber(snapshot?.derivedInputs?.pointSpotsQty);
   const derivedTrackFromStep0 = toNumber(snapshot?.derivedInputs?.trackLengthMeters);
-  const trackMountType = (snapshot?.derivedInputs?.trackMountType ?? "none") as "built-in" | "surface" | "none";
+  const trackMountType = (snapshot?.derivedInputs?.trackMountType ?? "none") as
+    | "built-in"
+    | "surface"
+    | "none";
 
   // СТРОГО: досчёт только если Step0 подтверждён (0->1)
   const canReconcileInstall = step0AreaConfirmed;
@@ -267,7 +319,6 @@ export function WizardStep2Summary() {
 
   useEffect(() => {
     if (!canReconcileInstall) return;
-
     setSnapshot((prev) => {
       if (!prev) return prev;
       const base = toNumber(prev.total);
@@ -291,7 +342,9 @@ export function WizardStep2Summary() {
         onClick={() => setTab(id)}
         className={[
           "rounded-xl px-3 py-2 text-xs font-semibold transition-colors",
-          active ? "bg-slate-950 text-white" : "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50",
+          active
+            ? "bg-slate-950 text-white"
+            : "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50",
         ].join(" ")}
       >
         {label}
@@ -301,15 +354,25 @@ export function WizardStep2Summary() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        <TabButton id="summary" label="Итог" />
-        <TabButton id="full" label="Полный расчёт" />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
+          <TabButton id="summary" label="Коротко" />
+          <TabButton id="full" label="Подробно" />
+        </div>
+
+        <button
+          type="button"
+          onClick={handleEditLighting}
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
+        >
+          Редактировать свет
+        </button>
       </div>
 
       {!lightingDiscountEligible ? (
         <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
           <p className="font-semibold">Скидка −15% на свет действует при заказе потолка.</p>
-          <p className="mt-1 text-blue-900/80">
+          <p className="mt-2">
             Если хотите — подтвердите параметры потолка на шаге 1, и скидка применится автоматически.
           </p>
           <button
@@ -322,131 +385,139 @@ export function WizardStep2Summary() {
         </div>
       ) : null}
 
+      {missingLamps.length > 0 ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          <p className="font-semibold">Напоминание про лампы</p>
+          <p className="mt-2 text-amber-900/90">
+            Вы выбрали светильники, которым нужны лампы (1:1), но лампы пока не добавлены в нужном количестве.
+          </p>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            {missingLamps.map((m) => (
+              <li key={m.socket}>
+                Не хватает ламп <span className="font-semibold">{m.socket}</span>: нужно{" "}
+                <span className="font-semibold">{m.requiredQty}</span> шт., в корзине{" "}
+                <span className="font-semibold">{m.currentQty}</span> шт.
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            onClick={handleEditLighting}
+            className="mt-3 rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+          >
+            Вернуться к свету и добавить лампы →
+          </button>
+        </div>
+      ) : null}
+
       {tab === "summary" ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
           <p className="text-base font-semibold text-slate-950">Итог расчёта</p>
 
-          <div className="mt-3 space-y-1 text-sm">
+          <div className="mt-3 space-y-2">
             {showCeilingInUi ? (
               <>
-                <p className="text-slate-800">
-                  Потолок: <span className="font-semibold text-slate-950">{fmt(ceilingTotal)} ₽</span>
-                </p>
+                <div className="flex items-center justify-between gap-3">
+                  <span>Потолок</span>
+                  <span className="font-semibold text-slate-950">{fmt(ceilingTotal)} ₽</span>
+                </div>
 
                 {canReconcileInstall && extraInstallTotal > 0 ? (
-                  <p className="text-slate-800">
-                    Монтаж по свету (досчёт):{" "}
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Монтаж по свету (досчёт)</span>
                     <span className="font-semibold text-slate-950">{fmt(extraInstallTotal)} ₽</span>
-                  </p>
+                  </div>
                 ) : null}
               </>
             ) : (
-              <p className="text-slate-800">
-                Потолок: <span className="font-semibold text-slate-950">—</span>{" "}
-                <span className="text-xs text-slate-500">(после шага 1)</span>
-              </p>
+              <div className="flex items-center justify-between gap-3">
+                <span>Потолок</span>
+                <span className="text-slate-600">— (после шага 1)</span>
+              </div>
             )}
 
-            <p className={lightingDiscountEligible ? "text-emerald-700" : "text-slate-800"}>
-              Свет{lightingDiscountEligible ? " (со скидкой)" : ""}:{" "}
-              <span className="font-semibold">{fmt(lightingEffectiveTotal)} ₽</span>
-              {!lightingDiscountEligible ? <span className="text-xs text-slate-500"> (без скидки)</span> : null}
-            </p>
+            <div className="flex items-center justify-between gap-3">
+              <span>
+                Свет{lightingDiscountEligible ? " (со скидкой)" : ""}{" "}
+                {!lightingDiscountEligible ? <span className="text-slate-500">(без скидки)</span> : null}
+              </span>
+              <span className="font-semibold text-slate-950">{fmt(lightingEffectiveTotal)} ₽</span>
+            </div>
 
-            <p className="mt-2 text-base font-semibold text-slate-950">Итого: ~{fmt(grandTotal)} ₽</p>
+            <div className="border-t border-slate-200 pt-3">
+              <div className="flex items-center justify-between gap-3 text-sm font-semibold text-slate-950">
+                <span>Итого</span>
+                <span>~{fmt(grandTotal)} ₽</span>
+              </div>
+            </div>
           </div>
         </div>
       ) : (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <div className="flex items-start justify-between gap-3">
-            <p className="text-base font-semibold text-slate-950">Полный расчёт</p>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+          <p className="text-base font-semibold text-slate-950">Полный расчёт</p>
 
-            <button
-              type="button"
-              onClick={handleEditLighting}
-              className="shrink-0 rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-            >
-              Редактировать свет
-            </button>
-          </div>
+          <div className="mt-3 space-y-2">
+            <p className="font-semibold text-slate-950">Потолок</p>
+            <p>
+              {showCeilingInUi ? (
+                <>Потолок: {fmt(ceilingTotal)} ₽</>
+              ) : (
+                <>Потолок: — (после шага 1)</>
+              )}
+            </p>
 
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-sm font-semibold text-slate-950">Потолок</p>
+            {canReconcileInstall && extraInstallTotal > 0 ? (
+              <p>Досчёт монтажа: {fmt(extraInstallTotal)} ₽</p>
+            ) : null}
 
-              <p className="mt-2 text-sm text-slate-700">
-                {showCeilingInUi ? (
-                  <>
-                    Потолок: <span className="font-semibold text-slate-950">{fmt(ceilingTotal)} ₽</span>
-                  </>
-                ) : (
-                  <>
-                    Потолок: <span className="font-semibold text-slate-950">—</span>{" "}
-                    <span className="text-xs text-slate-500">(после шага 1)</span>
-                  </>
-                )}
-              </p>
+            <p className="text-xs text-slate-500">
+              В корзине: профиль трека ~{selectedTrackMeters.toFixed(1)} м · точечные {selectedPointQty} шт.
+              <br />
+              По потолку: трек {derivedTrackFromStep0} м · точечные {derivedPointFromStep0} шт.
+            </p>
 
-              {canReconcileInstall && extraInstallTotal > 0 ? (
-                <p className="mt-1 text-sm text-slate-700">
-                  Досчёт монтажа: <span className="font-semibold text-slate-950">{fmt(extraInstallTotal)} ₽</span>
-                </p>
-              ) : null}
-
-              <p className="mt-3 text-xs text-slate-500">
-                В корзине: профиль трека ~{selectedTrackMeters.toFixed(1)} м · точечные {selectedPointQty} шт.
-              </p>
-
-              <p className="mt-1 text-xs text-slate-500">
-                По потолку: трек {derivedTrackFromStep0} м · точечные {derivedPointFromStep0} шт.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-sm font-semibold text-slate-950">Освещение (товары)</p>
-
+            <div className="pt-2">
+              <p className="font-semibold text-slate-950">Освещение (товары)</p>
               {lightingItems.length > 0 ? (
-                <ul className="mt-2 space-y-2 text-sm text-slate-800">
-                  {lightingItems.map((item: CatalogLightingItem) => (
-                    <li key={toText(item.sku)} className="rounded-xl border border-slate-200 bg-white p-3">
-                      <p className="font-medium text-slate-950 break-words">{toText(item.name)}</p>
-                      <p className="mt-2 text-xs text-slate-700">
-                        Кол-во: <span className="font-semibold">{toNumber(item.qty)}</span> · Цена:{" "}
-                        <span className="font-semibold">{fmt(toNumber(item.priceRub))} ₽</span>
-                      </p>
+                <ul className="mt-2 list-disc space-y-1 pl-5">
+                  {lightingItems.map((item) => (
+                    <li key={`${item.sku}-${item.name}`}>
+                      <span className="font-medium text-slate-950">{toText(item.name)}</span>
+                      <span className="text-slate-600">
+                        {" "}
+                        — {toNumber(item.qty)} шт. · {fmt(toNumber(item.priceRub))} ₽/шт
+                      </span>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="mt-2 text-sm text-slate-600">Освещение не выбрано — можно продолжить.</p>
+                <p className="mt-2 text-slate-600">Освещение не выбрано — можно продолжить.</p>
               )}
             </div>
-          </div>
 
-          <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-sm font-semibold text-slate-950">Итого</p>
-            <p className="mt-2 text-base font-semibold text-slate-950">~{fmt(grandTotal)} ₽</p>
+            <div className="border-t border-slate-200 pt-3">
+              <p className="text-sm font-semibold text-slate-950">Итого: ~{fmt(grandTotal)} ₽</p>
+            </div>
           </div>
         </div>
       )}
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
-        <p className="text-sm font-semibold text-slate-950">Что дальше</p>
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+        <p className="font-semibold text-slate-950">Что дальше</p>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
           <li>Оставьте заявку — уточним задачу и договоримся о бесплатном замере.</li>
           <li>После замера подтвердим комплектацию и точную стоимость.</li>
           <li>Если нужно — поможем подобрать освещение под ваш интерьер и сценарии.</li>
         </ul>
       </div>
 
-      <div id="modal-action-form" className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4">
         <p className="text-base font-semibold text-slate-950">Оставить заявку</p>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-2 text-sm text-slate-600">
           Можно указать район/метро — так быстрее сориентируемся по выезду.
         </p>
-
         <div className="mt-4">
-          <ActionForm source="calculator-modal" />
+          <ActionForm />
         </div>
       </div>
     </div>
