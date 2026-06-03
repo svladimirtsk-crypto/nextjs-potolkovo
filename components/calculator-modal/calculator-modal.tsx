@@ -93,10 +93,22 @@ export function CalculatorModal() {
   const activePreset = shouldApplyPreset ? options?.preset : undefined;
   const snapshotValid = isSnapshotValid(snapshot);
 
+  // A1: не делаем “сломанную серую кнопку”.
+  // Блокируем только пока snapshot еще не появился (редко и очень коротко).
+  const step0Ready = useMemo(() => {
+    if (currentStep !== 0) return true;
+    if (!snapshot) return false;
+
+    const area = Number((snapshot as any).area);
+    const total = Number((snapshot as any).total);
+
+    return Number.isFinite(area) && area > 0 && Number.isFinite(total) && total >= 0;
+  }, [currentStep, snapshot]);
+
   const isNextDisabled = useMemo(() => {
-    if (currentStep === 0) return !snapshotValid;
+    if (currentStep === 0) return !step0Ready;
     return false;
-  }, [currentStep, snapshotValid]);
+  }, [currentStep, step0Ready]);
 
   const stepTitle = useMemo(() => {
     if (currentStep === 1) {
@@ -192,8 +204,6 @@ export function CalculatorModal() {
 
     const baseSnapshot = snapshot ?? createEmptySnapshot(source);
 
-    // ВАЖНО: если скидка ещё не “разрешена” (не прошли потолок),
-    // то сохраняем свет так, чтобы downstream (заявка) не увидел “скидочную” цифру как факт.
     const lightingToSave =
       lightingDraft && lightingDraft.mode !== "none"
         ? {
@@ -329,7 +339,7 @@ export function CalculatorModal() {
                     </button>
                     {isNextDisabled ? (
                       <p className="text-right text-xs text-slate-400" role="status" aria-live="polite">
-                        Подвигайте слайдер площади - расчет появится автоматически
+                        Секунду — готовим расчёт…
                       </p>
                     ) : null}
                   </>
