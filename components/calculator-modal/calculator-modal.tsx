@@ -3,17 +3,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import type { CalculatorLeadSnapshot } from "@/components/home/price-calculator-context";
-import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 import type { WizardStep } from "@/lib/calculator-modal-types";
 import { isSnapshotValid } from "@/lib/calculator-snapshot-guard";
-import { scrollToAnchorTarget } from "@/lib/scroll-to-anchor";
 
 import { useCalculatorModal } from "./calculator-modal-context";
 import { PriceStrip } from "./price-strip";
 import { WizardStep0Calculator } from "./wizard-step0-calculator";
 import { WizardStep1Lighting } from "./wizard-step1-lighting";
 import { WizardStep2Summary } from "./wizard-step2-summary";
+
+import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
   const selector = [
@@ -27,58 +26,9 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll<HTMLElement>(selector));
 }
 
-function createEmptySnapshot(source: string): CalculatorLeadSnapshot {
-  return {
-    area: 0,
-    ceilingTypeLabel: "Не выбрано",
-    ceilingBaseRate: 0,
-    ceilingBaseTotal: 0,
-    ceilingExtraLabel: null,
-    ceilingLength: null,
-    ceilingExtraRatePerMeter: null,
-    ceilingExtraTotal: 0,
-    lightLinesEnabled: false,
-    lightLinesLabel: null,
-    lightLinesLength: null,
-    lightLinesRatePerMeter: null,
-    lightLinesTotal: 0,
-    corniceLabel: null,
-    corniceLength: null,
-    corniceRatePerMeter: null,
-    corniceTotal: 0,
-    trackLabel: null,
-    trackLength: null,
-    trackRatePerMeter: null,
-    trackTotal: 0,
-    lightsEnabled: false,
-    lightsCount: 0,
-    lightsRatePerUnit: 0,
-    lightsTotal: 0,
-    total: 0,
-    // grandTotal — потолочная часть (+досчёт монтажа), без света
-    grandTotal: 0,
-    derivedInputs: {
-      pointSpotsQty: 0,
-      trackMountType: "none",
-      trackLengthMeters: 0,
-      recommendedTrackSpotsQty: 0,
-    },
-    leadSource: source,
-  };
-}
-
 export function CalculatorModal() {
-  const {
-    isOpen,
-    currentStep,
-    closeCalculator,
-    goToStep,
-    options,
-    lightingDraft,
-    lightingDiscountEligible,
-  } = useCalculatorModal();
-
-  const { snapshot, setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
+  const { isOpen, currentStep, closeCalculator, goToStep, options, lightingDraft } = useCalculatorModal();
+  const { snapshot } = usePriceCalculatorBridge();
 
   const panelRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -89,26 +39,13 @@ export function CalculatorModal() {
 
   useEffect(() => setMounted(true), []);
 
-  const shouldApplyPreset = options?.preset && (!snapshot || options.forcePreset === true);
-  const activePreset = shouldApplyPreset ? options?.preset : undefined;
   const snapshotValid = isSnapshotValid(snapshot);
 
-  // A1: не делаем “сломанную серую кнопку”.
-  // Блокируем только пока snapshot еще не появился (редко и очень коротко).
-  const step0Ready = useMemo(() => {
-    if (currentStep !== 0) return true;
-    if (!snapshot) return false;
-
-    const area = Number((snapshot as any).area);
-    const total = Number((snapshot as any).total);
-
-    return Number.isFinite(area) && area > 0 && Number.isFinite(total) && total >= 0;
-  }, [currentStep, snapshot]);
-
   const isNextDisabled = useMemo(() => {
-    if (currentStep === 0) return !step0Ready;
+    // убираем “серую кнопку” как UX-поломку: Step0 допускаем всегда, если snapshot уже валиден
+    if (currentStep === 0) return !snapshotValid;
     return false;
-  }, [currentStep, step0Ready]);
+  }, [currentStep, snapshotValid]);
 
   const stepTitle = useMemo(() => {
     if (currentStep === 1) {
@@ -136,11 +73,8 @@ export function CalculatorModal() {
     document.body.style.overflow = "hidden";
 
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reducedMotion) {
-      setVisible(true);
-    } else {
-      requestAnimationFrame(() => setVisible(true));
-    }
+    if (reducedMotion) setVisible(true);
+    else requestAnimationFrame(() => setVisible(true));
 
     requestAnimationFrame(() => {
       if (!panelRef.current) return;
@@ -163,6 +97,7 @@ export function CalculatorModal() {
 
   useEffect(() => {
     if (!isOpen) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
@@ -199,45 +134,18 @@ export function CalculatorModal() {
     [isOpen, requestClose]
   );
 
-  const handleConfirm = useCallback(() => {
-    const source: string = String(options?.source ?? "");
+  const scrollToInlineForm = () => {
+    if (!panelRef.current) return;
+    const target = panelRef.current.querySelector<HTMLElement>("#modal-action-form");
+    if (!target) return;
 
-    const baseSnapshot = snapshot ?? createEmptySnapshot(source);
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
 
-    const lightingToSave =
-      lightingDraft && lightingDraft.mode !== "none"
-        ? {
-            ...lightingDraft,
-            discountedTotalRub: lightingDiscountEligible
-              ? lightingDraft.discountedTotalRub
-              : lightingDraft.totalRub,
-          }
-        : lightingDraft ?? null;
-
-    setSnapshot({
-      ...baseSnapshot,
-      lighting: lightingToSave ?? undefined,
-      leadSource: String((baseSnapshot as any).leadSource ?? source),
-    });
-
-    if (snapshotValid) {
-      setHasInteracted(true);
-    }
-
-    requestClose();
     requestAnimationFrame(() => {
-      scrollToAnchorTarget("#action", { focus: true, highlight: true });
+      const input = target.querySelector<HTMLInputElement>("input");
+      if (input) input.focus();
     });
-  }, [
-    options?.source,
-    snapshot,
-    lightingDraft,
-    lightingDiscountEligible,
-    setSnapshot,
-    snapshotValid,
-    setHasInteracted,
-    requestClose,
-  ]);
+  };
 
   if (!mounted) return null;
 
@@ -247,10 +155,7 @@ export function CalculatorModal() {
   const modalActive = isOpen && visible;
 
   return createPortal(
-    <div
-      aria-hidden={!isOpen}
-      className={`fixed inset-0 z-[120] ${modalActive ? "pointer-events-auto" : "pointer-events-none"}`}
-    >
+    <div aria-hidden={!isOpen} className={`fixed inset-0 z-[120] ${modalActive ? "pointer-events-auto" : "pointer-events-none"}`}>
       <div
         ref={overlayRef}
         onClick={handleOverlayClick}
@@ -299,13 +204,13 @@ export function CalculatorModal() {
 
           <div className="flex-1 overflow-y-auto px-5 py-5">
             <div className={currentStep === 0 ? "" : "hidden"} aria-hidden={currentStep !== 0}>
-              <WizardStep0Calculator preset={activePreset} />
+              <WizardStep0Calculator preset={options?.preset} />
             </div>
             <div className={currentStep === 1 ? "" : "hidden"} aria-hidden={currentStep !== 1}>
               <WizardStep1Lighting />
             </div>
             <div className={currentStep === 2 ? "" : "hidden"} aria-hidden={currentStep !== 2}>
-              <WizardStep2Summary onConfirm={handleConfirm} />
+              <WizardStep2Summary />
             </div>
           </div>
 
@@ -324,36 +229,29 @@ export function CalculatorModal() {
                 <div />
               )}
 
-              <div className="flex flex-col items-end gap-1">
-                {currentStep < 2 ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => goToStep((currentStep + 1) as WizardStep)}
-                      disabled={isNextDisabled}
-                      aria-disabled={isNextDisabled}
-                      className="flex h-12 items-center rounded-2xl bg-slate-950 px-6 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-slate-950"
-                      style={{ minHeight: 48 }}
-                    >
-                      Далее →
-                    </button>
-                    {isNextDisabled ? (
-                      <p className="text-right text-xs text-slate-400" role="status" aria-live="polite">
-                        Секунду — готовим расчёт…
-                      </p>
-                    ) : null}
-                  </>
-                ) : (
+              {currentStep < 2 ? (
+                <div className="flex flex-col items-end gap-1">
                   <button
                     type="button"
-                    onClick={handleConfirm}
-                    className="flex h-12 items-center rounded-2xl bg-slate-950 px-6 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+                    onClick={() => goToStep((currentStep + 1) as WizardStep)}
+                    disabled={isNextDisabled}
+                    aria-disabled={isNextDisabled}
+                    className="flex h-12 items-center rounded-2xl bg-slate-950 px-6 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-slate-950"
                     style={{ minHeight: 48 }}
                   >
-                    Записаться на бесплатный замер →
+                    Далее →
                   </button>
-                )}
-              </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={scrollToInlineForm}
+                  className="flex h-12 items-center rounded-2xl bg-slate-950 px-6 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+                  style={{ minHeight: 48 }}
+                >
+                  Оставить заявку →
+                </button>
+              )}
             </div>
           </div>
         </div>
