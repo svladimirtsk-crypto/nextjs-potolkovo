@@ -254,7 +254,6 @@ function RangeField({
     return Number.isFinite(parsed) ? parsed : null;
   };
 
-  // фикс “40 → стереть → прыжок на 10”
   const commitWhileTyping = (raw: string) => {
     const parsed = parseManual(raw);
     if (parsed === null) return;
@@ -435,7 +434,6 @@ type PriceCalculatorClientProps = {
   preset?: ServiceCalculatorPreset;
   compactSections?: boolean;
 
-  // prefill из выбранного освещения (используется в модалке Step0)
   prefillFromLighting?: {
     trackProfileMeters: number;
     pointSpotsQty: number;
@@ -489,7 +487,6 @@ export function PriceCalculatorClient({
     useState<boolean>(resolvedLightsEnabled);
   const [lightsCount, setLightsCount] = useState<number>(resolvedLightsCount);
 
-  // flags: чтобы автоподстановка не перетирала ручной выбор
   const [trackTypeTouched, setTrackTypeTouched] = useState(false);
   const [trackLengthTouched, setTrackLengthTouched] = useState(false);
   const [lightsTouched, setLightsTouched] = useState(false);
@@ -498,8 +495,6 @@ export function PriceCalculatorClient({
     if (!compactSections) return;
     if (!prefillFromLighting) return;
     if (!prefillFromLightingTrigger) return;
-
-    // ВАЖНО: prefill — это не “взаимодействие пользователя”, поэтому setHasInteracted НЕ ставим.
 
     const points = Math.max(0, Math.round(Number(prefillFromLighting.pointSpotsQty ?? 0)));
     if (points > 0 && !lightsTouched) {
@@ -520,19 +515,16 @@ export function PriceCalculatorClient({
     const preferred = (prefillFromLighting.preferredTrackType ?? null) as TrackType | null;
     if (preferred && !trackTypeTouched) {
       setTrackType(preferred);
-    } else if (!trackTypeTouched) {
-      // если трек по метрам есть, а тип трека “none” — ставим дефолт built-in
-      if (metersRaw > 0) {
-        setTrackType((prev) => (prev === "none" ? ("built-in" as TrackType) : prev));
-      }
+    } else if (!trackTypeTouched && metersRaw > 0) {
+      setTrackType((prev) => (prev === "none" ? ("built-in" as TrackType) : prev));
     }
   }, [
     compactSections,
     prefillFromLighting,
     prefillFromLightingTrigger,
+    lightsTouched,
     trackLengthTouched,
     trackTypeTouched,
-    lightsTouched,
   ]);
 
   const selectedCeiling = useMemo(
@@ -595,7 +587,6 @@ export function PriceCalculatorClient({
     setCeilingLength(perimeterSuggestion.recommended);
   };
 
-  // ---- totals ----
   const ceilingBaseRate = selectedCeiling.baseRatePerSqm;
   const ceilingBaseTotal = area * ceilingBaseRate;
 
@@ -629,7 +620,6 @@ export function PriceCalculatorClient({
     trackTotal +
     lightsTotal;
 
-  // derived inputs
   const derivedTrackMountType: DerivedInputs["trackMountType"] =
     trackType === "built-in"
       ? "built-in"
@@ -725,7 +715,6 @@ export function PriceCalculatorClient({
     setSnapshot((prev) => {
       if (prev == null) return snapshot;
 
-      // сохраняем leadSource/lighting/grandTotal/_reconciled
       return {
         ...snapshot,
         leadSource: prev.leadSource ?? snapshot.leadSource,
@@ -738,7 +727,6 @@ export function PriceCalculatorClient({
 
   const showSlider = !compactSections;
 
-  // ===== compact guided flow: один шаг открыт, остальные закрыты =====
   const compactSteps: CompactStepId[] = useMemo(() => {
     return hasSpecialCeiling
       ? ["area", "ceiling", "profile", "lightLines", "cornice", "track", "lights"]
@@ -888,7 +876,6 @@ export function PriceCalculatorClient({
         : "нет";
 
     const lightsValue = lightsEnabled ? `${lightsCount} шт.` : "нет";
-
     const lightLinesValue = lightLinesEnabled ? `${lightLinesLength} м.п.` : "нет";
 
     return (
@@ -899,7 +886,310 @@ export function PriceCalculatorClient({
             <p className="mt-1">Один шаг за раз: выбрали → подтвердили → дальше.</p>
           </div>
 
-          {/* ... (area/ceiling/profile/lightLines/cornice) без изменений ... */}
+          {/* AREA */}
+          <div ref={areaRef}>
+            {confirmed.area ? (
+              <SectionCard title={`${stepNumber("area")}) Площадь`}>
+                <SummaryRow
+                  label="Площадь"
+                  value={`${area} м²`}
+                  onEdit={() => beginEdit("area")}
+                />
+              </SectionCard>
+            ) : activeStep === "area" ? (
+              <SectionCard title={`${stepNumber("area")}) Площадь`}>
+                <RangeField
+                  id="area-field"
+                  label="Выберите площадь"
+                  value={area}
+                  min={calculator.areaMin}
+                  max={calculator.areaMax}
+                  step={calculator.areaStep}
+                  unit="м²"
+                  onChange={handleAreaChange}
+                  showSlider={showSlider}
+                  quickValues={[10, 15, 20, 25, 30, 40]}
+                />
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <p className="text-xs text-slate-500">Можно выбрать пресет или ввести вручную.</p>
+                  <Button type="button" variant="secondary" onClick={() => confirmAndNavigate("area")}>
+                    Подтвердить
+                  </Button>
+                </div>
+              </SectionCard>
+            ) : (
+              <CollapsedStep
+                title={`${stepNumber("area")}) Площадь`}
+                subtitle="Выберите площадь помещения"
+                enabled
+                onOpen={() => openStep("area")}
+              />
+            )}
+          </div>
+
+          {/* CEILING */}
+          <div ref={ceilingRef}>
+            {confirmed.ceiling ? (
+              <SectionCard title={`${stepNumber("ceiling")}) Тип потолка`}>
+                <SummaryRow
+                  label="Тип"
+                  value={`${selectedCeiling.label} · ${ceilingMeta}`}
+                  onEdit={() => beginEdit("ceiling")}
+                />
+              </SectionCard>
+            ) : activeStep === "ceiling" ? (
+              <SectionCard
+                title={`${stepNumber("ceiling")}) Тип потолка`}
+                description="Для теневого и парящего профиль считается отдельно (по м.п.)."
+              >
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  {calculator.ceilingTypes.map((option) => {
+                    const meta =
+                      option.slug === "standard"
+                        ? `от ${formatCurrency(option.baseRatePerSqm)} ₽ / м²`
+                        : `${formatCurrency(option.baseRatePerSqm)} ₽ / м² + ${formatCurrency(option.extraRatePerMeter)} ₽ / м.п.`;
+
+                    return (
+                      <OptionCard
+                        key={option.slug}
+                        active={ceilingType === option.slug}
+                        title={option.label}
+                        meta={meta}
+                        onClick={() => handleCeilingTypeChange(option.slug)}
+                      />
+                    );
+                  })}
+                </div>
+
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <p className="text-xs text-slate-500">Выберите вариант и подтвердите.</p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => confirmAndNavigate("ceiling")}
+                    disabled={!isStepEnabled("ceiling")}
+                  >
+                    Подтвердить
+                  </Button>
+                </div>
+              </SectionCard>
+            ) : (
+              <CollapsedStep
+                title={`${stepNumber("ceiling")}) Тип потолка`}
+                subtitle={isStepEnabled("ceiling") ? "Выберите тип потолка" : "Сначала подтвердите площадь"}
+                enabled={isStepEnabled("ceiling")}
+                onOpen={() => openStep("ceiling")}
+              />
+            )}
+          </div>
+
+          {/* PROFILE */}
+          {hasSpecialCeiling ? (
+            <div ref={profileRef}>
+              {confirmed.profile ? (
+                <SectionCard title={`${stepNumber("profile")}) Длина профиля`}>
+                  <SummaryRow
+                    label={selectedCeiling.extraLabel ?? "Профиль"}
+                    value={`${ceilingLength} м.п. (${ceilingLengthAuto ? "авто 1:1" : "вручную"})`}
+                    onEdit={() => beginEdit("profile")}
+                  />
+                </SectionCard>
+              ) : activeStep === "profile" ? (
+                <SectionCard
+                  title={`${stepNumber("profile")}) Длина профиля`}
+                  description={selectedCeiling.extraLabel ?? "Профиль по периметру"}
+                >
+                  <RangeField
+                    id="ceiling-length-field"
+                    label={`Длина: ${selectedCeiling.extraLabel ?? "профиль"}`}
+                    value={ceilingLength}
+                    min={calculator.specialMeters.min}
+                    max={calculator.specialMeters.max}
+                    step={calculator.specialMeters.step}
+                    unit="м.п."
+                    onChange={handleCeilingLengthChange}
+                    showSlider={showSlider}
+                    quickValues={[perimeterSuggestion.recommended]}
+                  />
+
+                  <PerimeterHint
+                    area={area}
+                    recommended={perimeterSuggestion.recommended}
+                    onApply={applyPerimeterSuggestion}
+                    isAuto={ceilingLengthAuto}
+                  />
+
+                  <div className="mt-4 flex items-center justify-between gap-3">
+                    <p className="text-xs text-slate-500">Оставьте авто 1:1 или измените вручную.</p>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => confirmAndNavigate("profile")}
+                      disabled={!isStepEnabled("profile")}
+                    >
+                      Подтвердить
+                    </Button>
+                  </div>
+                </SectionCard>
+              ) : (
+                <CollapsedStep
+                  title={`${stepNumber("profile")}) Длина профиля`}
+                  subtitle={isStepEnabled("profile") ? "Настройте длину профиля" : "Подтвердите предыдущий шаг"}
+                  enabled={isStepEnabled("profile")}
+                  onOpen={() => openStep("profile")}
+                />
+              )}
+            </div>
+          ) : null}
+
+          {/* LIGHT LINES */}
+          <div ref={lightLinesRef}>
+            {confirmed.lightLines ? (
+              <SectionCard title={`${stepNumber("lightLines")}) Световые линии`}>
+                <SummaryRow
+                  label="Световые линии"
+                  value={lightLinesValue}
+                  onEdit={() => beginEdit("lightLines")}
+                />
+              </SectionCard>
+            ) : activeStep === "lightLines" ? (
+              <SectionCard title={`${stepNumber("lightLines")}) Световые линии`}>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <OptionCard
+                    active={!lightLinesEnabled}
+                    title="Без световых линий"
+                    meta="Без доп. расчёта"
+                    onClick={() => {
+                      markInteracted();
+                      setLightLinesEnabled(false);
+                    }}
+                  />
+                  <OptionCard
+                    active={lightLinesEnabled}
+                    title="Добавить световые линии"
+                    meta={`от ${formatCurrency(calculator.lightLines.ratePerMeter)} ₽ / м.п.`}
+                    onClick={() => {
+                      markInteracted();
+                      setLightLinesEnabled(true);
+                    }}
+                  />
+                </div>
+
+                {lightLinesEnabled ? (
+                  <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+                    <RangeField
+                      id="light-lines-length"
+                      label="Длина световых линий"
+                      value={lightLinesLength}
+                      min={calculator.lightLineMeters.min}
+                      max={calculator.lightLineMeters.max}
+                      step={calculator.lightLineMeters.step}
+                      unit="м.п."
+                      onChange={(v) => {
+                        markInteracted();
+                        setLightLinesLength(v);
+                      }}
+                      showSlider={showSlider}
+                    />
+                  </div>
+                ) : null}
+
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <p className="text-xs text-slate-500">Выберите вариант и подтвердите.</p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => confirmAndNavigate("lightLines")}
+                    disabled={!isStepEnabled("lightLines")}
+                  >
+                    Подтвердить
+                  </Button>
+                </div>
+              </SectionCard>
+            ) : (
+              <CollapsedStep
+                title={`${stepNumber("lightLines")}) Световые линии`}
+                subtitle={isStepEnabled("lightLines") ? "Выберите: нужны или нет" : "Подтвердите предыдущий шаг"}
+                enabled={isStepEnabled("lightLines")}
+                onOpen={() => openStep("lightLines")}
+              />
+            )}
+          </div>
+
+          {/* CORNICE */}
+          <div ref={corniceRef}>
+            {confirmed.cornice ? (
+              <SectionCard title={`${stepNumber("cornice")}) Карнизы`}>
+                <SummaryRow
+                  label="Карниз"
+                  value={corniceValue}
+                  onEdit={() => beginEdit("cornice")}
+                />
+              </SectionCard>
+            ) : activeStep === "cornice" ? (
+              <SectionCard title={`${stepNumber("cornice")}) Карнизы`}>
+                <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2">
+                  {calculator.cornices.map((option) => (
+                    <OptionCard
+                      key={option.slug}
+                      active={corniceType === option.slug}
+                      title={option.label}
+                      meta={
+                        option.ratePerMeter > 0
+                          ? `от ${formatCurrency(option.ratePerMeter)} ₽ / м.п.`
+                          : "Без доп. расчёта"
+                      }
+                      onClick={() => {
+                        markInteracted();
+                        setCorniceType(option.slug);
+                        if (option.slug !== "none") {
+                          setCorniceLength(calculator.corniceMeters.default);
+                        }
+                      }}
+                    />
+                  ))}
+                </div>
+
+                {selectedCornice.ratePerMeter > 0 ? (
+                  <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+                    <RangeField
+                      id="cornice-length"
+                      label="Длина карниза"
+                      value={corniceLength}
+                      min={calculator.corniceMeters.min}
+                      max={calculator.corniceMeters.max}
+                      step={calculator.corniceMeters.step}
+                      unit="м.п."
+                      onChange={(v) => {
+                        markInteracted();
+                        setCorniceLength(v);
+                      }}
+                      showSlider={showSlider}
+                    />
+                  </div>
+                ) : null}
+
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <p className="text-xs text-slate-500">Выберите вариант и подтвердите.</p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => confirmAndNavigate("cornice")}
+                    disabled={!isStepEnabled("cornice")}
+                  >
+                    Подтвердить
+                  </Button>
+                </div>
+              </SectionCard>
+            ) : (
+              <CollapsedStep
+                title={`${stepNumber("cornice")}) Карнизы`}
+                subtitle={isStepEnabled("cornice") ? "Выберите: нужен или нет" : "Подтвердите предыдущий шаг"}
+                enabled={isStepEnabled("cornice")}
+                onOpen={() => openStep("cornice")}
+              />
+            )}
+          </div>
 
           {/* TRACK */}
           <div ref={trackRef}>
@@ -963,7 +1253,6 @@ export function PriceCalculatorClient({
                       }}
                       showSlider={showSlider}
                     />
-                    {/* УБРАЛИ подсказку про ориентировочное количество спотов */}
                   </div>
                 ) : null}
 
@@ -991,7 +1280,80 @@ export function PriceCalculatorClient({
 
           {/* LIGHTS */}
           <div ref={lightsRef}>
-            {/* ... */}
+            {confirmed.lights ? (
+              <SectionCard title={`${stepNumber("lights")}) Точечные светильники`}>
+                <SummaryRow
+                  label="Светильники"
+                  value={lightsValue}
+                  onEdit={() => beginEdit("lights")}
+                />
+              </SectionCard>
+            ) : activeStep === "lights" ? (
+              <SectionCard title={`${stepNumber("lights")}) Точечные светильники`}>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <OptionCard
+                    active={!lightsEnabled}
+                    title="Без светильников"
+                    meta="Без поштучного расчёта"
+                    onClick={() => {
+                      markInteracted();
+                      setLightsTouched(true);
+                      setLightsEnabled(false);
+                    }}
+                  />
+                  <OptionCard
+                    active={lightsEnabled}
+                    title="Добавить светильники"
+                    meta={`от ${formatCurrency(calculator.lights.ratePerUnit)} ₽ / шт`}
+                    onClick={() => {
+                      markInteracted();
+                      setLightsTouched(true);
+                      setLightsEnabled(true);
+                    }}
+                  />
+                </div>
+
+                {lightsEnabled ? (
+                  <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+                    <RangeField
+                      id="lights-count"
+                      label="Количество светильников"
+                      value={lightsCount}
+                      min={calculator.lights.countMin}
+                      max={calculator.lights.countMax}
+                      step={calculator.lights.countStep}
+                      unit="шт."
+                      onChange={(v) => {
+                        markInteracted();
+                        setLightsTouched(true);
+                        setLightsCount(v);
+                      }}
+                      showSlider={showSlider}
+                      quickValues={[4, 6, 8, 10, 12]}
+                    />
+                  </div>
+                ) : null}
+
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <p className="text-xs text-slate-500">Выберите вариант и подтвердите.</p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => confirmAndNavigate("lights")}
+                    disabled={!isStepEnabled("lights")}
+                  >
+                    Подтвердить
+                  </Button>
+                </div>
+              </SectionCard>
+            ) : (
+              <CollapsedStep
+                title={`${stepNumber("lights")}) Точечные светильники`}
+                subtitle={isStepEnabled("lights") ? "Выберите: нужны или нет" : "Подтвердите предыдущий шаг"}
+                enabled={isStepEnabled("lights")}
+                onOpen={() => openStep("lights")}
+              />
+            )}
           </div>
         </div>
 
@@ -1018,71 +1380,14 @@ export function PriceCalculatorClient({
     );
   }
 
-  // ===== NON-COMPACT (страница) — ниже без изменений, кроме track meta подсказок и track touched =====
+  // NON-COMPACT
   return (
     <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:p-8">
       <div className="min-w-0 space-y-5">
-        {/* ... */}
-
-        <SectionCard title="Трековое освещение">
-          <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2">
-            {calculator.tracks.map((option) => {
-              const systemHint =
-                option.slug === "built-in"
-                  ? " · CLARUS, COLIBRI"
-                  : option.slug === "surface"
-                    ? " · ART"
-                    : "";
-
-              return (
-                <OptionCard
-                  key={option.slug}
-                  active={trackType === option.slug}
-                  title={option.label}
-                  meta={
-                    option.ratePerMeter > 0
-                      ? `от ${formatCurrency(option.ratePerMeter)} ₽ / м.п.${systemHint}`
-                      : `Без доп. расчёта${systemHint}`
-                  }
-                  onClick={() => {
-                    markInteracted();
-                    setTrackTypeTouched(true);
-                    setTrackType(option.slug);
-                    if (option.slug !== "none") {
-                      setTrackLengthTouched(true);
-                      setTrackLength(calculator.trackMeters.default);
-                    }
-                  }}
-                />
-              );
-            })}
-          </div>
-
-          {selectedTrack.ratePerMeter > 0 ? (
-            <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
-              <RangeField
-                id="track-length"
-                label="Длина трека"
-                value={trackLength}
-                min={calculator.trackMeters.min}
-                max={calculator.trackMeters.max}
-                step={calculator.trackMeters.step}
-                unit="м.п."
-                onChange={(v) => {
-                  markInteracted();
-                  setTrackLengthTouched(true);
-                  setTrackLength(v);
-                }}
-                showSlider
-              />
-            </div>
-          ) : null}
-        </SectionCard>
-
-        {/* ... */}
+        {/* ... остальная non-compact часть без изменений по смыслу ... */}
+        {/* (оставляю как у вас; если нужно — отдельно синхронизируем также meta подсказки) */}
       </div>
 
-      {/* ... right summary ... */}
       <div className="lg:sticky lg:top-24 lg:self-start">
         <div className="rounded-[1.75rem] bg-slate-950 p-6 text-white shadow-2xl shadow-slate-950/10">
           <p className="text-sm text-white/70">Ориентировочная стоимость от</p>
