@@ -3,7 +3,6 @@
 import { useMemo, useState, type FormEvent } from "react";
 
 import { legal } from "@/content/legal";
-
 import { getKitDisplayName } from "@/lib/calculator-modal-types";
 import { trackFormSubmitSuccess } from "@/lib/analytics";
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
@@ -20,11 +19,10 @@ import { TextLink } from "@/components/ui/text-link";
 
 const COPY = {
   successTitle: "Заявка отправлена",
-  errorMessage: "Не удалось отправить заявку. Проверьте данные и попробуйте ещё раз.",
+  errorMessage: "Не удалось отправить заявку.\nПроверьте данные и попробуйте ещё раз.",
   submitButtonLabel: "Записаться на замер",
-  helperText:
-    "Обычно отвечаю быстро. Можно указать район — так проще сориентироваться по выезду.",
-  addressFieldHint: "Необязательно. Это поможет быстрее сориентироваться по выезду.",
+  helperText: "Обычно отвечаю быстро. Можно указать район — так проще сориентироваться по выезду.",
+  addressFieldHint: "Необязательно.\nЭто поможет быстрее сориентироваться по выезду.",
 } as const;
 
 type FormStatus = "idle" | "success" | "error";
@@ -41,11 +39,9 @@ function normalizePhone(value: string): string {
 
   // 8XXXXXXXXXX -> +7XXXXXXXXXX
   if (digits.startsWith("8") && digits.length === 11) return `+7${digits.slice(1)}`;
-
   // 7XXXXXXXXXX -> +7XXXXXXXXXX
   if (digits.startsWith("7") && digits.length === 11) return `+${digits}`;
-
-  // generic +<digits>
+  // generic +
   if (digits.length >= 10 && digits.length <= 15) return `+${digits}`;
 
   return value.trim();
@@ -55,10 +51,6 @@ function isValidPhone(value: string): boolean {
   return /^\+\d{10,15}$/.test(value);
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("ru-RU").format(Math.round(value));
-}
-
 function buildLeadMessage(
   ceilingLines: string[],
   lightingLines: string[],
@@ -66,14 +58,12 @@ function buildLeadMessage(
   source: string
 ): string {
   const parts: string[] = ["Заявка с сайта ПОТОЛКОВО"];
-
   if (source) parts.push(`Источник: ${source}`);
   if (address.trim()) parts.push("", `Адрес / район: ${address.trim()}`);
 
   if (ceilingLines.length) {
     parts.push("", "Параметры из калькулятора:", ...ceilingLines.map((l) => `- ${l}`));
   }
-
   if (lightingLines.length) {
     parts.push("", ...lightingLines);
   }
@@ -81,9 +71,7 @@ function buildLeadMessage(
   return parts.join("\n");
 }
 
-type ActionFormProps = {
-  source?: string;
-};
+type ActionFormProps = { source?: string };
 
 export function ActionForm({ source }: ActionFormProps) {
   const { snapshot, hasInteracted } = usePriceCalculatorBridge();
@@ -97,16 +85,16 @@ export function ActionForm({ source }: ActionFormProps) {
 
   const lightingLines = useMemo(() => getLightingSummaryLines(snapshot), [snapshot]);
 
-  const [name, setName] = useState<string>("");
-  const [phone, setPhone] = useState<string>("");
-  const [address, setAddress] = useState<string>("");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
 
   const [status, setStatus] = useState<FormStatus>("idle");
-  const [message, setMessage] = useState<string>("");
+  const [message, setMessage] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [isPending, setIsPending] = useState<boolean>(false);
+  const [isPending, setIsPending] = useState(false);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
 
     setStatus("idle");
@@ -118,7 +106,6 @@ export function ActionForm({ source }: ActionFormProps) {
     const normalizedPhone = normalizePhone(phone);
 
     const nextErrors: FieldErrors = {};
-
     if (!trimmedName) nextErrors.name = "Укажите имя.";
     else if (trimmedName.length > 80) nextErrors.name = "Слишком длинное имя.";
 
@@ -143,16 +130,16 @@ export function ActionForm({ source }: ActionFormProps) {
     }
 
     const lightingMode: string = String(snapshot?.lighting?.mode ?? "none");
-    const lightingKitDisplay: string = String(
-      snapshot?.lighting ? getKitDisplayName(snapshot.lighting) : ""
-    );
-
+    const lightingKitDisplay: string = String(snapshot?.lighting ? getKitDisplayName(snapshot.lighting) : "");
     const lightingItemsCount = Number(snapshot?.lighting?.items?.length ?? 0);
-    const lightingTotalRub = Number(snapshot?.lighting?.totalRub ?? 0);
 
+    const lightingTotalRub = Number(snapshot?.lighting?.totalRub ?? 0);
     const lightingDiscountedRub = Number(
       snapshot?.lighting?.discountedTotalRub ?? applyLightingDiscount(lightingTotalRub)
     );
+
+    const discountApplied = Boolean(snapshot?.lightingDiscountApplied);
+    const discountPercentApplied = Number(snapshot?.lightingDiscountPercentApplied ?? 0);
 
     const formData = new FormData();
     formData.append("access_key", String(accessKey));
@@ -163,10 +150,7 @@ export function ActionForm({ source }: ActionFormProps) {
     formData.append("phone", normalizedPhone);
     formData.append("address", trimmedAddress);
 
-    formData.append(
-      "message",
-      buildLeadMessage(ceilingLines, lightingLines, trimmedAddress, effectiveSource)
-    );
+    formData.append("message", buildLeadMessage(ceilingLines, lightingLines, trimmedAddress, effectiveSource));
 
     // anti-spam
     formData.append("botcheck", "");
@@ -174,18 +158,22 @@ export function ActionForm({ source }: ActionFormProps) {
 
     // extra fields
     formData.append("calculator_source", effectiveSource);
+
     formData.append("lighting_mode", lightingMode);
     formData.append("lighting_kit", lightingKitDisplay);
     formData.append("lighting_items_count", String(lightingItemsCount));
+
     formData.append("lighting_total_rub", String(lightingTotalRub));
     formData.append("lighting_discounted_total_rub", String(lightingDiscountedRub));
+
+    formData.append("lighting_discount_applied", String(discountApplied));
+    formData.append("lighting_discount_percent_applied", String(discountPercentApplied));
 
     // legacy compatibility
     formData.append("lighting_total", String(lightingTotalRub));
     formData.append("lighting_discounted_total", String(lightingDiscountedRub));
 
     setIsPending(true);
-
     try {
       const response = await fetch("https://api.web3forms.com/submit", {
         method: "POST",
@@ -193,7 +181,6 @@ export function ActionForm({ source }: ActionFormProps) {
       });
 
       const result = await response.json().catch(() => null);
-
       if (!response.ok || !result?.success) {
         const errorText: string = String(result?.message ?? result?.error ?? `HTTP ${response.status}`);
         setStatus("error");
@@ -202,9 +189,8 @@ export function ActionForm({ source }: ActionFormProps) {
       }
 
       trackFormSubmitSuccess(effectiveSource);
-
       setStatus("success");
-      setMessage("Спасибо. Я свяжусь с вами, чтобы уточнить задачу и договориться о замере.");
+      setMessage("Спасибо.\nЯ свяжусь с вами, чтобы уточнить задачу и договориться о замере.");
 
       setName("");
       setPhone("");
@@ -221,109 +207,73 @@ export function ActionForm({ source }: ActionFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {status === "success" ? (
-        <div
-          className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950"
-          role="status"
-          aria-live="polite"
-        >
-          <p className="font-medium">{COPY.successTitle}</p>
-          <p className="mt-1 text-sm text-emerald-900/80">{message}</p>
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
+          <p className="font-semibold">{COPY.successTitle}</p>
+          <p className="mt-2 whitespace-pre-line">{message}</p>
         </div>
       ) : null}
 
       {status === "error" ? (
-        <div
-          className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-950"
-          role="alert"
-          aria-live="polite"
-        >
-          <p className="text-sm">{message || COPY.errorMessage}</p>
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-950">
+          <p className="whitespace-pre-line">{message || COPY.errorMessage}</p>
         </div>
       ) : null}
 
       {(ceilingLines.length > 0 || lightingLines.length > 0) && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
           {ceilingLines.length > 0 ? (
-            <div>
-              <p className="text-sm font-medium text-slate-950">
-                В заявку попадёт ваш расчёт потолка
-              </p>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-600">
+            <>
+              <p className="font-semibold text-slate-950">В заявку попадёт ваш расчёт потолка</p>
+              <ul className="mt-2 list-disc space-y-1 pl-5">
                 {ceilingLines.map((line) => (
                   <li key={line}>{line}</li>
                 ))}
               </ul>
-            </div>
+            </>
           ) : null}
 
           {lightingLines.length > 0 ? (
             <div className={ceilingLines.length > 0 ? "mt-4" : ""}>
-              <p className="text-sm font-medium text-slate-950">Освещение</p>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-600">
+              <p className="font-semibold text-slate-950">И выбранное освещение</p>
+              <ul className="mt-2 list-disc space-y-1 pl-5">
                 {lightingLines.map((line) => (
-                  <li key={line}>{line}</li>
+                  <li key={line} className="whitespace-pre-line">
+                    {line}
+                  </li>
                 ))}
               </ul>
-
-              {snapshot?.lighting?.totalRub != null ? (
-                <p className="mt-2 text-xs text-slate-500">
-                  Сумма оборудования: {formatCurrency(Number(snapshot.lighting.totalRub))} ₽
-                </p>
-              ) : null}
             </div>
           ) : null}
         </div>
       )}
 
-      <div className="grid gap-3">
-        <Input
-          label="Имя"
-          name="name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Иван"
-          autoComplete="name"
-          aria-invalid={Boolean(fieldErrors.name) || undefined}
-        />
-        {fieldErrors.name ? <p className="text-xs text-rose-600">{fieldErrors.name}</p> : null}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Имя" />
+          {fieldErrors.name ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.name}</p> : null}
+        </div>
 
-        <Input
-          label="Телефон"
-          name="phone"
-          type="tel"
-          inputMode="tel"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          placeholder="+79051234567"
-          autoComplete="tel"
-          aria-invalid={Boolean(fieldErrors.phone) || undefined}
-        />
-        {fieldErrors.phone ? <p className="text-xs text-rose-600">{fieldErrors.phone}</p> : null}
+        <div>
+          <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Телефон (например, +7905…)" />
+          {fieldErrors.phone ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.phone}</p> : null}
+        </div>
+      </div>
 
-        <Input
-          label="Адрес или район (необязательно)"
-          name="address"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          placeholder="Например: Центральный район"
-          autoComplete="street-address"
-          aria-invalid={Boolean(fieldErrors.address) || undefined}
-        />
-        <p className="text-xs text-slate-500">{COPY.addressFieldHint}</p>
-        {fieldErrors.address ? (
-          <p className="text-xs text-rose-600">{fieldErrors.address}</p>
-        ) : null}
+      <div>
+        <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Район / ближайшее метро (необязательно)" />
+        <p className="mt-1 text-xs text-slate-500 whitespace-pre-line">{COPY.addressFieldHint}</p>
+        {fieldErrors.address ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.address}</p> : null}
       </div>
 
       <Button type="submit" className="w-full" disabled={isPending}>
         {isPending ? "Отправляю..." : COPY.submitButtonLabel}
       </Button>
 
-      <p className="text-xs text-slate-500">{COPY.helperText}</p>
-
       <p className="text-xs text-slate-500">
-        {legal.consentTextPrefix}
-        <TextLink href={legal.privacyHref}>{legal.privacyLabel}</TextLink>
+        {COPY.helperText}
+        <br />
+        {legal.consentTextPrefix}{" "}
+        <TextLink href={legal.privacyHref}>{legal.privacyLabel}</TextLink>{" "}
         {legal.consentTextSuffix}
       </p>
     </form>
