@@ -27,6 +27,7 @@ function normalizePhone(value: string): string {
   if (digits.length >= 10 && digits.length <= 15) return `+${digits}`;
   return value.trim();
 }
+
 function isValidPhone(value: string): boolean {
   return /^\+\d{10,15}$/.test(value);
 }
@@ -46,7 +47,10 @@ export function TrackSaleActionForm({ source }: TrackSaleActionFormProps) {
   const { snapshot, hasInteracted } = usePriceCalculatorBridge();
   const effectiveSource: string = String(snapshot?.leadSource ?? source ?? "catalog_trek_page");
 
-  const ceilingLines = useMemo(() => (hasInteracted ? getCalculatorSummaryLines(snapshot) : []), [hasInteracted, snapshot]);
+  const ceilingLines = useMemo(
+    () => (hasInteracted ? getCalculatorSummaryLines(snapshot) : []),
+    [hasInteracted, snapshot]
+  );
   const lightingLines = useMemo(() => getLightingSummaryLines(snapshot), [snapshot]);
 
   const [name, setName] = useState("");
@@ -96,22 +100,26 @@ export function TrackSaleActionForm({ source }: TrackSaleActionFormProps) {
       snapshot?.lighting?.discountedTotalRub ?? applyLightingDiscount(Number(snapshot?.lighting?.totalRub ?? 0))
     );
 
-    const discountApplied = Boolean(snapshot?.lightingDiscountApplied);
-    const discountPercentApplied = Number(snapshot?.lightingDiscountPercentApplied ?? 0);
+    const discountApplied = Boolean((snapshot as any)?.lightingDiscountApplied);
+    const discountPercentApplied = Number((snapshot as any)?.lightingDiscountPercentApplied ?? 0);
 
     const formData = new FormData();
     formData.append("access_key", String(accessKey));
-    formData.append("subject", String("Новая заявка с трековой страницы ПОТОЛКОВО"));
-    formData.append("from_name", String("ПОТОЛКОВО - Трековая страница"));
+    formData.append("subject", "Новая заявка с трековой страницы ПОТОЛКОВО");
+    formData.append("from_name", "ПОТОЛКОВО - Трековая страница");
 
-    formData.append("name", String(trimmedName));
-    formData.append("phone", String(normalizedPhone));
-    formData.append("address", String(trimmedAddress));
+    formData.append("name", trimmedName);
+    formData.append("phone", normalizedPhone);
+    formData.append("address", trimmedAddress);
 
-    formData.append("message", String(buildMessage(ceilingLines, lightingLines, trimmedAddress, effectiveSource)));
+    formData.append("message", buildMessage(ceilingLines, lightingLines, trimmedAddress, effectiveSource));
 
-    formData.append("botcheck", String(""));
-    formData.append("company", String(""));
+    // anti-spam
+    formData.append("botcheck", "");
+    formData.append("company", "");
+
+    // extra
+    formData.append("calculator_source", effectiveSource);
 
     formData.append("lighting_mode", String(snapshot?.lighting?.mode ?? "none"));
     formData.append("lighting_items_count", String(snapshot?.lighting?.items?.length ?? 0));
@@ -125,8 +133,6 @@ export function TrackSaleActionForm({ source }: TrackSaleActionFormProps) {
     // legacy
     formData.append("lighting_total", String(lightingTotalRub));
     formData.append("lighting_discounted_total", String(lightingDiscountedRub));
-
-    formData.append("calculator_source", String(effectiveSource));
 
     setIsPending(true);
     try {
@@ -153,7 +159,7 @@ export function TrackSaleActionForm({ source }: TrackSaleActionFormProps) {
       setErrors({});
     } catch {
       setStatus("error");
-      setMessage("Не удалось отправить заявку. Проверьте соединение и попробуйте еще раз.");
+      setMessage("Не удалось отправить заявку. Проверьте соединение и попробуйте ещё раз.");
     } finally {
       setIsPending(false);
     }
@@ -174,17 +180,32 @@ export function TrackSaleActionForm({ source }: TrackSaleActionFormProps) {
       ) : null}
 
       <div>
-        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Имя" />
+        <Input
+          label="Имя"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Имя"
+        />
         {errors.name ? <p className="mt-1 text-xs text-rose-600">{errors.name}</p> : null}
       </div>
 
       <div>
-        <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Телефон (например, +7905…)" />
+        <Input
+          label="Телефон"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="Телефон (например, +7905…)"
+        />
         {errors.phone ? <p className="mt-1 text-xs text-rose-600">{errors.phone}</p> : null}
       </div>
 
       <div>
-        <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Район / ближайшее метро (необязательно)" />
+        <Input
+          label="Район / ближайшее метро (необязательно)"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          placeholder="Район / ближайшее метро"
+        />
         {errors.address ? <p className="mt-1 text-xs text-rose-600">{errors.address}</p> : null}
       </div>
 
