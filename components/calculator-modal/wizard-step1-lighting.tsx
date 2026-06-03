@@ -32,6 +32,7 @@ import {
 } from "@/lib/catalog-ui-config";
 
 import { ART_TRACK_PROFILE_VENDOR_WHITELIST, applyVendorOverrides } from "@/lib/vendor-code-overrides";
+import { calcTrackProfileMeters, inferPieceLengthMeters } from "@/lib/product-length-meters";
 
 import { ProductImage } from "@/components/feed2/ProductImage";
 import { useCalculatorModal } from "./calculator-modal-context";
@@ -162,57 +163,6 @@ function pickDisplayAttributes(product: FeedCatalogProduct): { label: string; va
   return (attrs ?? []).slice(0, 4).map((attr) => ({ label: toText(attr.label), value: toText(attr.value) }));
 }
 
-function parseMetersFromValue(raw: string): number | null {
-  const s = toText(raw).toLowerCase().replace(/\s+/g, " ");
-
-  // mm
-  const mm = s.match(/(\d+(?:[.,]\d+)?)\s*(мм|mm)\b/);
-  if (mm) {
-    const v = Number(mm[1].replace(",", "."));
-    if (Number.isFinite(v) && v > 0) return v / 1000;
-  }
-
-  // cm
-  const cm = s.match(/(\d+(?:[.,]\d+)?)\s*(см|cm)\b/);
-  if (cm) {
-    const v = Number(cm[1].replace(",", "."));
-    if (Number.isFinite(v) && v > 0) return v / 100;
-  }
-
-  // meters
-  const m = s.match(/(\d+(?:[.,]\d+)?)\s*(м|m)\b/);
-  if (m) {
-    const v = Number(m[1].replace(",", "."));
-    if (Number.isFinite(v) && v > 0) return v;
-  }
-
-  return null;
-}
-
-function tryGetTrackProfilePieceMeters(product: FeedCatalogProduct): number | null {
-  if (typeof product.pieceLengthMeters === "number" && product.pieceLengthMeters > 0) return product.pieceLengthMeters;
-  if (typeof product.lengthMeters === "number" && product.lengthMeters > 0) return product.lengthMeters;
-
-  // пробуем из params/keyAttributes
-  const attrs = [...(product.keyAttributes ?? []), ...(product.params ?? [])];
-  for (const a of attrs) {
-    const label = toText(a.label).toLowerCase();
-    if (!label) continue;
-    const looksLikeLength =
-      label.includes("длина") || label.includes("length") || label.includes("размер") || label.includes("метраж");
-    if (!looksLikeLength) continue;
-
-    const v = parseMetersFromValue(toText(a.value));
-    if (v && v > 0) return v;
-  }
-
-  // пробуем из name (например "2 м", "3m", "2000 мм")
-  const fromName = parseMetersFromValue(toText(product.name));
-  if (fromName && fromName > 0) return fromName;
-
-  return null;
-}
-
 function TabButton({
   active,
   onClick,
@@ -267,13 +217,11 @@ function ProductCard({
   qty,
   onInc,
   onDec,
-  discountEligible,
 }: {
   product: FeedCatalogProduct;
   qty: number;
   onInc: () => void;
   onDec: () => void;
-  discountEligible: boolean;
 }) {
   const regular = toNumber(product.priceRub);
   const discounted = getDiscountedPrice(regular);
@@ -301,16 +249,10 @@ function ProductCard({
             <p>
               Цена: <span className="font-semibold text-slate-900">{fmt(regular)} ₽</span>
             </p>
-            <p className={discountEligible ? "text-emerald-700" : "text-slate-500"}>
-              {discountEligible ? (
-                <>
-                  Со скидкой: <span className="font-semibold">{fmt(discounted)} ₽</span>
-                  {benefit > 0 ? <span className="text-slate-500"> · выгода {fmt(benefit)} ₽</span> : null}
-                </>
-              ) : (
-                <>Скидка −15% будет при заказе потолка (после шага 1)</>
-              )}
+            <p className="text-emerald-700">
+              Со скидкой: <span className="font-semibold">{fmt(discounted)} ₽</span>
             </p>
+            {benefit > 0 ? <p className="text-slate-500">Выгода: {fmt(benefit)} ₽</p> : null}
           </div>
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -396,12 +338,12 @@ export function WizardStep1Lighting() {
     setStep1CatalogView,
     goToStep,
     step0AreaConfirmed,
+    showCeilingInUi,
   } = useCalculatorModal();
 
   const [activeTab, setActiveTab] = useState<Tab>("recommendations");
   const [catalogView, setCatalogView] = useState<CatalogView>("browse");
 
-  // применяем стартовые настройки из options один раз на открытие/смену сценария
   const appliedInitialUiRef = useRef<string | null>(null);
   useEffect(() => {
     const key = JSON.stringify({
@@ -449,8 +391,6 @@ export function WizardStep1Lighting() {
   const [removedHint, setRemovedHint] = useState(false);
 
   const prevInitialLightingRef = useRef<LightingSnapshot | null | undefined>(undefined);
-
-  const discountEligible = step0AreaConfirmed;
 
   const products = useMemo(() => {
     const rawProducts = (snapshotData as { products?: unknown[] })?.products ?? [];
@@ -544,22 +484,39 @@ export function WizardStep1Lighting() {
       .filter((entry) => !REMOVED_COLIBRI_VENDOR_CODES.has(toText(entry.product.vendorCode)));
   }, [cartItems, productsById]);
 
-  useEffect(() => {
-    setCartItems((prev) => {
-      const next: CartItems = { ...prev };
-      let changed = false;
+  // ===== Progress numbers =====
+  const selectedTrackMeters = useMemo(() => {
+    let meters = 0;
+    for (const entry of cartEntries) {
+      const p = entry.product;
+      if (p.kind !== "TRACK_PROFILE") continue;
+      meters += calcTrackProfileMeters(p, entry.qty);
+    }
+    return meters;
+  }, [cartEntries]);
 
-      for (const [productId] of Object.entries(next)) {
-        const product = productsById.get(productId);
-        if (!product || REMOVED_COLIBRI_VENDOR_CODES.has(toText(product.vendorCode))) {
-          delete next[productId];
-          changed = true;
-        }
-      }
+  const selectedPointQty = useMemo(() => {
+    let qty = 0;
+    for (const entry of cartEntries) {
+      const p = entry.product;
+      if (p.kind === "SPOT_FIXTURE" || isPanelProduct(p)) qty += entry.qty;
+    }
+    return qty;
+  }, [cartEntries]);
 
-      return changed ? next : prev;
-    });
-  }, [productsById]);
+  // targets показываем только если потолок “разрешён к показу” (чтобы не давить в lighting-first)
+  const requiredTrackMeters = showCeilingInUi ? toNumber(snapshot?.derivedInputs?.trackLengthMeters) : 0;
+  const requiredPointQty = showCeilingInUi ? toNumber(snapshot?.derivedInputs?.pointSpotsQty) : 0;
+
+  const progressHasTargets = requiredTrackMeters > 0 || requiredPointQty > 0;
+
+  const EPS_METERS = 0.05;
+  const trackDone = requiredTrackMeters > 0 ? selectedTrackMeters + EPS_METERS >= requiredTrackMeters : true;
+  const pointsDone = requiredPointQty > 0 ? selectedPointQty >= requiredPointQty : true;
+  const progressDone = progressHasTargets ? trackDone && pointsDone : false;
+
+  const remainingTrackMeters = Math.max(0, requiredTrackMeters - selectedTrackMeters);
+  const remainingPointQty = Math.max(0, requiredPointQty - selectedPointQty);
 
   const selectedViewItems = useMemo(() => {
     return cartEntries.map((entry) => ({
@@ -576,65 +533,12 @@ export function WizardStep1Lighting() {
   const selectedTotals = useMemo(() => {
     const regular = selectedViewItems.reduce((sum, x) => sum + x.item.qty * x.item.priceRub, 0);
     const discounted = applyLightingDiscount(regular);
-    const effective = discountEligible ? discounted : regular;
     const benefit = Math.max(0, regular - discounted);
-    return { regular, discounted, effective, benefit };
-  }, [discountEligible, selectedViewItems]);
+    return { regular, discounted, benefit };
+  }, [selectedViewItems]);
 
-  // ===== Progress numbers =====
-  const selectedTrackMeters = useMemo(() => {
-    let meters = 0;
-
-    for (const entry of cartEntries) {
-      const p = entry.product;
-      if (p.kind !== "TRACK_PROFILE") continue;
-
-      if (p.unit === "m") {
-        meters += entry.qty;
-        continue;
-      }
-
-      const piece = tryGetTrackProfilePieceMeters(p);
-      if (piece && piece > 0) meters += entry.qty * piece;
-    }
-
-    return meters;
-  }, [cartEntries]);
-
-  const selectedPointQty = useMemo(() => {
-    let qty = 0;
-    for (const entry of cartEntries) {
-      const p = entry.product;
-      if (p.kind === "SPOT_FIXTURE" || isPanelProduct(p)) qty += entry.qty;
-    }
-    return qty;
-  }, [cartEntries]);
-
-  const requiredTrackMeters = step0AreaConfirmed ? toNumber(snapshot?.derivedInputs?.trackLengthMeters) : 0;
-  const requiredPointQty = step0AreaConfirmed ? toNumber(snapshot?.derivedInputs?.pointSpotsQty) : 0;
-
-  const progressHasTargets = requiredTrackMeters > 0 || requiredPointQty > 0;
-
-  const EPS_METERS = 0.05;
-  const trackDone = requiredTrackMeters > 0 ? selectedTrackMeters + EPS_METERS >= requiredTrackMeters : true;
-  const pointsDone = requiredPointQty > 0 ? selectedPointQty >= requiredPointQty : true;
-
-  const progressDone = progressHasTargets ? trackDone && pointsDone : false;
-
-  const remainingTrackMeters = Math.max(0, requiredTrackMeters - selectedTrackMeters);
-  const remainingPointQty = Math.max(0, requiredPointQty - selectedPointQty);
-
-  const lampOptionsBySocket = useMemo(() => {
-    const lamps = products.filter((product) => isLamp(product));
-    const byPriceAsc = (a: FeedCatalogProduct, b: FeedCatalogProduct) => toNumber(a.priceRub) - toNumber(b.priceRub);
-
-    return {
-      GX53: lamps.filter((lamp) => detectSocket(lamp) === "GX53").sort(byPriceAsc),
-      MR16: lamps.filter((lamp) => detectSocket(lamp) === "MR16").sort(byPriceAsc),
-    };
-  }, [products]);
-
-  // ===== dependencies =====
+  // ===== dependencies (лампы/закладные) — оставляю как есть в вашей текущей ветке,
+  // здесь прогресс метража уже будет работать =====
   const mountRequiredByVendor = useMemo(() => {
     const required: Record<string, number> = {};
     for (const entry of cartEntries) {
@@ -646,12 +550,20 @@ export function WizardStep1Lighting() {
     return required;
   }, [cartEntries]);
 
+  const lampOptionsBySocket = useMemo(() => {
+    const lamps = products.filter((product) => isLamp(product));
+    const byPriceAsc = (a: FeedCatalogProduct, b: FeedCatalogProduct) => toNumber(a.priceRub) - toNumber(b.priceRub);
+
+    return {
+      GX53: lamps.filter((lamp) => detectSocket(lamp) === "GX53").sort(byPriceAsc),
+      MR16: lamps.filter((lamp) => detectSocket(lamp) === "MR16").sort(byPriceAsc),
+    };
+  }, [products]);
+
   const lampRequiredBySocket = useMemo(() => {
-    // ВАЖНО: лампы не должны “требовать лампы” — иначе required будет расти бесконечно
     const required: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
     for (const entry of cartEntries) {
       if (entry.product.kind === "LAMP") continue;
-
       const socket = getRequiredLampSocket(entry.product);
       if (!socket) continue;
       required[socket] = (required[socket] ?? 0) + entry.qty;
@@ -748,9 +660,7 @@ export function WizardStep1Lighting() {
 
   const hasClarusInSnapshot = useMemo(() => products.some((product) => product.system === "CLARUS_48"), [products]);
 
-  const hasClarusInCart = useMemo(() => {
-    return cartEntries.some((entry) => entry.product.system === "CLARUS_48");
-  }, [cartEntries]);
+  const hasClarusInCart = useMemo(() => cartEntries.some((entry) => entry.product.system === "CLARUS_48"), [cartEntries]);
 
   const clarusPsuQty = useMemo(() => {
     return cartEntries
@@ -801,7 +711,6 @@ export function WizardStep1Lighting() {
 
   const missingLamps = useMemo(() => {
     const out: Array<{ socket: LampSocket; requiredQty: number; currentQty: number }> = [];
-
     for (const socket of ["GX53", "MR16"] as LampSocket[]) {
       const required = toNumber(lampRequiredBySocket[socket]);
       if (required <= 0) continue;
@@ -809,15 +718,8 @@ export function WizardStep1Lighting() {
       const ids = lampOptionsBySocket[socket].map((lamp) => toText(lamp.productId));
       const current = ids.reduce((sum, id) => sum + toNumber(cartItems[id]), 0);
 
-      if (current < required) {
-        out.push({
-          socket,
-          requiredQty: required,
-          currentQty: current,
-        });
-      }
+      if (current < required) out.push({ socket, requiredQty: required, currentQty: current });
     }
-
     return out;
   }, [cartItems, lampOptionsBySocket, lampRequiredBySocket]);
 
@@ -936,7 +838,6 @@ export function WizardStep1Lighting() {
 
     if (fixtures.length === 0) return false;
 
-    // лампы сейчас считаем только как “есть ли вообще в корзине в нужном количестве”
     const lampQtyBySocket: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
     for (const socket of ["GX53", "MR16"] as LampSocket[]) {
       const lampIds = lampOptionsBySocket[socket].map((lamp) => toText(lamp.productId));
@@ -1002,7 +903,7 @@ export function WizardStep1Lighting() {
 
   return (
     <div className="space-y-4">
-      {/* Progress block */}
+      {/* Progress */}
       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -1068,10 +969,10 @@ export function WizardStep1Lighting() {
           </div>
         ) : null}
 
-        {!discountEligible ? (
+        {!step0AreaConfirmed ? (
           <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
             <p className="font-semibold">Скидка −15% на свет действует при заказе потолка.</p>
-            <p className="mt-1 text-blue-900/80">Подтвердите шаг 1 — и скидка применится к итоговой сумме света.</p>
+            <p className="mt-1 text-blue-900/80">Подтвердите шаг 1 — и скидка применится.</p>
             <button
               type="button"
               onClick={() => goToStep(0)}
@@ -1242,6 +1143,11 @@ export function WizardStep1Lighting() {
                       const discounted = getDiscountedPrice(regular);
                       const productId = toText(product.productId);
 
+                      const pieceMeters =
+                        product.kind === "TRACK_PROFILE" && product.unit !== "m"
+                          ? inferPieceLengthMeters(product)
+                          : null;
+
                       return (
                         <li key={toText(item.sku)} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                           <div className="grid grid-cols-[5.5rem_1fr] gap-3">
@@ -1253,16 +1159,20 @@ export function WizardStep1Lighting() {
                                 {pickDisplayAttributes(product).map((a) => `${a.label}: ${a.value}`).join(" • ")}
                               </p>
 
-                              <p className="mt-2 text-xs text-slate-700">
-                                Qty: {item.qty} • {fmt(regular)} ₽/шт
-                                {discountEligible ? (
-                                  <>
-                                    {" "}
-                                    • со скидкой {fmt(discounted)} ₽/шт
-                                  </>
+                              {product.kind === "TRACK_PROFILE" && product.unit !== "m" ? (
+                                pieceMeters ? (
+                                  <p className="mt-1 text-xs text-slate-600">
+                                    ≈ {pieceMeters.toFixed(2)} м/шт (для прогресса метража)
+                                  </p>
                                 ) : (
-                                  <> • скидка −15% будет при заказе потолка</>
-                                )}
+                                  <p className="mt-1 text-xs text-amber-700">
+                                    Длина профиля не найдена в данных товара — метры могут не считаться.
+                                  </p>
+                                )
+                              ) : null}
+
+                              <p className="mt-2 text-xs text-slate-700">
+                                Qty: {item.qty} • {fmt(regular)} ₽/шт • со скидкой {fmt(discounted)} ₽/шт
                               </p>
 
                               <button
@@ -1287,12 +1197,9 @@ export function WizardStep1Lighting() {
                   </ul>
 
                   <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-3 text-sm">
-                    <p>Итого (без скидки): {fmt(selectedTotals.regular)} ₽</p>
-                    {discountEligible ? (
-                      <p className="text-emerald-700">Итого со скидкой: {fmt(selectedTotals.discounted)} ₽</p>
-                    ) : (
-                      <p className="text-slate-500">Со скидкой −15% при заказе потолка: {fmt(selectedTotals.discounted)} ₽</p>
-                    )}
+                    <p>Итого без скидки: {fmt(selectedTotals.regular)} ₽</p>
+                    <p className="text-emerald-700">Итого со скидкой: {fmt(selectedTotals.discounted)} ₽</p>
+                    <p className="text-slate-500">Ваша выгода: {fmt(selectedTotals.benefit)} ₽</p>
                   </div>
                 </>
               )}
@@ -1429,7 +1336,6 @@ export function WizardStep1Lighting() {
                       qty={qty}
                       onInc={() => setProductQty(product, qty + step)}
                       onDec={() => setProductQty(product, qty - step)}
-                      discountEligible={discountEligible}
                     />
                   );
                 })}
