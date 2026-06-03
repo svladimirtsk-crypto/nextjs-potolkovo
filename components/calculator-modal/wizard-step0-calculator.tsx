@@ -74,25 +74,18 @@ function normalizeProduct(raw: unknown): FeedCatalogProduct | null {
 
 function isPanelProduct(product: FeedCatalogProduct): boolean {
   const text = `${toText(product.name)} ${toText(product.categoryPath)}`.toLowerCase();
-  return (
-    text.includes("панел") ||
-    text.includes("panel") ||
-    text.includes("600x600") ||
-    text.includes("595x595")
-  );
+  return text.includes("панел") || text.includes("panel") || text.includes("600x600") || text.includes("595x595");
 }
+
+type PreferredTrackType = "built-in" | "surface" | null;
 
 type WizardStep0CalculatorProps = {
   preset?: ServiceCalculatorPreset;
 };
 
 export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
-  const {
-    markStep0SessionInteracted,
-    options,
-    lightingDraft,
-    step0SessionInteracted,
-  } = useCalculatorModal();
+  const { markStep0SessionInteracted, options, lightingDraft, step0SessionInteracted } =
+    useCalculatorModal();
 
   const forcePreset = Boolean(options?.forcePreset);
   const resolvedPreset: ServiceCalculatorPreset = {
@@ -181,11 +174,10 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
 
     const hasAny = trackProfileMeters > 0 || pointSpotsQty > 0;
 
-    // preferred mount by chosen system
     const hasArt = metersArt > 0;
     const hasBuiltIn = metersClarus > 0 || metersColibri > 0;
 
-    const preferredTrackType =
+    const preferredTrackType: PreferredTrackType =
       hasArt && !hasBuiltIn ? "surface" : !hasArt && hasBuiltIn ? "built-in" : null;
 
     return {
@@ -239,7 +231,7 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
             ? {
                 trackProfileMeters: prefillMetrics.trackProfileMeters,
                 pointSpotsQty: prefillMetrics.pointSpotsQty,
-                preferredTrackType: prefillMetrics.preferredTrackType ?? undefined,
+                preferredTrackType: prefillMetrics.preferredTrackType,
               }
             : null
         }
