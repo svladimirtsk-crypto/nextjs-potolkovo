@@ -6,7 +6,6 @@ import snapshotData from "@/data/eks-feed2-snapshot.json";
 import type { FeedCatalogParam, FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 
 import { homepage } from "@/content/homepage";
-import { applyLightingDiscount } from "@/lib/lighting-formulas";
 import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
 
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
@@ -15,21 +14,17 @@ import { usePriceCalculatorBridge } from "@/components/home/price-calculator-con
 function toText(value: unknown): string {
   return String(value ?? "").trim();
 }
-
 function toNumber(value: unknown): number {
   const n = Number(value ?? 0);
   return Number.isFinite(n) ? n : 0;
 }
-
 function fmt(value: number): string {
   return new Intl.NumberFormat("ru-RU").format(Math.round(value));
 }
-
 function toNumberOrNull(value: unknown): number | null {
   const n = Number(value ?? NaN);
   return Number.isFinite(n) ? n : null;
 }
-
 function toParams(input: unknown): FeedCatalogParam[] {
   if (!Array.isArray(input)) return [];
   return input
@@ -79,57 +74,7 @@ function normalizeProduct(raw: unknown): FeedCatalogProduct | null {
 
 function isPanelProduct(product: FeedCatalogProduct): boolean {
   const text = `${toText(product.name)} ${toText(product.categoryPath)}`.toLowerCase();
-  return (
-    text.includes("панел") ||
-    text.includes("panel") ||
-    text.includes("600x600") ||
-    text.includes("595x595")
-  );
-}
-
-function parseMetersFromValue(raw: string): number | null {
-  const s = toText(raw).toLowerCase().replace(/\s+/g, " ");
-
-  const mm = s.match(/(\d+(?:[.,]\d+)?)\s*(мм|mm)\b/);
-  if (mm) {
-    const v = Number(mm[1].replace(",", "."));
-    if (Number.isFinite(v) && v > 0) return v / 1000;
-  }
-
-  const cm = s.match(/(\d+(?:[.,]\d+)?)\s*(см|cm)\b/);
-  if (cm) {
-    const v = Number(cm[1].replace(",", "."));
-    if (Number.isFinite(v) && v > 0) return v / 100;
-  }
-
-  const m = s.match(/(\d+(?:[.,]\d+)?)\s*(м|m)\b/);
-  if (m) {
-    const v = Number(m[1].replace(",", "."));
-    if (Number.isFinite(v) && v > 0) return v;
-  }
-
-  return null;
-}
-
-function tryGetTrackProfilePieceMeters(product: FeedCatalogProduct): number | null {
-  if (typeof product.pieceLengthMeters === "number" && product.pieceLengthMeters > 0) return product.pieceLengthMeters;
-  if (typeof product.lengthMeters === "number" && product.lengthMeters > 0) return product.lengthMeters;
-
-  const attrs = [...(product.keyAttributes ?? []), ...(product.params ?? [])];
-  for (const a of attrs) {
-    const label = toText(a.label).toLowerCase();
-    if (!label) continue;
-    const looksLikeLength = label.includes("длина") || label.includes("length") || label.includes("размер");
-    if (!looksLikeLength) continue;
-
-    const v = parseMetersFromValue(toText(a.value));
-    if (v && v > 0) return v;
-  }
-
-  const fromName = parseMetersFromValue(toText(product.name));
-  if (fromName && fromName > 0) return fromName;
-
-  return null;
+  return text.includes("панел") || text.includes("panel") || text.includes("600x600") || text.includes("595x595");
 }
 
 function sumTrackMetersFromLightingItems(
@@ -154,10 +99,8 @@ function sumTrackMetersFromLightingItems(
     if (product.kind !== "TRACK_PROFILE") continue;
 
     if (product.unit === "m") meters += qty;
-    else {
-      const piece = tryGetTrackProfilePieceMeters(product);
-      if (piece && piece > 0) meters += qty * piece;
-    }
+    else if (typeof product.pieceLengthMeters === "number") meters += qty * product.pieceLengthMeters;
+    else if (typeof product.lengthMeters === "number") meters += qty * product.lengthMeters;
   }
 
   return meters;
@@ -201,21 +144,25 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
     goToStep,
     setStep1CatalogView,
     closeCalculator,
+
+    // строгий флаг монтажа
     step0AreaConfirmed,
+
+    // централизованные итоги
+    ceilingTotal,
+    lightingEffectiveTotal,
+    lightingDiscountEligible,
+    showCeilingInUi,
+    grandTotal,
+
+    // для списка
     lightingDraft,
-    step0SessionInteracted,
-    options,
   } = useCalculatorModal();
 
   const { snapshot, setSnapshot } = usePriceCalculatorBridge();
 
   const lighting = snapshot?.lighting ?? lightingDraft ?? null;
   const lightingItems = lighting?.mode === "catalog" ? (lighting.items ?? []) : [];
-
-  const discountEligible = step0AreaConfirmed;
-
-  // lighting-first gating для потолка на Step3
-  const showCeiling = options?.entryMode !== "lighting-first" || step0SessionInteracted;
 
   const catalogProducts = useMemo(() => {
     const rawProducts = (snapshotData as { products?: unknown[] })?.products ?? [];
@@ -257,18 +204,11 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
     );
   }, [byId, byVendor, lightingItems]);
 
-  const ceilingTotalRaw = toNumber(snapshot?.total);
-  const ceilingTotal = showCeiling ? ceilingTotalRaw : 0;
-
-  const lightingTotalRub = toNumber(lighting?.totalRub);
-  const lightingDiscountedRub = applyLightingDiscount(lightingTotalRub);
-  const lightingEffectiveRub = discountEligible ? lightingDiscountedRub : lightingTotalRub;
-
   const derivedPointFromStep0 = toNumber(snapshot?.derivedInputs?.pointSpotsQty);
   const derivedTrackFromStep0 = toNumber(snapshot?.derivedInputs?.trackLengthMeters);
-
   const trackMountType = (snapshot?.derivedInputs?.trackMountType ?? "none") as "built-in" | "surface" | "none";
 
+  // СТРОГО: досчёт только если Step0 подтверждён (0->1)
   const canReconcileInstall = step0AreaConfirmed;
 
   const trackRates = homepage.price.calculator.tracks;
@@ -295,6 +235,7 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
 
   const extraInstallTotal = extraTrackInstall + extraSpotInstall;
 
+  // Пишем snapshot.grandTotal = snapshot.total + extraInstallTotal (только если Step0 подтверждён)
   useEffect(() => {
     if (!canReconcileInstall) return;
 
@@ -305,16 +246,6 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
       return { ...prev, grandTotal: nextGrand };
     });
   }, [canReconcileInstall, extraInstallTotal, setSnapshot]);
-
-  const grandTotal = useMemo(() => {
-    const ceilingPart = showCeiling
-      ? canReconcileInstall
-        ? ceilingTotalRaw + extraInstallTotal
-        : ceilingTotalRaw
-      : 0;
-
-    return ceilingPart + lightingEffectiveRub;
-  }, [canReconcileInstall, ceilingTotalRaw, extraInstallTotal, lightingEffectiveRub, showCeiling]);
 
   const handleEditLighting = () => {
     setStep1CatalogView("selected");
@@ -346,9 +277,7 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
         onClick={() => setTab(id)}
         className={[
           "rounded-xl px-3 py-2 text-xs font-semibold transition-colors",
-          active
-            ? "bg-slate-950 text-white"
-            : "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50",
+          active ? "bg-slate-950 text-white" : "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50",
         ].join(" ")}
       >
         {label}
@@ -363,7 +292,7 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
         <TabButton id="full" label="Полный расчёт" />
       </div>
 
-      {!discountEligible ? (
+      {!lightingDiscountEligible ? (
         <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
           <p className="font-semibold">Сейчас свет посчитан без скидки.</p>
           <p className="mt-1 text-blue-900/80">
@@ -384,10 +313,10 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
           <p className="text-base font-semibold text-slate-950">Итог расчёта</p>
 
           <div className="mt-3 space-y-1 text-sm">
-            {showCeiling ? (
+            {showCeilingInUi ? (
               <>
                 <p className="text-slate-800">
-                  Потолок: <span className="font-semibold text-slate-950">{fmt(ceilingTotalRaw)} ₽</span>
+                  Потолок: <span className="font-semibold text-slate-950">{fmt(ceilingTotal)} ₽</span>
                 </p>
 
                 {canReconcileInstall && extraInstallTotal > 0 ? (
@@ -404,16 +333,11 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
               </p>
             )}
 
-            {discountEligible ? (
-              <p className="text-emerald-700">
-                Свет (со скидкой −15%): <span className="font-semibold">{fmt(lightingEffectiveRub)} ₽</span>
-              </p>
-            ) : (
-              <p className="text-slate-800">
-                Свет: <span className="font-semibold text-slate-950">{fmt(lightingEffectiveRub)} ₽</span>{" "}
-                <span className="text-xs text-slate-500">(без скидки)</span>
-              </p>
-            )}
+            <p className={lightingDiscountEligible ? "text-emerald-700" : "text-slate-800"}>
+              Свет{lightingDiscountEligible ? " (со скидкой −15%)" : ""}:{" "}
+              <span className="font-semibold">{fmt(lightingEffectiveTotal)} ₽</span>
+              {!lightingDiscountEligible ? <span className="text-xs text-slate-500"> (без скидки)</span> : null}
+            </p>
 
             <p className="mt-2 text-base font-semibold text-slate-950">Итого: ~{fmt(grandTotal)} ₽</p>
           </div>
@@ -437,9 +361,9 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
               <p className="text-sm font-semibold text-slate-950">Потолок</p>
 
               <p className="mt-2 text-sm text-slate-700">
-                {showCeiling ? (
+                {showCeilingInUi ? (
                   <>
-                    Потолок: <span className="font-semibold text-slate-950">{fmt(ceilingTotalRaw)} ₽</span>
+                    Потолок: <span className="font-semibold text-slate-950">{fmt(ceilingTotal)} ₽</span>
                   </>
                 ) : (
                   <>
@@ -487,9 +411,9 @@ export function WizardStep2Summary({ onConfirm }: WizardStep2SummaryProps) {
               <div className="mt-3 border-t border-slate-200 pt-3 text-sm">
                 <p className="flex items-baseline justify-between gap-3 text-slate-800">
                   <span>Итого по свету</span>
-                  <span className="font-semibold text-slate-950">{fmt(lightingEffectiveRub)} ₽</span>
+                  <span className="font-semibold text-slate-950">{fmt(lightingEffectiveTotal)} ₽</span>
                 </p>
-                {!discountEligible ? (
+                {!lightingDiscountEligible ? (
                   <p className="mt-1 text-xs text-slate-500">Без скидки. Скидка −15% — при заказе потолка.</p>
                 ) : (
                   <p className="mt-1 text-xs text-emerald-700">Со скидкой −15%.</p>
