@@ -39,8 +39,10 @@ function normalizePhone(value: string): string {
 
   // 8XXXXXXXXXX -> +7XXXXXXXXXX
   if (digits.startsWith("8") && digits.length === 11) return `+7${digits.slice(1)}`;
+
   // 7XXXXXXXXXX -> +7XXXXXXXXXX
   if (digits.startsWith("7") && digits.length === 11) return `+${digits}`;
+
   // generic +
   if (digits.length >= 10 && digits.length <= 15) return `+${digits}`;
 
@@ -58,12 +60,14 @@ function buildLeadMessage(
   source: string
 ): string {
   const parts: string[] = ["Заявка с сайта ПОТОЛКОВО"];
+
   if (source) parts.push(`Источник: ${source}`);
   if (address.trim()) parts.push("", `Адрес / район: ${address.trim()}`);
 
   if (ceilingLines.length) {
     parts.push("", "Параметры из калькулятора:", ...ceilingLines.map((l) => `- ${l}`));
   }
+
   if (lightingLines.length) {
     parts.push("", ...lightingLines);
   }
@@ -106,6 +110,7 @@ export function ActionForm({ source }: ActionFormProps) {
     const normalizedPhone = normalizePhone(phone);
 
     const nextErrors: FieldErrors = {};
+
     if (!trimmedName) nextErrors.name = "Укажите имя.";
     else if (trimmedName.length > 80) nextErrors.name = "Слишком длинное имя.";
 
@@ -132,8 +137,8 @@ export function ActionForm({ source }: ActionFormProps) {
     const lightingMode: string = String(snapshot?.lighting?.mode ?? "none");
     const lightingKitDisplay: string = String(snapshot?.lighting ? getKitDisplayName(snapshot.lighting) : "");
     const lightingItemsCount = Number(snapshot?.lighting?.items?.length ?? 0);
-
     const lightingTotalRub = Number(snapshot?.lighting?.totalRub ?? 0);
+
     const lightingDiscountedRub = Number(
       snapshot?.lighting?.discountedTotalRub ?? applyLightingDiscount(lightingTotalRub)
     );
@@ -145,7 +150,6 @@ export function ActionForm({ source }: ActionFormProps) {
     formData.append("access_key", String(accessKey));
     formData.append("subject", "Новая заявка с сайта ПОТОЛКОВО");
     formData.append("from_name", "ПОТОЛКОВО Сайт");
-
     formData.append("name", trimmedName);
     formData.append("phone", normalizedPhone);
     formData.append("address", trimmedAddress);
@@ -158,14 +162,11 @@ export function ActionForm({ source }: ActionFormProps) {
 
     // extra fields
     formData.append("calculator_source", effectiveSource);
-
     formData.append("lighting_mode", lightingMode);
     formData.append("lighting_kit", lightingKitDisplay);
     formData.append("lighting_items_count", String(lightingItemsCount));
-
     formData.append("lighting_total_rub", String(lightingTotalRub));
     formData.append("lighting_discounted_total_rub", String(lightingDiscountedRub));
-
     formData.append("lighting_discount_applied", String(discountApplied));
     formData.append("lighting_discount_percent_applied", String(discountPercentApplied));
 
@@ -174,6 +175,7 @@ export function ActionForm({ source }: ActionFormProps) {
     formData.append("lighting_discounted_total", String(lightingDiscountedRub));
 
     setIsPending(true);
+
     try {
       const response = await fetch("https://api.web3forms.com/submit", {
         method: "POST",
@@ -181,6 +183,7 @@ export function ActionForm({ source }: ActionFormProps) {
       });
 
       const result = await response.json().catch(() => null);
+
       if (!response.ok || !result?.success) {
         const errorText: string = String(result?.message ?? result?.error ?? `HTTP ${response.status}`);
         setStatus("error");
@@ -189,6 +192,7 @@ export function ActionForm({ source }: ActionFormProps) {
       }
 
       trackFormSubmitSuccess(effectiveSource);
+
       setStatus("success");
       setMessage("Спасибо.\nЯ свяжусь с вами, чтобы уточнить задачу и договориться о замере.");
 
@@ -247,21 +251,40 @@ export function ActionForm({ source }: ActionFormProps) {
         </div>
       )}
 
+      {/* FIX build: Input требует обязательный `label` */}
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Имя" />
+          <Input
+            label="Имя"
+            name="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Имя"
+          />
           {fieldErrors.name ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.name}</p> : null}
         </div>
 
         <div>
-          <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Телефон (например, +7905…)" />
+          <Input
+            label="Телефон"
+            name="phone"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="Телефон (например, +7905…)"
+          />
           {fieldErrors.phone ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.phone}</p> : null}
         </div>
       </div>
 
       <div>
-        <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Район / ближайшее метро (необязательно)" />
-        <p className="mt-1 text-xs text-slate-500 whitespace-pre-line">{COPY.addressFieldHint}</p>
+        <Input
+          label="Район / ближайшее метро (необязательно)"
+          name="address"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          placeholder="Район / ближайшее метро (необязательно)"
+        />
+        <p className="mt-1 whitespace-pre-line text-xs text-slate-500">{COPY.addressFieldHint}</p>
         {fieldErrors.address ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.address}</p> : null}
       </div>
 
