@@ -4,12 +4,7 @@ type YmParams = Record<string, string | number | boolean>;
 
 declare global {
   interface Window {
-    ym?: (
-      counterId: number,
-      action: string,
-      goalName?: string,
-      params?: YmParams
-    ) => void;
+    ym?: (counterId: number, action: string, goalName?: string, params?: YmParams) => void;
   }
 }
 
@@ -44,5 +39,69 @@ export function trackWizardConfirm(source?: string) {
 export function trackFormSubmitSuccess(source?: string) {
   ymReachGoal("form_submit_success", {
     ...(source ? { source } : {}),
+  });
+}
+
+// ── New goals (Metrika) ───────────────────────────────────────────────────────
+
+export function trackKitClicked(params: {
+  kitBaseName: string;
+  itemsCount: number;
+  totalRub: number;
+  source?: string;
+}) {
+  ymReachGoal("kit_clicked", {
+    kit: params.kitBaseName,
+    items_count: params.itemsCount,
+    total_rub: params.totalRub,
+    ...(params.source ? { source: params.source } : {}),
+  });
+}
+
+export function trackLightingCartChanged(params: {
+  action: "add" | "remove" | "change";
+  sku: string;
+  productKind: string;
+  qty: number;
+  source?: string;
+}) {
+  ymReachGoal("lighting_cart_changed", {
+    action: params.action,
+    sku: params.sku,
+    kind: params.productKind,
+    qty: params.qty,
+    ...(params.source ? { source: params.source } : {}),
+  });
+}
+
+export function trackFormOpened(params: {
+  formPlacement: "modal" | "page";
+  source?: string;
+}) {
+  ymReachGoal("form_opened", {
+    form: params.formPlacement,
+    ...(params.source ? { source: params.source } : {}),
+  });
+}
+
+export function trackPhoneValidated(params: {
+  formPlacement: "modal" | "page";
+  source?: string;
+}) {
+  ymReachGoal("phone_validated", {
+    form: params.formPlacement,
+    ...(params.source ? { source: params.source } : {}),
+  });
+}
+
+export function trackFormSubmitError(params: {
+  kind: "validation" | "config" | "provider" | "network";
+  formPlacement: "modal" | "page";
+  source?: string;
+}) {
+  ymReachGoal("form_submit_error", {
+    kind: params.kind,
+    form: params.formPlacement,
+    ...(params.source ? { source: params.source } : {}),
   });
 }
