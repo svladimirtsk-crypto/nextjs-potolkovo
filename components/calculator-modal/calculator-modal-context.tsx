@@ -164,7 +164,7 @@ trackWizardStepView(step as 0 | 1 | 2, effectiveSource);
 
       setCurrentStep(step);
     },
-    [currentStep, setHasInteracted, setSnapshot, snapshot]
+   [currentStep, options, setHasInteracted, setSnapshot, snapshot]
   );
 
   const ceilingTotal = toNumber((snapshot as any)?.total);
