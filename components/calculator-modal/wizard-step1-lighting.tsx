@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import snapshotData from "@/data/eks-feed2-snapshot.json";
 import type { FeedCatalogParam, FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
-
+import { trackLightingCartChanged } from "@/lib/analytics";
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
 import {
   buildProductsIndex,
@@ -769,16 +769,30 @@ export function WizardStep1Lighting() {
   };
 
   const setProductQty = (product: FeedCatalogProduct, nextQtyRaw: number) => {
-    const id = toText(product.productId);
-    const qty = normalizeQty(nextQtyRaw, product.unit);
+  const id = toText(product.productId);
+  const nextQty = normalizeQty(nextQtyRaw, product.unit);
 
-    setCartItems((prev) => {
-      const next = { ...prev };
-      if (qty <= 0) delete next[id];
-      else next[id] = qty;
-      return next;
+  const prevQty = toNumber(cartItems[id]);
+  const action: "add" | "remove" | "change" =
+    prevQty <= 0 && nextQty > 0 ? "add" : prevQty > 0 && nextQty <= 0 ? "remove" : "change";
+
+  if (prevQty !== nextQty) {
+    trackLightingCartChanged({
+      action,
+      sku: id,
+      productKind: String(product.kind),
+      qty: nextQty,
+      source: String(options?.source ?? "unknown"),
     });
-  };
+  }
+
+  setCartItems((prev) => {
+    const next = { ...prev };
+    if (nextQty <= 0) delete next[id];
+    else next[id] = nextQty;
+    return next;
+  });
+};
 
   const addMountOneToOne = (fixtureVendor: string) => {
     const mountVendor = POINT_TO_MOUNT_VENDOR_CODE[toText(fixtureVendor)];
