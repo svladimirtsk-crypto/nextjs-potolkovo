@@ -995,21 +995,7 @@ export function WizardStep1Lighting() {
             </button>
           </div>
         ) : null}
-      </div>
-
-      {/* остальная часть файла (каталог/рекомендации/лампы/выбранное) — без изменений
-          у вас она уже в текущей версии и работает с свободным выбором ламп */}
-      {/* NOTE: ниже оставляю как у вас было — чтобы не потерять структуру. */}
-      {/* --- */}
-      {/* ... */}
-      <div className="text-xs text-slate-500">
-        {/* заглушка чтобы файл был самодостаточным в этом ответе не добавляю —
-            у вас ниже уже есть весь UI, который мы правили ранее. */}
-      </div>
-    </div>
-  );
-}
-      <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2">
         <TabButton active={activeTab === "recommendations"} onClick={() => setActiveTab("recommendations")}>
           Рекомендации
         </TabButton>
@@ -1471,6 +1457,20 @@ export function WizardStep1Lighting() {
       {lightingDraft?.mode === "catalog" ? (
         <p className="text-xs text-slate-500">В выбранном: {lightingDraft.items?.length ?? 0} поз.</p>
       ) : null}
+    </div>
+  );
+}
+      </div>
+
+      {/* остальная часть файла (каталог/рекомендации/лампы/выбранное) — без изменений
+          у вас она уже в текущей версии и работает с свободным выбором ламп */}
+      {/* NOTE: ниже оставляю как у вас было — чтобы не потерять структуру. */}
+      {/* --- */}
+      {/* ... */}
+      <div className="text-xs text-slate-500">
+        {/* заглушка чтобы файл был самодостаточным в этом ответе не добавляю —
+            у вас ниже уже есть весь UI, который мы правили ранее. */}
+      </div>
     </div>
   );
 }
