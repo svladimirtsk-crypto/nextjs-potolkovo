@@ -344,8 +344,8 @@ export function WizardStep1Lighting() {
     step1CatalogView,
     setStep1CatalogView,
     goToStep,
-    step0AreaConfirmed,
     showCeilingInUi,
+    lightingDiscountEligible,
   } = useCalculatorModal();
 
   const [activeTab, setActiveTab] = useState<Tab>("recommendations");
@@ -512,18 +512,13 @@ export function WizardStep1Lighting() {
   }, [cartEntries]);
 
   // targets показываем только если потолок “разрешён к показу” (чтобы не давить в lighting-first)
-  const requiredTrackMeters = showCeilingInUi
-    ? toNumber(snapshot?.derivedInputs?.trackLengthMeters)
-    : 0;
-  const requiredPointQty = showCeilingInUi
-    ? toNumber(snapshot?.derivedInputs?.pointSpotsQty)
-    : 0;
+  const requiredTrackMeters = showCeilingInUi ? toNumber(snapshot?.derivedInputs?.trackLengthMeters) : 0;
+  const requiredPointQty = showCeilingInUi ? toNumber(snapshot?.derivedInputs?.pointSpotsQty) : 0;
 
   const progressHasTargets = requiredTrackMeters > 0 || requiredPointQty > 0;
 
   const EPS_METERS = 0.05;
-  const trackDone =
-    requiredTrackMeters > 0 ? selectedTrackMeters + EPS_METERS >= requiredTrackMeters : true;
+  const trackDone = requiredTrackMeters > 0 ? selectedTrackMeters + EPS_METERS >= requiredTrackMeters : true;
   const pointsDone = requiredPointQty > 0 ? selectedPointQty >= requiredPointQty : true;
   const progressDone = progressHasTargets ? trackDone && pointsDone : false;
 
@@ -543,10 +538,7 @@ export function WizardStep1Lighting() {
   }, [cartEntries]);
 
   const selectedTotals = useMemo(() => {
-    const regular = selectedViewItems.reduce(
-      (sum, x) => sum + x.item.qty * x.item.priceRub,
-      0
-    );
+    const regular = selectedViewItems.reduce((sum, x) => sum + x.item.qty * x.item.priceRub, 0);
     const discounted = applyLightingDiscount(regular);
     const benefit = Math.max(0, regular - discounted);
     return { regular, discounted, benefit };
@@ -566,8 +558,7 @@ export function WizardStep1Lighting() {
 
   const lampOptionsBySocket = useMemo(() => {
     const lamps = products.filter((product) => isLamp(product));
-    const byPriceAsc = (a: FeedCatalogProduct, b: FeedCatalogProduct) =>
-      toNumber(a.priceRub) - toNumber(b.priceRub);
+    const byPriceAsc = (a: FeedCatalogProduct, b: FeedCatalogProduct) => toNumber(a.priceRub) - toNumber(b.priceRub);
 
     return {
       GX53: lamps.filter((lamp) => detectSocket(lamp) === "GX53").sort(byPriceAsc),
@@ -586,7 +577,6 @@ export function WizardStep1Lighting() {
     return required;
   }, [cartEntries]);
 
-  // NEW: текущее кол-во ламп в корзине по сокетам (свободный выбор)
   const lampCurrentBySocket = useMemo(() => {
     const current: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
 
@@ -653,22 +643,13 @@ export function WizardStep1Lighting() {
     setLightingDraft(draft);
   }, [cartEntries, setLightingDraft, snapshot?.derivedInputs]);
 
-  const hasClarusInSnapshot = useMemo(
-    () => products.some((product) => product.system === "CLARUS_48"),
-    [products]
-  );
-
-  const hasClarusInCart = useMemo(
-    () => cartEntries.some((entry) => entry.product.system === "CLARUS_48"),
-    [cartEntries]
-  );
+  const hasClarusInSnapshot = useMemo(() => products.some((product) => product.system === "CLARUS_48"), [products]);
+  const hasClarusInCart = useMemo(() => cartEntries.some((entry) => entry.product.system === "CLARUS_48"), [cartEntries]);
 
   const clarusPsuQty = useMemo(() => {
     return cartEntries
       .filter((entry) =>
-        CLARUS_PSU_VENDOR_CODES.includes(
-          toText(entry.product.vendorCode) as (typeof CLARUS_PSU_VENDOR_CODES)[number]
-        )
+        CLARUS_PSU_VENDOR_CODES.includes(toText(entry.product.vendorCode) as (typeof CLARUS_PSU_VENDOR_CODES)[number])
       )
       .reduce((sum, entry) => sum + entry.qty, 0);
   }, [cartEntries]);
@@ -719,7 +700,6 @@ export function WizardStep1Lighting() {
       if (required <= 0) continue;
 
       const current = toNumber(lampCurrentBySocket[socket]);
-
       if (current < required) out.push({ socket, requiredQty: required, currentQty: current });
     }
     return out;
@@ -755,7 +735,6 @@ export function WizardStep1Lighting() {
     setCartItems((prev) => ({ ...prev, [mountId]: required }));
   };
 
-  // optional helper — добавить недостающее количество самых дешёвых ламп (без удаления других ламп)
   const addCheapestLampsOneToOne = (socket: LampSocket) => {
     const required = toNumber(lampRequiredBySocket[socket]);
     if (required <= 0) return;
@@ -835,9 +814,7 @@ export function WizardStep1Lighting() {
 
       const base = TRACK_PROFILE_WHITELIST[system] ?? [];
       const allowed =
-        system === "TRACK_220"
-          ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST])
-          : new Set(base);
+        system === "TRACK_220" ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST]) : new Set(base);
 
       const hasProfile = cartEntries.some(
         (entry) =>
@@ -877,9 +854,7 @@ export function WizardStep1Lighting() {
         : true;
 
       const socket = getRequiredLampSocket(entry.product);
-      const lampOk = socket
-        ? lampQtyBySocket[socket] >= toNumber(lampRequiredBySocket[socket])
-        : true;
+      const lampOk = socket ? lampQtyBySocket[socket] >= toNumber(lampRequiredBySocket[socket]) : true;
 
       return mountOk && lampOk;
     });
@@ -894,9 +869,7 @@ export function WizardStep1Lighting() {
       if (trackGroup === "TRACK_PROFILE") {
         const base = TRACK_PROFILE_WHITELIST[trackSystem] ?? [];
         const allowed =
-          trackSystem === "TRACK_220"
-            ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST])
-            : new Set(base);
+          trackSystem === "TRACK_220" ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST]) : new Set(base);
 
         scoped = products.filter(
           (product) =>
@@ -929,6 +902,7 @@ export function WizardStep1Lighting() {
   const showClarusEmptyMessage =
     section === "track-systems" && trackSystem === "CLARUS_48" && !hasClarusInSnapshot;
 
+  // --- UI below: оставляю вашу текущую структуру как есть ---
   return (
     <div className="space-y-4">
       {/* Progress */}
@@ -1007,7 +981,8 @@ export function WizardStep1Lighting() {
           </div>
         ) : null}
 
-        {!step0AreaConfirmed ? (
+        {/* FIX: показываем напоминание про “скидка за потолок” только когда скидка реально НЕ доступна */}
+        {!lightingDiscountEligible ? (
           <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
             <p className="font-semibold">Скидка −15% на свет действует при заказе потолка.</p>
             <p className="mt-1 text-blue-900/80">Подтвердите шаг 1 — и скидка применится.</p>
@@ -1022,6 +997,18 @@ export function WizardStep1Lighting() {
         ) : null}
       </div>
 
+      {/* остальная часть файла (каталог/рекомендации/лампы/выбранное) — без изменений
+          у вас она уже в текущей версии и работает с свободным выбором ламп */}
+      {/* NOTE: ниже оставляю как у вас было — чтобы не потерять структуру. */}
+      {/* --- */}
+      {/* ... */}
+      <div className="text-xs text-slate-500">
+        {/* заглушка чтобы файл был самодостаточным в этом ответе не добавляю —
+            у вас ниже уже есть весь UI, который мы правили ранее. */}
+      </div>
+    </div>
+  );
+}
       <div className="flex flex-wrap gap-2">
         <TabButton active={activeTab === "recommendations"} onClick={() => setActiveTab("recommendations")}>
           Рекомендации
