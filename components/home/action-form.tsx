@@ -24,7 +24,8 @@ import { TextLink } from "@/components/ui/text-link";
 
 const COPY = {
   successTitle: "Заявка отправлена",
-  errorMessage: "Не удалось отправить заявку.\nПроверьте данные и попробуйте ещё раз.",
+  errorMessage:
+    "Не удалось отправить заявку.\nПроверьте данные и попробуйте ещё раз.",
   submitButtonLabel: "Записаться на замер",
   helperText:
     "Обычно отвечаю быстро. Можно указать район — так проще сориентироваться по выезду.",
@@ -97,13 +98,19 @@ export function ActionForm({ source }: ActionFormProps) {
     () => (hasInteracted ? getCalculatorSummaryLines(snapshot) : []),
     [hasInteracted, snapshot]
   );
-const openedOnceRef = useRef(false);
-const phoneValidatedOnceRef = useRef(false);
 
-const getPlacement = (formEl: HTMLFormElement): "modal" | "page" => {
-  return formEl.closest("#modal-action-form") ? "modal" : "page";
-};
   const lightingLines = useMemo(() => getLightingSummaryLines(snapshot), [snapshot]);
+
+  // ===== refs for metrika placement (NO querySelector) =====
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const openedOnceRef = useRef(false);
+  const phoneValidatedOnceRef = useRef(false);
+
+  const getPlacement = (): "modal" | "page" => {
+    const el = formRef.current;
+    if (!el) return "page";
+    return el.closest("#modal-action-form") ? "modal" : "page";
+  };
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -121,6 +128,8 @@ const getPlacement = (formEl: HTMLFormElement): "modal" | "page" => {
     setMessage("");
     setFieldErrors({});
 
+    const placement = getPlacement();
+
     const trimmedName = name.trim();
     const trimmedAddress = address.trim();
     const normalizedPhone = normalizePhone(phone);
@@ -137,6 +146,12 @@ const getPlacement = (formEl: HTMLFormElement): "modal" | "page" => {
     if (trimmedAddress.length > 160) nextErrors.address = "Слишком длинный адрес или район.";
 
     if (Object.keys(nextErrors).length > 0) {
+      trackFormSubmitError({
+        kind: "validation",
+        formPlacement: placement,
+        source: effectiveSource,
+      });
+
       setFieldErrors(nextErrors);
       setStatus("error");
       setMessage("Пожалуйста, заполните имя и телефон корректно.");
@@ -145,6 +160,12 @@ const getPlacement = (formEl: HTMLFormElement): "modal" | "page" => {
 
     const accessKey = process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY;
     if (!accessKey) {
+      trackFormSubmitError({
+        kind: "config",
+        formPlacement: placement,
+        source: effectiveSource,
+      });
+
       setStatus("error");
       setMessage("На клиенте не настроен NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY.");
       return;
@@ -152,15 +173,12 @@ const getPlacement = (formEl: HTMLFormElement): "modal" | "page" => {
 
     // ===== Lighting numbers =====
     const lightingMode: string = String(snapshot?.lighting?.mode ?? "none");
-    const lightingKitDisplay: string = String(
-      snapshot?.lighting ? getKitDisplayName(snapshot.lighting) : ""
-    );
-
+    const lightingKitDisplay: string = String(snapshot?.lighting ? getKitDisplayName(snapshot.lighting) : "");
     const lightingItemsCount = Number(snapshot?.lighting?.items?.length ?? 0);
     const lightingTotalRub = toNumber(snapshot?.lighting?.totalRub ?? 0);
 
-    // ВАЖНО: если discountedTotalRub уже сохранён в snapshot — используем его.
-    // Иначе считаем “потенциальную скидку” (это число полезно для менеджера).
+    // если discountedTotalRub уже сохранён в snapshot — используем его.
+    // иначе считаем “потенциальную скидку” (для менеджера).
     const lightingDiscountedRub = toNumber(
       snapshot?.lighting?.discountedTotalRub ?? applyLightingDiscount(lightingTotalRub)
     );
@@ -195,12 +213,14 @@ const getPlacement = (formEl: HTMLFormElement): "modal" | "page" => {
     const trackInstallMeters = toNumber(snapshot?.trackLength ?? 0);
     const trackInstallTotalRub = toNumber(snapshot?.trackTotal ?? 0);
 
-    // ===== Order estimate (not authoritative) =====
-    // Это удобная оценка для менеджера: потолок (с досчётом, если он был) + свет (со скидкой как в snapshot)
+    // ===== Order estimate =====
     const effectiveCeilingRub =
       ceilingWorksGrandTotalRub > 0 ? ceilingWorksGrandTotalRub : ceilingWorksTotalRub;
 
-    const orderEstimatedGrandRub = Math.max(0, effectiveCeilingRub) + Math.max(0, lightingDiscountedRub);
+    const orderEstimatedGrandRub =
+      Math.max(0, effectiveCeilingRub) + Math.max(0, lightingDiscountedRub);
+
+    // ===== attribution from sessionStorage =====
     const attribution: Record<string, string> = {};
     if (typeof window !== "undefined") {
       const keys = [
@@ -214,7 +234,6 @@ const getPlacement = (formEl: HTMLFormElement): "modal" | "page" => {
         "_openstat",
         "fbclid",
       ];
-
       for (const key of keys) {
         const v = sessionStorage.getItem(key);
         if (v && v.trim()) attribution[key] = v.trim();
@@ -226,11 +245,14 @@ const getPlacement = (formEl: HTMLFormElement): "modal" | "page" => {
       const firstReferrer = sessionStorage.getItem("first_referrer");
       if (firstReferrer && firstReferrer.trim()) attribution["first_referrer"] = firstReferrer.trim();
     }
+
     const formData = new FormData();
-        const appendIfPresent = (key: string, value: string | undefined) => {
+
+    const appendIfPresent = (key: string, value: string | undefined) => {
       const v = String(value ?? "").trim();
       if (v) formData.append(key, v);
     };
+
     formData.append("access_key", String(accessKey));
     formData.append("subject", "Новая заявка с сайта ПОТОЛКОВО");
     formData.append("from_name", "ПОТОЛКОВО Сайт");
@@ -247,16 +269,12 @@ const getPlacement = (formEl: HTMLFormElement): "modal" | "page" => {
     formData.append("botcheck", "");
     formData.append("company", "");
 
-    // ===== Extra fields (structured) =====
-
-    // meta
+    // extra fields
     formData.append("calculator_source", effectiveSource);
-        for (const [key, value] of Object.entries(attribution)) {
-      appendIfPresent(key, value);
-    }
+    for (const [key, value] of Object.entries(attribution)) appendIfPresent(key, value);
+
     formData.append("calculator_has_interacted", String(Boolean(hasInteracted)));
 
-    // lighting
     formData.append("lighting_mode", lightingMode);
     formData.append("lighting_kit", lightingKitDisplay);
     formData.append("lighting_items_count", String(lightingItemsCount));
@@ -265,7 +283,6 @@ const getPlacement = (formEl: HTMLFormElement): "modal" | "page" => {
     formData.append("lighting_discount_applied", String(discountApplied));
     formData.append("lighting_discount_percent_applied", String(discountPercentApplied));
 
-    // ceiling / works
     formData.append("ceiling_area_m2", String(area));
     formData.append("ceiling_type_label", ceilingTypeLabel);
 
@@ -273,7 +290,6 @@ const getPlacement = (formEl: HTMLFormElement): "modal" | "page" => {
     formData.append("ceiling_works_grand_total_rub", String(ceilingWorksGrandTotalRub));
     formData.append("ceiling_extra_install_rub", String(ceilingExtraInstallRub));
 
-    // step0 work breakdown (important for монтаж/люстры)
     formData.append("install_chandeliers_enabled", String(chandeliersEnabled));
     formData.append("install_chandeliers_count", String(chandeliersCount));
     formData.append("install_chandeliers_total_rub", String(chandeliersTotalRub));
@@ -286,10 +302,9 @@ const getPlacement = (formEl: HTMLFormElement): "modal" | "page" => {
     formData.append("install_track_meters", String(trackInstallMeters));
     formData.append("install_track_total_rub", String(trackInstallTotalRub));
 
-    // order estimate
     formData.append("order_estimated_grand_total_rub", String(orderEstimatedGrandRub));
 
-    // legacy compatibility
+    // legacy
     formData.append("lighting_total", String(lightingTotalRub));
     formData.append("lighting_discounted_total", String(lightingDiscountedRub));
 
@@ -304,6 +319,12 @@ const getPlacement = (formEl: HTMLFormElement): "modal" | "page" => {
       const result = await response.json().catch(() => null);
 
       if (!response.ok || !result?.success) {
+        trackFormSubmitError({
+          kind: "provider",
+          formPlacement: placement,
+          source: effectiveSource,
+        });
+
         const errorText: string = String(
           result?.message ?? result?.error ?? `HTTP ${response.status}`
         );
@@ -322,6 +343,12 @@ const getPlacement = (formEl: HTMLFormElement): "modal" | "page" => {
       setAddress("");
       setFieldErrors({});
     } catch {
+      trackFormSubmitError({
+        kind: "network",
+        formPlacement: placement,
+        source: effectiveSource,
+      });
+
       setStatus("error");
       setMessage(COPY.errorMessage);
     } finally {
@@ -331,16 +358,16 @@ const getPlacement = (formEl: HTMLFormElement): "modal" | "page" => {
 
   return (
     <form
-  onSubmit={handleSubmit}
-  onFocusCapture={(e) => {
-    if (openedOnceRef.current) return;
-    openedOnceRef.current = true;
+      ref={formRef}
+      onSubmit={handleSubmit}
+      onFocusCapture={() => {
+        if (openedOnceRef.current) return;
+        openedOnceRef.current = true;
 
-    const placement = getPlacement(e.currentTarget);
-    trackFormOpened({ formPlacement: placement, source: effectiveSource });
-  }}
-  className="space-y-4"
->
+        trackFormOpened({ formPlacement: getPlacement(), source: effectiveSource });
+      }}
+      className="space-y-4"
+    >
       {status === "success" ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
           <p className="font-semibold">{COPY.successTitle}</p>
@@ -393,31 +420,27 @@ const getPlacement = (formEl: HTMLFormElement): "modal" | "page" => {
             onChange={(e) => setName(e.target.value)}
             placeholder="Имя"
           />
-          {fieldErrors.name ? (
-            <p className="mt-1 text-xs text-rose-600">{fieldErrors.name}</p>
-          ) : null}
+          {fieldErrors.name ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.name}</p> : null}
         </div>
 
         <div>
           <Input
-            onBlur={() => {
-  if (phoneValidatedOnceRef.current) return;
-  const normalized = normalizePhone(phone);
-  if (!normalized || !isValidPhone(normalized)) return;
-
-  phoneValidatedOnceRef.current = true;
-  const placement = getPlacement(document.querySelector("form") as HTMLFormElement);
-  trackPhoneValidated({ formPlacement: placement, source: effectiveSource });
-}}
             label="Телефон"
             name="phone"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
+            onBlur={() => {
+              if (phoneValidatedOnceRef.current) return;
+
+              const normalized = normalizePhone(phone);
+              if (!normalized || !isValidPhone(normalized)) return;
+
+              phoneValidatedOnceRef.current = true;
+              trackPhoneValidated({ formPlacement: getPlacement(), source: effectiveSource });
+            }}
             placeholder="Телефон (например, +7905…)"
           />
-          {fieldErrors.phone ? (
-            <p className="mt-1 text-xs text-rose-600">{fieldErrors.phone}</p>
-          ) : null}
+          {fieldErrors.phone ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.phone}</p> : null}
         </div>
       </div>
 
@@ -429,12 +452,8 @@ const getPlacement = (formEl: HTMLFormElement): "modal" | "page" => {
           onChange={(e) => setAddress(e.target.value)}
           placeholder="Район / ближайшее метро (необязательно)"
         />
-        <p className="mt-1 whitespace-pre-line text-xs text-slate-500">
-          {COPY.addressFieldHint}
-        </p>
-        {fieldErrors.address ? (
-          <p className="mt-1 text-xs text-rose-600">{fieldErrors.address}</p>
-        ) : null}
+        <p className="mt-1 whitespace-pre-line text-xs text-slate-500">{COPY.addressFieldHint}</p>
+        {fieldErrors.address ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.address}</p> : null}
       </div>
 
       <Button type="submit" className="w-full" disabled={isPending}>
