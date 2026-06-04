@@ -137,6 +137,8 @@ setSnapshot((prev) => {
 
   const goToStep = useCallback(
     (step: WizardStep) => {
+      const effectiveSource = String(options?.source ?? "unknown");
+trackWizardStepView(step as 0 | 1 | 2, effectiveSource);
       // подтверждение Step0 фиксируем на переходе 0 -> 1
       if (currentStep === 0 && step === 1) {
         if (isCeilingSnapshotReady(snapshot)) {
@@ -144,8 +146,7 @@ setSnapshot((prev) => {
 
           // скидка становится “разрешённой”
           setLightingDiscountEligible(true);
-const effectiveSource = String(options?.source ?? "unknown");
-trackWizardStepView(step as 0 | 1 | 2, effectiveSource);
+
           // это важно для формы: если человек прошёл Step0 и нажал Далее — это взаимодействие
           setHasInteracted(true);
 
