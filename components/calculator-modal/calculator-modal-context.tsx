@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
 import type {
   CalculatorModalContextValue,
@@ -29,6 +36,7 @@ function isCeilingSnapshotReady(snapshot: any): boolean {
 
 function calcLightingRegularTotal(draft: LightingSnapshot | null): number {
   if (!draft) return 0;
+
   if (Number.isFinite(draft.totalRub)) return toNumber(draft.totalRub);
 
   const items = draft.mode === "catalog" ? (draft.items ?? []) : [];
@@ -47,7 +55,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   const [step0SessionInteracted, setStep0SessionInteracted] = useState(false);
   const [step0AreaConfirmed, setStep0AreaConfirmed] = useState(false);
 
-  // скидка: “разрешена” после подтверждения потолка 0->1
+  // скидка: “разрешена” после подтверждения потолка 0->1 (или при lighting-first входе со светом)
   const [lightingDiscountEligible, setLightingDiscountEligible] = useState(false);
 
   const [step1CatalogView, setStep1CatalogView] = useState<"selected" | "browse" | null>(null);
@@ -72,8 +80,10 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       const resolvedOpts: OpenCalculatorOptions = {
         ...incoming,
         initialStep: incoming.initialStep ?? (isLightingFirst ? 1 : 0),
-        initialLightingTab: incoming.initialLightingTab ?? (isLightingFirst ? "catalog" : undefined),
-        initialLightingView: incoming.initialLightingView ?? (isLightingFirst ? "browse" : undefined),
+        initialLightingTab:
+          incoming.initialLightingTab ?? (isLightingFirst ? "catalog" : undefined),
+        initialLightingView:
+          incoming.initialLightingView ?? (isLightingFirst ? "browse" : undefined),
         preset:
           incoming.preset ??
           (isLightingFirst
@@ -90,26 +100,38 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       if (resolvedOpts.initialLighting) setLightingDraftState(resolvedOpts.initialLighting);
       else setLightingDraftState(null);
 
-      const source = String(resolvedOpts.source ?? "");
-      if (source.length > 0) {
-        setSnapshot((prev) => (prev ? { ...prev, leadSource: source } : prev));
-      }
-
       // reset flags on each open
       setStep0SessionInteracted(false);
       setStep0AreaConfirmed(false);
-      setLightingDiscountEligible(false);
+
+      // ===== FIX C1: lighting-first discount eligibility =====
+      // Если человек пришёл “из света” и уже есть выбранные товары — считаем это commitment
+      // и не ломаем обещанную скидку внутри модалки.
+      const incomingHasLightingItems =
+        resolvedOpts.initialLighting?.mode === "catalog" &&
+        (resolvedOpts.initialLighting.items?.length ?? 0) > 0;
+
+      const enableLightingDiscountNow = Boolean(isLightingFirst && incomingHasLightingItems);
+
+      setLightingDiscountEligible(enableLightingDiscountNow);
 
       setStep1CatalogView(resolvedOpts.initialLightingView ?? null);
 
-      // сбрасываем поля аналитики скидки на старом snapshot (если он есть)
+      // сохраняем source в snapshot (если snapshot уже существует)
+      const source = String(resolvedOpts.source ?? "");
+
+      // сбрасываем/ставим поля скидки на snapshot (если он есть)
       setSnapshot((prev) => {
         if (!prev) return prev;
-        return {
-          ...prev,
-          lightingDiscountApplied: false,
-          lightingDiscountPercentApplied: 0,
-        };
+
+        const next: any = { ...prev };
+
+        if (source.length > 0) next.leadSource = source;
+
+        next.lightingDiscountApplied = enableLightingDiscountNow;
+        next.lightingDiscountPercentApplied = enableLightingDiscountNow ? 15 : 0;
+
+        return next;
       });
 
       setIsOpen(true);
@@ -151,13 +173,20 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
     [currentStep, setHasInteracted, setSnapshot, snapshot]
   );
 
-  const ceilingTotal = toNumber(snapshot?.total);
+  const ceilingTotal = toNumber((snapshot as any)?.total);
 
-  const lightingRegularTotal = useMemo(() => calcLightingRegularTotal(lightingDraft), [lightingDraft]);
+  const lightingRegularTotal = useMemo(
+    () => calcLightingRegularTotal(lightingDraft),
+    [lightingDraft]
+  );
 
   const lightingDiscountedTotal = useMemo(() => {
     if (!lightingDraft) return 0;
-    if (Number.isFinite(lightingDraft.discountedTotalRub)) return toNumber(lightingDraft.discountedTotalRub);
+
+    if (Number.isFinite(lightingDraft.discountedTotalRub)) {
+      return toNumber(lightingDraft.discountedTotalRub);
+    }
+
     if (lightingRegularTotal <= 0) return 0;
     return applyLightingDiscount(lightingRegularTotal);
   }, [lightingDraft, lightingRegularTotal]);
@@ -175,7 +204,9 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   const ceilingEffectiveTotal = useMemo(() => {
     if (!showCeilingInUi) return 0;
 
-    const total = toNumber(snapshot?.total);
+    const total = toNumber((snapshot as any)?.total);
+
+    // строго: grandTotal (с досчётом монтажа) учитываем только если Step0 подтверждён
     if (!step0AreaConfirmed) return total;
 
     const grand = toNumber((snapshot as any)?.grandTotal);
@@ -188,38 +219,39 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
     return ceilingEffectiveTotal + lightingEffectiveTotal;
   }, [ceilingEffectiveTotal, lightingEffectiveTotal]);
 
-  const value = useMemo<CalculatorModalContextValue>(
-    () => ({
-      isOpen,
-      currentStep,
-      options,
-      openCalculator,
-      closeCalculator,
-      goToStep,
+  const value = useMemo(
+    () =>
+      ({
+        isOpen,
+        currentStep,
+        options,
+        openCalculator,
+        closeCalculator,
+        goToStep,
 
-      lightingDraft,
-      setLightingDraft,
+        lightingDraft,
+        setLightingDraft,
 
-      ceilingTotal,
+        ceilingTotal,
 
-      // legacy поля (оставляем совместимость)
-      lightingDiscountedTotal,
+        // legacy поле (оставляем совместимость)
+        lightingDiscountedTotal,
 
-      // новые поля (используются в UI)
-      lightingRegularTotal,
-      lightingEffectiveTotal,
-      lightingDiscountEligible,
-      showCeilingInUi,
+        // новые поля (используются в UI)
+        lightingRegularTotal,
+        lightingEffectiveTotal,
+        lightingDiscountEligible,
 
-      grandTotal,
+        showCeilingInUi,
+        grandTotal,
 
-      step0SessionInteracted,
-      markStep0SessionInteracted,
-      step0AreaConfirmed,
+        step0SessionInteracted,
+        markStep0SessionInteracted,
+        step0AreaConfirmed,
 
-      step1CatalogView,
-      setStep1CatalogView,
-    }) as any,
+        step1CatalogView,
+        setStep1CatalogView,
+      }) as CalculatorModalContextValue,
     [
       isOpen,
       currentStep,
@@ -244,7 +276,11 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
     ]
   );
 
-  return <CalculatorModalContext.Provider value={value}>{children}</CalculatorModalContext.Provider>;
+  return (
+    <CalculatorModalContext.Provider value={value}>
+      {children}
+    </CalculatorModalContext.Provider>
+  );
 }
 
 export function useCalculatorModal(): CalculatorModalContextValue {
