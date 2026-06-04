@@ -5,6 +5,7 @@ import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-type
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 import { REMOVED_COLIBRI_VENDOR_CODES } from "@/lib/catalog-ui-config";
+import { trackKitClicked } from "@/lib/analytics";
 
 type LightKitCtaButtonProps = {
   title: string;
@@ -34,13 +35,18 @@ export function LightKitCtaButton({ title, items, source }: LightKitCtaButtonPro
 
   const handleClick = () => {
     const filteredItems = items.filter((item) => !shouldDropRemovedItem(item));
-
-    if (filteredItems.length === 0) {
-      return;
-    }
+    if (filteredItems.length === 0) return;
 
     const totalRub = filteredItems.reduce((sum, i) => sum + i.qty * i.priceRub, 0);
     const discountedTotalRub = applyLightingDiscount(totalRub);
+
+    // YM: kit clicked
+    trackKitClicked({
+      kitBaseName: title,
+      itemsCount: filteredItems.length,
+      totalRub,
+      source: String(source ?? "track-sale-ready-set"),
+    });
 
     const lighting: LightingSnapshot = {
       mode: "catalog",
