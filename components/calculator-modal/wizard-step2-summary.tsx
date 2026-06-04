@@ -13,8 +13,7 @@ import { ActionForm } from "@/components/home/action-form";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 
-import { detectSocket, getRequiredLampSocket } from "@/lib/feed2-products";
-import type { LampSocket } from "@/lib/catalog-ui-config";
+import { getKitDisplayName } from "@/lib/calculator-modal-types";
 
 type CatalogLightingItem = {
   sku: string;
@@ -53,6 +52,7 @@ function toParams(input: unknown): FeedCatalogParam[] {
 
 function normalizeProduct(raw: unknown): FeedCatalogProduct | null {
   const p = raw as Record<string, unknown>;
+
   const vendorCode = toText((p as any).vendorCode);
   const offerId = toText((p as any).offerId);
   const name = toText((p as any).name);
@@ -97,39 +97,29 @@ function isPanelProduct(product: FeedCatalogProduct): boolean {
   );
 }
 
-function resolveProductFromSku(
-  skuRaw: string,
-  byId: Map<string, FeedCatalogProduct>,
-  byVendor: Map<string, string>
-): FeedCatalogProduct | null {
-  const sku = toText(skuRaw);
-  if (!sku) return null;
-
-  const direct = byId.get(sku);
-  if (direct) return direct;
-
-  const resolvedId = toText(byVendor.get(sku) ?? "");
-  if (!resolvedId) return null;
-
-  return byId.get(resolvedId) ?? null;
-}
-
 function sumTrackMetersFromLightingItems(
   items: Array<{ sku: string; qty: number }>,
   byId: Map<string, FeedCatalogProduct>,
   byVendor: Map<string, string>
 ): number {
   let meters = 0;
+
   for (const item of items) {
+    const sku = toText(item.sku);
     const qty = toNumber(item.qty);
-    if (qty <= 0) continue;
 
-    const product = resolveProductFromSku(item.sku, byId, byVendor);
+    const byProduct = byId.get(sku);
+    const byVendorId = byVendor.get(sku);
+    const resolvedId = byProduct ? sku : toText(byVendorId ?? "");
+    if (!resolvedId) continue;
+
+    const product = byId.get(resolvedId);
     if (!product) continue;
-    if (product.kind !== "TRACK_PROFILE") continue;
 
+    if (product.kind !== "TRACK_PROFILE") continue;
     meters += calcTrackProfileMeters(product, qty);
   }
+
   return meters;
 }
 
@@ -139,15 +129,22 @@ function sumPointQtyFromLightingItems(
   byVendor: Map<string, string>
 ): number {
   let qtyTotal = 0;
-  for (const item of items) {
-    const qty = toNumber(item.qty);
-    if (qty <= 0) continue;
 
-    const product = resolveProductFromSku(item.sku, byId, byVendor);
+  for (const item of items) {
+    const sku = toText(item.sku);
+    const qty = toNumber(item.qty);
+
+    const byProduct = byId.get(sku);
+    const byVendorId = byVendor.get(sku);
+    const resolvedId = byProduct ? sku : toText(byVendorId ?? "");
+    if (!resolvedId) continue;
+
+    const product = byId.get(resolvedId);
     if (!product) continue;
 
     if (product.kind === "SPOT_FIXTURE" || isPanelProduct(product)) qtyTotal += qty;
   }
+
   return qtyTotal;
 }
 
@@ -189,12 +186,12 @@ export function WizardStep2Summary() {
   const [tab, setTab] = useState<Step3Tab>("summary");
 
   const { snapshot, setSnapshot } = usePriceCalculatorBridge();
-
   const lighting = snapshot?.lighting ?? lightingDraft ?? null;
+
+  const kitDisplayName = useMemo(() => getKitDisplayName(lighting), [lighting]);
 
   const lightingItems: CatalogLightingItem[] = useMemo(() => {
     const items = lighting?.mode === "catalog" ? (lighting.items ?? []) : [];
-    // нормализуем до нужных типов
     return (items as any[]).map((x) => ({
       sku: toText((x as any)?.sku),
       name: toText((x as any)?.name),
@@ -243,45 +240,6 @@ export function WizardStep2Summary() {
     );
   }, [byId, byVendor, lightingItems]);
 
-  // ===== Reminder: lamps 1:1 =====
-  const missingLamps = useMemo(() => {
-    const required: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
-    const current: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
-
-    for (const item of lightingItems) {
-      const qty = toNumber(item.qty);
-      if (qty <= 0) continue;
-
-      const product = resolveProductFromSku(item.sku, byId, byVendor);
-      if (!product) continue;
-
-      // (1) лампы в корзине
-      if (product.kind === "LAMP" && product.available !== false && toNumber(product.priceRub) > 0) {
-        const sock = detectSocket(product);
-        if (sock === "GX53" || sock === "MR16") current[sock] += qty;
-      }
-
-      // (2) светильники, которым нужны лампы
-      const requiredSocket = getRequiredLampSocket(product);
-      if (requiredSocket === "GX53" || requiredSocket === "MR16") {
-        required[requiredSocket] += qty;
-      }
-    }
-
-    const out: Array<{ socket: LampSocket; requiredQty: number; currentQty: number }> = [];
-    (["GX53", "MR16"] as LampSocket[]).forEach((socket) => {
-      const req = toNumber(required[socket]);
-      if (req <= 0) return;
-
-      const cur = toNumber(current[socket]);
-      if (cur >= req) return;
-
-      out.push({ socket, requiredQty: req, currentQty: cur });
-    });
-
-    return out;
-  }, [byId, byVendor, lightingItems]);
-
   const derivedPointFromStep0 = toNumber(snapshot?.derivedInputs?.pointSpotsQty);
   const derivedTrackFromStep0 = toNumber(snapshot?.derivedInputs?.trackLengthMeters);
   const trackMountType = (snapshot?.derivedInputs?.trackMountType ?? "none") as
@@ -311,7 +269,9 @@ export function WizardStep2Summary() {
     desiredSpotInstallQty > 0 ? desiredSpotInstallQty * spotInstallRate : 0;
 
   const extraTrackInstall =
-    desiredTrackInstallMeters > 0 ? Math.max(0, desiredTrackInstallCost - includedTrackInstall) : 0;
+    desiredTrackInstallMeters > 0
+      ? Math.max(0, desiredTrackInstallCost - includedTrackInstall)
+      : 0;
   const extraSpotInstall =
     desiredSpotInstallQty > 0 ? Math.max(0, desiredSpotInstallCost - includedSpotInstall) : 0;
 
@@ -319,6 +279,7 @@ export function WizardStep2Summary() {
 
   useEffect(() => {
     if (!canReconcileInstall) return;
+
     setSnapshot((prev) => {
       if (!prev) return prev;
       const base = toNumber(prev.total);
@@ -385,31 +346,6 @@ export function WizardStep2Summary() {
         </div>
       ) : null}
 
-      {missingLamps.length > 0 ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-          <p className="font-semibold">Напоминание про лампы</p>
-          <p className="mt-2 text-amber-900/90">
-            Вы выбрали светильники, которым нужны лампы (1:1), но лампы пока не добавлены в нужном количестве.
-          </p>
-          <ul className="mt-2 list-disc space-y-1 pl-5">
-            {missingLamps.map((m) => (
-              <li key={m.socket}>
-                Не хватает ламп <span className="font-semibold">{m.socket}</span>: нужно{" "}
-                <span className="font-semibold">{m.requiredQty}</span> шт., в корзине{" "}
-                <span className="font-semibold">{m.currentQty}</span> шт.
-              </li>
-            ))}
-          </ul>
-          <button
-            type="button"
-            onClick={handleEditLighting}
-            className="mt-3 rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-900 hover:bg-amber-100"
-          >
-            Вернуться к свету и добавить лампы →
-          </button>
-        </div>
-      ) : null}
-
       {tab === "summary" ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
           <p className="text-base font-semibold text-slate-950">Итог расчёта</p>
@@ -458,13 +394,7 @@ export function WizardStep2Summary() {
 
           <div className="mt-3 space-y-2">
             <p className="font-semibold text-slate-950">Потолок</p>
-            <p>
-              {showCeilingInUi ? (
-                <>Потолок: {fmt(ceilingTotal)} ₽</>
-              ) : (
-                <>Потолок: — (после шага 1)</>
-              )}
-            </p>
+            <p>{showCeilingInUi ? <>Потолок: {fmt(ceilingTotal)} ₽</> : <>Потолок: — (после шага 1)</>}</p>
 
             {canReconcileInstall && extraInstallTotal > 0 ? (
               <p>Досчёт монтажа: {fmt(extraInstallTotal)} ₽</p>
@@ -477,7 +407,10 @@ export function WizardStep2Summary() {
             </p>
 
             <div className="pt-2">
-              <p className="font-semibold text-slate-950">Освещение (товары)</p>
+              <p className="font-semibold text-slate-950">
+                Освещение (товары){kitDisplayName ? ` — ${kitDisplayName}` : ""}
+              </p>
+
               {lightingItems.length > 0 ? (
                 <ul className="mt-2 list-disc space-y-1 pl-5">
                   {lightingItems.map((item) => (
@@ -511,7 +444,8 @@ export function WizardStep2Summary() {
         </ul>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      {/* ВАЖНО: этот id нужен для scrollToInlineForm() из футера модалки */}
+      <div id="modal-action-form" className="rounded-2xl border border-slate-200 bg-white p-4">
         <p className="text-base font-semibold text-slate-950">Оставить заявку</p>
         <p className="mt-2 text-sm text-slate-600">
           Можно указать район/метро — так быстрее сориентируемся по выезду.
