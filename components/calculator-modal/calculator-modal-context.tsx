@@ -134,10 +134,9 @@ setSnapshot((prev) => {
   const closeCalculator = useCallback(() => {
     setIsOpen(false);
   }, []);
-
-  const goToStep = useCallback(
-    const effectiveSource = String(options?.source ?? "unknown");
+const effectiveSource = String(options?.source ?? "unknown");
 trackWizardStepView(step as 0 | 1 | 2, effectiveSource);
+  const goToStep = useCallback(
     (step: WizardStep) => {
       // подтверждение Step0 фиксируем на переходе 0 -> 1
       if (currentStep === 0 && step === 1) {
