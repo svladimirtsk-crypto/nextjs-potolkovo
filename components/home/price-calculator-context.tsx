@@ -10,7 +10,11 @@ import {
   type SetStateAction,
 } from "react";
 
-import { getKitDisplayName, type DerivedInputs, type LightingSnapshot } from "@/lib/calculator-modal-types";
+import {
+  getKitDisplayName,
+  type DerivedInputs,
+  type LightingSnapshot,
+} from "@/lib/calculator-modal-types";
 
 export type CalculatorLeadSnapshot = {
   area: number;
@@ -40,6 +44,12 @@ export type CalculatorLeadSnapshot = {
   trackRatePerMeter: number | null;
   trackTotal: number;
 
+  // NEW: Установка люстр
+  chandeliersEnabled?: boolean;
+  chandeliersCount?: number | null;
+  chandeliersRatePerUnit?: number;
+  chandeliersTotal?: number;
+
   lightsEnabled: boolean;
   lightsCount: number | null;
   lightsRatePerUnit: number;
@@ -49,12 +59,13 @@ export type CalculatorLeadSnapshot = {
   grandTotal?: number;
 
   derivedInputs: DerivedInputs;
-  lighting?: LightingSnapshot;
 
+  lighting?: LightingSnapshot;
   leadSource?: string;
+
   _reconciled?: boolean;
 
-  // NEW: аналитика по скидке на свет
+  // аналитика по скидке на свет
   lightingDiscountApplied?: boolean;
   lightingDiscountPercentApplied?: number; // например 15
 };
@@ -62,12 +73,13 @@ export type CalculatorLeadSnapshot = {
 type PriceCalculatorContextValue = {
   snapshot: CalculatorLeadSnapshot | null;
   setSnapshot: Dispatch<SetStateAction<CalculatorLeadSnapshot | null>>;
-
   hasInteracted: boolean;
   setHasInteracted: Dispatch<SetStateAction<boolean>>;
 };
 
-const PriceCalculatorContext = createContext<PriceCalculatorContextValue | null>(null);
+const PriceCalculatorContext = createContext<PriceCalculatorContextValue | null>(
+  null
+);
 
 export function PriceCalculatorProvider({ children }: { children: ReactNode }) {
   const [snapshot, setSnapshot] = useState<CalculatorLeadSnapshot | null>(null);
@@ -78,13 +90,19 @@ export function PriceCalculatorProvider({ children }: { children: ReactNode }) {
     [snapshot, hasInteracted]
   );
 
-  return <PriceCalculatorContext.Provider value={value}>{children}</PriceCalculatorContext.Provider>;
+  return (
+    <PriceCalculatorContext.Provider value={value}>
+      {children}
+    </PriceCalculatorContext.Provider>
+  );
 }
 
 export function usePriceCalculatorBridge() {
   const context = useContext(PriceCalculatorContext);
   if (!context) {
-    throw new Error("usePriceCalculatorBridge must be used inside PriceCalculatorProvider.");
+    throw new Error(
+      "usePriceCalculatorBridge must be used inside PriceCalculatorProvider."
+    );
   }
   return context;
 }
@@ -97,7 +115,14 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat("ru-RU").format(Math.round(value));
 }
 
-export function getCalculatorSummaryLines(snapshot: CalculatorLeadSnapshot | null): string[] {
+function toNumber(value: unknown): number {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+export function getCalculatorSummaryLines(
+  snapshot: CalculatorLeadSnapshot | null
+): string[] {
   if (!snapshot) return [];
 
   const lines: string[] = [
@@ -140,7 +165,9 @@ export function getCalculatorSummaryLines(snapshot: CalculatorLeadSnapshot | nul
     snapshot.corniceRatePerMeter !== null
   ) {
     lines.push(
-      `${snapshot.corniceLabel}: ${snapshot.corniceLength} м.п. × ${formatCurrency(snapshot.corniceRatePerMeter)} ₽`
+      `${snapshot.corniceLabel}: ${snapshot.corniceLength} м.п. × ${formatCurrency(
+        snapshot.corniceRatePerMeter
+      )} ₽`
     );
   }
 
@@ -151,28 +178,53 @@ export function getCalculatorSummaryLines(snapshot: CalculatorLeadSnapshot | nul
     snapshot.trackRatePerMeter !== null
   ) {
     lines.push(
-      `${snapshot.trackLabel}: ${snapshot.trackLength} м.п. × ${formatCurrency(snapshot.trackRatePerMeter)} ₽`
+      `${snapshot.trackLabel}: ${snapshot.trackLength} м.п. × ${formatCurrency(
+        snapshot.trackRatePerMeter
+      )} ₽`
+    );
+  }
+
+  const chandeliersEnabled = Boolean(snapshot.chandeliersEnabled);
+  const chandeliersTotal = toNumber(snapshot.chandeliersTotal);
+  const chandeliersCount = snapshot.chandeliersCount ?? null;
+  const chandeliersRate = toNumber(snapshot.chandeliersRatePerUnit);
+
+  if (chandeliersEnabled && chandeliersTotal > 0 && chandeliersCount !== null) {
+    lines.push(
+      `Установка люстр: ${chandeliersCount} шт. × ${formatCurrency(chandeliersRate)} ₽`
     );
   }
 
   if (snapshot.lightsEnabled && snapshot.lightsTotal > 0 && snapshot.lightsCount !== null) {
     lines.push(
-      `Светильники: ${snapshot.lightsCount} шт. × ${formatCurrency(snapshot.lightsRatePerUnit)} ₽`
+      `Светильники: ${snapshot.lightsCount} шт. × ${formatCurrency(
+        snapshot.lightsRatePerUnit
+      )} ₽`
     );
   }
 
-  lines.push(`Потолок (работы): ${formatCurrency(snapshot.total)} ₽`);
+  const baseTotal = toNumber(snapshot.total);
+  lines.push(`Потолок (работы): ${formatCurrency(baseTotal)} ₽`);
+
+  const grand = toNumber(snapshot.grandTotal);
+  if (grand > baseTotal + 0.5) {
+    const extra = Math.max(0, grand - baseTotal);
+    lines.push(`Досчёт монтажа по свету: ${formatCurrency(extra)} ₽`);
+    lines.push(`Потолок (работы + досчёт): ${formatCurrency(grand)} ₽`);
+  }
 
   return lines;
 }
 
-export function getLightingSummaryLines(snapshot: CalculatorLeadSnapshot | null): string[] {
+export function getLightingSummaryLines(
+  snapshot: CalculatorLeadSnapshot | null
+): string[] {
   const lighting = snapshot?.lighting;
   if (!lighting || lighting.mode === "none") return [];
 
   const lines: string[] = [];
 
-  const displayName = lighting.mode === "kit" ? getKitDisplayName(lighting) : null;
+  const displayName = getKitDisplayName(lighting);
   lines.push(displayName ? `Освещение - ${displayName}:` : "Освещение (из каталога):");
 
   for (const item of lighting.items ?? []) {
@@ -184,15 +236,21 @@ export function getLightingSummaryLines(snapshot: CalculatorLeadSnapshot | null)
 
   if (total != null) lines.push(` Оборудование: ${formatCurrency(total)} ₽`);
 
+  const percent = snapshot?.lightingDiscountPercentApplied ?? 15;
   const discountApplied = Boolean(snapshot?.lightingDiscountApplied);
-  const hasRealDiscount =
-    total != null && discounted != null && Math.abs(Number(total) - Number(discounted)) >= 1;
 
-  if (discountApplied || hasRealDiscount) {
+  const hasPotentialDiscount =
+    total != null &&
+    discounted != null &&
+    Math.abs(Number(total) - Number(discounted)) >= 1;
+
+  if (discountApplied) {
     if (discounted != null) {
-      const percent = snapshot?.lightingDiscountPercentApplied ?? 15;
       lines.push(` Со скидкой ${percent}%: ${formatCurrency(discounted)} ₽`);
     }
+  } else if (hasPotentialDiscount) {
+    // важно: не выдаём это как применённую скидку — это “при условии потолка”
+    lines.push(` Если с потолком (−${percent}%): ${formatCurrency(discounted!)} ₽`);
   }
 
   return lines;
