@@ -21,7 +21,8 @@ const COPY = {
   successTitle: "Заявка отправлена",
   errorMessage: "Не удалось отправить заявку.\nПроверьте данные и попробуйте ещё раз.",
   submitButtonLabel: "Записаться на замер",
-  helperText: "Обычно отвечаю быстро. Можно указать район — так проще сориентироваться по выезду.",
+  helperText:
+    "Обычно отвечаю быстро. Можно указать район — так проще сориентироваться по выезду.",
   addressFieldHint: "Необязательно.\nЭто поможет быстрее сориентироваться по выезду.",
 } as const;
 
@@ -51,6 +52,11 @@ function normalizePhone(value: string): string {
 
 function isValidPhone(value: string): boolean {
   return /^\+\d{10,15}$/.test(value);
+}
+
+function toNumber(value: unknown): number {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
 }
 
 function buildLeadMessage(
@@ -134,17 +140,57 @@ export function ActionForm({ source }: ActionFormProps) {
       return;
     }
 
+    // ===== Lighting numbers =====
     const lightingMode: string = String(snapshot?.lighting?.mode ?? "none");
-    const lightingKitDisplay: string = String(snapshot?.lighting ? getKitDisplayName(snapshot.lighting) : "");
-    const lightingItemsCount = Number(snapshot?.lighting?.items?.length ?? 0);
-    const lightingTotalRub = Number(snapshot?.lighting?.totalRub ?? 0);
+    const lightingKitDisplay: string = String(
+      snapshot?.lighting ? getKitDisplayName(snapshot.lighting) : ""
+    );
 
-    const lightingDiscountedRub = Number(
+    const lightingItemsCount = Number(snapshot?.lighting?.items?.length ?? 0);
+    const lightingTotalRub = toNumber(snapshot?.lighting?.totalRub ?? 0);
+
+    // ВАЖНО: если discountedTotalRub уже сохранён в snapshot — используем его.
+    // Иначе считаем “потенциальную скидку” (это число полезно для менеджера).
+    const lightingDiscountedRub = toNumber(
       snapshot?.lighting?.discountedTotalRub ?? applyLightingDiscount(lightingTotalRub)
     );
 
     const discountApplied = Boolean(snapshot?.lightingDiscountApplied);
     const discountPercentApplied = Number(snapshot?.lightingDiscountPercentApplied ?? 0);
+
+    // ===== Ceiling / works numbers (Step0) =====
+    const area = toNumber(snapshot?.area ?? 0);
+    const ceilingTypeLabel = String(snapshot?.ceilingTypeLabel ?? "");
+
+    const ceilingWorksTotalRub = toNumber(snapshot?.total ?? 0);
+    const ceilingWorksGrandTotalRub = toNumber(snapshot?.grandTotal ?? 0);
+
+    const ceilingExtraInstallRub =
+      ceilingWorksGrandTotalRub > ceilingWorksTotalRub + 0.5
+        ? Math.max(0, ceilingWorksGrandTotalRub - ceilingWorksTotalRub)
+        : 0;
+
+    // Люстры (новый шаг Step0)
+    const chandeliersEnabled = Boolean(snapshot?.chandeliersEnabled);
+    const chandeliersCount = toNumber(snapshot?.chandeliersCount ?? 0);
+    const chandeliersTotalRub = toNumber(snapshot?.chandeliersTotal ?? 0);
+
+    // точечные (монтаж из Step0)
+    const spotInstallEnabled = Boolean(snapshot?.lightsEnabled);
+    const spotInstallCount = toNumber(snapshot?.lightsCount ?? 0);
+    const spotInstallTotalRub = toNumber(snapshot?.lightsTotal ?? 0);
+
+    // трек (монтаж из Step0)
+    const trackInstallEnabled = Boolean(snapshot?.trackLabel);
+    const trackInstallMeters = toNumber(snapshot?.trackLength ?? 0);
+    const trackInstallTotalRub = toNumber(snapshot?.trackTotal ?? 0);
+
+    // ===== Order estimate (not authoritative) =====
+    // Это удобная оценка для менеджера: потолок (с досчётом, если он был) + свет (со скидкой как в snapshot)
+    const effectiveCeilingRub =
+      ceilingWorksGrandTotalRub > 0 ? ceilingWorksGrandTotalRub : ceilingWorksTotalRub;
+
+    const orderEstimatedGrandRub = Math.max(0, effectiveCeilingRub) + Math.max(0, lightingDiscountedRub);
 
     const formData = new FormData();
     formData.append("access_key", String(accessKey));
@@ -154,14 +200,22 @@ export function ActionForm({ source }: ActionFormProps) {
     formData.append("phone", normalizedPhone);
     formData.append("address", trimmedAddress);
 
-    formData.append("message", buildLeadMessage(ceilingLines, lightingLines, trimmedAddress, effectiveSource));
+    formData.append(
+      "message",
+      buildLeadMessage(ceilingLines, lightingLines, trimmedAddress, effectiveSource)
+    );
 
     // anti-spam
     formData.append("botcheck", "");
     formData.append("company", "");
 
-    // extra fields
+    // ===== Extra fields (structured) =====
+
+    // meta
     formData.append("calculator_source", effectiveSource);
+    formData.append("calculator_has_interacted", String(Boolean(hasInteracted)));
+
+    // lighting
     formData.append("lighting_mode", lightingMode);
     formData.append("lighting_kit", lightingKitDisplay);
     formData.append("lighting_items_count", String(lightingItemsCount));
@@ -169,6 +223,30 @@ export function ActionForm({ source }: ActionFormProps) {
     formData.append("lighting_discounted_total_rub", String(lightingDiscountedRub));
     formData.append("lighting_discount_applied", String(discountApplied));
     formData.append("lighting_discount_percent_applied", String(discountPercentApplied));
+
+    // ceiling / works
+    formData.append("ceiling_area_m2", String(area));
+    formData.append("ceiling_type_label", ceilingTypeLabel);
+
+    formData.append("ceiling_works_total_rub", String(ceilingWorksTotalRub));
+    formData.append("ceiling_works_grand_total_rub", String(ceilingWorksGrandTotalRub));
+    formData.append("ceiling_extra_install_rub", String(ceilingExtraInstallRub));
+
+    // step0 work breakdown (important for монтаж/люстры)
+    formData.append("install_chandeliers_enabled", String(chandeliersEnabled));
+    formData.append("install_chandeliers_count", String(chandeliersCount));
+    formData.append("install_chandeliers_total_rub", String(chandeliersTotalRub));
+
+    formData.append("install_spots_enabled", String(spotInstallEnabled));
+    formData.append("install_spots_count", String(spotInstallCount));
+    formData.append("install_spots_total_rub", String(spotInstallTotalRub));
+
+    formData.append("install_track_enabled", String(trackInstallEnabled));
+    formData.append("install_track_meters", String(trackInstallMeters));
+    formData.append("install_track_total_rub", String(trackInstallTotalRub));
+
+    // order estimate
+    formData.append("order_estimated_grand_total_rub", String(orderEstimatedGrandRub));
 
     // legacy compatibility
     formData.append("lighting_total", String(lightingTotalRub));
@@ -185,7 +263,9 @@ export function ActionForm({ source }: ActionFormProps) {
       const result = await response.json().catch(() => null);
 
       if (!response.ok || !result?.success) {
-        const errorText: string = String(result?.message ?? result?.error ?? `HTTP ${response.status}`);
+        const errorText: string = String(
+          result?.message ?? result?.error ?? `HTTP ${response.status}`
+        );
         setStatus("error");
         setMessage(`Ошибка отправки в Web3Forms: ${errorText}`);
         return;
@@ -227,7 +307,9 @@ export function ActionForm({ source }: ActionFormProps) {
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
           {ceilingLines.length > 0 ? (
             <>
-              <p className="font-semibold text-slate-950">В заявку попадёт ваш расчёт потолка</p>
+              <p className="font-semibold text-slate-950">
+                В заявку попадёт ваш расчёт потолка
+              </p>
               <ul className="mt-2 list-disc space-y-1 pl-5">
                 {ceilingLines.map((line) => (
                   <li key={line}>{line}</li>
@@ -251,7 +333,6 @@ export function ActionForm({ source }: ActionFormProps) {
         </div>
       )}
 
-      {/* FIX build: Input требует обязательный `label` */}
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <Input
@@ -261,7 +342,9 @@ export function ActionForm({ source }: ActionFormProps) {
             onChange={(e) => setName(e.target.value)}
             placeholder="Имя"
           />
-          {fieldErrors.name ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.name}</p> : null}
+          {fieldErrors.name ? (
+            <p className="mt-1 text-xs text-rose-600">{fieldErrors.name}</p>
+          ) : null}
         </div>
 
         <div>
@@ -272,7 +355,9 @@ export function ActionForm({ source }: ActionFormProps) {
             onChange={(e) => setPhone(e.target.value)}
             placeholder="Телефон (например, +7905…)"
           />
-          {fieldErrors.phone ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.phone}</p> : null}
+          {fieldErrors.phone ? (
+            <p className="mt-1 text-xs text-rose-600">{fieldErrors.phone}</p>
+          ) : null}
         </div>
       </div>
 
@@ -284,8 +369,12 @@ export function ActionForm({ source }: ActionFormProps) {
           onChange={(e) => setAddress(e.target.value)}
           placeholder="Район / ближайшее метро (необязательно)"
         />
-        <p className="mt-1 whitespace-pre-line text-xs text-slate-500">{COPY.addressFieldHint}</p>
-        {fieldErrors.address ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.address}</p> : null}
+        <p className="mt-1 whitespace-pre-line text-xs text-slate-500">
+          {COPY.addressFieldHint}
+        </p>
+        {fieldErrors.address ? (
+          <p className="mt-1 text-xs text-rose-600">{fieldErrors.address}</p>
+        ) : null}
       </div>
 
       <Button type="submit" className="w-full" disabled={isPending}>
