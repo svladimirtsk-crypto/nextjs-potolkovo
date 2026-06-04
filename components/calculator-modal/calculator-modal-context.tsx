@@ -100,40 +100,29 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       if (resolvedOpts.initialLighting) setLightingDraftState(resolvedOpts.initialLighting);
       else setLightingDraftState(null);
 
-      // reset flags on each open
-      setStep0SessionInteracted(false);
-      setStep0AreaConfirmed(false);
+     // reset flags on each open
+setStep0SessionInteracted(false);
+setStep0AreaConfirmed(false);
 
-      // ===== FIX C1: lighting-first discount eligibility =====
-      // Если человек пришёл “из света” и уже есть выбранные товары — считаем это commitment
-      // и не ломаем обещанную скидку внутри модалки.
-      const incomingHasLightingItems =
-        resolvedOpts.initialLighting?.mode === "catalog" &&
-        (resolvedOpts.initialLighting.items?.length ?? 0) > 0;
+const incomingHasLightingItems =
+  resolvedOpts.initialLighting?.mode === "catalog" &&
+  (resolvedOpts.initialLighting.items?.length ?? 0) > 0;
 
-      const enableLightingDiscountNow = Boolean(isLightingFirst && incomingHasLightingItems);
+// FIX C1: в lighting-first со светом сразу считаем скидку доступной
+const enableDiscountNow = Boolean(isLightingFirst && incomingHasLightingItems);
+setLightingDiscountEligible(enableDiscountNow);
 
-      setLightingDiscountEligible(enableLightingDiscountNow);
+setStep1CatalogView(resolvedOpts.initialLightingView ?? null);
 
-      setStep1CatalogView(resolvedOpts.initialLightingView ?? null);
-
-      // сохраняем source в snapshot (если snapshot уже существует)
-      const source = String(resolvedOpts.source ?? "");
-
-      // сбрасываем/ставим поля скидки на snapshot (если он есть)
-      setSnapshot((prev) => {
-        if (!prev) return prev;
-
-        const next: any = { ...prev };
-
-        if (source.length > 0) next.leadSource = source;
-
-        next.lightingDiscountApplied = enableLightingDiscountNow;
-        next.lightingDiscountPercentApplied = enableLightingDiscountNow ? 15 : 0;
-
-        return next;
-      });
-
+// скидка: сбрасываем/ставим на snapshot (если он есть)
+setSnapshot((prev) => {
+  if (!prev) return prev;
+  return {
+    ...prev,
+    lightingDiscountApplied: enableDiscountNow,
+    lightingDiscountPercentApplied: enableDiscountNow ? 15 : 0,
+  };
+});
       setIsOpen(true);
     },
     [setSnapshot]
