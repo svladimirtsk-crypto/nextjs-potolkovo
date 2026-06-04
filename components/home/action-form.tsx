@@ -191,8 +191,36 @@ export function ActionForm({ source }: ActionFormProps) {
       ceilingWorksGrandTotalRub > 0 ? ceilingWorksGrandTotalRub : ceilingWorksTotalRub;
 
     const orderEstimatedGrandRub = Math.max(0, effectiveCeilingRub) + Math.max(0, lightingDiscountedRub);
+    const attribution: Record<string, string> = {};
+    if (typeof window !== "undefined") {
+      const keys = [
+        "utm_source",
+        "utm_medium",
+        "utm_campaign",
+        "utm_content",
+        "utm_term",
+        "yclid",
+        "gclid",
+        "_openstat",
+        "fbclid",
+      ];
 
+      for (const key of keys) {
+        const v = sessionStorage.getItem(key);
+        if (v && v.trim()) attribution[key] = v.trim();
+      }
+
+      const firstLanding = sessionStorage.getItem("first_landing");
+      if (firstLanding && firstLanding.trim()) attribution["first_landing"] = firstLanding.trim();
+
+      const firstReferrer = sessionStorage.getItem("first_referrer");
+      if (firstReferrer && firstReferrer.trim()) attribution["first_referrer"] = firstReferrer.trim();
+    }
     const formData = new FormData();
+        const appendIfPresent = (key: string, value: string | undefined) => {
+      const v = String(value ?? "").trim();
+      if (v) formData.append(key, v);
+    };
     formData.append("access_key", String(accessKey));
     formData.append("subject", "Новая заявка с сайта ПОТОЛКОВО");
     formData.append("from_name", "ПОТОЛКОВО Сайт");
@@ -213,6 +241,9 @@ export function ActionForm({ source }: ActionFormProps) {
 
     // meta
     formData.append("calculator_source", effectiveSource);
+        for (const [key, value] of Object.entries(attribution)) {
+      appendIfPresent(key, value);
+    }
     formData.append("calculator_has_interacted", String(Boolean(hasInteracted)));
 
     // lighting
