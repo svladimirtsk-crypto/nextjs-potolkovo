@@ -35,7 +35,10 @@ import {
   ART_TRACK_PROFILE_VENDOR_WHITELIST,
   applyVendorOverrides,
 } from "@/lib/vendor-code-overrides";
-import { calcTrackProfileMeters, inferPieceLengthMeters } from "@/lib/product-length-meters";
+import {
+  calcTrackProfileMeters,
+  inferPieceLengthMeters,
+} from "@/lib/product-length-meters";
 
 import { ProductImage } from "@/components/feed2/ProductImage";
 import { useCalculatorModal } from "./calculator-modal-context";
@@ -56,7 +59,9 @@ function fmt(value: number): string {
   return new Intl.NumberFormat("ru-RU").format(Math.round(value));
 }
 function fmtMeters(value: number): string {
-  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 }).format(value);
+  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 }).format(
+    value
+  );
 }
 function clamp01(value: number): number {
   if (!Number.isFinite(value)) return 0;
@@ -88,7 +93,9 @@ function normalizeProduct(raw: unknown): FeedCatalogProduct | null {
   const productId = productIdRaw || `feed2-${vendorCode || offerId || name}`;
 
   const images = Array.isArray((p as any).images)
-    ? ((p as any).images as unknown[]).map((item) => toText(item)).filter(Boolean)
+    ? ((p as any).images as unknown[])
+        .map((item) => toText(item))
+        .filter(Boolean)
     : [];
 
   return {
@@ -120,9 +127,13 @@ function normalizeQty(nextQtyRaw: number, unit: "pcs" | "m"): number {
 }
 
 function isMountsOrGrilles(product: FeedCatalogProduct): boolean {
-  const text = `${toText(product.name)} ${toText(product.vendorCode)} ${toText(product.categoryPath)}`.toLowerCase();
+  const text = `${toText(product.name)} ${toText(product.vendorCode)} ${toText(
+    product.categoryPath
+  )}`.toLowerCase();
   if (product.kind === "CEILING_COMPONENT") return true;
-  return text.includes("заклад") || text.includes("решетк") || text.includes("решётк");
+  return (
+    text.includes("заклад") || text.includes("решетк") || text.includes("решётк")
+  );
 }
 
 function isPanelProduct(product: FeedCatalogProduct): boolean {
@@ -158,12 +169,18 @@ function matchesPointSubtype(product: FeedCatalogProduct, subtype: PointSubtypeI
 }
 
 function isLamp(product: FeedCatalogProduct): boolean {
-  return product.kind === "LAMP" && toNumber(product.priceRub) > 0 && product.available !== false;
+  return (
+    product.kind === "LAMP" &&
+    toNumber(product.priceRub) > 0 &&
+    product.available !== false
+  );
 }
 
 function pickDisplayAttributes(product: FeedCatalogProduct): { label: string; value: string }[] {
   const attrs = product.keyAttributes?.length ? product.keyAttributes : product.params;
-  return (attrs ?? []).slice(0, 4).map((attr) => ({ label: toText(attr.label), value: toText(attr.value) }));
+  return (attrs ?? [])
+    .slice(0, 4)
+    .map((attr) => ({ label: toText(attr.label), value: toText(attr.value) }));
 }
 
 function TabButton({
@@ -181,7 +198,9 @@ function TabButton({
       onClick={onClick}
       className={[
         "rounded-xl px-3 py-2 text-sm font-medium transition-colors",
-        active ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200",
+        active
+          ? "bg-slate-950 text-white"
+          : "bg-slate-100 text-slate-700 hover:bg-slate-200",
       ].join(" ")}
     >
       {children}
@@ -189,7 +208,15 @@ function TabButton({
   );
 }
 
-function ProductQtyControls({ qty, onDec, onInc }: { qty: number; onDec: () => void; onInc: () => void }) {
+function ProductQtyControls({
+  qty,
+  onDec,
+  onInc,
+}: {
+  qty: number;
+  onDec: () => void;
+  onInc: () => void;
+}) {
   return (
     <div className="flex items-center gap-2">
       <button
@@ -201,7 +228,9 @@ function ProductQtyControls({ qty, onDec, onInc }: { qty: number; onDec: () => v
         −
       </button>
 
-      <div className="min-w-[3.5rem] text-center text-sm font-semibold text-slate-950">{qty}</div>
+      <div className="min-w-[3.5rem] text-center text-sm font-semibold text-slate-950">
+        {qty}
+      </div>
 
       <button
         type="button"
@@ -236,26 +265,35 @@ function ProductCard({
         <ProductImage src={toText(product.coverImage)} alt={toText(product.name)} />
 
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-slate-950 break-words">{toText(product.name)}</p>
+          <p className="break-words text-sm font-semibold text-slate-950">
+            {toText(product.name)}
+          </p>
 
           {toText(product.vendorCode) ? (
-            <p className="mt-1 text-xs text-slate-500 break-words">Артикул: {toText(product.vendorCode)}</p>
+            <p className="mt-1 break-words text-xs text-slate-500">
+              Артикул: {toText(product.vendorCode)}
+            </p>
           ) : null}
 
           {pickDisplayAttributes(product).length > 0 ? (
-            <p className="mt-2 text-xs text-slate-600 break-words">
-              {pickDisplayAttributes(product).map((attr) => `${attr.label}: ${attr.value}`).join(" • ")}
+            <p className="mt-2 break-words text-xs text-slate-600">
+              {pickDisplayAttributes(product)
+                .map((attr) => `${attr.label}: ${attr.value}`)
+                .join(" • ")}
             </p>
           ) : null}
 
           <div className="mt-3 text-xs text-slate-700">
             <p>
-              Цена: <span className="font-semibold text-slate-900">{fmt(regular)} ₽</span>
+              Цена:{" "}
+              <span className="font-semibold text-slate-900">{fmt(regular)} ₽</span>
             </p>
             <p className="text-emerald-700">
               Со скидкой: <span className="font-semibold">{fmt(discounted)} ₽</span>
             </p>
-            {benefit > 0 ? <p className="text-slate-500">Выгода: {fmt(benefit)} ₽</p> : null}
+            {benefit > 0 ? (
+              <p className="text-slate-500">Выгода: {fmt(benefit)} ₽</p>
+            ) : null}
           </div>
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -327,7 +365,9 @@ function ProgressRow({
             />
           </div>
 
-          <p className="mt-2 text-xs text-slate-500">{done ? "Готово по расчёту." : "Можно продолжать — или добрать."}</p>
+          <p className="mt-2 text-xs text-slate-500">
+            {done ? "Готово по расчёту." : "Можно продолжать — или добрать."}
+          </p>
         </div>
       ) : null}
     </div>
@@ -512,13 +552,18 @@ export function WizardStep1Lighting() {
   }, [cartEntries]);
 
   // targets показываем только если потолок “разрешён к показу” (чтобы не давить в lighting-first)
-  const requiredTrackMeters = showCeilingInUi ? toNumber(snapshot?.derivedInputs?.trackLengthMeters) : 0;
-  const requiredPointQty = showCeilingInUi ? toNumber(snapshot?.derivedInputs?.pointSpotsQty) : 0;
+  const requiredTrackMeters = showCeilingInUi
+    ? toNumber(snapshot?.derivedInputs?.trackLengthMeters)
+    : 0;
+  const requiredPointQty = showCeilingInUi
+    ? toNumber(snapshot?.derivedInputs?.pointSpotsQty)
+    : 0;
 
   const progressHasTargets = requiredTrackMeters > 0 || requiredPointQty > 0;
 
   const EPS_METERS = 0.05;
-  const trackDone = requiredTrackMeters > 0 ? selectedTrackMeters + EPS_METERS >= requiredTrackMeters : true;
+  const trackDone =
+    requiredTrackMeters > 0 ? selectedTrackMeters + EPS_METERS >= requiredTrackMeters : true;
   const pointsDone = requiredPointQty > 0 ? selectedPointQty >= requiredPointQty : true;
   const progressDone = progressHasTargets ? trackDone && pointsDone : false;
 
@@ -538,13 +583,16 @@ export function WizardStep1Lighting() {
   }, [cartEntries]);
 
   const selectedTotals = useMemo(() => {
-    const regular = selectedViewItems.reduce((sum, x) => sum + x.item.qty * x.item.priceRub, 0);
+    const regular = selectedViewItems.reduce(
+      (sum, x) => sum + x.item.qty * x.item.priceRub,
+      0
+    );
     const discounted = applyLightingDiscount(regular);
     const benefit = Math.max(0, regular - discounted);
     return { regular, discounted, benefit };
   }, [selectedViewItems]);
 
-  // ===== dependencies =====
+  // ===== dependencies (закладные/лампы/PSU) =====
   const mountRequiredByVendor = useMemo(() => {
     const required: Record<string, number> = {};
     for (const entry of cartEntries) {
@@ -558,7 +606,8 @@ export function WizardStep1Lighting() {
 
   const lampOptionsBySocket = useMemo(() => {
     const lamps = products.filter((product) => isLamp(product));
-    const byPriceAsc = (a: FeedCatalogProduct, b: FeedCatalogProduct) => toNumber(a.priceRub) - toNumber(b.priceRub);
+    const byPriceAsc = (a: FeedCatalogProduct, b: FeedCatalogProduct) =>
+      toNumber(a.priceRub) - toNumber(b.priceRub);
 
     return {
       GX53: lamps.filter((lamp) => detectSocket(lamp) === "GX53").sort(byPriceAsc),
@@ -643,13 +692,22 @@ export function WizardStep1Lighting() {
     setLightingDraft(draft);
   }, [cartEntries, setLightingDraft, snapshot?.derivedInputs]);
 
-  const hasClarusInSnapshot = useMemo(() => products.some((product) => product.system === "CLARUS_48"), [products]);
-  const hasClarusInCart = useMemo(() => cartEntries.some((entry) => entry.product.system === "CLARUS_48"), [cartEntries]);
+  const hasClarusInSnapshot = useMemo(
+    () => products.some((product) => product.system === "CLARUS_48"),
+    [products]
+  );
+
+  const hasClarusInCart = useMemo(
+    () => cartEntries.some((entry) => entry.product.system === "CLARUS_48"),
+    [cartEntries]
+  );
 
   const clarusPsuQty = useMemo(() => {
     return cartEntries
       .filter((entry) =>
-        CLARUS_PSU_VENDOR_CODES.includes(toText(entry.product.vendorCode) as (typeof CLARUS_PSU_VENDOR_CODES)[number])
+        CLARUS_PSU_VENDOR_CODES.includes(
+          toText(entry.product.vendorCode) as (typeof CLARUS_PSU_VENDOR_CODES)[number]
+        )
       )
       .reduce((sum, entry) => sum + entry.qty, 0);
   }, [cartEntries]);
@@ -735,6 +793,7 @@ export function WizardStep1Lighting() {
     setCartItems((prev) => ({ ...prev, [mountId]: required }));
   };
 
+  // optional helper — добавить недостающее количество самых дешёвых ламп (без удаления других ламп)
   const addCheapestLampsOneToOne = (socket: LampSocket) => {
     const required = toNumber(lampRequiredBySocket[socket]);
     if (required <= 0) return;
@@ -814,7 +873,9 @@ export function WizardStep1Lighting() {
 
       const base = TRACK_PROFILE_WHITELIST[system] ?? [];
       const allowed =
-        system === "TRACK_220" ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST]) : new Set(base);
+        system === "TRACK_220"
+          ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST])
+          : new Set(base);
 
       const hasProfile = cartEntries.some(
         (entry) =>
@@ -854,7 +915,9 @@ export function WizardStep1Lighting() {
         : true;
 
       const socket = getRequiredLampSocket(entry.product);
-      const lampOk = socket ? lampQtyBySocket[socket] >= toNumber(lampRequiredBySocket[socket]) : true;
+      const lampOk = socket
+        ? lampQtyBySocket[socket] >= toNumber(lampRequiredBySocket[socket])
+        : true;
 
       return mountOk && lampOk;
     });
@@ -869,7 +932,9 @@ export function WizardStep1Lighting() {
       if (trackGroup === "TRACK_PROFILE") {
         const base = TRACK_PROFILE_WHITELIST[trackSystem] ?? [];
         const allowed =
-          trackSystem === "TRACK_220" ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST]) : new Set(base);
+          trackSystem === "TRACK_220"
+            ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST])
+            : new Set(base);
 
         scoped = products.filter(
           (product) =>
@@ -878,7 +943,9 @@ export function WizardStep1Lighting() {
             allowed.has(toText(product.vendorCode))
         );
       } else {
-        scoped = products.filter((product) => product.system === trackSystem && product.kind === trackGroup);
+        scoped = products.filter(
+          (product) => product.system === trackSystem && product.kind === trackGroup
+        );
       }
     } else if (section === "point-fixtures") {
       scoped = products.filter((product) => matchesPointSubtype(product, pointSubtype));
@@ -892,17 +959,30 @@ export function WizardStep1Lighting() {
     if (!q) return scoped;
 
     return scoped.filter((product) => {
-      const attrs = pickDisplayAttributes(product).map((a) => `${a.label} ${a.value}`).join(" ");
+      const attrs = pickDisplayAttributes(product)
+        .map((a) => `${a.label} ${a.value}`)
+        .join(" ");
       const haystack =
-        `${toText(product.name)} ${toText(product.vendorCode)} ${toText(product.categoryPath)} ${attrs}`.toLowerCase();
+        `${toText(product.name)} ${toText(product.vendorCode)} ${toText(
+          product.categoryPath
+        )} ${attrs}`.toLowerCase();
       return haystack.includes(q);
     });
-  }, [catalogView, lampSocket, pointSubtype, products, query, section, selectedViewItems, trackGroup, trackSystem]);
+  }, [
+    catalogView,
+    lampSocket,
+    pointSubtype,
+    products,
+    query,
+    section,
+    selectedViewItems,
+    trackGroup,
+    trackSystem,
+  ]);
 
   const showClarusEmptyMessage =
     section === "track-systems" && trackSystem === "CLARUS_48" && !hasClarusInSnapshot;
 
-  // --- UI below: оставляю вашу текущую структуру как есть ---
   return (
     <div className="space-y-4">
       {/* Progress */}
@@ -911,7 +991,8 @@ export function WizardStep1Lighting() {
           <div>
             <p className="text-sm font-semibold text-slate-950">Прогресс по сборке</p>
             <p className="mt-1 text-xs text-slate-600">
-              Для трека учитываем метры <span className="font-semibold">профиля/шинопровода</span>.
+              Для трека учитываем метры{" "}
+              <span className="font-semibold">профиля/шинопровода</span>.
             </p>
           </div>
 
@@ -939,9 +1020,13 @@ export function WizardStep1Lighting() {
 
         {progressHasTargets && !progressDone ? (
           <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-800">
-            <p className="font-semibold text-slate-950">Осталось добрать (если хотите ровно по расчёту)</p>
+            <p className="font-semibold text-slate-950">
+              Осталось добрать (если хотите ровно по расчёту)
+            </p>
             <p className="mt-1 text-slate-700">
-              Профиль трека: <span className="font-semibold">{fmtMeters(remainingTrackMeters)}</span> м · Точечные:{" "}
+              Профиль трека:{" "}
+              <span className="font-semibold">{fmtMeters(remainingTrackMeters)}</span>{" "}
+              м · Точечные:{" "}
               <span className="font-semibold">{fmt(remainingPointQty)}</span> шт.
             </p>
 
@@ -968,7 +1053,9 @@ export function WizardStep1Lighting() {
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
             <div className="text-sm text-emerald-950">
               <p className="font-semibold">Отлично — комплект собран по расчёту.</p>
-              <p className="mt-1 text-xs text-emerald-900/80">Можно переходить к завершению.</p>
+              <p className="mt-1 text-xs text-emerald-900/80">
+                Можно переходить к завершению.
+              </p>
             </div>
 
             <button
@@ -981,7 +1068,6 @@ export function WizardStep1Lighting() {
           </div>
         ) : null}
 
-        {/* FIX: показываем напоминание про “скидка за потолок” только когда скидка реально НЕ доступна */}
         {!lightingDiscountEligible ? (
           <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
             <p className="font-semibold">Скидка −15% на свет действует при заказе потолка.</p>
@@ -995,7 +1081,9 @@ export function WizardStep1Lighting() {
             </button>
           </div>
         ) : null}
-          <div className="flex flex-wrap gap-2">
+      </div>
+
+      <div className="flex flex-wrap gap-2">
         <TabButton active={activeTab === "recommendations"} onClick={() => setActiveTab("recommendations")}>
           Рекомендации
         </TabButton>
@@ -1124,7 +1212,10 @@ export function WizardStep1Lighting() {
           ))}
 
           {missingLamps.map((m) => (
-            <div key={m.socket} className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+            <div
+              key={m.socket}
+              className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950"
+            >
               <p className="font-semibold">Не хватает ламп {m.socket} (1:1)</p>
               <p className="mt-2">
                 Нужно: <span className="font-semibold">{m.requiredQty}</span> шт., в корзине:{" "}
@@ -1187,7 +1278,9 @@ export function WizardStep1Lighting() {
               onClick={() => setCatalogViewAndSync("browse")}
               className={[
                 "rounded-xl px-3 py-2 text-sm font-medium",
-                catalogView === "browse" ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-700",
+                catalogView === "browse"
+                  ? "bg-slate-950 text-white"
+                  : "bg-slate-100 text-slate-700",
               ].join(" ")}
             >
               Каталог
@@ -1197,7 +1290,9 @@ export function WizardStep1Lighting() {
               onClick={() => setCatalogViewAndSync("selected")}
               className={[
                 "rounded-xl px-3 py-2 text-sm font-medium",
-                catalogView === "selected" ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-700",
+                catalogView === "selected"
+                  ? "bg-slate-950 text-white"
+                  : "bg-slate-100 text-slate-700",
               ].join(" ")}
             >
               Выбранное ({selectedViewItems.length})
@@ -1222,14 +1317,21 @@ export function WizardStep1Lighting() {
                           : null;
 
                       return (
-                        <li key={toText(item.sku)} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                        <li
+                          key={toText(item.sku)}
+                          className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+                        >
                           <div className="grid grid-cols-[5.5rem_1fr] gap-3">
                             <ProductImage src={toText(product.coverImage)} alt={toText(product.name)} />
 
                             <div className="min-w-0">
-                              <p className="text-sm font-semibold text-slate-950 break-words">{toText(item.name)}</p>
-                              <p className="mt-1 text-xs text-slate-600 break-words">
-                                {pickDisplayAttributes(product).map((a) => `${a.label}: ${a.value}`).join(" • ")}
+                              <p className="break-words text-sm font-semibold text-slate-950">
+                                {toText(item.name)}
+                              </p>
+                              <p className="mt-1 break-words text-xs text-slate-600">
+                                {pickDisplayAttributes(product)
+                                  .map((a) => `${a.label}: ${a.value}`)
+                                  .join(" • ")}
                               </p>
 
                               {product.kind === "TRACK_PROFILE" && product.unit !== "m" ? (
@@ -1289,9 +1391,10 @@ export function WizardStep1Lighting() {
                       setQuery("");
                     }}
                     className={[
-                      "rounded-xl px-3 py-2 text-sm",
-                      section === item.id ? "bg-slate-950 text-white" : "bg-white text-slate-700 hover:bg-slate-50",
-                      "border border-slate-200",
+                      "rounded-xl border border-slate-200 px-3 py-2 text-sm",
+                      section === item.id
+                        ? "bg-slate-950 text-white"
+                        : "bg-white text-slate-700 hover:bg-slate-50",
                     ].join(" ")}
                   >
                     {item.label}
@@ -1310,9 +1413,10 @@ export function WizardStep1Lighting() {
                         setQuery("");
                       }}
                       className={[
-                        "rounded-xl px-3 py-1.5 text-xs",
-                        trackSystem === system.id ? "bg-slate-900 text-white" : "bg-white text-slate-700",
-                        "border border-slate-200",
+                        "rounded-xl border border-slate-200 px-3 py-1.5 text-xs",
+                        trackSystem === system.id
+                          ? "bg-slate-900 text-white"
+                          : "bg-white text-slate-700",
                       ].join(" ")}
                     >
                       {system.label}
@@ -1328,9 +1432,10 @@ export function WizardStep1Lighting() {
                         setQuery("");
                       }}
                       className={[
-                        "rounded-xl px-3 py-1.5 text-xs",
-                        trackGroup === group.id ? "bg-slate-900 text-white" : "bg-white text-slate-700",
-                        "border border-slate-200",
+                        "rounded-xl border border-slate-200 px-3 py-1.5 text-xs",
+                        trackGroup === group.id
+                          ? "bg-slate-900 text-white"
+                          : "bg-white text-slate-700",
                       ].join(" ")}
                     >
                       {group.label}
@@ -1350,9 +1455,10 @@ export function WizardStep1Lighting() {
                         setQuery("");
                       }}
                       className={[
-                        "rounded-xl px-3 py-1.5 text-xs",
-                        pointSubtype === subtype.id ? "bg-slate-900 text-white" : "bg-white text-slate-700",
-                        "border border-slate-200",
+                        "rounded-xl border border-slate-200 px-3 py-1.5 text-xs",
+                        pointSubtype === subtype.id
+                          ? "bg-slate-900 text-white"
+                          : "bg-white text-slate-700",
                       ].join(" ")}
                     >
                       {subtype.label}
@@ -1373,9 +1479,10 @@ export function WizardStep1Lighting() {
                           setQuery("");
                         }}
                         className={[
-                          "rounded-xl px-3 py-1.5 text-xs",
-                          lampSocket === socket ? "bg-slate-900 text-white" : "bg-white text-slate-700",
-                          "border border-slate-200",
+                          "rounded-xl border border-slate-200 px-3 py-1.5 text-xs",
+                          lampSocket === socket
+                            ? "bg-slate-900 text-white"
+                            : "bg-white text-slate-700",
                         ].join(" ")}
                       >
                         {socket}
@@ -1383,7 +1490,6 @@ export function WizardStep1Lighting() {
                     ))}
                   </div>
 
-                  {/* NEW: мини-прогресс рядом с переключателем сокетов */}
                   <div className="flex flex-wrap gap-2">
                     {(["GX53", "MR16"] as LampSocket[]).map((socket) => {
                       const required = toNumber(lampRequiredBySocket[socket]);
@@ -1455,7 +1561,9 @@ export function WizardStep1Lighting() {
       ) : null}
 
       {lightingDraft?.mode === "catalog" ? (
-        <p className="text-xs text-slate-500">В выбранном: {lightingDraft.items?.length ?? 0} поз.</p>
+        <p className="text-xs text-slate-500">
+          В выбранном: {lightingDraft.items?.length ?? 0} поз.
+        </p>
       ) : null}
     </div>
   );
