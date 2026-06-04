@@ -19,6 +19,7 @@ import type {
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
 import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
+import { trackCalculatorOpen, trackWizardStepView } from "@/lib/analytics";
 
 function toNumber(value: unknown): number {
   const n = Number(value ?? 0);
