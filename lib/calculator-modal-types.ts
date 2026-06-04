@@ -1,7 +1,6 @@
 import type { ServiceCalculatorPreset } from "@/content/services";
 
 export type LightingMode = "kit" | "catalog" | "none";
-
 export type CatalogViewMode = "selected" | "browse";
 
 export type LightingItem = {
@@ -27,7 +26,6 @@ export type LightingSnapshot = {
   kitName?: string;
 
   items?: LightingItem[];
-
   totalRub?: number;
   discountedTotalRub?: number;
 
@@ -42,34 +40,28 @@ export type OpenCalculatorOptions = {
   forcePreset?: boolean;
 
   initialStep?: WizardStep;
-
   initialLighting?: LightingSnapshot;
   initialLightingTab?: "recommendations" | "catalog";
   initialLightingView?: CatalogViewMode;
 
   entryMode?: "default" | "lighting-first";
-
   source?: string;
 };
 
 export type CalculatorModalContextValue = {
   isOpen: boolean;
   currentStep: WizardStep;
-
   options: OpenCalculatorOptions | null;
 
   openCalculator: (options?: OpenCalculatorOptions) => void;
   closeCalculator: () => void;
-
   goToStep: (step: WizardStep) => void;
 
   lightingDraft: LightingSnapshot | null;
   setLightingDraft: (draft: LightingSnapshot | null) => void;
 
-  /**
-   * snapshot.total (потолок, как посчитал Step0)
-   * В lighting-first может быть не показан в UI (см. showCeilingInUi), но в snapshot он может существовать.
-   */
+  /** snapshot.total (потолок, как посчитал Step0)
+   *  В lighting-first может быть не показан в UI (см. showCeilingInUi), но в snapshot он может существовать. */
   ceilingTotal: number;
 
   /** Свет без скидки (по корзине/lightingDraft). */
@@ -78,53 +70,40 @@ export type CalculatorModalContextValue = {
   /** Свет со скидкой (-15%), независимо от eligibility (число “если бы применили”). */
   lightingDiscountedTotal: number;
 
-  /**
-   * Свет, который показываем как “к оплате сейчас”:
-   * - если скидка разрешена (lightingDiscountEligible) -> discounted
-   * - иначе -> regular
-   */
+  /** Свет, который показываем как “к оплате сейчас” */
   lightingEffectiveTotal: number;
 
-  /**
-   * Скидка на свет: “разрешена”, когда пользователь подтвердил потолок и перешёл 0 -> 1.
-   * Важно: это НЕ равно step0AreaConfirmed (строгость монтажа).
-   */
+  /** Скидка на свет: “разрешена”, когда пользователь подтвердил потолок и перешёл 0 -> 1. */
   lightingDiscountEligible: boolean;
 
-  /**
-   * Нужно ли показывать потолок в UI:
-   * - в default: всегда true
-   * - в lighting-first: только после взаимодействия со Step0 или на самом Step0
-   */
+  /** Нужно ли показывать потолок в UI */
   showCeilingInUi: boolean;
 
-  /**
-   * Единая итоговая цифра для UI = (потолок, если showCeilingInUi) + (lightingEffectiveTotal)
-   * При step0AreaConfirmed потолочная часть берёт snapshot.grandTotal (если она >= snapshot.total).
-   */
+  /** Единая итоговая цифра для UI */
   grandTotal: number;
 
   step0SessionInteracted: boolean;
   markStep0SessionInteracted: () => void;
 
-  /**
-   * СТРОГОЕ правило: досчёт монтажа в Step3 делаем только если Step0 был подтверждён
-   * (в протоколе — пользователь реально перешёл с Step0 на Step1).
-   */
+  /** СТРОГОЕ правило: досчёт монтажа в Step3 делаем только если Step0 был подтверждён (0->1). */
   step0AreaConfirmed: boolean;
 
   step1CatalogView: CatalogViewMode | null;
   setStep1CatalogView: (view: CatalogViewMode | null) => void;
 };
 
-export function getKitDisplayName(lighting: LightingSnapshot | null | undefined): string | null {
+export function getKitDisplayName(
+  lighting: LightingSnapshot | null | undefined
+): string | null {
   if (!lighting) return null;
-  if (lighting.mode !== "kit") return null;
 
+  // ВАЖНО: kits сейчас приходят как mode:"catalog", но с kitBaseName.
+  // Поэтому kitBaseName — это наш "источник истины" для отображения имени комплекта.
   if (lighting.kitBaseName) {
     const qty = lighting.scaledSpotsQty;
     return qty != null ? `${lighting.kitBaseName} · ${qty} шт.` : lighting.kitBaseName;
   }
 
-  return lighting.kitName ?? null;
+  if (lighting.mode === "kit") return lighting.kitName ?? null;
+  return null;
 }
