@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 
 import type { WizardStep } from "@/lib/calculator-modal-types";
 import { isSnapshotValid } from "@/lib/calculator-snapshot-guard";
-
+import { trackWizardConfirm } from "@/lib/analytics";
 import { useCalculatorModal } from "./calculator-modal-context";
 import { PriceStrip } from "./price-strip";
 import { WizardStep0Calculator } from "./wizard-step0-calculator";
@@ -245,7 +245,10 @@ export function CalculatorModal() {
               ) : (
                 <button
                   type="button"
-                  onClick={scrollToInlineForm}
+                  onClick={() => {
+  trackWizardConfirm(String(options?.source ?? "unknown"));
+  scrollToInlineForm();
+}}
                   className="flex h-12 items-center rounded-2xl bg-slate-950 px-6 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
                   style={{ minHeight: 48 }}
                 >
