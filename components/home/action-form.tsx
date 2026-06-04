@@ -1,10 +1,15 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 
 import { legal } from "@/content/legal";
 import { getKitDisplayName } from "@/lib/calculator-modal-types";
-import { trackFormSubmitSuccess } from "@/lib/analytics";
+import {
+  trackFormOpened,
+  trackFormSubmitError,
+  trackFormSubmitSuccess,
+  trackPhoneValidated,
+} from "@/lib/analytics";
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
 
 import {
@@ -92,7 +97,12 @@ export function ActionForm({ source }: ActionFormProps) {
     () => (hasInteracted ? getCalculatorSummaryLines(snapshot) : []),
     [hasInteracted, snapshot]
   );
+const openedOnceRef = useRef(false);
+const phoneValidatedOnceRef = useRef(false);
 
+const getPlacement = (formEl: HTMLFormElement): "modal" | "page" => {
+  return formEl.closest("#modal-action-form") ? "modal" : "page";
+};
   const lightingLines = useMemo(() => getLightingSummaryLines(snapshot), [snapshot]);
 
   const [name, setName] = useState("");
@@ -320,7 +330,17 @@ export function ActionForm({ source }: ActionFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form
+  onSubmit={handleSubmit}
+  onFocusCapture={(e) => {
+    if (openedOnceRef.current) return;
+    openedOnceRef.current = true;
+
+    const placement = getPlacement(e.currentTarget);
+    trackFormOpened({ formPlacement: placement, source: effectiveSource });
+  }}
+  className="space-y-4"
+>
       {status === "success" ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
           <p className="font-semibold">{COPY.successTitle}</p>
@@ -380,6 +400,15 @@ export function ActionForm({ source }: ActionFormProps) {
 
         <div>
           <Input
+            onBlur={() => {
+  if (phoneValidatedOnceRef.current) return;
+  const normalized = normalizePhone(phone);
+  if (!normalized || !isValidPhone(normalized)) return;
+
+  phoneValidatedOnceRef.current = true;
+  const placement = getPlacement(document.querySelector("form") as HTMLFormElement);
+  trackPhoneValidated({ formPlacement: placement, source: effectiveSource });
+}}
             label="Телефон"
             name="phone"
             value={phone}
