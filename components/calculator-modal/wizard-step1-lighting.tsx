@@ -377,16 +377,16 @@ function ProgressRow({
 export function WizardStep1Lighting() {
   const { snapshot } = usePriceCalculatorBridge();
 
-  const {
-    lightingDraft,
-    setLightingDraft,
-    options,
-    step1CatalogView,
-    setStep1CatalogView,
-    goToStep,
-    showCeilingInUi,
-    lightingDiscountEligible,
-  } = useCalculatorModal();
+ const {
+  lightingDraft,
+  setLightingDraft,
+  options,
+  step1CatalogView,
+  setStep1CatalogView,
+  goToStep,
+  showCeilingInUi,
+  lightingDiscountEligible,
+} = useCalculatorModal();
 
   const [activeTab, setActiveTab] = useState<Tab>("recommendations");
   const [catalogView, setCatalogView] = useState<CatalogView>("browse");
