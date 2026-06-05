@@ -151,12 +151,12 @@ function sumPointQtyFromLightingItems(
 type Step3Tab = "summary" | "full";
 
 export function WizardStep2Summary() {
-  // в проекте контекст расширялся; избегаем расхождения типов
   const modal = useCalculatorModal() as any;
 
   const goToStep: (n: 0 | 1 | 2) => void = modal.goToStep;
   const setStep1CatalogView: (view: "selected" | "browse" | null) => void =
     modal.setStep1CatalogView;
+  const closeCalculator: () => void = modal.closeCalculator;
 
   const step0AreaConfirmed: boolean = Boolean(modal.step0AreaConfirmed);
   const step0SessionInteracted: boolean = Boolean(modal.step0SessionInteracted);
@@ -184,6 +184,7 @@ export function WizardStep2Summary() {
       : (showCeilingInUi ? ceilingTotal : 0) + lightingEffectiveTotal;
 
   const [tab, setTab] = useState<Step3Tab>("summary");
+  const [showResult, setShowResult] = useState(false);
 
   const { snapshot, setSnapshot } = usePriceCalculatorBridge();
   const lighting = snapshot?.lighting ?? lightingDraft ?? null;
@@ -247,7 +248,6 @@ export function WizardStep2Summary() {
     | "surface"
     | "none";
 
-  // СТРОГО: досчёт только если Step0 подтверждён (0->1)
   const canReconcileInstall = step0AreaConfirmed;
 
   const trackRates = homepage.price.calculator.tracks;
@@ -295,6 +295,12 @@ export function WizardStep2Summary() {
 
   const handleGoToCeiling = () => goToStep(0);
 
+  const scrollToInlineForm = () => {
+    const el = document.getElementById("modal-action-form");
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   function TabButton({ id, label }: { id: Step3Tab; label: string }) {
     const active = tab === id;
     return (
@@ -325,6 +331,7 @@ export function WizardStep2Summary() {
           type="button"
           onClick={handleEditLighting}
           className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-900 hover:bg-slate-50"
+          style={{ minHeight: 44, minWidth: 44 }}
         >
           Редактировать свет
         </button>
@@ -400,17 +407,22 @@ export function WizardStep2Summary() {
               <p>Досчёт монтажа: {fmt(extraInstallTotal)} ₽</p>
             ) : null}
 
-            <p className="text-xs text-slate-500">
-              В корзине: профиль трека ~{selectedTrackMeters.toFixed(1)} м · точечные {selectedPointQty} шт.
-              <br />
-              По потолку: трек {derivedTrackFromStep0} м · точечные {derivedPointFromStep0} шт.
-            </p>
+            {/* P2.6: hide row when both are zero */}
+            {(selectedTrackMeters > 0 || selectedPointQty > 0 || derivedTrackFromStep0 > 0 || derivedPointFromStep0 > 0) ? (
+              <p className="text-xs text-slate-500">
+                {selectedTrackMeters > 0 || selectedPointQty > 0 ? `В корзине: ${selectedTrackMeters > 0 ? `профиль трека ~${selectedTrackMeters.toFixed(1)} м` : ""}${selectedTrackMeters > 0 && selectedPointQty > 0 ? " · " : ""}${selectedPointQty > 0 ? `точечные ${selectedPointQty} шт.` : ""}` : ""}
+                {derivedTrackFromStep0 > 0 || derivedPointFromStep0 > 0 ? (
+                  <><br />По потолку: {derivedTrackFromStep0 > 0 ? `трек ${derivedTrackFromStep0} м` : ""}{derivedTrackFromStep0 > 0 && derivedPointFromStep0 > 0 ? " · " : ""}{derivedPointFromStep0 > 0 ? `точечные ${derivedPointFromStep0} шт.` : ""}</>
+                ) : null}
+              </p>
+            ) : null}
 
             <div className="pt-2">
               <p className="font-semibold text-slate-950">
                 Освещение (товары){kitDisplayName ? ` — ${kitDisplayName}` : ""}
               </p>
 
+              {/* P2.19: условный рендер только если есть товары */}
               {lightingItems.length > 0 ? (
                 <ul className="mt-2 list-disc space-y-1 pl-5">
                   {lightingItems.map((item) => (
@@ -423,9 +435,7 @@ export function WizardStep2Summary() {
                     </li>
                   ))}
                 </ul>
-              ) : (
-                <p className="mt-2 text-slate-600">Освещение не выбрано — можно продолжить.</p>
-              )}
+              ) : null}
             </div>
 
             <div className="border-t border-slate-200 pt-3">
@@ -435,25 +445,125 @@ export function WizardStep2Summary() {
         </div>
       )}
 
-      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-        <p className="font-semibold text-slate-950">Что дальше</p>
-        <ul className="mt-2 list-disc space-y-1 pl-5">
-          <li>Оставьте заявку — уточним задачу и договоримся о бесплатном замере.</li>
-          <li>После замера подтвердим комплектацию и точную стоимость.</li>
-          <li>Если нужно — поможем подобрать освещение под ваш интерьер и сценарии.</li>
-        </ul>
+      {/* P1.6: Показать kitBaseName */}
+      {lighting?.kitBaseName ? (
+        <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+          <div className="text-xs text-blue-600 font-medium uppercase tracking-wide">
+            Готовый комплект
+          </div>
+          <div className="text-base font-semibold text-slate-950 mt-1">
+            {lighting.kitBaseName}
+            {lighting.scaledSpotsQty != null ? ` · ${lighting.scaledSpotsQty} шт.` : ""}
+          </div>
+        </div>
+      ) : null}
+
+      {/* P2.13: "Что входит" секция */}
+      <details className="rounded-2xl border border-slate-200 bg-white">
+        <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-950">
+          Что входит в расчёт
+        </summary>
+        <div className="border-t border-slate-200 px-4 py-3">
+          <div className="flex flex-wrap gap-2">
+            {["Договор", "Гарантия 2 года", "Монтаж за 1 день", "Уборка после"].map((item) => (
+              <span
+                key={item}
+                className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700"
+              >
+                ✓ {item}
+              </span>
+            ))}
+          </div>
+        </div>
+      </details>
+
+      {/* P3.2: WhatsApp/Telegram alternative */}
+      <div className="text-center text-xs text-slate-500">
+        <span>или напишите в </span>
+        <a
+          href="https://wa.me/79999999999"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold text-emerald-700 hover:text-emerald-800"
+        >
+          WhatsApp
+        </a>
+        <span> / </span>
+        <a
+          href="https://t.me/potolkovo"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold text-blue-600 hover:text-blue-800"
+        >
+          Telegram
+        </a>
       </div>
 
-      {/* ВАЖНО: этот id нужен для scrollToInlineForm() из футера модалки */}
-      <div id="modal-action-form" className="rounded-2xl border border-slate-200 bg-white p-4">
-        <p className="text-base font-semibold text-slate-950">Оставить заявку</p>
-        <p className="mt-2 text-sm text-slate-600">
-          Можно указать район/метро — так быстрее сориентируемся по выезду.
-        </p>
-        <div className="mt-4">
-          <ActionForm />
+      {/* P2.7: "В заявку попадёт ваш расчёт" — accordion */}
+      <details className="rounded-2xl border border-slate-200 bg-slate-50">
+        <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-950">
+          Показать, что попадёт в заявку
+        </summary>
+        <div className="border-t border-slate-200 px-4 py-3 text-sm text-slate-700">
+          <ul className="list-disc space-y-1 pl-5">
+            {showCeilingInUi ? (
+              <li>Потолок: {fmt(ceilingTotal)} ₽</li>
+            ) : null}
+            {lightingItems.length > 0 ? (
+              <li>Освещение: {lightingItems.length} позиций</li>
+            ) : null}
+            <li>Итого: ~{fmt(grandTotal)} ₽</li>
+          </ul>
         </div>
-      </div>
+      </details>
+
+      {showResult ? (
+        /* P0.8: Success state */
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center" aria-live="polite">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white text-2xl font-bold">
+            ✓
+          </div>
+          <p className="text-lg font-semibold text-emerald-950">Спасибо!</p>
+          <p className="mt-1 text-sm text-emerald-800">Перезвоню в течение 15 минут</p>
+          <button
+            type="button"
+            onClick={closeCalculator}
+            className="mt-4 rounded-xl bg-emerald-700 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+          >
+            Хорошо, жду
+          </button>
+        </div>
+      ) : (
+        <>
+          <div id="modal-action-form" className="rounded-2xl border border-slate-200 bg-white p-4">
+            <p className="text-base font-semibold text-slate-950">Оставить заявку</p>
+            <p className="mt-2 text-sm text-slate-600">
+              Можно указать район/метро — так быстрее сориентируемся по выезду.
+            </p>
+            <div className="mt-4">
+              <ActionForm onSuccess={() => setShowResult(true)} />
+            </div>
+          </div>
+
+          {/* P1.5: Sticky bottom bar with submit */}
+          <div
+            className="sticky bottom-0 bg-white border-t border-slate-200 -mx-6 px-6 py-3 flex items-center justify-between z-10"
+            style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}
+          >
+            <div>
+              <div className="text-xs text-slate-500">Итого:</div>
+              <div className="text-lg font-bold">{fmt(grandTotal)} ₽</div>
+            </div>
+            <button
+              type="button"
+              onClick={scrollToInlineForm}
+              className="flex h-12 items-center rounded-2xl bg-slate-950 px-6 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+            >
+              Оставить заявку →
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
