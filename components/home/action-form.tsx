@@ -24,9 +24,11 @@ import { TextLink } from "@/components/ui/text-link";
 
 const COPY = {
   successTitle: "Заявка отправлена",
+  successMessage: "Спасибо!\nЯ свяжусь с вами, чтобы уточнить задачу и договориться о замере.",
   errorMessage:
     "Не удалось отправить заявку.\nПроверьте данные и попробуйте ещё раз.",
   submitButtonLabel: "Записаться на замер",
+  submitButtonLabelPending: "Отправляю...",
   helperText:
     "Обычно отвечаю быстро. Можно указать район — так проще сориентироваться по выезду.",
   addressFieldHint: "Необязательно.\nЭто поможет быстрее сориентироваться по выезду.",
@@ -87,9 +89,13 @@ function buildLeadMessage(
   return parts.join("\n");
 }
 
-type ActionFormProps = { source?: string };
+type ActionFormProps = {
+  source?: string;
+  /** P0.8: callback after successful submit */
+  onSuccess?: () => void;
+};
 
-export function ActionForm({ source }: ActionFormProps) {
+export function ActionForm({ source, onSuccess }: ActionFormProps) {
   const { snapshot, hasInteracted } = usePriceCalculatorBridge();
 
   const effectiveSource: string = String(snapshot?.leadSource ?? source ?? "");
@@ -335,8 +341,11 @@ export function ActionForm({ source }: ActionFormProps) {
 
       trackFormSubmitSuccess(effectiveSource);
 
+      // P0.8: callback для WizardStep2Summary
+      onSuccess?.();
+
       setStatus("success");
-      setMessage("Спасибо.\nЯ свяжусь с вами, чтобы уточнить задачу и договориться о замере.");
+      setMessage(COPY.successMessage);
 
       setName("");
       setPhone("");
@@ -418,7 +427,6 @@ export function ActionForm({ source }: ActionFormProps) {
             name="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Имя"
           />
           {fieldErrors.name ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.name}</p> : null}
         </div>
@@ -438,7 +446,7 @@ export function ActionForm({ source }: ActionFormProps) {
               phoneValidatedOnceRef.current = true;
               trackPhoneValidated({ formPlacement: getPlacement(), source: effectiveSource });
             }}
-            placeholder="Телефон (например, +7905…)"
+            placeholder="+7 (___) ___-__-__"
           />
           {fieldErrors.phone ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.phone}</p> : null}
         </div>
@@ -446,18 +454,28 @@ export function ActionForm({ source }: ActionFormProps) {
 
       <div>
         <Input
-          label="Район / ближайшее метро (необязательно)"
+          label="Район или метро (необязательно)"
           name="address"
           value={address}
           onChange={(e) => setAddress(e.target.value)}
-          placeholder="Район / ближайшее метро (необязательно)"
         />
         <p className="mt-1 whitespace-pre-line text-xs text-slate-500">{COPY.addressFieldHint}</p>
         {fieldErrors.address ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.address}</p> : null}
       </div>
 
+      {/* P2.18: loading state on submit button */}
       <Button type="submit" className="w-full" disabled={isPending}>
-        {isPending ? "Отправляю..." : COPY.submitButtonLabel}
+        {isPending ? (
+          <span className="flex items-center justify-center gap-2">
+            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            {COPY.submitButtonLabelPending}
+          </span>
+        ) : (
+          COPY.submitButtonLabel
+        )}
       </Button>
 
       <p className="text-xs text-slate-500">
