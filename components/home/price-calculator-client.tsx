@@ -444,6 +444,9 @@ type PriceCalculatorClientProps = {
     preferredTrackType?: TrackType | null;
   } | null;
   prefillFromLightingTrigger?: number;
+
+  // P0.1: callback for the dark card CTA button
+  onPrimaryCtaClick?: () => void;
 };
 
 export function PriceCalculatorClient({
@@ -451,6 +454,7 @@ export function PriceCalculatorClient({
   compactSections = false,
   prefillFromLighting = null,
   prefillFromLightingTrigger = 0,
+  onPrimaryCtaClick,
 }: PriceCalculatorClientProps) {
   const { setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
 
@@ -1082,7 +1086,7 @@ export function PriceCalculatorClient({
               ) : (
                 <CollapsedStep
                   title={`${stepNumber("profile")}) Длина профиля`}
-                  subtitle={isStepEnabled("profile") ? "Настройте длину профиля" : "Подтвердите предыдущий шаг"}
+                  subtitle={isStepEnabled("profile") ? "Настройте длину профиля" : "Сначала выберите тип потолка"}
                   enabled={isStepEnabled("profile")}
                   onOpen={() => openStep("profile")}
                 />
@@ -1157,7 +1161,7 @@ export function PriceCalculatorClient({
             ) : (
               <CollapsedStep
                 title={`${stepNumber("lightLines")}) Световые линии`}
-                subtitle={isStepEnabled("lightLines") ? "Выберите: нужны или нет" : "Подтвердите предыдущий шаг"}
+                subtitle={isStepEnabled("lightLines") ? "Выберите: нужны или нет" : "Сначала подтвердите площадь и тип потолка"}
                 enabled={isStepEnabled("lightLines")}
                 onOpen={() => openStep("lightLines")}
               />
@@ -1232,7 +1236,7 @@ export function PriceCalculatorClient({
             ) : (
               <CollapsedStep
                 title={`${stepNumber("cornice")}) Карнизы`}
-                subtitle={isStepEnabled("cornice") ? "Выберите: нужен или нет" : "Подтвердите предыдущий шаг"}
+                subtitle={isStepEnabled("cornice") ? "Выберите: нужен или нет" : "Сначала выберите световые линии"}
                 enabled={isStepEnabled("cornice")}
                 onOpen={() => openStep("cornice")}
               />
@@ -1320,7 +1324,7 @@ export function PriceCalculatorClient({
             ) : (
               <CollapsedStep
                 title={`${stepNumber("track")}) Трековое освещение`}
-                subtitle={isStepEnabled("track") ? "Выберите: нужен или нет" : "Подтвердите предыдущий шаг"}
+                subtitle={isStepEnabled("track") ? "Выберите: нужен или нет" : "Сначала подтвердите карниз"}
                 enabled={isStepEnabled("track")}
                 onOpen={() => openStep("track")}
               />
@@ -1402,7 +1406,7 @@ export function PriceCalculatorClient({
                 subtitle={
                   isStepEnabled("chandeliers")
                     ? "Выберите: нужна или нет"
-                    : "Подтвердите предыдущий шаг"
+                    : "Сначала выберите трековое освещение"
                 }
                 enabled={isStepEnabled("chandeliers")}
                 onOpen={() => openStep("chandeliers")}
@@ -1481,7 +1485,7 @@ export function PriceCalculatorClient({
             ) : (
               <CollapsedStep
                 title={`${stepNumber("lights")}) Точечные светильники`}
-                subtitle={isStepEnabled("lights") ? "Выберите: нужны или нет" : "Подтвердите предыдущий шаг"}
+                subtitle={isStepEnabled("lights") ? "Выберите: нужны или нет" : "Сначала выберите установку люстр"}
                 enabled={isStepEnabled("lights")}
                 onOpen={() => openStep("lights")}
               />
@@ -1503,7 +1507,7 @@ export function PriceCalculatorClient({
             </p>
 
             <div className="mt-6">
-              <Button type="button" className="w-full">
+              <Button type="button" className="w-full" onClick={onPrimaryCtaClick}>
                 {homepage.price.primaryCtaLabel}
               </Button>
             </div>
@@ -1856,7 +1860,7 @@ export function PriceCalculatorClient({
           </div>
 
           <div className="mt-6">
-            <Button type="button" className="w-full">
+            <Button type="button" className="w-full" onClick={onPrimaryCtaClick}>
               {homepage.price.primaryCtaLabel}
             </Button>
           </div>
