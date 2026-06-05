@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useCalculatorModal } from "./calculator-modal-context";
 
 function fmt(n: number) {
@@ -18,6 +19,16 @@ export function PriceStrip() {
   } = useCalculatorModal();
 
   const hasLighting = lightingEffectiveTotal > 0;
+
+  // P2.17: Price change animation key
+  const prevTotalRef = useRef(grandTotal);
+  const [animKey, setAnimKey] = useState(0);
+  useEffect(() => {
+    if (grandTotal !== prevTotalRef.current) {
+      prevTotalRef.current = grandTotal;
+      setAnimKey((k) => k + 1);
+    }
+  }, [grandTotal]);
 
   // placeholder на шаге 0 пока ничего не выбрано
   if (!showCeilingInUi && !hasLighting) {
@@ -71,9 +82,16 @@ export function PriceStrip() {
 
           <span className="text-slate-500"> · </span>
 
-          <span className="font-semibold">Итого: ~{fmt(grandTotal)} ₽</span>
+          <span key={animKey} className="font-semibold inline-block animate-pulse-once">
+            Итого: ~{fmt(grandTotal)} ₽
+          </span>
         </>
-      ) : null}
+      ) : (
+        <span key={animKey} className="font-semibold inline-block animate-pulse-once">
+          {" "}
+          · Итого: ~{fmt(grandTotal)} ₽
+        </span>
+      )}
     </div>
   );
 }
