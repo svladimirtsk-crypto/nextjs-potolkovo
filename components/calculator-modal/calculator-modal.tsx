@@ -27,7 +27,7 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
 }
 
 export function CalculatorModal() {
-  const { isOpen, currentStep, closeCalculator, goToStep, options, lightingDraft } = useCalculatorModal();
+  const { isOpen, currentStep, closeCalculator, goToStep, options, lightingDraft, lightingDraft: hasLightingData } = useCalculatorModal();
   const { snapshot } = usePriceCalculatorBridge();
 
   const panelRef = useRef<HTMLDivElement>(null);
@@ -37,12 +37,16 @@ export function CalculatorModal() {
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
 
+  // P1.3: Swipe-to-close state
+  const [dragY, setDragY] = useState(0);
+  const touchStartRef = useRef(0);
+  const [isDragging, setIsDragging] = useState(false);
+
   useEffect(() => setMounted(true), []);
 
   const snapshotValid = isSnapshotValid(snapshot);
 
   const isNextDisabled = useMemo(() => {
-    // убираем “серую кнопку” как UX-поломку: Step0 допускаем всегда, если snapshot уже валиден
     if (currentStep === 0) return !snapshotValid;
     return false;
   }, [currentStep, snapshotValid]);
@@ -62,15 +66,51 @@ export function CalculatorModal() {
     return titles[currentStep];
   }, [currentStep, lightingDraft]);
 
+  // P0.7: confirm before close if has data
+  const hasAnyData = useMemo(() => {
+    if (snapshot && snapshot.total > 0) return true;
+    if (lightingDraft && lightingDraft.mode !== "none") return true;
+    return false;
+  }, [snapshot, lightingDraft]);
+
   const requestClose = useCallback(() => {
+    // P0.7: confirm dialog if there's data
+    if (hasAnyData && typeof window !== "undefined") {
+      const confirmed = window.confirm("Закрыть калькулятор? Ваш расчёт не сохранится.");
+      if (!confirmed) return;
+    }
     setVisible(false);
+    setDragY(0);
     closeCalculator();
-  }, [closeCalculator]);
+  }, [closeCalculator, hasAnyData]);
+
+  // P1.3: Swipe-to-close handlers
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    if (window.innerWidth >= 1024) return; // только на мобиле
+    touchStartRef.current = e.touches[0].clientY;
+    setIsDragging(true);
+  }, []);
+
+  const onTouchMove = useCallback((e: React.TouchEvent) => {
+    if (window.innerWidth >= 1024) return;
+    const y = e.touches[0].clientY - touchStartRef.current;
+    if (y > 0) setDragY(y);
+  }, []);
+
+  const onTouchEnd = useCallback(() => {
+    if (window.innerWidth >= 1024) return;
+    setIsDragging(false);
+    if (dragY > 200) requestClose();
+    else setDragY(0);
+  }, [dragY, requestClose]);
 
   useEffect(() => {
     if (!isOpen) return;
     previousFocusRef.current = document.activeElement as HTMLElement;
     document.body.style.overflow = "hidden";
+
+    // P2.8: add modal-open class
+    document.body.classList.add("modal-open");
 
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reducedMotion) setVisible(true);
@@ -84,12 +124,14 @@ export function CalculatorModal() {
 
     return () => {
       document.body.style.overflow = "";
+      document.body.classList.remove("modal-open");
     };
   }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) return;
     setVisible(false);
+    setDragY(0);
     if (!previousFocusRef.current) return;
     previousFocusRef.current.focus();
     previousFocusRef.current = null;
@@ -154,8 +196,35 @@ export function CalculatorModal() {
   const transitionClass = reducedMotion ? "" : "transition-all duration-200";
   const modalActive = isOpen && visible;
 
+  // P0.6: Progress bar
+  const ProgressBar = () => (
+    <div className="flex items-center gap-1.5" role="progressbar" aria-valuenow={currentStep + 1} aria-valuemin={1} aria-valuemax={3}>
+      {[0, 1, 2].map((i) => {
+        const isCurrent = i === currentStep;
+        const isPast = i < currentStep;
+        const canVisit = i < currentStep;
+        return (
+          <button
+            key={i}
+            onClick={() => canVisit && goToStep(i as WizardStep)}
+            disabled={!canVisit && !isCurrent}
+            aria-label={`Шаг ${i + 1}`}
+            className={`h-1.5 rounded-full transition-all ${
+              isCurrent
+                ? "w-12 bg-slate-950"
+                : isPast
+                  ? "w-8 bg-slate-600 cursor-pointer hover:bg-slate-800"
+                  : "w-8 bg-slate-200 cursor-not-allowed"
+            }`}
+          />
+        );
+      })}
+    </div>
+  );
+
   return createPortal(
     <div aria-hidden={!isOpen} className={`fixed inset-0 z-[120] ${modalActive ? "pointer-events-auto" : "pointer-events-none"}`}>
+      {/* Overlay */}
       <div
         ref={overlayRef}
         onClick={handleOverlayClick}
@@ -174,18 +243,32 @@ export function CalculatorModal() {
           role="dialog"
           aria-modal={isOpen ? "true" : undefined}
           aria-labelledby="calc-modal-title"
+          // P1.1: full-screen bottom sheet on mobile + P1.3: drag transform
           className={`w-full max-h-[92dvh] flex flex-col rounded-t-2xl bg-white shadow-2xl lg:max-h-[90dvh] lg:max-w-5xl lg:rounded-2xl xl:max-w-6xl ${transitionClass} ${
             modalActive
               ? "translate-y-0 opacity-100 lg:scale-100 pointer-events-auto"
               : "translate-y-4 opacity-0 lg:scale-95 pointer-events-none"
-          }`}
+          } max-sm:fixed max-sm:inset-0 max-sm:max-h-screen max-sm:rounded-none max-sm:animate-slideUp`}
+          // P1.3: swipe-to-close
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          style={
+            isDragging && dragY > 0
+              ? { transform: `translateY(${dragY}px)`, transition: "none" }
+              : undefined
+          }
         >
+          {/* Header */}
           <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4">
             <div>
               <h2 id="calc-modal-title" className="text-lg font-semibold text-slate-950">
                 {stepTitle}
               </h2>
-              <p className="mt-0.5 text-xs text-slate-500">Шаг {currentStep + 1} из 3</p>
+              {/* P0.6: progress bar instead of text */}
+              <div className="mt-2">
+                <ProgressBar />
+              </div>
             </div>
             <button
               type="button"
@@ -198,10 +281,12 @@ export function CalculatorModal() {
             </button>
           </div>
 
-          <div className="sticky top-0 z-10 border-b border-slate-200 bg-white">
+          {/* P2.14: Sticky PriceStrip */}
+          <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-5 py-3">
             <PriceStrip />
           </div>
 
+          {/* Content */}
           <div className="flex-1 overflow-y-auto px-5 py-5">
             <div className={currentStep === 0 ? "" : "hidden"} aria-hidden={currentStep !== 0}>
               <WizardStep0Calculator preset={options?.preset} />
@@ -214,7 +299,12 @@ export function CalculatorModal() {
             </div>
           </div>
 
-          <div className="shrink-0 border-t border-slate-200 px-5 py-4">
+          {/* Footer */}
+          <div
+            className="shrink-0 border-t border-slate-200 px-5 py-4"
+            // P1.2: iOS safe-area for footer
+            style={{ paddingBottom: "max(env(safe-area-inset-bottom), 16px)" }}
+          >
             <div className="flex items-center justify-between gap-3">
               {currentStep > 0 ? (
                 <button
@@ -246,9 +336,9 @@ export function CalculatorModal() {
                 <button
                   type="button"
                   onClick={() => {
-  trackWizardConfirm(String(options?.source ?? "unknown"));
-  scrollToInlineForm();
-}}
+                    trackWizardConfirm(String(options?.source ?? "unknown"));
+                    scrollToInlineForm();
+                  }}
                   className="flex h-12 items-center rounded-2xl bg-slate-950 px-6 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
                   style={{ minHeight: 48 }}
                 >
