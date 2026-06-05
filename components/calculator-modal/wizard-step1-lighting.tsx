@@ -217,13 +217,24 @@ function ProductQtyControls({
   onDec: () => void;
   onInc: () => void;
 }) {
+  const handleDec = () => {
+    // P2.9: haptic feedback
+    if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(10);
+    onDec();
+  };
+  const handleInc = () => {
+    if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(10);
+    onInc();
+  };
+
   return (
     <div className="flex items-center gap-2">
       <button
         type="button"
-        onClick={onDec}
-        className="h-9 w-9 rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
+        onClick={handleDec}
+        className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
         aria-label="Уменьшить"
+        style={{ minHeight: 44, minWidth: 44 }}
       >
         −
       </button>
@@ -234,9 +245,10 @@ function ProductQtyControls({
 
       <button
         type="button"
-        onClick={onInc}
-        className="h-9 w-9 rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
+        onClick={handleInc}
+        className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
         aria-label="Увеличить"
+        style={{ minHeight: 44, minWidth: 44 }}
       >
         +
       </button>
@@ -258,6 +270,7 @@ function ProductCard({
   const regular = toNumber(product.priceRub);
   const discounted = getDiscountedPrice(regular);
   const benefit = computeBenefit(regular, discounted);
+  const [showDetails, setShowDetails] = useState(false);
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -269,21 +282,9 @@ function ProductCard({
             {toText(product.name)}
           </p>
 
-          {toText(product.vendorCode) ? (
-            <p className="mt-1 break-words text-xs text-slate-500">
-              Артикул: {toText(product.vendorCode)}
-            </p>
-          ) : null}
-
-          {pickDisplayAttributes(product).length > 0 ? (
-            <p className="mt-2 break-words text-xs text-slate-600">
-              {pickDisplayAttributes(product)
-                .map((attr) => `${attr.label}: ${attr.value}`)
-                .join(" • ")}
-            </p>
-          ) : null}
-
-          <div className="mt-3 text-xs text-slate-700">
+          {/* P2.4: Article removed from main card — hidden in details popover */}
+          {/* P2.5: Name + price + qty first, details expandable */}
+          <div className="mt-2 text-xs text-slate-700">
             <p>
               Цена:{" "}
               <span className="font-semibold text-slate-900">{fmt(regular)} ₽</span>
@@ -296,6 +297,36 @@ function ProductCard({
             ) : null}
           </div>
 
+          {/* P2.5: "Подробнее" раскрывает характеристики */}
+          {pickDisplayAttributes(product).length > 0 || toText(product.vendorCode) ? (
+            <button
+              type="button"
+              onClick={() => setShowDetails(!showDetails)}
+              className="mt-1 text-xs font-medium text-blue-600 hover:text-blue-800"
+            >
+              {showDetails ? "Скрыть" : "Подробнее"}
+            </button>
+          ) : null}
+
+          {showDetails ? (
+            <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              {toText(product.vendorCode) ? (
+                <p className="text-xs text-slate-500">
+                  Артикул: {toText(product.vendorCode)}
+                </p>
+              ) : null}
+              {pickDisplayAttributes(product).length > 0 ? (
+                <div className="mt-1 space-y-0.5 text-xs text-slate-600">
+                  {pickDisplayAttributes(product).map((attr) => (
+                    <p key={attr.label}>
+                      {attr.label}: {attr.value}
+                    </p>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <ProductQtyControls
               qty={product.unit === "m" ? Number(qty.toFixed(1)) : qty}
@@ -303,14 +334,12 @@ function ProductCard({
               onInc={onInc}
             />
 
-            <span
-              className={[
-                "rounded-full px-3 py-1 text-xs font-semibold",
-                qty > 0 ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600",
-              ].join(" ")}
-            >
-              {qty > 0 ? "В корзине" : "Не выбрано"}
-            </span>
+            {/* P2.3: hide "Не выбрано" when qty=0 */}
+            {qty > 0 ? (
+              <span className="rounded-full px-3 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700">
+                В корзине
+              </span>
+            ) : null}
           </div>
         </div>
       </div>
@@ -1097,12 +1126,16 @@ export function WizardStep1Lighting() {
         ) : null}
       </div>
 
+      {/* P2.1: Tabs in one row: Рекомендации / Каталог / Выбранное (N) */}
       <div className="flex flex-wrap gap-2">
         <TabButton active={activeTab === "recommendations"} onClick={() => setActiveTab("recommendations")}>
           Рекомендации
         </TabButton>
-        <TabButton active={activeTab === "catalog"} onClick={() => setActiveTab("catalog")}>
+        <TabButton active={activeTab === "catalog" && catalogView === "browse"} onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}>
           Каталог
+        </TabButton>
+        <TabButton active={catalogView === "selected"} onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("selected"); }}>
+          Выбранное ({selectedViewItems.length})
         </TabButton>
       </div>
 
@@ -1286,33 +1319,6 @@ export function WizardStep1Lighting() {
 
       {activeTab === "catalog" ? (
         <div className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setCatalogViewAndSync("browse")}
-              className={[
-                "rounded-xl px-3 py-2 text-sm font-medium",
-                catalogView === "browse"
-                  ? "bg-slate-950 text-white"
-                  : "bg-slate-100 text-slate-700",
-              ].join(" ")}
-            >
-              Каталог
-            </button>
-            <button
-              type="button"
-              onClick={() => setCatalogViewAndSync("selected")}
-              className={[
-                "rounded-xl px-3 py-2 text-sm font-medium",
-                catalogView === "selected"
-                  ? "bg-slate-950 text-white"
-                  : "bg-slate-100 text-slate-700",
-              ].join(" ")}
-            >
-              Выбранное ({selectedViewItems.length})
-            </button>
-          </div>
-
           {catalogView === "selected" ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               {selectedViewItems.length === 0 ? (
@@ -1418,24 +1424,36 @@ export function WizardStep1Lighting() {
 
               {section === "track-systems" ? (
                 <div className="flex flex-wrap gap-2">
-                  {TRACK_SYSTEMS.map((system) => (
-                    <button
-                      key={system.id}
-                      type="button"
-                      onClick={() => {
-                        setTrackSystem(system.id);
-                        setQuery("");
-                      }}
-                      className={[
-                        "rounded-xl border border-slate-200 px-3 py-1.5 text-xs",
-                        trackSystem === system.id
-                          ? "bg-slate-900 text-white"
-                          : "bg-white text-slate-700",
-                      ].join(" ")}
-                    >
-                      {system.label}
-                    </button>
-                  ))}
+                  {/* P1.12: Brand hierarchy — COLIBRI recommended (accent), CLARUS/ART outline */}
+                  {TRACK_SYSTEMS.map((system) => {
+                    const isActive = trackSystem === system.id;
+                    const isRecommended = system.id === "COLIBRI_220";
+                    return (
+                      <button
+                        key={system.id}
+                        type="button"
+                        onClick={() => {
+                          setTrackSystem(system.id);
+                          setQuery("");
+                        }}
+                        className={[
+                          "rounded-xl border px-3 py-1.5 text-xs transition-colors",
+                          isActive
+                            ? isRecommended
+                              ? "bg-blue-600 text-white border-blue-600"
+                              : "bg-slate-900 text-white border-slate-900"
+                            : isRecommended
+                              ? "border-blue-300 bg-blue-50 text-blue-800 hover:bg-blue-100"
+                              : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                        ].join(" ")}
+                      >
+                        {system.label}
+                        {isRecommended && !isActive ? (
+                          <span className="ml-1 text-[10px] opacity-70">● рек.</span>
+                        ) : null}
+                      </button>
+                    );
+                  })}
 
                   {TRACK_GROUPS.map((group) => (
                     <button
@@ -1533,12 +1551,16 @@ export function WizardStep1Lighting() {
                 </div>
               ) : null}
 
-              <input
-                value={query}
-                onChange={(event) => setQuery(String(event.target.value ?? ""))}
-                placeholder="Поиск в текущем разделе"
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
-              />
+              {/* P2.2: Search input with icon */}
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">🔍</span>
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(String(event.target.value ?? ""))}
+                  placeholder="Поиск в текущем разделе"
+                  className="w-full rounded-2xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-sm text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
+                />
+              </div>
 
               {showClarusEmptyMessage ? (
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
