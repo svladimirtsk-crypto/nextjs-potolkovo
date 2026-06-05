@@ -44,6 +44,26 @@ function calcLightingRegularTotal(draft: LightingSnapshot | null): number {
   return items.reduce((sum, it) => sum + toNumber(it.qty) * toNumber(it.priceRub), 0);
 }
 
+// P1.10: чтение UTM из sessionStorage при открытии модалки
+function captureUtmIntoSession() {
+  if (typeof window === "undefined") return;
+  const params = new URLSearchParams(window.location.search);
+  const keys = [
+    "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term",
+    "yclid", "gclid", "_openstat", "fbclid",
+  ];
+  for (const key of keys) {
+    const v = params.get(key);
+    if (v) sessionStorage.setItem(key, v);
+  }
+  if (!sessionStorage.getItem("first_landing")) {
+    sessionStorage.setItem("first_landing", window.location.href);
+  }
+  if (!sessionStorage.getItem("first_referrer")) {
+    sessionStorage.setItem("first_referrer", document.referrer || window.location.href);
+  }
+}
+
 const CalculatorModalContext = createContext<CalculatorModalContextValue | null>(null);
 
 export function CalculatorModalProvider({ children }: { children: ReactNode }) {
@@ -56,7 +76,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   const [step0SessionInteracted, setStep0SessionInteracted] = useState(false);
   const [step0AreaConfirmed, setStep0AreaConfirmed] = useState(false);
 
-  // скидка: “разрешена” после подтверждения потолка 0->1 (или при lighting-first входе со светом)
+  // скидка: "разрешена" после подтверждения потолка 0->1 (или при lighting-first входе со светом)
   const [lightingDiscountEligible, setLightingDiscountEligible] = useState(false);
 
   const [step1CatalogView, setStep1CatalogView] = useState<"selected" | "browse" | null>(null);
@@ -69,7 +89,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
 
   const markStep0SessionInteracted = useCallback(() => {
     setStep0SessionInteracted(true);
-    // строго: любое изменение Step0 сбрасывает “инженерное подтверждение”
+    // строго: любое изменение Step0 сбрасывает "инженерное подтверждение"
     setStep0AreaConfirmed(false);
   }, []);
 
@@ -77,6 +97,11 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
     (opts?: OpenCalculatorOptions) => {
       const incoming = opts ?? {};
       const isLightingFirst = incoming.entryMode === "lighting-first";
+
+      // P0.4: lighting-first -> скидка доступна сразу
+      if (isLightingFirst) {
+        setLightingDiscountEligible(true);
+      }
 
       const resolvedOpts: OpenCalculatorOptions = {
         ...incoming,
@@ -94,38 +119,43 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
                 areaDefault: DEFAULT_CALCULATOR_AREA,
               }),
       };
-const effectiveSource = String(resolvedOpts.source ?? "unknown");
-trackCalculatorOpen(effectiveSource);
-trackWizardStepView((resolvedOpts.initialStep ?? 0) as 0 | 1 | 2, effectiveSource);
+
+      const effectiveSource = String(resolvedOpts.source ?? "unknown");
+      trackCalculatorOpen(effectiveSource);
+      trackWizardStepView((resolvedOpts.initialStep ?? 0) as 0 | 1 | 2, effectiveSource);
+
+      // P1.10: захват UTM при открытии
+      captureUtmIntoSession();
+
       setOptions(resolvedOpts);
       setCurrentStep(resolvedOpts.initialStep ?? 0);
 
       if (resolvedOpts.initialLighting) setLightingDraftState(resolvedOpts.initialLighting);
       else setLightingDraftState(null);
 
-     // reset flags on each open
-setStep0SessionInteracted(false);
-setStep0AreaConfirmed(false);
+      // reset flags on each open
+      setStep0SessionInteracted(false);
+      setStep0AreaConfirmed(false);
 
-const incomingHasLightingItems =
-  resolvedOpts.initialLighting?.mode === "catalog" &&
-  (resolvedOpts.initialLighting.items?.length ?? 0) > 0;
+      const incomingHasLightingItems =
+        resolvedOpts.initialLighting?.mode === "catalog" &&
+        (resolvedOpts.initialLighting.items?.length ?? 0) > 0;
 
-// FIX C1: в lighting-first со светом сразу считаем скидку доступной
-const enableDiscountNow = Boolean(isLightingFirst && incomingHasLightingItems);
-setLightingDiscountEligible(enableDiscountNow);
+      // FIX C1: в lighting-first со светом сразу считаем скидку доступной
+      const enableDiscountNow = Boolean(isLightingFirst && incomingHasLightingItems);
+      setLightingDiscountEligible((prev) => prev || enableDiscountNow);
 
-setStep1CatalogView(resolvedOpts.initialLightingView ?? null);
+      setStep1CatalogView(resolvedOpts.initialLightingView ?? null);
 
-// скидка: сбрасываем/ставим на snapshot (если он есть)
-setSnapshot((prev) => {
-  if (!prev) return prev;
-  return {
-    ...prev,
-    lightingDiscountApplied: enableDiscountNow,
-    lightingDiscountPercentApplied: enableDiscountNow ? 15 : 0,
-  };
-});
+      // скидка: сбрасываем/ставим на snapshot (если он есть)
+      setSnapshot((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          lightingDiscountApplied: enableDiscountNow,
+          lightingDiscountPercentApplied: enableDiscountNow ? 15 : 0,
+        };
+      });
       setIsOpen(true);
     },
     [setSnapshot]
@@ -138,19 +168,19 @@ setSnapshot((prev) => {
   const goToStep = useCallback(
     (step: WizardStep) => {
       const effectiveSource = String(options?.source ?? "unknown");
-trackWizardStepView(step as 0 | 1 | 2, effectiveSource);
+      trackWizardStepView(step as 0 | 1 | 2, effectiveSource);
       // подтверждение Step0 фиксируем на переходе 0 -> 1
       if (currentStep === 0 && step === 1) {
         if (isCeilingSnapshotReady(snapshot)) {
           setStep0AreaConfirmed(true);
 
-          // скидка становится “разрешённой”
+          // скидка становится "разрешённой"
           setLightingDiscountEligible(true);
 
           // это важно для формы: если человек прошёл Step0 и нажал Далее — это взаимодействие
           setHasInteracted(true);
 
-          // записываем в snapshot флаг скидки как “будет применена”
+          // записываем в snapshot флаг скидки как "будет применена"
           setSnapshot((prev) => {
             if (!prev) return prev;
             return {
