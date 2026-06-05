@@ -84,7 +84,7 @@ type WizardStep0CalculatorProps = {
 };
 
 export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
-  const { markStep0SessionInteracted, options, lightingDraft, step0SessionInteracted } =
+  const { markStep0SessionInteracted, options, lightingDraft, step0SessionInteracted, goToStep } =
     useCalculatorModal();
 
   const forcePreset = Boolean(options?.forcePreset);
@@ -234,6 +234,8 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
             : null
         }
         prefillFromLightingTrigger={prefillTrigger}
+        // P0.1: Dark card CTA button navigates to Step 3 (form)
+        onPrimaryCtaClick={() => goToStep(2)}
       />
     </div>
   );
