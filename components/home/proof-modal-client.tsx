@@ -4,8 +4,30 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 
 import { homeAssets } from "@/content/home-assets";
+import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
+import type { ServiceCalculatorPreset } from "@/content/services";
 
-type ProofItem = (typeof import("@/content/homepage").homepage.proof.items)[number];
+type ActionPreset = {
+  ceilingType?: string;
+  trackType?: string;
+  corniceType?: string;
+};
+
+type ProofItem = {
+  slug: string;
+  title: string;
+  serviceType: string;
+  roomType: string;
+  summary: string;
+  areaLabel: string;
+  timelineLabel: string;
+  priceLabel: string;
+  imageAssetKey: string;
+  alt: string;
+  ctaLabel: string;
+  actionTargetId: string;
+  actionPreset?: ActionPreset;
+};
 
 type ProofModalClientProps = {
   items: readonly ProofItem[];
@@ -94,6 +116,26 @@ export function ProofModalClient({
   const safeImageIndex = Math.min(activeImageIndex, Math.max(gallery.length - 1, 0));
   const activeImage = gallery[safeImageIndex] ?? asset.src;
   const price = splitPriceLabel(item.priceLabel);
+
+  // P1.8: Open calculator with preset from case
+  const { openCalculator } = useCalculatorModal();
+
+  const handleWantSame = () => {
+    onClose();
+    // Convert actionPreset to ServiceCalculatorPreset-compatible object
+    const preset = item.actionPreset
+      ? {
+          ceilingType: (item.actionPreset.ceilingType as ServiceCalculatorPreset["ceilingType"]) ?? "standard",
+          trackType: item.actionPreset.trackType as ServiceCalculatorPreset["trackType"],
+          corniceType: item.actionPreset.corniceType as ServiceCalculatorPreset["corniceType"],
+        }
+      : { ceilingType: "standard" as const };
+
+    openCalculator({
+      preset: preset as ServiceCalculatorPreset,
+      source: "proof-" + item.slug,
+    });
+  };
 
   return (
     <div className="fixed inset-0 z-[80]" role="dialog" aria-modal="true" aria-label={item.title}>
@@ -239,14 +281,13 @@ export function ProofModalClient({
                 </div>
 
                 <div className="mt-8 space-y-3 lg:mt-auto">
-                  <a
-                    href={`#${item.actionTargetId ?? "action"}`}
-                    onClick={onClose}
-                    className="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-slate-950 bg-slate-950 px-5 py-3 text-sm font-semibold transition-colors hover:border-slate-800 hover:bg-slate-800"
-                    style={{ color: "#ffffff" }}
+                  <button
+                    type="button"
+                    onClick={handleWantSame}
+                    className="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-slate-950 bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition-colors hover:border-slate-800 hover:bg-slate-800"
                   >
                     Хочу похожее решение
-                  </a>
+                  </button>
 
                   <button
                     type="button"
