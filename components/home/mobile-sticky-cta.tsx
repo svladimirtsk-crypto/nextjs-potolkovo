@@ -98,7 +98,7 @@ export function MobileStickyCta() {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-40 lg:hidden">
+    <div className="mobile-sticky-cta fixed bottom-0 inset-x-0 z-40 lg:hidden">
       <div
         className="border-t border-slate-200 bg-white/95 backdrop-blur px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}
