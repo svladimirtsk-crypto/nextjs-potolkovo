@@ -63,6 +63,7 @@ export const homepage = {
         alt: "Теневой профиль и трековое освещение в квартире в Москве",
         ctaLabel: "Хочу так же",
         actionTargetId: "action",
+        actionPreset: { ceilingType: "shadow", trackType: "built-in" },
       },
       {
         slug: "floating-led-living-room",
@@ -78,6 +79,7 @@ export const homepage = {
         alt: "Парящий натяжной потолок с LED-подсветкой в квартире",
         ctaLabel: "Хочу так же",
         actionTargetId: "action",
+        actionPreset: { ceilingType: "floating" },
       },
       {
         slug: "light-lines-office",
@@ -93,6 +95,7 @@ export const homepage = {
         alt: "Световые линии в натяжном потолке в офисном пространстве",
         ctaLabel: "Хочу так же",
         actionTargetId: "action",
+        actionPreset: { ceilingType: "standard" },
       },
       {
         slug: "hidden-cornice-flat",
@@ -108,6 +111,7 @@ export const homepage = {
         alt: "Скрытый карниз в натяжном потолке в жилом интерьере",
         ctaLabel: "Хочу так же",
         actionTargetId: "action",
+        actionPreset: { ceilingType: "standard", corniceType: "hidden-niche" },
       },
       {
         slug: "matte-apartment",
@@ -123,6 +127,7 @@ export const homepage = {
         alt: "Белый матовый натяжной потолок в квартире",
         ctaLabel: "Хочу так же",
         actionTargetId: "action",
+        actionPreset: { ceilingType: "standard" },
       },
       {
         slug: "custom-dome",
