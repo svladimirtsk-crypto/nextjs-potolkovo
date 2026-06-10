@@ -98,11 +98,6 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       const incoming = opts ?? {};
       const isLightingFirst = incoming.entryMode === "lighting-first";
 
-      // P0.4: lighting-first -> скидка доступна сразу
-      if (isLightingFirst) {
-        setLightingDiscountEligible(true);
-      }
-
       const resolvedOpts: OpenCalculatorOptions = {
         ...incoming,
         initialStep: incoming.initialStep ?? (isLightingFirst ? 1 : 0),
@@ -143,7 +138,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
 
       // FIX C1: в lighting-first со светом сразу считаем скидку доступной
       const enableDiscountNow = Boolean(isLightingFirst && incomingHasLightingItems);
-      setLightingDiscountEligible((prev) => prev || enableDiscountNow);
+      setLightingDiscountEligible(enableDiscountNow);
 
       setStep1CatalogView(resolvedOpts.initialLightingView ?? null);
 
@@ -169,8 +164,8 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
     (step: WizardStep) => {
       const effectiveSource = String(options?.source ?? "unknown");
       trackWizardStepView(step as 0 | 1 | 2, effectiveSource);
-      // подтверждение Step0 фиксируем на переходе 0 -> 1
-      if (currentStep === 0 && step === 1) {
+      // подтверждение Step0 фиксируем на переходе 0 -> 1 или 0 -> 2
+      if (currentStep === 0 && step >= 1) {
         if (isCeilingSnapshotReady(snapshot)) {
           setStep0AreaConfirmed(true);
 
