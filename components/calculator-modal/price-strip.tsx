@@ -77,7 +77,7 @@ export function PriceStrip() {
           </span>
 
           {!lightingDiscountEligible ? (
-            <span className="text-slate-500"> · скидка −15% при заказе потолка</span>
+            <span className="text-slate-500"> · с потолком −15%</span>
           ) : null}
 
           <span className="text-slate-500"> · </span>
