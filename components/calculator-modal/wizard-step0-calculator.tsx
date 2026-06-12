@@ -224,6 +224,7 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
       <PriceCalculatorClient
         preset={resolvedPreset}
         compactSections
+        showMobileStickyBar={false}
         prefillFromLighting={
           prefillMetrics.hasAny
             ? {
