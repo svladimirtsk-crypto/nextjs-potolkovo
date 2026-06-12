@@ -58,6 +58,10 @@ export function HomeHero() {
               <Button href="#action" variant="secondary" className="w-full sm:w-auto">
                 {hero.primaryCtaLabel}
               </Button>
+              <span className="text-sm text-white/60 hidden sm:inline">или</span>
+              <Button href="#price" variant="ghost" className="w-full sm:w-auto !text-white/80 hover:!text-white border border-white/20 hover:border-white/40 hover:bg-white/10">
+                Рассчитать стоимость
+              </Button>
             </div>
 
             <div className="mt-8 flex flex-wrap gap-2.5">
