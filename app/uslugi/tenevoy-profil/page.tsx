@@ -4,6 +4,7 @@ import { ServicePageLayoutV2 } from "../_components/ServicePageLayoutV2";
 import { ServiceActionSection } from "../_components/ServiceActionSection";
 import { ServiceCompareSection } from "../_components/ServiceCompareSection";
 import { ServiceHero } from "../_components/ServiceHero";
+import { AvitoReviewsSection } from "@/components/home/avito-reviews-section";
 import { ServicePriceSection } from "../_components/ServicePriceSection";
 import { ServicePromiseSection } from "../_components/ServicePromiseSection";
 import { ServiceProofStrip } from "../_components/ServiceProofStrip";
@@ -41,6 +42,7 @@ export default function TenevoyProfilPage() {
       compare={<ServiceCompareSection />}
       trust={<ServiceTrustSection service={service} />}
       promise={<ServicePromiseSection service={service} />}
+      reviews={<AvitoReviewsSection />}
       related={<ServiceRelatedServices service={service} />}
       action={<ServiceActionSection service={service} />}
     />
