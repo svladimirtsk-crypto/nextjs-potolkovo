@@ -24,14 +24,14 @@ import { TextLink } from "@/components/ui/text-link";
 
 const COPY = {
   successTitle: "Заявка отправлена",
-  successMessage: "Спасибо!\nЯ свяжусь с вами, чтобы уточнить задачу и договориться о замере.",
+  successMessage: "Спасибо!\nПерезвоню в ближайшее время — уточню детали и предложу решение.",
   errorMessage:
     "Не удалось отправить заявку.\nПроверьте данные и попробуйте ещё раз.",
-  submitButtonLabel: "Записаться на замер",
+  submitButtonLabel: "Записаться на бесплатный замер",
   submitButtonLabelPending: "Отправляю...",
   helperText:
-    "Обычно отвечаю быстро. Можно указать район — так проще сориентироваться по выезду.",
-  addressFieldHint: "Необязательно.\nЭто поможет быстрее сориентироваться по выезду.",
+    "Перезвоню, чтобы уточнить детали. Можно указать район — так проще сориентироваться.",
+  addressFieldHint: "Необязательно.\nПоможет быстрее сориентироваться по выезду.",
 } as const;
 
 type FormStatus = "idle" | "success" | "error";
@@ -192,6 +192,9 @@ export function ActionForm({ source, onSuccess }: ActionFormProps) {
     const discountApplied = Boolean(snapshot?.lightingDiscountApplied);
     const discountPercentApplied = Number(snapshot?.lightingDiscountPercentApplied ?? 0);
 
+    // Effective: what customer actually pays for lighting (with or without discount)
+    const lightingEffectiveRub = discountApplied ? lightingDiscountedRub : lightingTotalRub;
+
     // ===== Ceiling / works numbers (Step0) =====
     const area = toNumber(snapshot?.area ?? 0);
     const ceilingTypeLabel = String(snapshot?.ceilingTypeLabel ?? "");
@@ -223,8 +226,9 @@ export function ActionForm({ source, onSuccess }: ActionFormProps) {
     const effectiveCeilingRub =
       ceilingWorksGrandTotalRub > 0 ? ceilingWorksGrandTotalRub : ceilingWorksTotalRub;
 
+    // Итого = потолок (с досчётом если есть) + свет (по effective цене, а не всегда скидочной)
     const orderEstimatedGrandRub =
-      Math.max(0, effectiveCeilingRub) + Math.max(0, lightingDiscountedRub);
+      Math.max(0, effectiveCeilingRub) + Math.max(0, lightingEffectiveRub);
 
     // ===== attribution from sessionStorage =====
     const attribution: Record<string, string> = {};
@@ -390,35 +394,33 @@ export function ActionForm({ source, onSuccess }: ActionFormProps) {
         </div>
       ) : null}
 
-      {(ceilingLines.length > 0 || lightingLines.length > 0) && (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-          {ceilingLines.length > 0 ? (
-            <>
-              <p className="font-semibold text-slate-950">
-                В заявку попадёт ваш расчёт потолка
-              </p>
-              <ul className="mt-2 list-disc space-y-1 pl-5">
+      {(ceilingLines.length > 0 || lightingLines.length > 0) ? (
+        <details className="rounded-2xl border border-slate-200 bg-slate-50">
+          <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-950">
+            Расчёт включён в заявку ({ceilingLines.length + lightingLines.length} пунктов) · нажмите, чтобы раскрыть
+          </summary>
+          <div className="border-t border-slate-200 px-4 py-3 text-sm text-slate-700">
+            {ceilingLines.length > 0 ? (
+              <ul className="list-disc space-y-1 pl-5">
                 {ceilingLines.map((line) => (
                   <li key={line}>{line}</li>
                 ))}
               </ul>
-            </>
-          ) : null}
-
-          {lightingLines.length > 0 ? (
-            <div className={ceilingLines.length > 0 ? "mt-4" : ""}>
-              <p className="font-semibold text-slate-950">И выбранное освещение</p>
-              <ul className="mt-2 list-disc space-y-1 pl-5">
-                {lightingLines.map((line) => (
-                  <li key={line} className="whitespace-pre-line">
-                    {line}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </div>
-      )}
+            ) : null}
+            {lightingLines.length > 0 ? (
+              <div className={ceilingLines.length > 0 ? "mt-3" : ""}>
+                <ul className="list-disc space-y-1 pl-5">
+                  {lightingLines.map((line) => (
+                    <li key={line} className="whitespace-pre-line">
+                      {line}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        </details>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
