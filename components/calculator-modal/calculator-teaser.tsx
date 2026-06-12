@@ -10,10 +10,10 @@ type CalculatorTeaserProps = {
 };
 
 const BULLETS = [
-  "Тип потолка и профиль",
-  "Площадь помещения",
-  "Карнизы и световые линии",
-  "Точечные светильники и трековое освещение",
+  "Тип потолка, профиль и площадь",
+  "Карнизы, световые линии и трековое освещение",
+  "Каталог светильников со скидкой до −15%",
+  "Итоговая стоимость за 2 минуты",
 ];
 
 function resolveButtonLabel(explicitLabel: string | undefined, heading: string): string | undefined {
@@ -35,7 +35,7 @@ export function CalculatorTeaser({
     <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
       <Heading
         title={heading}
-        description="Учтем все параметры: от типа потолка до освещения."
+        description="Выберите параметры — калькулятор покажет стоимость с учётом освещения, монтажа и скидок."
       />
 
       <ul className="mt-6 space-y-2.5">
@@ -59,7 +59,7 @@ export function CalculatorTeaser({
       </div>
 
       <p className="mt-4 text-sm text-slate-500">
-        Точную стоимость определим на бесплатном замере
+        Ориентир по цене → точная смета после бесплатного замера
       </p>
     </div>
   );
