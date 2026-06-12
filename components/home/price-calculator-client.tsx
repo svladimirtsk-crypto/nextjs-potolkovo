@@ -137,16 +137,20 @@ function SummaryRow({
   onEdit: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-200">
       <p className="flex items-center gap-2 text-sm text-slate-700">
         <CompactBadge>✓</CompactBadge>
         <span>
           {label}: <span className="font-semibold text-slate-950">{value}</span>
         </span>
       </p>
-      <Button type="button" variant="secondary" onClick={onEdit}>
+      <button
+        type="button"
+        onClick={onEdit}
+        className="rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200 hover:text-slate-950"
+      >
         Изменить
-      </Button>
+      </button>
     </div>
   );
 }
@@ -164,7 +168,7 @@ function CollapsedStep({
 }) {
   return (
     <SectionCard title={title}>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-200">
         <p className="text-sm text-slate-700">{subtitle}</p>
         <Button type="button" variant="secondary" onClick={onOpen} disabled={!enabled}>
           Открыть
@@ -447,6 +451,9 @@ type PriceCalculatorClientProps = {
 
   // P0.1: callback for the dark card CTA button
   onPrimaryCtaClick?: () => void;
+
+  // V-3: Mobile sticky bottom bar — disabled in modal context
+  showMobileStickyBar?: boolean;
 };
 
 export function PriceCalculatorClient({
@@ -455,6 +462,7 @@ export function PriceCalculatorClient({
   prefillFromLighting = null,
   prefillFromLightingTrigger = 0,
   onPrimaryCtaClick,
+  showMobileStickyBar = true,
 }: PriceCalculatorClientProps) {
   const { setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
 
@@ -905,9 +913,13 @@ export function PriceCalculatorClient({
   }, [hasSpecialCeiling, compactSections]);
 
   if (compactSections) {
-    const stepNumber = (id: CompactStepId) => {
-      const idx = stepIndex(id);
-      return idx >= 0 ? idx + 1 : 0;
+    // V-5: step numbers removed — titles hardcoded without numbers
+
+    const scrollToAction = () => {
+      if (typeof document !== "undefined") {
+        const el = document.getElementById("action");
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     };
 
     const ceilingMeta =
@@ -918,30 +930,28 @@ export function PriceCalculatorClient({
     const corniceValue =
       selectedCornice.ratePerMeter > 0
         ? `${selectedCornice.label}, ${corniceLength} м.п.`
-        : "нет";
+        : "не нужен";
 
     const trackValue =
       selectedTrack.ratePerMeter > 0
         ? `${selectedTrack.label}, ${trackLength} м.п.`
-        : "нет";
+        : "не нужен";
 
-    const chandeliersValue = chandeliersEnabled ? `${chandeliersCount} шт.` : "нет";
-    const lightsValue = lightsEnabled ? `${lightsCount} шт.` : "нет";
-    const lightLinesValue = lightLinesEnabled ? `${lightLinesLength} м.п.` : "нет";
+    const chandeliersValue = chandeliersEnabled ? `${chandeliersCount} шт.` : "не нужна";
+    const lightsValue = lightsEnabled ? `${lightsCount} шт.` : "не нужны";
+    const lightLinesValue = lightLinesEnabled ? `${lightLinesLength} м.п.` : "не нужны";
 
     return (
+      <>
       <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:p-8">
         {/* LEFT */}
         <div className="min-w-0 space-y-5">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-            <p className="font-semibold text-slate-950">Быстрый расчёт</p>
-            <p className="mt-1">Один шаг за раз: выбрали → подтвердили → дальше.</p>
-          </div>
+          {/* intro removed — visual noise */}
 
           {/* AREA */}
           <div ref={areaRef}>
             {confirmed.area ? (
-              <SectionCard title={`${stepNumber("area")}) Площадь`}>
+              <SectionCard title={`Площадь`}>
                 <SummaryRow
                   label="Площадь"
                   value={`${area} м²`}
@@ -949,7 +959,7 @@ export function PriceCalculatorClient({
                 />
               </SectionCard>
             ) : activeStep === "area" ? (
-              <SectionCard title={`${stepNumber("area")}) Площадь`}>
+              <SectionCard title={`Площадь`}>
                 <RangeField
                   id="area-field"
                   label="Выберите площадь"
@@ -971,7 +981,7 @@ export function PriceCalculatorClient({
               </SectionCard>
             ) : (
               <CollapsedStep
-                title={`${stepNumber("area")}) Площадь`}
+                title={`Площадь`}
                 subtitle="Выберите площадь помещения"
                 enabled
                 onOpen={() => openStep("area")}
@@ -982,7 +992,7 @@ export function PriceCalculatorClient({
           {/* CEILING */}
           <div ref={ceilingRef}>
             {confirmed.ceiling ? (
-              <SectionCard title={`${stepNumber("ceiling")}) Тип потолка`}>
+              <SectionCard title={`Тип потолка`}>
                 <SummaryRow
                   label="Тип"
                   value={`${selectedCeiling.label} · ${ceilingMeta}`}
@@ -991,7 +1001,7 @@ export function PriceCalculatorClient({
               </SectionCard>
             ) : activeStep === "ceiling" ? (
               <SectionCard
-                title={`${stepNumber("ceiling")}) Тип потолка`}
+                title={`Тип потолка`}
                 description="Для теневого и парящего профиль считается отдельно (по м.п.)."
               >
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -1027,7 +1037,7 @@ export function PriceCalculatorClient({
               </SectionCard>
             ) : (
               <CollapsedStep
-                title={`${stepNumber("ceiling")}) Тип потолка`}
+                title={`Тип потолка`}
                 subtitle={isStepEnabled("ceiling") ? "Выберите тип потолка" : "Сначала подтвердите площадь"}
                 enabled={isStepEnabled("ceiling")}
                 onOpen={() => openStep("ceiling")}
@@ -1039,7 +1049,7 @@ export function PriceCalculatorClient({
           {hasSpecialCeiling ? (
             <div ref={profileRef}>
               {confirmed.profile ? (
-                <SectionCard title={`${stepNumber("profile")}) Длина профиля`}>
+                <SectionCard title={`Длина профиля`}>
                   <SummaryRow
                     label={selectedCeiling.extraLabel ?? "Профиль"}
                     value={`${ceilingLength} м.п. (${ceilingLengthAuto ? "авто 1:1" : "вручную"})`}
@@ -1048,7 +1058,7 @@ export function PriceCalculatorClient({
                 </SectionCard>
               ) : activeStep === "profile" ? (
                 <SectionCard
-                  title={`${stepNumber("profile")}) Длина профиля`}
+                  title={`Длина профиля`}
                   description={selectedCeiling.extraLabel ?? "Профиль по периметру"}
                 >
                   <RangeField
@@ -1085,7 +1095,7 @@ export function PriceCalculatorClient({
                 </SectionCard>
               ) : (
                 <CollapsedStep
-                  title={`${stepNumber("profile")}) Длина профиля`}
+                  title={`Длина профиля`}
                   subtitle={isStepEnabled("profile") ? "Настройте длину профиля" : "Сначала выберите тип потолка"}
                   enabled={isStepEnabled("profile")}
                   onOpen={() => openStep("profile")}
@@ -1097,7 +1107,7 @@ export function PriceCalculatorClient({
           {/* LIGHT LINES */}
           <div ref={lightLinesRef}>
             {confirmed.lightLines ? (
-              <SectionCard title={`${stepNumber("lightLines")}) Световые линии`}>
+              <SectionCard title={`Световые линии`}>
                 <SummaryRow
                   label="Световые линии"
                   value={lightLinesValue}
@@ -1105,7 +1115,7 @@ export function PriceCalculatorClient({
                 />
               </SectionCard>
             ) : activeStep === "lightLines" ? (
-              <SectionCard title={`${stepNumber("lightLines")}) Световые линии`}>
+              <SectionCard title={`Световые линии`}>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <OptionCard
                     active={!lightLinesEnabled}
@@ -1160,7 +1170,7 @@ export function PriceCalculatorClient({
               </SectionCard>
             ) : (
               <CollapsedStep
-                title={`${stepNumber("lightLines")}) Световые линии`}
+                title={`Световые линии`}
                 subtitle={isStepEnabled("lightLines") ? "Выберите: нужны или нет" : "Сначала подтвердите площадь и тип потолка"}
                 enabled={isStepEnabled("lightLines")}
                 onOpen={() => openStep("lightLines")}
@@ -1171,7 +1181,7 @@ export function PriceCalculatorClient({
           {/* CORNICE */}
           <div ref={corniceRef}>
             {confirmed.cornice ? (
-              <SectionCard title={`${stepNumber("cornice")}) Карнизы`}>
+              <SectionCard title={`Карнизы`}>
                 <SummaryRow
                   label="Карниз"
                   value={corniceValue}
@@ -1179,7 +1189,7 @@ export function PriceCalculatorClient({
                 />
               </SectionCard>
             ) : activeStep === "cornice" ? (
-              <SectionCard title={`${stepNumber("cornice")}) Карнизы`}>
+              <SectionCard title={`Карнизы`}>
                 <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2">
                   {calculator.cornices.map((option) => (
                     <OptionCard
@@ -1235,7 +1245,7 @@ export function PriceCalculatorClient({
               </SectionCard>
             ) : (
               <CollapsedStep
-                title={`${stepNumber("cornice")}) Карнизы`}
+                title={`Карнизы`}
                 subtitle={isStepEnabled("cornice") ? "Выберите: нужен или нет" : "Сначала выберите световые линии"}
                 enabled={isStepEnabled("cornice")}
                 onOpen={() => openStep("cornice")}
@@ -1246,7 +1256,7 @@ export function PriceCalculatorClient({
           {/* TRACK */}
           <div ref={trackRef}>
             {confirmed.track ? (
-              <SectionCard title={`${stepNumber("track")}) Трековое освещение`}>
+              <SectionCard title={`Трековое освещение`}>
                 <SummaryRow
                   label="Трек"
                   value={trackValue}
@@ -1254,7 +1264,7 @@ export function PriceCalculatorClient({
                 />
               </SectionCard>
             ) : activeStep === "track" ? (
-              <SectionCard title={`${stepNumber("track")}) Трековое освещение`}>
+              <SectionCard title={`Трековое освещение`}>
                 <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2">
                   {calculator.tracks.map((option) => {
                     const systemHint =
@@ -1323,7 +1333,7 @@ export function PriceCalculatorClient({
               </SectionCard>
             ) : (
               <CollapsedStep
-                title={`${stepNumber("track")}) Трековое освещение`}
+                title={`Трековое освещение`}
                 subtitle={isStepEnabled("track") ? "Выберите: нужен или нет" : "Сначала подтвердите карниз"}
                 enabled={isStepEnabled("track")}
                 onOpen={() => openStep("track")}
@@ -1334,7 +1344,7 @@ export function PriceCalculatorClient({
           {/* CHANDELIERS */}
           <div ref={chandeliersRef}>
             {confirmed.chandeliers ? (
-              <SectionCard title={`${stepNumber("chandeliers")}) Установка люстр`}>
+              <SectionCard title={`Установка люстр`}>
                 <SummaryRow
                   label="Установка люстр"
                   value={chandeliersValue}
@@ -1342,7 +1352,7 @@ export function PriceCalculatorClient({
                 />
               </SectionCard>
             ) : activeStep === "chandeliers" ? (
-              <SectionCard title={`${stepNumber("chandeliers")}) Установка люстр`}>
+              <SectionCard title={`Установка люстр`}>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <OptionCard
                     active={!chandeliersEnabled}
@@ -1402,7 +1412,7 @@ export function PriceCalculatorClient({
               </SectionCard>
             ) : (
               <CollapsedStep
-                title={`${stepNumber("chandeliers")}) Установка люстр`}
+                title={`Установка люстр`}
                 subtitle={
                   isStepEnabled("chandeliers")
                     ? "Выберите: нужна или нет"
@@ -1417,7 +1427,7 @@ export function PriceCalculatorClient({
           {/* LIGHTS */}
           <div ref={lightsRef}>
             {confirmed.lights ? (
-              <SectionCard title={`${stepNumber("lights")}) Точечные светильники`}>
+              <SectionCard title={`Точечные светильники`}>
                 <SummaryRow
                   label="Светильники"
                   value={lightsValue}
@@ -1425,7 +1435,7 @@ export function PriceCalculatorClient({
                 />
               </SectionCard>
             ) : activeStep === "lights" ? (
-              <SectionCard title={`${stepNumber("lights")}) Точечные светильники`}>
+              <SectionCard title={`Точечные светильники`}>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <OptionCard
                     active={!lightsEnabled}
@@ -1484,7 +1494,7 @@ export function PriceCalculatorClient({
               </SectionCard>
             ) : (
               <CollapsedStep
-                title={`${stepNumber("lights")}) Точечные светильники`}
+                title={`Точечные светильники`}
                 subtitle={isStepEnabled("lights") ? "Выберите: нужны или нет" : "Сначала выберите установку люстр"}
                 enabled={isStepEnabled("lights")}
                 onOpen={() => openStep("lights")}
@@ -1493,8 +1503,8 @@ export function PriceCalculatorClient({
           </div>
         </div>
 
-        {/* RIGHT summary */}
-        <div className="lg:sticky lg:top-24 lg:self-start">
+        {/* RIGHT summary — desktop sidebar */}
+        <div className="hidden lg:block lg:sticky lg:top-24 lg:self-start">
           <div className="rounded-[1.75rem] bg-slate-950 p-6 text-white shadow-2xl shadow-slate-950/10">
             <p className="text-sm text-white/70">Ориентировочная стоимость от</p>
             <p className="mt-2 text-3xl font-semibold tracking-tight">
@@ -1502,18 +1512,43 @@ export function PriceCalculatorClient({
             </p>
 
             <p className="mt-2 text-xs text-white/70">
-              Площадь {area} м² · {selectedCeiling.label}
-              {hasSpecialCeiling ? ` · профиль ${ceilingLength} м.п.` : ""}
+              {selectedCeiling.label} · {area} м²
+              {hasSpecialCeiling ? ` · ${ceilingLength} м.п.` : ""}
             </p>
 
             <div className="mt-6">
-              <Button type="button" className="w-full" onClick={onPrimaryCtaClick}>
+              <Button type="button" className="w-full" onClick={onPrimaryCtaClick ?? (() => scrollToAction())}>
                 {homepage.price.primaryCtaLabel}
               </Button>
             </div>
           </div>
         </div>
+
+        {/* V-3: Mobile sticky bottom bar with price + CTA */}
+        {showMobileStickyBar ? (
+        <div className="calc-sticky-bar fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] backdrop-blur lg:hidden"
+          style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}
+        >
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-xs text-slate-500">Итого от</p>
+              <p className="text-lg font-bold tracking-tight text-slate-950">
+                {formatCurrency(total)} ₽
+              </p>
+            </div>
+            <Button type="button" className="whitespace-nowrap shrink-0" onClick={onPrimaryCtaClick ?? (() => scrollToAction())}>
+              {homepage.price.primaryCtaLabel}
+            </Button>
+          </div>
+        </div>
+        ) : null}
       </div>
+
+      {/* Spacer for mobile sticky bar so last step isn't hidden */}
+      {showMobileStickyBar ? (
+        <div className="h-20 lg:hidden" aria-hidden="true" />
+      ) : null}
+      </>
     );
   }
 
@@ -1860,7 +1895,12 @@ export function PriceCalculatorClient({
           </div>
 
           <div className="mt-6">
-            <Button type="button" className="w-full" onClick={onPrimaryCtaClick}>
+            <Button type="button" className="w-full" onClick={onPrimaryCtaClick ?? (() => {
+              if (typeof document !== "undefined") {
+                const el = document.getElementById("action");
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+              }
+            })}>
               {homepage.price.primaryCtaLabel}
             </Button>
           </div>
