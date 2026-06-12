@@ -15,6 +15,7 @@ type ServicePageLayoutV2Props = {
   action: ReactNode;
   related?: ReactNode;
   compare?: ReactNode;
+  reviews?: ReactNode;
 };
 
 export function ServicePageLayoutV2({
@@ -27,6 +28,7 @@ export function ServicePageLayoutV2({
   action,
   related,
   compare,
+  reviews,
 }: ServicePageLayoutV2Props) {
   return (
     <>
@@ -47,6 +49,7 @@ export function ServicePageLayoutV2({
           {compare ?? null}
           {trust}
           {promise}
+          {reviews ?? null}
           {action}
           {related ?? null}
         </main>
