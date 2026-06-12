@@ -970,10 +970,10 @@ export function PriceCalculatorClient({
                   unit="м²"
                   onChange={handleAreaChange}
                   showSlider={showSlider}
-                  quickValues={[10, 15, 20, 25, 30, 40]}
+                  quickValues={[10, 15, 20, 25, 30, 40, 50, 60, 80]}
                 />
                 <div className="mt-4 flex items-center justify-between gap-3">
-                  <p className="text-xs text-slate-500">Можно выбрать пресет или ввести вручную.</p>
+                  <p className="text-xs text-slate-500">Пресет или введите вручную. Для больших площадей — просто наберите число.</p>
                   <Button type="button" variant="secondary" onClick={() => confirmAndNavigate("area")}>
                     Подтвердить
                   </Button>
@@ -1567,7 +1567,7 @@ export function PriceCalculatorClient({
             unit="м²"
             onChange={handleAreaChange}
             showSlider
-            quickValues={[10, 15, 20, 25, 30, 40]}
+            quickValues={[10, 15, 20, 25, 30, 40, 50, 60, 80]}
           />
         </SectionCard>
 
