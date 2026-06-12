@@ -210,7 +210,6 @@ export function getCalculatorSummaryLines(
   if (grand > baseTotal + 0.5) {
     const extra = Math.max(0, grand - baseTotal);
     lines.push(`Досчёт монтажа по свету: ${formatCurrency(extra)} ₽`);
-    lines.push(`Потолок (работы + досчёт): ${formatCurrency(grand)} ₽`);
   }
 
   return lines;
