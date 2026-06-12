@@ -232,7 +232,7 @@ function ProductQtyControls({
       <button
         type="button"
         onClick={handleDec}
-        className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
+        className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 active:scale-95"
         aria-label="Уменьшить"
         style={{ minHeight: 44, minWidth: 44 }}
       >
@@ -246,7 +246,7 @@ function ProductQtyControls({
       <button
         type="button"
         onClick={handleInc}
-        className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
+        className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 active:scale-95"
         aria-label="Увеличить"
         style={{ minHeight: 44, minWidth: 44 }}
       >
@@ -274,7 +274,7 @@ function ProductCard({
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
-      <div className="grid grid-cols-[8rem_1fr] gap-4">
+      <div className="grid grid-cols-[5.5rem_1fr] gap-3 sm:grid-cols-[8rem_1fr] sm:gap-4">
         <ProductImage src={toText(product.coverImage)} alt={toText(product.name)} />
 
         <div className="min-w-0">
@@ -284,17 +284,14 @@ function ProductCard({
 
           {/* P2.4: Article removed from main card — hidden in details popover */}
           {/* P2.5: Name + price + qty first, details expandable */}
-          <div className="mt-2 text-xs text-slate-700">
-            <p>
-              Цена:{" "}
-              <span className="font-semibold text-slate-900">{fmt(regular)} ₽</span>
-            </p>
-            <p className="text-emerald-700">
-              Со скидкой: <span className="font-semibold">{fmt(discounted)} ₽</span>
-            </p>
+          <div className="mt-2 text-xs">
+            <span className="line-through text-slate-400">{fmt(regular)} ₽</span>
+            {" "}
+            <span className="font-semibold text-emerald-700">{fmt(discounted)} ₽</span>
             {benefit > 0 ? (
-              <p className="text-slate-500">Выгода: {fmt(benefit)} ₽</p>
+              <span className="text-slate-500"> · выгода {fmt(benefit)} ₽</span>
             ) : null}
+            <span className="text-slate-400"> · с потолком</span>
           </div>
 
           {/* P2.5: "Подробнее" раскрывает характеристики */}
@@ -302,7 +299,7 @@ function ProductCard({
             <button
               type="button"
               onClick={() => setShowDetails(!showDetails)}
-              className="mt-1 text-xs font-medium text-blue-600 hover:text-blue-800"
+              className="mt-1 text-xs font-medium text-slate-500 hover:text-slate-800 underline decoration-slate-300 underline-offset-2"
             >
               {showDetails ? "Скрыть" : "Подробнее"}
             </button>
@@ -337,7 +334,7 @@ function ProductCard({
             {/* P2.3: hide "Не выбрано" when qty=0 */}
             {qty > 0 ? (
               <span className="rounded-full px-3 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700">
-                В корзине
+                В корзине: {product.unit === "m" ? qty.toFixed(1) : qty} {product.unit === "m" ? "м" : "шт"}
               </span>
             ) : null}
           </div>
@@ -395,7 +392,7 @@ function ProgressRow({
           </div>
 
           <p className="mt-2 text-xs text-slate-500">
-            {done ? "Готово по расчёту." : "Можно продолжать — или добрать."}
+            {done ? "Расчёт полностью укомплектован ✓" : "Выберите свет — или переходите к итогу."}
           </p>
         </div>
       ) : null}
@@ -589,6 +586,61 @@ export function WizardStep1Lighting() {
     : 0;
 
   const progressHasTargets = requiredTrackMeters > 0 || requiredPointQty > 0;
+  // ===== Auto-fill from Step0 requirements =====
+  const autoFillRef = useRef(false);
+  useEffect(() => {
+    // Only auto-fill once, only when cart is empty, only when Step0 has requirements
+    if (autoFillRef.current) return;
+    if (Object.keys(cartItems).length > 0) return;
+    if (requiredTrackMeters <= 0 && requiredPointQty <= 0) return;
+    if (!showCeilingInUi) return; // Don't auto-fill in lighting-first mode
+
+    autoFillRef.current = true;
+    const next: CartItems = {};
+
+    // Auto-fill track profiles: pick cheapest profile per system, calc qty to match meters
+    if (requiredTrackMeters > 0) {
+      // Determine which track system from Step0 derivedInputs
+      const trackMountType = snapshot?.derivedInputs?.trackMountType ?? "none";
+      let targetSystem: TrackSystemId | null = null;
+      if (trackMountType === "built-in") targetSystem = "COLIBRI_220";
+      else if (trackMountType === "surface") targetSystem = "TRACK_220";
+
+      if (targetSystem) {
+        const profiles = products.filter(
+          (p) => p.kind === "TRACK_PROFILE" && p.system === targetSystem && p.priceRub > 0
+        );
+        if (profiles.length > 0) {
+          // Sort by price ascending (cheapest per piece)
+          profiles.sort((a, b) => a.priceRub - b.priceRub);
+          const best = profiles[0];
+          const pieceM = inferPieceLengthMeters(best);
+          if (pieceM && pieceM > 0) {
+            const qty = Math.ceil(requiredTrackMeters / pieceM);
+            next[best.productId] = qty;
+          }
+        }
+      }
+    }
+
+    // Auto-fill point fixtures: pick cheapest GX53 spot fixture
+    if (requiredPointQty > 0) {
+      const spots = products.filter(
+        (p) => p.kind === "SPOT_FIXTURE" && p.priceRub > 0 && !isPanelProduct(p)
+      );
+      if (spots.length > 0) {
+        spots.sort((a, b) => a.priceRub - b.priceRub);
+        const best = spots[0];
+        next[best.productId] = requiredPointQty;
+      }
+    }
+
+    if (Object.keys(next).length > 0) {
+      setCartItems(next);
+    }
+  }, [cartItems, requiredTrackMeters, requiredPointQty, showCeilingInUi, snapshot?.derivedInputs, products, productsById]);
+
+
 
   const EPS_METERS = 0.05;
   const trackDone =
@@ -1200,13 +1252,13 @@ export function WizardStep1Lighting() {
       {activeTab === "recommendations" ? (
         <div className="space-y-3">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-800">
-            <p className="font-semibold text-slate-950">Комплектация (треки/точечные)</p>
+            <p className="font-semibold text-slate-950">Что нужно собрать</p>
 
             <ul className="mt-3 list-disc space-y-1 pl-5 text-slate-700">
-              <li>COLIBRI: {trackAssembled.COLIBRI_220 ? "собрано" : "не собрано"}</li>
-              <li>CLARUS: {trackAssembled.CLARUS_48 ? "собрано" : "не собрано"}</li>
-              <li>ART: {trackAssembled.TRACK_220 ? "собрано" : "не собрано"}</li>
-              <li>Точечные: {pointCompleted ? "укомплектовано" : "не укомплектовано"}</li>
+              <li>COLIBRI {trackAssembled.COLIBRI_220 ? "✓ собран" : "— профиль + светильники"}</li>
+              <li>CLARUS {trackAssembled.CLARUS_48 ? "✓ собран" : "— профиль + светильники"}</li>
+              <li>ART {trackAssembled.TRACK_220 ? "✓ собран" : "— профиль + светильники"}</li>
+              <li>Точечные {pointCompleted ? "✓ выбраны" : "— корпуса + лампы"}</li>
             </ul>
 
             <div className="mt-3 flex flex-wrap gap-2">
@@ -1215,21 +1267,21 @@ export function WizardStep1Lighting() {
                 onClick={gotoTracks}
                 className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
               >
-                Перейти к трекам
+                Открыть треки в каталоге
               </button>
               <button
                 type="button"
                 onClick={gotoPoints}
                 className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
               >
-                Перейти к точечным
+                Открыть точечные в каталоге
               </button>
               <button
                 type="button"
                 onClick={gotoTrackProfiles}
                 className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
               >
-                Профиль трека (м)
+                Профиль трека
               </button>
             </div>
           </div>
@@ -1392,8 +1444,8 @@ export function WizardStep1Lighting() {
                   </ul>
 
                   <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-3 text-sm">
-                    <p>Итого без скидки: {fmt(selectedTotals.regular)} ₽</p>
-                    <p className="text-emerald-700">Итого со скидкой: {fmt(selectedTotals.discounted)} ₽</p>
+                    <p>Итого: {fmt(selectedTotals.regular)} ₽</p>
+                    <p className="text-emerald-700">С заказом потолка (−15%): {fmt(selectedTotals.discounted)} ₽</p>
                     <p className="text-slate-500">Ваша выгода: {fmt(selectedTotals.benefit)} ₽</p>
                   </div>
                 </>
@@ -1596,10 +1648,33 @@ export function WizardStep1Lighting() {
         </div>
       ) : null}
 
-      {lightingDraft?.mode === "catalog" ? (
-        <p className="text-xs text-slate-500">
-          В выбранном: {lightingDraft.items?.length ?? 0} поз.
-        </p>
+      {/* Sticky mini-cart pill */}
+      {lightingDraft?.mode === "catalog" && (lightingDraft.items?.length ?? 0) > 0 ? (
+        <div className="sticky bottom-0 z-10 -mx-5 border-t border-slate-200 bg-white/95 backdrop-blur px-5 py-3 flex items-center justify-between gap-3 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]"
+          style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}
+        >
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">
+              {lightingDraft.items?.length ?? 0}
+            </span>
+            <span className="text-sm font-medium text-slate-950">
+              {fmt(lightingDraft.totalRub ?? 0)} ₽
+              {lightingDraft.discountedTotalRub != null && lightingDraft.discountedTotalRub < (lightingDraft.totalRub ?? 0) ? (
+                <span className="ml-1 text-xs text-emerald-700">−15%</span>
+              ) : null}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setCatalogView("selected");
+              setActiveTab("catalog");
+            }}
+            className="flex h-10 items-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+          >
+            К итогу →
+          </button>
+        </div>
       ) : null}
     </div>
   );
