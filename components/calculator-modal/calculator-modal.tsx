@@ -198,25 +198,33 @@ export function CalculatorModal() {
 
   // P0.6: Progress bar
   const ProgressBar = () => (
-    <div className="flex items-center gap-1.5" role="progressbar" aria-valuenow={currentStep + 1} aria-valuemin={1} aria-valuemax={3}>
+    <div className="flex items-center gap-3" role="progressbar" aria-valuenow={currentStep + 1} aria-valuemin={1} aria-valuemax={3}>
       {[0, 1, 2].map((i) => {
         const isCurrent = i === currentStep;
         const isPast = i < currentStep;
         const canVisit = i < currentStep;
+        const stepLabels = ["Потолок", "Свет", "Итог"];
         return (
           <button
             key={i}
             onClick={() => canVisit && goToStep(i as WizardStep)}
             disabled={!canVisit && !isCurrent}
-            aria-label={`Шаг ${i + 1}`}
-            className={`h-1.5 rounded-full transition-all ${
+            aria-label={`Шаг ${i + 1}: ${stepLabels[i]}`}
+            className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
               isCurrent
-                ? "w-12 bg-slate-950"
+                ? "bg-slate-950 text-white"
                 : isPast
-                  ? "w-8 bg-slate-600 cursor-pointer hover:bg-slate-800"
-                  : "w-8 bg-slate-200 cursor-not-allowed"
+                  ? "bg-slate-200 text-slate-700 cursor-pointer hover:bg-slate-300"
+                  : "bg-slate-100 text-slate-400 cursor-not-allowed"
             }`}
-          />
+          >
+            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
+              isPast ? "bg-slate-950 text-white" : ""
+            }`}>
+              {isPast ? "✓" : i + 1}
+            </span>
+            <span className="hidden sm:inline">{stepLabels[i]}</span>
+          </button>
         );
       })}
     </div>
@@ -342,7 +350,7 @@ export function CalculatorModal() {
                   className="flex h-12 items-center rounded-2xl bg-slate-950 px-6 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
                   style={{ minHeight: 48 }}
                 >
-                  Оставить заявку →
+                  Записаться на замер →
                 </button>
               )}
             </div>
