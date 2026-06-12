@@ -296,15 +296,21 @@ export function CalculatorModal() {
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto px-5 py-5">
-            <div className={currentStep === 0 ? "" : "hidden"} aria-hidden={currentStep !== 0}>
-              <WizardStep0Calculator preset={options?.preset} />
-            </div>
-            <div className={currentStep === 1 ? "" : "hidden"} aria-hidden={currentStep !== 1}>
-              <WizardStep1Lighting />
-            </div>
-            <div className={currentStep === 2 ? "" : "hidden"} aria-hidden={currentStep !== 2}>
-              <WizardStep2Summary />
-            </div>
+            {currentStep === 0 ? (
+              <div key="step0" className="animate-fade-slide-in">
+                <WizardStep0Calculator preset={options?.preset} />
+              </div>
+            ) : null}
+            {currentStep === 1 ? (
+              <div key="step1" className="animate-fade-slide-in">
+                <WizardStep1Lighting />
+              </div>
+            ) : null}
+            {currentStep === 2 ? (
+              <div key="step2" className="animate-fade-slide-in">
+                <WizardStep2Summary />
+              </div>
+            ) : null}
           </div>
 
           {/* Footer */}
@@ -337,7 +343,7 @@ export function CalculatorModal() {
                     className="flex h-12 items-center rounded-2xl bg-slate-950 px-6 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-slate-950"
                     style={{ minHeight: 48 }}
                   >
-                    Далее →
+                    {currentStep === 1 && (lightingDraft?.items?.length ?? 0) > 0 ? "К итогу →" : "Далее →"}
                   </button>
                 </div>
               ) : (
