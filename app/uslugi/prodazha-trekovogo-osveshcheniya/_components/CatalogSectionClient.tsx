@@ -119,14 +119,23 @@ function ProductCard({
   const discounted = getDiscountedPrice(regular);
   const benefit = benefitRub(regular);
 
-  const attrs = (product.keyAttributes?.length ? product.keyAttributes : product.params)
-    .slice(0, 3)
-    .map((p) => `${toText(p.label)}: ${toText(p.value)}`)
-    .join(" • ");
+  const allAttrs = (product.keyAttributes?.length ? product.keyAttributes : product.params)
+    .slice(0, 4)
+    .map((p) => ({ label: toText(p.label), value: toText(p.value) }))
+    .filter((a) => a.label && a.value);
+
+  // V-20: show first 2 attributes on card surface, "+N ещё" expandable
+  const visibleAttrs = allAttrs.slice(0, 2);
+  const hiddenCount = allAttrs.length - visibleAttrs.length;
+
+  const [showAllAttrs, setShowAllAttrs] = useState(false);
+  const displayAttrs = showAllAttrs ? allAttrs : visibleAttrs;
+
+  const attrs = displayAttrs.map((a) => `${a.label}: ${a.value}`).join(" • ");
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
-      <div className="grid grid-cols-[8rem_1fr] gap-4">
+      <div className="grid grid-cols-[5.5rem_1fr] gap-3 sm:grid-cols-[8rem_1fr] sm:gap-4">
         <div className="cursor-zoom-in">
           <ProductImageLightbox src={toText(product.coverImage)} alt={toText(product.name)} />
         </div>
@@ -134,18 +143,38 @@ function ProductCard({
         <div className="min-w-0">
           <p className="text-sm font-semibold text-slate-950 break-words">{toText(product.name)}</p>
 
-          {toText(product.vendorCode) ? (
-            <p className="mt-1 text-xs text-slate-500 break-words">Артикул: {toText(product.vendorCode)}</p>
+          {/* V-20: vendor code hidden from main card */}
+
+          {attrs ? (
+            <p className="mt-2 text-xs text-slate-600 break-words">
+              {attrs}
+              {hiddenCount > 0 && !showAllAttrs ? (
+                <button
+                  type="button"
+                  onClick={() => setShowAllAttrs(true)}
+                  className="ml-1 text-slate-500 underline decoration-slate-300 underline-offset-2 hover:text-slate-800"
+                >
+                  ещё {hiddenCount}
+                </button>
+              ) : null}
+              {showAllAttrs && hiddenCount > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setShowAllAttrs(false)}
+                  className="ml-1 text-slate-500 underline decoration-slate-300 underline-offset-2 hover:text-slate-800"
+                >
+                  свернуть
+                </button>
+              ) : null}
+            </p>
           ) : null}
 
-          {attrs ? <p className="mt-2 text-xs text-slate-600 break-words">{attrs}</p> : null}
-
-          <div className="mt-3 text-xs text-slate-700">
-            <p>
-              {fmt(regular)} ₽ <span className="text-slate-500">· со скидкой:</span>{" "}
-              <span className="font-semibold text-emerald-700">{fmt(discounted)} ₽</span>
-            </p>
-            {benefit > 0 ? <p className="text-slate-500">выгода: {fmt(benefit)} ₽</p> : null}
+          <div className="mt-3 text-xs">
+            <span className="line-through text-slate-400">{fmt(regular)} ₽</span>
+            {" "}
+            <span className="font-semibold text-emerald-700">{fmt(discounted)} ₽</span>
+            {benefit > 0 ? <span className="text-slate-500"> · выгода {fmt(benefit)} ₽</span> : null}
+            <span className="text-slate-400"> · с потолком</span>
           </div>
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -153,7 +182,7 @@ function ProductCard({
               <button
                 type="button"
                 onClick={onDec}
-                className="h-9 w-9 rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
+                className="h-11 w-11 rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 active:scale-95"
               >
                 −
               </button>
@@ -165,7 +194,7 @@ function ProductCard({
               <button
                 type="button"
                 onClick={onInc}
-                className="h-9 w-9 rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
+                className="h-11 w-11 rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 active:scale-95"
               >
                 +
               </button>
@@ -174,10 +203,10 @@ function ProductCard({
             <span
               className={[
                 "rounded-full px-3 py-1 text-xs font-semibold",
-                qty > 0 ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600",
+                qty > 0 ? "bg-emerald-50 text-emerald-700" : "hidden",
               ].join(" ")}
             >
-              {qty > 0 ? "В корзине" : "Не выбрано"}
+              В корзине
             </span>
           </div>
         </div>
@@ -221,6 +250,7 @@ export function CatalogSectionClient({ data }: Props) {
 
   const [query, setQuery] = useState("");
   const [cartItems, setCartItems] = useState<CartItems>({});
+  const [visibleCount, setVisibleCount] = useState(24);
 
   const selectedEntries = useMemo(() => {
     return Object.entries(cartItems)
@@ -555,6 +585,7 @@ export function CatalogSectionClient({ data }: Props) {
               onClick={() => {
                 setSection(item.id);
                 setQuery("");
+                setVisibleCount(24);
               }}
               className={[
                 "rounded-xl px-3 py-2 text-sm font-medium",
@@ -651,12 +682,15 @@ export function CatalogSectionClient({ data }: Props) {
           </div>
         ) : null}
 
-        <input
+        <div className="relative mt-4">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">🔍</span>
+          <input
           value={query}
           onChange={(event) => setQuery(String(event.target.value ?? ""))}
           placeholder="Поиск в текущем разделе"
-          className="mt-4 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
+          className="w-full rounded-2xl border border-slate-300 bg-white pl-10 pr-4 py-3 text-sm text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
         />
+        </div>
 
         {/* Selected mini-bar */}
         {selectedEntries.length > 0 ? (
@@ -700,15 +734,15 @@ export function CatalogSectionClient({ data }: Props) {
             <div className="mt-3 text-sm text-slate-800">
               <p>Итого: {fmt(selectedTotal)} ₽</p>
               <p className="text-emerald-700">
-                Со скидкой: {fmt(discountedSelectedTotal)} ₽ <span className="text-xs">−15%</span>
+                С потолком (−15%): {fmt(discountedSelectedTotal)} ₽
               </p>
             </div>
           </div>
         ) : null}
 
-        {/* Products grid */}
+        {/* Products grid with "Показать ещё" */}
         <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {filteredProducts.map((product) => {
+          {filteredProducts.slice(0, visibleCount).map((product) => {
             const id = toText(product.productId);
             const qty = toNumber(cartItems[id]);
             const step = product.unit === "m" ? 0.5 : 1;
@@ -738,6 +772,19 @@ export function CatalogSectionClient({ data }: Props) {
             );
           })}
         </div>
+
+        {/* "Показать ещё" button */}
+        {filteredProducts.length > visibleCount ? (
+          <div className="mt-6 text-center">
+            <button
+              type="button"
+              onClick={() => setVisibleCount((c) => c + 24)}
+              className="rounded-2xl border border-slate-300 bg-white px-8 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 hover:border-slate-400"
+            >
+              Показать ещё ({filteredProducts.length - visibleCount} из {filteredProducts.length})
+            </button>
+          </div>
+        ) : null}
 
         {filteredProducts.length === 0 ? (
           <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
