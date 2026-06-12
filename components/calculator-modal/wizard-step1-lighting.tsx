@@ -586,59 +586,99 @@ export function WizardStep1Lighting() {
     : 0;
 
   const progressHasTargets = requiredTrackMeters > 0 || requiredPointQty > 0;
-  // ===== Auto-fill from Step0 requirements =====
-  const autoFillRef = useRef(false);
-  useEffect(() => {
-    // Only auto-fill once, only when cart is empty, only when Step0 has requirements
-    if (autoFillRef.current) return;
-    if (Object.keys(cartItems).length > 0) return;
-    if (requiredTrackMeters <= 0 && requiredPointQty <= 0) return;
-    if (!showCeilingInUi) return; // Don't auto-fill in lighting-first mode
+  // ===== Recommendations from Step0 (NOT auto-fill) =====
+  // Instead of silently adding items to cart, we show recommendation cards
+  // that the user can explicitly accept or dismiss.
+  const recommendedTrackProfiles = useMemo(() => {
+    if (!showCeilingInUi || requiredTrackMeters <= 0) return [];
+    const trackMountType = snapshot?.derivedInputs?.trackMountType ?? "none";
 
-    autoFillRef.current = true;
-    const next: CartItems = {};
+    // built-in → COLIBRI + CLARUS; surface → ART
+    const targetSystems: TrackSystemId[] =
+      trackMountType === "built-in"
+        ? ["COLIBRI_220", "CLARUS_48"]
+        : trackMountType === "surface"
+          ? ["TRACK_220"]
+          : [];
 
-    // Auto-fill track profiles: pick cheapest profile per system, calc qty to match meters
-    if (requiredTrackMeters > 0) {
-      // Determine which track system from Step0 derivedInputs
-      const trackMountType = snapshot?.derivedInputs?.trackMountType ?? "none";
-      let targetSystem: TrackSystemId | null = null;
-      if (trackMountType === "built-in") targetSystem = "COLIBRI_220";
-      else if (trackMountType === "surface") targetSystem = "TRACK_220";
+    const results: Array<{ product: FeedCatalogProduct; system: TrackSystemId; qty: number; totalMeters: number }> = [];
 
-      if (targetSystem) {
-        const profiles = products.filter(
-          (p) => p.kind === "TRACK_PROFILE" && p.system === targetSystem && p.priceRub > 0
-        );
-        if (profiles.length > 0) {
-          // Sort by price ascending (cheapest per piece)
-          profiles.sort((a, b) => a.priceRub - b.priceRub);
-          const best = profiles[0];
-          const pieceM = inferPieceLengthMeters(best);
-          if (pieceM && pieceM > 0) {
-            const qty = Math.ceil(requiredTrackMeters / pieceM);
-            next[best.productId] = qty;
-          }
-        }
-      }
-    }
+    for (const system of targetSystems) {
+      const base = TRACK_PROFILE_WHITELIST[system] ?? [];
+      const allowed =
+        system === "TRACK_220"
+          ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST])
+          : new Set(base);
 
-    // Auto-fill point fixtures: pick cheapest GX53 spot fixture
-    if (requiredPointQty > 0) {
-      const spots = products.filter(
-        (p) => p.kind === "SPOT_FIXTURE" && p.priceRub > 0 && !isPanelProduct(p)
+      const profiles = products.filter(
+        (p) => p.kind === "TRACK_PROFILE" && p.system === system && p.priceRub > 0 && allowed.has(toText(p.vendorCode))
       );
-      if (spots.length > 0) {
-        spots.sort((a, b) => a.priceRub - b.priceRub);
-        const best = spots[0];
-        next[best.productId] = requiredPointQty;
+      if (profiles.length === 0) continue;
+
+      // Sort by price ascending, pick cheapest
+      profiles.sort((a, b) => a.priceRub - b.priceRub);
+      const best = profiles[0];
+      const pieceM = inferPieceLengthMeters(best);
+      if (pieceM && pieceM > 0) {
+        const qty = Math.ceil(requiredTrackMeters / pieceM);
+        results.push({ product: best, system, qty, totalMeters: qty * pieceM });
       }
     }
 
-    if (Object.keys(next).length > 0) {
-      setCartItems(next);
+    return results;
+  }, [showCeilingInUi, requiredTrackMeters, snapshot?.derivedInputs, products]);
+
+  const recommendedPointFixtures = useMemo(() => {
+    if (!showCeilingInUi || requiredPointQty <= 0) return [];
+    const spots = products.filter(
+      (p) => p.kind === "SPOT_FIXTURE" && p.priceRub > 0 && !isPanelProduct(p)
+    );
+    if (spots.length === 0) return [];
+
+    spots.sort((a, b) => a.priceRub - b.priceRub);
+    // Return up to 3 cheapest options
+    return spots.slice(0, 3).map((p) => ({ product: p }));
+  }, [showCeilingInUi, requiredPointQty, products]);
+
+  const hasRecommendations =
+    recommendedTrackProfiles.length > 0 || recommendedPointFixtures.length > 0;
+
+  // Track which recommendations were dismissed
+  const [dismissedRecs, setDismissedRecs] = useState<Set<string>>(new Set());
+  const dismissRec = (key: string) =>
+    setDismissedRecs((prev) => new Set(prev).add(key));
+
+  const acceptTrackRecommendation = (rec: typeof recommendedTrackProfiles[number]) => {
+    setProductQty(rec.product, rec.qty);
+    dismissRec(`track-${rec.system}`);
+  };
+
+  const acceptPointRecommendation = (rec: typeof recommendedPointFixtures[number]) => {
+    setProductQty(rec.product, requiredPointQty);
+    dismissRec(`point-${rec.product.productId}`);
+  };
+
+  const acceptAllRecommendations = () => {
+    for (const rec of recommendedTrackProfiles) {
+      if (!dismissedRecs.has(`track-${rec.system}`)) {
+        setProductQty(rec.product, rec.qty);
+      }
     }
-  }, [cartItems, requiredTrackMeters, requiredPointQty, showCeilingInUi, snapshot?.derivedInputs, products, productsById]);
+    for (const rec of recommendedPointFixtures) {
+      if (!dismissedRecs.has(`point-${rec.product.productId}`)) {
+        setProductQty(rec.product, requiredPointQty);
+      }
+    }
+    setDismissedRecs(new Set()); // clear all dismissals
+  };
+
+  const visibleTrackRecs = recommendedTrackProfiles.filter(
+    (r) => !dismissedRecs.has(`track-${r.system}`)
+  );
+  const visiblePointRecs = recommendedPointFixtures.filter(
+    (r) => !dismissedRecs.has(`point-${r.product.productId}`)
+  );
+  const hasVisibleRecs = visibleTrackRecs.length > 0 || visiblePointRecs.length > 0;
 
 
 
@@ -1178,10 +1218,10 @@ export function WizardStep1Lighting() {
         ) : null}
       </div>
 
-      {/* P2.1: Tabs in one row: Рекомендации / Каталог / Выбранное (N) */}
+      {/* P2.1: Tabs in one row: Подбор / Каталог / Выбранное (N) */}
       <div className="flex flex-wrap gap-2">
         <TabButton active={activeTab === "recommendations"} onClick={() => setActiveTab("recommendations")}>
-          Рекомендации
+          Подбор
         </TabButton>
         <TabButton active={activeTab === "catalog" && catalogView === "browse"} onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}>
           Каталог
@@ -1250,42 +1290,212 @@ export function WizardStep1Lighting() {
       ) : null}
 
       {activeTab === "recommendations" ? (
-        <div className="space-y-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-800">
-            <p className="font-semibold text-slate-950">Что нужно собрать</p>
+        <div key="rec-tab" className="animate-fade-in space-y-3">
+          {/* Context from Step 0 */}
+          {hasRecommendations ? (
+            <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+              <p className="font-semibold">На основе вашего расчёта потолка</p>
+              <p className="mt-1 text-blue-900/80">
+                {requiredTrackMeters > 0 ? `Нужно ~${fmtMeters(requiredTrackMeters)} м трекового профиля` : ""}
+                {requiredTrackMeters > 0 && requiredPointQty > 0 ? " · " : ""}
+                {requiredPointQty > 0 ? `${requiredPointQty} точечных светильников` : ""}
+              </p>
+              {snapshot?.derivedInputs?.trackMountType === "built-in" ? (
+                <p className="mt-1 text-xs text-blue-800/70">Вы выбрали встроенный трек → системы COLIBRI / CLARUS</p>
+              ) : snapshot?.derivedInputs?.trackMountType === "surface" ? (
+                <p className="mt-1 text-xs text-blue-800/70">Вы выбрали накладной трек → система ART</p>
+              ) : null}
+            </div>
+          ) : null}
 
-            <ul className="mt-3 list-disc space-y-1 pl-5 text-slate-700">
-              <li>COLIBRI {trackAssembled.COLIBRI_220 ? "✓ собран" : "— профиль + светильники"}</li>
-              <li>CLARUS {trackAssembled.CLARUS_48 ? "✓ собран" : "— профиль + светильники"}</li>
-              <li>ART {trackAssembled.TRACK_220 ? "✓ собран" : "— профиль + светильники"}</li>
-              <li>Точечные {pointCompleted ? "✓ выбраны" : "— корпуса + лампы"}</li>
-            </ul>
+          {/* Quick accept all */}
+          {hasVisibleRecs && cartEntries.length === 0 ? (
+            <button
+              type="button"
+              onClick={acceptAllRecommendations}
+              className="w-full rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+            >
+              Добавить все рекомендации
+            </button>
+          ) : null}
 
-            <div className="mt-3 flex flex-wrap gap-2">
+          {/* Track profile recommendations */}
+          {visibleTrackRecs.map((rec) => {
+            const regular = toNumber(rec.product.priceRub);
+            const discounted = getDiscountedPrice(regular);
+            const benefit = computeBenefit(regular, discounted);
+            const alreadyInCart = toNumber(cartItems[rec.product.productId]) > 0;
+            const systemLabel = rec.system === "COLIBRI_220" ? "COLIBRI 220V" : rec.system === "CLARUS_48" ? "CLARUS 48V" : "ART 220V";
+
+            return (
+              <div key={`track-rec-${rec.system}`} className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0">
+                    <ProductImage src={toText(rec.product.coverImage)} alt={toText(rec.product.name)} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-xs font-semibold text-blue-700">{systemLabel} · Профиль</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-950">{toText(rec.product.name)}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => dismissRec(`track-${rec.system}`)}
+                        className="text-slate-400 hover:text-slate-600 text-xs"
+                        aria-label="Убрать рекомендацию"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <p className="mt-1 text-xs text-slate-600">
+                      {rec.qty} шт. ≈ {fmtMeters(rec.totalMeters)} м · {fmt(regular)} ₽/шт
+                    </p>
+                    <p className="mt-1 text-xs">
+                      <span className="line-through text-slate-400">{fmt(regular * rec.qty)} ₽</span>
+                      {" "}
+                      <span className="font-semibold text-emerald-700">{fmt(discounted * rec.qty)} ₽</span>
+                      {benefit > 0 ? <span className="text-slate-500"> · выгода {fmt(benefit * rec.qty)} ₽</span> : null}
+                      <span className="text-slate-400"> · с потолком</span>
+                    </p>
+
+                    <div className="mt-3">
+                      {alreadyInCart ? (
+                        <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                          ✓ В корзине
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => acceptTrackRecommendation(rec)}
+                          className="rounded-xl bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                        >
+                          Добавить {rec.qty} шт.
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Point fixture recommendations */}
+          {visiblePointRecs.map((rec) => {
+            const regular = toNumber(rec.product.priceRub);
+            const discounted = getDiscountedPrice(regular);
+            const benefit = computeBenefit(regular, discounted);
+            const alreadyInCart = toNumber(cartItems[rec.product.productId]) > 0;
+
+            return (
+              <div key={`point-rec-${rec.product.productId}`} className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="flex items-start gap-3">
+                  <div className="shrink-0">
+                    <ProductImage src={toText(rec.product.coverImage)} alt={toText(rec.product.name)} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-xs font-semibold text-slate-500">Точечный светильник</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-950">{toText(rec.product.name)}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => dismissRec(`point-${rec.product.productId}`)}
+                        className="text-slate-400 hover:text-slate-600 text-xs"
+                        aria-label="Убрать рекомендацию"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <p className="mt-1 text-xs text-slate-600">
+                      {requiredPointQty} шт. · {fmt(regular)} ₽/шт
+                    </p>
+                    <p className="mt-1 text-xs">
+                      <span className="line-through text-slate-400">{fmt(regular * requiredPointQty)} ₽</span>
+                      {" "}
+                      <span className="font-semibold text-emerald-700">{fmt(discounted * requiredPointQty)} ₽</span>
+                      {benefit > 0 ? <span className="text-slate-500"> · выгода {fmt(benefit * requiredPointQty)} ₽</span> : null}
+                      <span className="text-slate-400"> · с потолком</span>
+                    </p>
+
+                    <div className="mt-3">
+                      {alreadyInCart ? (
+                        <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                          ✓ В корзине
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => acceptPointRecommendation(rec)}
+                          className="rounded-xl bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                        >
+                          Добавить {requiredPointQty} шт.
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* "У меня уже есть" option */}
+          {hasRecommendations ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
+              <p className="font-medium text-slate-700">У меня уже есть освещение</p>
+              <p className="mt-1">Если трек или светильники уже куплены — просто пропустите этот шаг. Мы учтём только установку.</p>
               <button
                 type="button"
-                onClick={gotoTracks}
-                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                onClick={() => goToStep(2)}
+                className="mt-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
               >
-                Открыть треки в каталоге
-              </button>
-              <button
-                type="button"
-                onClick={gotoPoints}
-                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Открыть точечные в каталоге
-              </button>
-              <button
-                type="button"
-                onClick={gotoTrackProfiles}
-                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Профиль трека
+                Пропустить, к итогу →
               </button>
             </div>
-          </div>
+          ) : null}
 
+          {/* No recommendations (lighting-first or no Step0 data) */}
+          {!hasRecommendations ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+              <p className="font-semibold text-slate-950">Выберите освещение в каталоге</p>
+              <p className="mt-1">Перейдите в каталог, чтобы подобрать трековые системы и светильники.</p>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={gotoTracks}
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Трековые системы
+                </button>
+                <button
+                  type="button"
+                  onClick={gotoPoints}
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Точечные светильники
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {/* Open catalog link */}
+          {hasRecommendations ? (
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => setActiveTab("catalog")}
+                className="text-sm font-medium text-slate-500 underline decoration-slate-300 underline-offset-4 hover:text-slate-800"
+              >
+                Или выберите в каталоге →
+              </button>
+            </div>
+          ) : null}
+
+          {/* Existing warnings for mounts/lamps/PSU */}
           {missingMounts.map((item) => (
             <div
               key={`${item.fixtureVendorCode}-${item.mountVendorCode}`}
@@ -1370,7 +1580,7 @@ export function WizardStep1Lighting() {
       ) : null}
 
       {activeTab === "catalog" ? (
-        <div className="space-y-4">
+        <div key="catalog-tab" className="animate-fade-in space-y-4">
           {catalogView === "selected" ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               {selectedViewItems.length === 0 ? (
@@ -1648,11 +1858,9 @@ export function WizardStep1Lighting() {
         </div>
       ) : null}
 
-      {/* Sticky mini-cart pill */}
+      {/* Cart summary pill (non-sticky) — shows when items selected */}
       {lightingDraft?.mode === "catalog" && (lightingDraft.items?.length ?? 0) > 0 ? (
-        <div className="sticky bottom-0 z-10 -mx-5 border-t border-slate-200 bg-white/95 backdrop-blur px-5 py-3 flex items-center justify-between gap-3 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]"
-          style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}
-        >
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">
               {lightingDraft.items?.length ?? 0}
@@ -1664,16 +1872,25 @@ export function WizardStep1Lighting() {
               ) : null}
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setCatalogView("selected");
-              setActiveTab("catalog");
-            }}
-            className="flex h-10 items-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800"
-          >
-            К итогу →
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setCatalogView("selected");
+                setActiveTab("catalog");
+              }}
+              className="rounded-xl border border-emerald-300 bg-white px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100"
+            >
+              Посмотреть
+            </button>
+            <button
+              type="button"
+              onClick={() => goToStep(2)}
+              className="rounded-xl bg-emerald-700 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-800"
+            >
+              К итогу →
+            </button>
+          </div>
         </div>
       ) : null}
     </div>
