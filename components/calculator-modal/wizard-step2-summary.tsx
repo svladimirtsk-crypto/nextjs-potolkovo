@@ -150,8 +150,6 @@ function sumPointQtyFromLightingItems(
   return qtyTotal;
 }
 
-type Step3Tab = "summary" | "full";
-
 export function WizardStep2Summary() {
   const modal = useCalculatorModal() as any;
 
@@ -185,7 +183,6 @@ export function WizardStep2Summary() {
       ? modal.grandTotal
       : (showCeilingInUi ? ceilingTotal : 0) + lightingEffectiveTotal;
 
-  const [tab, setTab] = useState<Step3Tab>("summary");
   const [showResult, setShowResult] = useState(false);
 
   const { snapshot, setSnapshot } = usePriceCalculatorBridge();
@@ -306,226 +303,129 @@ export function WizardStep2Summary() {
     el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  function TabButton({ id, label }: { id: Step3Tab; label: string }) {
-    const active = tab === id;
-    return (
-      <button
-        type="button"
-        onClick={() => setTab(id)}
-        className={[
-          "rounded-xl px-3 py-2 text-xs font-semibold transition-colors",
-          active
-            ? "bg-slate-950 text-white"
-            : "border border-slate-200 bg-white text-slate-900 hover:bg-slate-50",
-        ].join(" ")}
-      >
-        {label}
-      </button>
-    );
-  }
-
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
-          <TabButton id="summary" label="Коротко" />
-          <TabButton id="full" label="Подробно" />
+    <div key="step2" className="animate-fade-slide-in space-y-4">
+      {/* Grand total — hero number */}
+      <div className="rounded-2xl bg-slate-950 p-6 text-center text-white shadow-xl">
+        <p className="text-sm text-white/70">Ориентировочный итог</p>
+        <p className="mt-2 text-4xl font-bold tracking-tight">~{fmt(grandTotal)} ₽</p>
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-xs text-white/60">
+          {showCeilingInUi ? <span>Потолок {fmt(ceilingTotal)} ₽</span> : null}
+          {showCeilingInUi && lightingEffectiveTotal > 0 ? <span>+</span> : null}
+          {lightingEffectiveTotal > 0 ? (
+            <span>
+              Свет {fmt(lightingEffectiveTotal)} ₽
+              {lightingDiscountEligible ? <span className="text-emerald-400"> −15%</span> : null}
+            </span>
+          ) : null}
         </div>
+        {!lightingDiscountEligible && lightingEffectiveTotal > 0 ? (
+          <p className="mt-2 text-xs text-white/50">С заказом потолка — скидка −15% на свет</p>
+        ) : null}
+      </div>
 
+      {/* Edit buttons row */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={handleGoToCeiling}
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          Изменить потолок
+        </button>
         <button
           type="button"
           onClick={handleEditLighting}
-          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
         >
-          <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M2 8h12M8 2v12" />
-          </svg>
           Изменить свет
         </button>
       </div>
 
+      {/* Detailed breakdown — only if user wants it */}
+      <details className="rounded-2xl border border-slate-200 bg-white">
+        <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-950">
+          Состав расчёта
+        </summary>
+        <div className="border-t border-slate-200 px-4 py-3 text-sm text-slate-700 space-y-2">
+          {showCeilingInUi ? (
+            <>
+              <div className="flex justify-between">
+                <span>Потолок (работы)</span>
+                <span className="font-semibold text-slate-950">{fmt(ceilingTotal)} ₽</span>
+              </div>
+              {canReconcileInstall && extraInstallTotal > 0 ? (
+                <div className="flex justify-between">
+                  <span>Монтаж по свету (досчёт)</span>
+                  <span className="font-semibold text-slate-950">{fmt(extraInstallTotal)} ₽</span>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <div className="flex justify-between">
+              <span>Потолок</span>
+              <span className="text-slate-500">— (не рассчитан)</span>
+            </div>
+          )}
+
+          {lightingItems.length > 0 ? (
+            <div className="pt-2">
+              <p className="font-semibold text-slate-950">
+                Освещение{kitDisplayName ? ` — ${kitDisplayName}` : ""}
+              </p>
+              <ul className="mt-1 space-y-0.5 text-slate-600">
+                {lightingItems.map((item) => (
+                  <li key={`${item.sku}-${item.name}`} className="flex justify-between">
+                    <span>{toText(item.name)} × {toNumber(item.qty)}</span>
+                    <span>{fmt(toNumber(item.priceRub) * toNumber(item.qty))} ₽</span>
+                  </li>
+                ))}
+              </ul>
+              {lightingDiscountEligible ? (
+                <p className="mt-1 text-xs text-emerald-700 font-medium">Скидка −15% учтена</p>
+              ) : null}
+            </div>
+          ) : null}
+
+          <div className="border-t border-slate-200 pt-2">
+            <div className="flex justify-between font-semibold text-slate-950">
+              <span>Итого</span>
+              <span>~{fmt(grandTotal)} ₽</span>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      {/* Discount hint */}
       {!lightingDiscountEligible ? (
         <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
           <p className="font-semibold">Свет дешевле с натяжным потолком</p>
-          <p className="mt-2">
-            При заказе потолка скидка −15% на всё освещение. Укажите параметры потолка — скидка применится автоматически.
+          <p className="mt-1 text-blue-900/80">
+            При заказе потолка скидка −15% на всё освещение.
           </p>
           <button
             type="button"
             onClick={handleGoToCeiling}
-            className="mt-3 rounded-xl bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800"
+            className="mt-2 rounded-xl bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800"
           >
-            Перейти к потолку →
+            Рассчитать потолок →
           </button>
         </div>
       ) : null}
 
-      {tab === "summary" ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
-          <p className="text-base font-semibold text-slate-950">Итог расчёта</p>
-
-          <div className="mt-3 space-y-2">
-            {showCeilingInUi ? (
-              <>
-                <div className="flex items-center justify-between gap-3">
-                  <span>Потолок</span>
-                  <span className="font-semibold text-slate-950">{fmt(ceilingTotal)} ₽</span>
-                </div>
-
-                {canReconcileInstall && extraInstallTotal > 0 ? (
-                  <div className="flex items-center justify-between gap-3">
-                    <span>Монтаж по свету (досчёт)</span>
-                    <span className="font-semibold text-slate-950">{fmt(extraInstallTotal)} ₽</span>
-                  </div>
-                ) : null}
-              </>
-            ) : (
-              <div className="flex items-center justify-between gap-3">
-                <span>Потолок</span>
-                <span className="text-slate-600">— (после шага 1)</span>
-              </div>
-            )}
-
-            <div className="flex items-center justify-between gap-3">
-              <span>
-                Свет{lightingDiscountEligible ? " (со скидкой)" : ""}{" "}
-                {!lightingDiscountEligible ? <span className="text-slate-500">(без скидки)</span> : null}
-              </span>
-              <span className="font-semibold text-slate-950">{fmt(lightingEffectiveTotal)} ₽</span>
-            </div>
-
-            <div className="border-t border-slate-200 pt-3">
-              <div className="flex items-center justify-between gap-3 text-sm font-semibold text-slate-950">
-                <span>Итого</span>
-                <span>~{fmt(grandTotal)} ₽</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
-          <p className="text-base font-semibold text-slate-950">Полный расчёт</p>
-
-          <div className="mt-3 space-y-2">
-            <p className="font-semibold text-slate-950">Потолок</p>
-            <p>{showCeilingInUi ? <>Потолок: {fmt(ceilingTotal)} ₽</> : <>Потолок: — (после шага 1)</>}</p>
-
-            {canReconcileInstall && extraInstallTotal > 0 ? (
-              <p>Досчёт монтажа: {fmt(extraInstallTotal)} ₽</p>
-            ) : null}
-
-            {/* P2.6: hide row when both are zero */}
-            {(selectedTrackMeters > 0 || selectedPointQty > 0 || derivedTrackFromStep0 > 0 || derivedPointFromStep0 > 0) ? (
-              <p className="text-xs text-slate-500">
-                {selectedTrackMeters > 0 || selectedPointQty > 0 ? `В корзине: ${selectedTrackMeters > 0 ? `профиль трека ~${selectedTrackMeters.toFixed(1)} м` : ""}${selectedTrackMeters > 0 && selectedPointQty > 0 ? " · " : ""}${selectedPointQty > 0 ? `точечные ${selectedPointQty} шт.` : ""}` : ""}
-                {derivedTrackFromStep0 > 0 || derivedPointFromStep0 > 0 ? (
-                  <><br />По потолку: {derivedTrackFromStep0 > 0 ? `трек ${derivedTrackFromStep0} м` : ""}{derivedTrackFromStep0 > 0 && derivedPointFromStep0 > 0 ? " · " : ""}{derivedPointFromStep0 > 0 ? `точечные ${derivedPointFromStep0} шт.` : ""}</>
-                ) : null}
-              </p>
-            ) : null}
-
-            <div className="pt-2">
-              <p className="font-semibold text-slate-950">
-                Освещение (товары){kitDisplayName ? ` — ${kitDisplayName}` : ""}
-              </p>
-
-              {/* P2.19: условный рендер только если есть товары */}
-              {lightingItems.length > 0 ? (
-                <ul className="mt-2 list-disc space-y-1 pl-5">
-                  {lightingItems.map((item) => (
-                    <li key={`${item.sku}-${item.name}`}>
-                      <span className="font-medium text-slate-950">{toText(item.name)}</span>
-                      <span className="text-slate-600">
-                        {" "}
-                        — {toNumber(item.qty)} шт. · {fmt(toNumber(item.priceRub))} ₽/шт
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
-
-            <div className="border-t border-slate-200 pt-3">
-              <p className="text-sm font-semibold text-slate-950">Итого: ~{fmt(grandTotal)} ₽</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* P1.6: Показать kitBaseName */}
-      {lighting?.kitBaseName ? (
-        <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
-          <div className="text-xs text-blue-600 font-medium uppercase tracking-wide">
-            Готовый комплект
-          </div>
-          <div className="text-base font-semibold text-slate-950 mt-1">
-            {lighting.kitBaseName}
-            {lighting.scaledSpotsQty != null ? ` · ${lighting.scaledSpotsQty} шт.` : ""}
-          </div>
-        </div>
-      ) : null}
-
-      {/* P2.13: "Что входит" секция */}
-      <details className="rounded-2xl border border-slate-200 bg-white">
-        <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-950">
-          Что входит в расчёт
-        </summary>
-        <div className="border-t border-slate-200 px-4 py-3">
-          <div className="flex flex-wrap gap-2">
-            {["Договор", "Гарантия 2 года", "Монтаж за 1 день", "Уборка после"].map((item) => (
-              <span
-                key={item}
-                className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700"
-              >
-                ✓ {item}
-              </span>
-            ))}
-          </div>
-        </div>
-      </details>
-
-      {/* V-35: WhatsApp/Telegram alternative with icons */}
-      <div className="flex items-center justify-center gap-4 text-sm">
-        <span className="text-slate-500">или напишите</span>
-        <a
-          href={`https://wa.me/${contacts.phoneDisplay.replace(/\D/g, "")}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 font-medium text-emerald-700 transition-colors hover:bg-emerald-100"
-        >
-          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18a8 8 0 01-4.243-1.214L4 20l1.214-3.757A8 8 0 1112 20z"/></svg>
-          WhatsApp
-        </a>
-        <a
-          href={contacts.telegramUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 font-medium text-blue-600 transition-colors hover:bg-blue-100"
-        >
-          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0a12 12 0 00-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 01.171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
-          Telegram
-        </a>
+      {/* What's included */}
+      <div className="flex flex-wrap gap-2">
+        {["Договор", "Гарантия 2 года", "Монтаж за 1 день", "Уборка после"].map((item) => (
+          <span
+            key={item}
+            className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700"
+          >
+            ✓ {item}
+          </span>
+        ))}
       </div>
 
-      {/* P2.7: "В заявку попадёт ваш расчёт" — accordion */}
-      <details className="rounded-2xl border border-slate-200 bg-slate-50">
-        <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-950">
-          Показать, что попадёт в заявку
-        </summary>
-        <div className="border-t border-slate-200 px-4 py-3 text-sm text-slate-700">
-          <ul className="list-disc space-y-1 pl-5">
-            {showCeilingInUi ? (
-              <li>Потолок: {fmt(ceilingTotal)} ₽</li>
-            ) : null}
-            {lightingItems.length > 0 ? (
-              <li>Освещение: {lightingItems.length} позиций</li>
-            ) : null}
-            <li>Итого: ~{fmt(grandTotal)} ₽</li>
-          </ul>
-        </div>
-      </details>
-
-      {/* P1: "What happens next" trust section */}
+      {/* What happens next */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4">
         <p className="text-sm font-semibold text-slate-950">Что происходит дальше</p>
         <div className="mt-3 space-y-2">
@@ -545,13 +445,12 @@ export function WizardStep2Summary() {
       </div>
 
       {showResult ? (
-        /* P0.8: Success state */
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center" aria-live="polite">
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white text-2xl font-bold">
             ✓
           </div>
           <p className="text-lg font-semibold text-emerald-950">Спасибо!</p>
-          <p className="mt-1 text-sm text-emerald-800">Перезвоню в течение 15 минут</p>
+          <p className="mt-1 text-sm text-emerald-800">Перезвоню в ближайшее время</p>
           <button
             type="button"
             onClick={closeCalculator}
@@ -562,23 +461,38 @@ export function WizardStep2Summary() {
         </div>
       ) : (
         <>
+          {/* WhatsApp/Telegram before form */}
+          <div className="flex items-center justify-center gap-4 text-sm">
+            <span className="text-slate-500">или напишите</span>
+            <a
+              href={`https://wa.me/${contacts.phoneDisplay.replace(/\D/g, "")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 font-medium text-emerald-700 transition-colors hover:bg-emerald-100"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18a8 8 0 01-4.243-1.214L4 20l1.214-3.757A8 8 0 1112 20z"/></svg>
+              WhatsApp
+            </a>
+            <a
+              href={contacts.telegramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 font-medium text-blue-600 transition-colors hover:bg-blue-100"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0a12 12 0 00-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 01.171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+              Telegram
+            </a>
+          </div>
+
+          {/* Form */}
           <div id="modal-action-form" className="rounded-2xl border border-slate-200 bg-white p-4">
             <p className="text-base font-semibold text-slate-950">Записаться на бесплатный замер</p>
             <p className="mt-2 text-sm text-slate-600">
-              Оставьте имя и телефон — перезвоню, уточню детали и предложу решение. Можно указать район для быстрой ориентировки по выезду.
+              Оставьте имя и телефон — перезвоню, уточню детали и предложу решение.
             </p>
             <div className="mt-4">
               <ActionForm onSuccess={() => setShowResult(true)} />
             </div>
-          </div>
-
-          {/* Price summary line before form — clear context */}
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-center">
-            <span className="text-sm text-slate-600">Итого к расчёту: </span>
-            <span className="text-lg font-bold text-slate-950">~{fmt(grandTotal)} ₽</span>
-            {lightingDiscountEligible ? (
-              <span className="ml-2 text-xs font-medium text-emerald-700">скидка −15% на свет</span>
-            ) : null}
           </div>
         </>
       )}
