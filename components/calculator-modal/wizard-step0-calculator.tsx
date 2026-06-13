@@ -198,9 +198,9 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
 
   return (
     <div
-      onPointerDown={markStep0SessionInteracted}
-      onKeyDown={markStep0SessionInteracted}
-      onChange={markStep0SessionInteracted}
+      onClickCapture={markStep0SessionInteracted}
+      onKeyDownCapture={markStep0SessionInteracted}
+      onChangeCapture={markStep0SessionInteracted}
     >
       {prefillMetrics.hasAny ? (
         <div className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
