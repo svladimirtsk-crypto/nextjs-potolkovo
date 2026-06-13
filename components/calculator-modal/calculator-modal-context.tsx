@@ -16,11 +16,21 @@ import type {
   OpenCalculatorOptions,
   WizardStep,
   Step1FooterAction,
+  LightingDiscountMode,
 } from "@/lib/calculator-modal-types";
 
-import { applyLightingDiscount } from "@/lib/lighting-formulas";
+import {
+  LIGHTING_ONLY_DISCOUNT_PERCENT,
+  LIGHTING_WITH_CEILING_DISCOUNT_PERCENT,
+  applyLightingOnlyDiscount,
+  applyLightingWithCeilingDiscount,
+  calcLightingDiscountAmount,
+} from "@/lib/lighting-formulas";
 import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
-import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
+import {
+  type CalculatorLeadSnapshot,
+  usePriceCalculatorBridge,
+} from "@/components/home/price-calculator-context";
 import { trackCalculatorOpen, trackWizardStepView } from "@/lib/analytics";
 
 function toNumber(value: unknown): number {
@@ -44,6 +54,43 @@ function calcLightingRegularTotal(draft: LightingSnapshot | null): number {
 
   const items = draft.mode === "catalog" ? (draft.items ?? []) : [];
   return items.reduce((sum, it) => sum + toNumber(it.qty) * toNumber(it.priceRub), 0);
+}
+
+function createLightingOnlySnapshot(): CalculatorLeadSnapshot {
+  return {
+    area: 0,
+    ceilingTypeLabel: "Потолок не выбран",
+    ceilingBaseRate: 0,
+    ceilingBaseTotal: 0,
+    ceilingExtraLabel: null,
+    ceilingLength: null,
+    ceilingExtraRatePerMeter: null,
+    ceilingExtraTotal: 0,
+    lightLinesEnabled: false,
+    lightLinesLabel: null,
+    lightLinesLength: null,
+    lightLinesRatePerMeter: null,
+    lightLinesTotal: 0,
+    corniceLabel: null,
+    corniceLength: null,
+    corniceRatePerMeter: null,
+    corniceTotal: 0,
+    trackLabel: null,
+    trackLength: null,
+    trackRatePerMeter: null,
+    trackTotal: 0,
+    lightsEnabled: false,
+    lightsCount: null,
+    lightsRatePerUnit: 0,
+    lightsTotal: 0,
+    total: 0,
+    derivedInputs: {
+      pointSpotsQty: 0,
+      trackMountType: "none",
+      trackLengthMeters: 0,
+      recommendedTrackSpotsQty: 0,
+    },
+  };
 }
 
 // P1.10: чтение UTM из sessionStorage при открытии модалки
@@ -78,7 +125,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   const [step0SessionInteracted, setStep0SessionInteracted] = useState(false);
   const [step0AreaConfirmed, setStep0AreaConfirmed] = useState(false);
 
-  // скидка: "разрешена" после подтверждения потолка 0->1 (или при lighting-first входе со светом)
+  // скидка с потолком: разрешена только после подтверждения потолка 0->1
   const [lightingDiscountEligible, setLightingDiscountEligible] = useState(false);
 
   const [step1CatalogView, setStep1CatalogView] = useState<"selected" | "browse" | null>(null);
@@ -99,18 +146,6 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   const setStep1FooterAction = useCallback((action: Step1FooterAction | null) => {
     setStep1FooterActionState(action);
   }, []);
-
-  // Синхронизируем выбранное освещение в общий snapshot, чтобы оно уходило в заявку на почту.
-  useEffect(() => {
-    setSnapshot((prev) => {
-      if (!prev) return prev;
-      if (prev.lighting === lightingDraft) return prev;
-      return {
-        ...prev,
-        lighting: lightingDraft ?? undefined,
-      };
-    });
-  }, [lightingDraft, setSnapshot]);
 
   const openCalculator = useCallback(
     (opts?: OpenCalculatorOptions) => {
@@ -151,12 +186,8 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       setStep0SessionInteracted(false);
       setStep0AreaConfirmed(false);
 
-      const incomingHasLightingItems =
-        resolvedOpts.initialLighting?.mode === "catalog" &&
-        (resolvedOpts.initialLighting.items?.length ?? 0) > 0;
-
-      // FIX C1: в lighting-first со светом сразу считаем скидку доступной
-      const enableDiscountNow = Boolean(isLightingFirst && incomingHasLightingItems);
+      // В lighting-first скидка с потолком НЕ применяется сразу: сначала действует −10% на свет.
+      const enableDiscountNow = false;
       setLightingDiscountEligible(enableDiscountNow);
 
       setStep1CatalogView(resolvedOpts.initialLightingView ?? null);
@@ -167,8 +198,10 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
         if (!prev) return prev;
         return {
           ...prev,
-          lightingDiscountApplied: enableDiscountNow,
-          lightingDiscountPercentApplied: enableDiscountNow ? 15 : 0,
+          lightingDiscountApplied: false,
+          lightingDiscountPercentApplied: 0,
+          lightingDiscountMode: "none",
+          lightingDiscountAmountRub: 0,
         };
       });
       setIsOpen(true);
@@ -201,7 +234,8 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
             return {
               ...prev,
               lightingDiscountApplied: true,
-              lightingDiscountPercentApplied: 15,
+              lightingDiscountPercentApplied: LIGHTING_WITH_CEILING_DISCOUNT_PERCENT,
+              lightingDiscountMode: "with-ceiling",
             };
           });
         }
@@ -219,20 +253,41 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
     [lightingDraft]
   );
 
-  const lightingDiscountedTotal = useMemo(() => {
-    if (!lightingDraft) return 0;
-
-    if (Number.isFinite(lightingDraft.discountedTotalRub)) {
-      return toNumber(lightingDraft.discountedTotalRub);
-    }
-
-    if (lightingRegularTotal <= 0) return 0;
-    return applyLightingDiscount(lightingRegularTotal);
+  const lightingStandaloneTotal = useMemo(() => {
+    if (!lightingDraft || lightingRegularTotal <= 0) return 0;
+    return applyLightingOnlyDiscount(lightingRegularTotal);
   }, [lightingDraft, lightingRegularTotal]);
 
+  const lightingWithCeilingTotal = useMemo(() => {
+    if (!lightingDraft || lightingRegularTotal <= 0) return 0;
+    return applyLightingWithCeilingDiscount(lightingRegularTotal);
+  }, [lightingDraft, lightingRegularTotal]);
+
+  // legacy field: total with ceiling discount (−25%)
+  const lightingDiscountedTotal = lightingWithCeilingTotal;
+
+  const lightingDiscountMode = useMemo<LightingDiscountMode>(() => {
+    if (!lightingDraft || lightingRegularTotal <= 0) return "none";
+    if (lightingDiscountEligible) return "with-ceiling";
+    if (options?.entryMode === "lighting-first") return "lighting-only";
+    return "none";
+  }, [lightingDiscountEligible, lightingDraft, lightingRegularTotal, options?.entryMode]);
+
   const lightingEffectiveTotal = useMemo(() => {
-    return lightingDiscountEligible ? lightingDiscountedTotal : lightingRegularTotal;
-  }, [lightingDiscountEligible, lightingDiscountedTotal, lightingRegularTotal]);
+    if (lightingDiscountMode === "with-ceiling") return lightingWithCeilingTotal;
+    if (lightingDiscountMode === "lighting-only") return lightingStandaloneTotal;
+    return lightingRegularTotal;
+  }, [lightingDiscountMode, lightingRegularTotal, lightingStandaloneTotal, lightingWithCeilingTotal]);
+
+  const lightingDiscountPercentApplied = useMemo(() => {
+    if (lightingDiscountMode === "with-ceiling") return LIGHTING_WITH_CEILING_DISCOUNT_PERCENT;
+    if (lightingDiscountMode === "lighting-only") return LIGHTING_ONLY_DISCOUNT_PERCENT;
+    return 0;
+  }, [lightingDiscountMode]);
+
+  const lightingDiscountAmount = useMemo(() => {
+    return calcLightingDiscountAmount(lightingRegularTotal, lightingEffectiveTotal);
+  }, [lightingEffectiveTotal, lightingRegularTotal]);
 
   const showCeilingInUi = useMemo(() => {
     const isLightingFirst = options?.entryMode === "lighting-first";
@@ -258,6 +313,48 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
     return ceilingEffectiveTotal + lightingEffectiveTotal;
   }, [ceilingEffectiveTotal, lightingEffectiveTotal]);
 
+  // Синхронизируем выбранное освещение в общий snapshot, чтобы оно уходило в заявку на почту.
+  useEffect(() => {
+    setSnapshot((prev) => {
+      const hasLighting = Boolean(lightingDraft && lightingDraft.mode !== "none" && (lightingDraft.items?.length ?? 0) > 0);
+      if (!prev && !hasLighting) return prev;
+
+      const base = prev ?? createLightingOnlySnapshot();
+
+      const lightingForSnapshot = hasLighting && lightingDraft
+        ? {
+            ...lightingDraft,
+            totalRub: lightingRegularTotal,
+            discountedTotalRub: lightingEffectiveTotal,
+            standaloneDiscountedTotalRub: lightingStandaloneTotal,
+            withCeilingDiscountedTotalRub: lightingWithCeilingTotal,
+            discountMode: lightingDiscountMode,
+            discountPercentApplied: lightingDiscountPercentApplied,
+            discountAmountRub: lightingDiscountAmount,
+          }
+        : undefined;
+
+      return {
+        ...base,
+        lighting: lightingForSnapshot,
+        lightingDiscountApplied: lightingDiscountMode !== "none",
+        lightingDiscountPercentApplied,
+        lightingDiscountMode,
+        lightingDiscountAmountRub: lightingDiscountAmount,
+      };
+    });
+  }, [
+    lightingDiscountAmount,
+    lightingDiscountMode,
+    lightingDiscountPercentApplied,
+    lightingDraft,
+    lightingEffectiveTotal,
+    lightingRegularTotal,
+    lightingStandaloneTotal,
+    lightingWithCeilingTotal,
+    setSnapshot,
+  ]);
+
   const value = useMemo(
     () =>
       ({
@@ -278,8 +375,13 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
 
         // новые поля (используются в UI)
         lightingRegularTotal,
+        lightingStandaloneTotal,
+        lightingWithCeilingTotal,
         lightingEffectiveTotal,
         lightingDiscountEligible,
+        lightingDiscountMode,
+        lightingDiscountPercentApplied,
+        lightingDiscountAmount,
 
         showCeilingInUi,
         grandTotal,
@@ -305,8 +407,13 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       ceilingTotal,
       lightingDiscountedTotal,
       lightingRegularTotal,
+      lightingStandaloneTotal,
+      lightingWithCeilingTotal,
       lightingEffectiveTotal,
       lightingDiscountEligible,
+      lightingDiscountMode,
+      lightingDiscountPercentApplied,
+      lightingDiscountAmount,
       showCeilingInUi,
       grandTotal,
       step0SessionInteracted,
