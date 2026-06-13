@@ -38,15 +38,14 @@ function shouldDropRemovedItem(item: LightingItem): boolean {
 export function LightKitCtaButton({ title, items, source }: LightKitCtaButtonProps) {
   const { openCalculator } = useCalculatorModal();
 
-  const handleClick = () => {
+  const buildLighting = (): LightingSnapshot | null => {
     const filteredItems = items.filter((item) => !shouldDropRemovedItem(item));
-    if (filteredItems.length === 0) return;
+    if (filteredItems.length === 0) return null;
 
     const totalRub = filteredItems.reduce((sum, i) => sum + i.qty * i.priceRub, 0);
     const discountedTotalRub = applyLightingOnlyDiscount(totalRub);
     const withCeilingDiscountedTotalRub = applyLightingWithCeilingDiscount(totalRub);
 
-    // YM: kit clicked
     trackKitClicked({
       kitBaseName: title,
       itemsCount: filteredItems.length,
@@ -54,7 +53,7 @@ export function LightKitCtaButton({ title, items, source }: LightKitCtaButtonPro
       source: String(source ?? "track-sale-ready-set"),
     });
 
-    const lighting: LightingSnapshot = {
+    return {
       mode: "catalog",
       kitBaseName: title,
       items: filteredItems.map((i) => ({ ...i })),
@@ -67,9 +66,14 @@ export function LightKitCtaButton({ title, items, source }: LightKitCtaButtonPro
       discountAmountRub: calcLightingDiscountAmount(totalRub, discountedTotalRub),
       userCustomizedLighting: true,
     };
+  };
+
+  const openLightingOnly = () => {
+    const lighting = buildLighting();
+    if (!lighting) return;
 
     openCalculator({
-      initialStep: 1,
+      initialStep: 2,
       initialLightingTab: "catalog",
       initialLightingView: "selected",
       entryMode: "lighting-first",
@@ -78,9 +82,28 @@ export function LightKitCtaButton({ title, items, source }: LightKitCtaButtonPro
     });
   };
 
+  const openWithCeiling = () => {
+    const lighting = buildLighting();
+    if (!lighting) return;
+
+    openCalculator({
+      initialStep: 0,
+      initialLightingTab: "catalog",
+      initialLightingView: "selected",
+      entryMode: "lighting-first",
+      initialLighting: lighting,
+      source: String(source ?? "track-sale-ready-set-add-ceiling"),
+    });
+  };
+
   return (
-    <Button type="button" className="w-full justify-center" onClick={handleClick}>
-      Хочу такой −10%
-    </Button>
+    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+      <Button type="button" className="w-full justify-center" onClick={openLightingOnly}>
+        Купить комплект −10%
+      </Button>
+      <Button type="button" variant="secondary" className="w-full justify-center" onClick={openWithCeiling}>
+        С потолком −25%
+      </Button>
+    </div>
   );
 }
