@@ -14,6 +14,7 @@ import type {
   LightingSnapshot,
   OpenCalculatorOptions,
   WizardStep,
+  Step1FooterAction,
 } from "@/lib/calculator-modal-types";
 
 import { applyLightingDiscount } from "@/lib/lighting-formulas";
@@ -80,6 +81,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   const [lightingDiscountEligible, setLightingDiscountEligible] = useState(false);
 
   const [step1CatalogView, setStep1CatalogView] = useState<"selected" | "browse" | null>(null);
+  const [step1FooterAction, setStep1FooterActionState] = useState<Step1FooterAction | null>(null);
 
   const { snapshot, setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
 
@@ -91,6 +93,10 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
     setStep0SessionInteracted(true);
     // строго: любое изменение Step0 сбрасывает "инженерное подтверждение"
     setStep0AreaConfirmed(false);
+  }, []);
+
+  const setStep1FooterAction = useCallback((action: Step1FooterAction | null) => {
+    setStep1FooterActionState(action);
   }, []);
 
   const openCalculator = useCallback(
@@ -141,6 +147,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       setLightingDiscountEligible(enableDiscountNow);
 
       setStep1CatalogView(resolvedOpts.initialLightingView ?? null);
+      setStep1FooterActionState(null);
 
       // скидка: сбрасываем/ставим на snapshot (если он есть)
       setSnapshot((prev) => {
@@ -270,6 +277,8 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
 
         step1CatalogView,
         setStep1CatalogView,
+        step1FooterAction,
+        setStep1FooterAction,
       }) as CalculatorModalContextValue,
     [
       isOpen,
@@ -292,6 +301,8 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       step0AreaConfirmed,
       step1CatalogView,
       setStep1CatalogView,
+      step1FooterAction,
+      setStep1FooterAction,
     ]
   );
 
