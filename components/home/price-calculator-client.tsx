@@ -18,7 +18,7 @@ const calculator = homepage.price.calculator;
 
 const CHANDELIERS_INSTALL_RATE_PER_UNIT = 1000;
 
-type CeilingType = (typeof calculator.ceilingTypes)[number]["slug"];
+type CeilingType = (typeof calculator.ceilingTypes)[number]["slug"] | "shadow-floating";
 type CorniceType = (typeof calculator.cornices)[number]["slug"];
 type TrackType = (typeof calculator.tracks)[number]["slug"];
 
@@ -27,7 +27,8 @@ type PerimeterSuggestion = { recommended: number };
 type CompactStepId =
   | "area"
   | "ceiling"
-  | "profile"
+  | "shadowProfile"
+  | "floatingProfile"
   | "lightLines"
   | "cornice"
   | "track"
@@ -467,7 +468,7 @@ export function PriceCalculatorClient({
   const { setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
 
   const resolvedAreaDefault = preset?.areaDefault ?? calculator.areaDefault;
-  const resolvedCeilingType = preset?.ceilingType ?? "standard";
+  const resolvedCeilingType = (preset?.ceilingType ?? "standard") as CeilingType;
   const resolvedCorniceType = preset?.corniceType ?? "none";
   const resolvedTrackType = preset?.trackType ?? "none";
   const resolvedLightsEnabled = preset?.lightsEnabled ?? false;
@@ -478,10 +479,27 @@ export function PriceCalculatorClient({
   const [ceilingType, setCeilingType] =
     useState<CeilingType>(resolvedCeilingType);
 
+  // Support for combined shadow + floating
+  const [shadowEnabled, setShadowEnabled] = useState<boolean>(
+    resolvedCeilingType === "shadow" || resolvedCeilingType === "shadow-floating"
+  );
+  const [floatingEnabled, setFloatingEnabled] = useState<boolean>(
+    resolvedCeilingType === "floating" || resolvedCeilingType === "shadow-floating"
+  );
+
   const [ceilingLength, setCeilingLength] = useState<number>(
     () => getPerimeterSuggestion(resolvedAreaDefault).recommended
   );
   const [ceilingLengthAuto, setCeilingLengthAuto] = useState<boolean>(true);
+
+  const [shadowLength, setShadowLength] = useState<number>(
+    () => getPerimeterSuggestion(resolvedAreaDefault).recommended
+  );
+  const [shadowLengthAuto, setShadowLengthAuto] = useState<boolean>(true);
+  const [floatingLength, setFloatingLength] = useState<number>(
+    () => getPerimeterSuggestion(resolvedAreaDefault).recommended
+  );
+  const [floatingLengthAuto, setFloatingLengthAuto] = useState<boolean>(true);
 
   const [lightLinesEnabled, setLightLinesEnabled] = useState<boolean>(false);
   const [lightLinesLength, setLightLinesLength] = useState<number>(
@@ -564,11 +582,28 @@ export function PriceCalculatorClient({
     trackTypeTouched,
   ]);
 
+  const effectiveCeilingType = useMemo<CeilingType>(() => {
+    if (shadowEnabled && floatingEnabled) return "shadow-floating";
+    if (shadowEnabled) return "shadow";
+    if (floatingEnabled) return "floating";
+    return "standard";
+  }, [shadowEnabled, floatingEnabled]);
+
   const selectedCeiling = useMemo(
     () =>
       calculator.ceilingTypes.find((c) => c.slug === ceilingType) ??
       calculator.ceilingTypes[0],
     [ceilingType]
+  );
+
+  const shadowCeiling = useMemo(
+    () => calculator.ceilingTypes.find((c) => c.slug === "shadow") ?? calculator.ceilingTypes[0],
+    []
+  );
+
+  const floatingCeiling = useMemo(
+    () => calculator.ceilingTypes.find((c) => c.slug === "floating") ?? calculator.ceilingTypes[0],
+    []
   );
 
   const selectedCornice = useMemo(
@@ -585,7 +620,7 @@ export function PriceCalculatorClient({
     [trackType]
   );
 
-  const hasSpecialCeiling = selectedCeiling.extraRatePerMeter > 0;
+  const hasSpecialCeiling = shadowEnabled || floatingEnabled;
   const perimeterSuggestion = useMemo(
     () => getPerimeterSuggestion(area),
     [area]
@@ -597,7 +632,13 @@ export function PriceCalculatorClient({
     markInteracted();
     setArea(v);
 
-    if (ceilingType !== "standard" && ceilingLengthAuto) {
+    if (shadowEnabled && shadowLengthAuto) {
+      setShadowLength(getPerimeterSuggestion(v).recommended);
+    }
+    if (floatingEnabled && floatingLengthAuto) {
+      setFloatingLength(getPerimeterSuggestion(v).recommended);
+    }
+    if (hasSpecialCeiling && ceilingLengthAuto) {
       setCeilingLength(getPerimeterSuggestion(v).recommended);
     }
   };
@@ -610,6 +651,42 @@ export function PriceCalculatorClient({
       setCeilingLengthAuto(true);
       setCeilingLength(getPerimeterSuggestion(area).recommended);
     }
+  };
+
+  const toggleShadow = () => {
+    markInteracted();
+    setShadowEnabled((prev) => {
+      const next = !prev;
+      if (next) {
+        setShadowLengthAuto(true);
+        setShadowLength(getPerimeterSuggestion(area).recommended);
+      }
+      return next;
+    });
+  };
+
+  const toggleFloating = () => {
+    markInteracted();
+    setFloatingEnabled((prev) => {
+      const next = !prev;
+      if (next) {
+        setFloatingLengthAuto(true);
+        setFloatingLength(getPerimeterSuggestion(area).recommended);
+      }
+      return next;
+    });
+  };
+
+  const handleShadowLengthChange = (v: number) => {
+    markInteracted();
+    setShadowLengthAuto(false);
+    setShadowLength(v);
+  };
+
+  const handleFloatingLengthChange = (v: number) => {
+    markInteracted();
+    setFloatingLengthAuto(false);
+    setFloatingLength(v);
   };
 
   const handleCeilingLengthChange = (v: number) => {
@@ -625,11 +702,19 @@ export function PriceCalculatorClient({
   };
 
   // ---- totals ----
-  const ceilingBaseRate = selectedCeiling.baseRatePerSqm;
+  const ceilingBaseRate = hasSpecialCeiling ? shadowCeiling.baseRatePerSqm : selectedCeiling.baseRatePerSqm;
   const ceilingBaseTotal = area * ceilingBaseRate;
 
+  const shadowExtraTotal = shadowEnabled
+    ? shadowLength * shadowCeiling.extraRatePerMeter
+    : 0;
+
+  const floatingExtraTotal = floatingEnabled
+    ? floatingLength * floatingCeiling.extraRatePerMeter
+    : 0;
+
   const ceilingExtraTotal = hasSpecialCeiling
-    ? ceilingLength * selectedCeiling.extraRatePerMeter
+    ? shadowExtraTotal + floatingExtraTotal
     : 0;
 
   const lightLinesTotal = lightLinesEnabled
@@ -686,18 +771,35 @@ export function PriceCalculatorClient({
   const snapshot = useMemo<CalculatorLeadSnapshot>(
     () => ({
       area,
-      ceilingTypeLabel: selectedCeiling.label,
+      ceilingTypeLabel: !shadowEnabled && !floatingEnabled
+        ? "Простой потолок"
+        : `${shadowEnabled ? "Теневой" : ""}${shadowEnabled && floatingEnabled ? " + " : ""}${floatingEnabled ? "Парящий" : ""}`,
       ceilingBaseRate,
       ceilingBaseTotal,
 
       ceilingExtraLabel: hasSpecialCeiling
-        ? selectedCeiling.extraLabel ?? null
+        ? (shadowEnabled && floatingEnabled
+            ? "Теневой + парящий профиль"
+            : shadowEnabled
+              ? shadowCeiling.extraLabel ?? null
+              : floatingCeiling.extraLabel ?? null)
         : null,
       ceilingLength: hasSpecialCeiling ? ceilingLength : null,
       ceilingExtraRatePerMeter: hasSpecialCeiling
-        ? selectedCeiling.extraRatePerMeter
+        ? (shadowEnabled && floatingEnabled
+            ? null
+            : shadowEnabled
+              ? shadowCeiling.extraRatePerMeter
+              : floatingCeiling.extraRatePerMeter)
         : null,
       ceilingExtraTotal,
+
+      shadowEnabled,
+      shadowLength: shadowEnabled ? shadowLength : null,
+      shadowExtraTotal,
+      floatingEnabled,
+      floatingLength: floatingEnabled ? floatingLength : null,
+      floatingExtraTotal,
 
       lightLinesEnabled,
       lightLinesLabel: lightLinesEnabled ? calculator.lightLines.label : null,
@@ -742,6 +844,14 @@ export function PriceCalculatorClient({
       ceilingBaseTotal,
       hasSpecialCeiling,
       ceilingLength,
+      shadowCeiling,
+      shadowEnabled,
+      shadowLength,
+      shadowExtraTotal,
+      floatingCeiling,
+      floatingEnabled,
+      floatingLength,
+      floatingExtraTotal,
       ceilingExtraTotal,
       lightLinesEnabled,
       lightLinesLength,
@@ -782,10 +892,12 @@ export function PriceCalculatorClient({
 
   // ===== compact guided flow: один шаг открыт, остальные закрыты =====
   const compactSteps: CompactStepId[] = useMemo(() => {
-    return hasSpecialCeiling
-      ? ["area", "ceiling", "profile", "lightLines", "cornice", "track", "chandeliers", "lights"]
-      : ["area", "ceiling", "lightLines", "cornice", "track", "chandeliers", "lights"];
-  }, [hasSpecialCeiling]);
+    const steps: CompactStepId[] = ["area", "ceiling"];
+    if (shadowEnabled) steps.push("shadowProfile");
+    if (floatingEnabled) steps.push("floatingProfile");
+    steps.push("lightLines", "cornice", "track", "chandeliers", "lights");
+    return steps;
+  }, [shadowEnabled, floatingEnabled]);
 
   const [activeStep, setActiveStep] = useState<CompactStepId>("area");
   const [resumeStep, setResumeStep] = useState<CompactStepId | null>(null);
@@ -793,7 +905,8 @@ export function PriceCalculatorClient({
   const [confirmed, setConfirmed] = useState<Record<CompactStepId, boolean>>({
     area: !compactSections,
     ceiling: !compactSections,
-    profile: !compactSections,
+    shadowProfile: !compactSections,
+    floatingProfile: !compactSections,
     lightLines: !compactSections,
     cornice: !compactSections,
     track: !compactSections,
@@ -803,7 +916,8 @@ export function PriceCalculatorClient({
 
   const areaRef = useRef<HTMLDivElement | null>(null);
   const ceilingRef = useRef<HTMLDivElement | null>(null);
-  const profileRef = useRef<HTMLDivElement | null>(null);
+  const shadowProfileRef = useRef<HTMLDivElement | null>(null);
+  const floatingProfileRef = useRef<HTMLDivElement | null>(null);
   const lightLinesRef = useRef<HTMLDivElement | null>(null);
   const corniceRef = useRef<HTMLDivElement | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
@@ -816,8 +930,10 @@ export function PriceCalculatorClient({
         return areaRef;
       case "ceiling":
         return ceilingRef;
-      case "profile":
-        return profileRef;
+      case "shadowProfile":
+        return shadowProfileRef;
+      case "floatingProfile":
+        return floatingProfileRef;
       case "lightLines":
         return lightLinesRef;
       case "cornice":
@@ -901,16 +1017,18 @@ export function PriceCalculatorClient({
 
     setConfirmed((prev) => {
       const next = { ...prev };
-      next.profile = hasSpecialCeiling ? false : true;
+      next.shadowProfile = shadowEnabled ? false : true;
+      next.floatingProfile = floatingEnabled ? false : true;
       return next;
     });
 
     setActiveStep((prev) => {
-      if (prev === "profile" && !hasSpecialCeiling) return "lightLines";
+      if (prev === "shadowProfile" && !shadowEnabled) return "lightLines";
+      if (prev === "floatingProfile" && !floatingEnabled) return "lightLines";
       return prev;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasSpecialCeiling, compactSections]);
+  }, [shadowEnabled, floatingEnabled, compactSections]);
 
   if (compactSections) {
     // V-5: step numbers removed — titles hardcoded without numbers
@@ -995,32 +1113,80 @@ export function PriceCalculatorClient({
               <SectionCard title={`Тип потолка`}>
                 <SummaryRow
                   label="Тип"
-                  value={`${selectedCeiling.label} · ${ceilingMeta}`}
+                  value={
+                    !shadowEnabled && !floatingEnabled
+                      ? `Простой потолок · от ${formatCurrency(selectedCeiling.baseRatePerSqm)} ₽ / м²`
+                      : `${shadowEnabled ? "Теневой" : ""}${shadowEnabled && floatingEnabled ? " + " : ""}${floatingEnabled ? "Парящий" : ""} · от ${formatCurrency(shadowCeiling.baseRatePerSqm)} ₽ / м²`
+                  }
                   onEdit={() => beginEdit("ceiling")}
                 />
               </SectionCard>
             ) : activeStep === "ceiling" ? (
               <SectionCard
                 title={`Тип потолка`}
-                description="Для теневого и парящего профиль считается отдельно (по м.п.)."
+                description="Можно выбрать одновременно теневой и парящий профиль."
               >
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  {calculator.ceilingTypes.map((option) => {
-                    const meta =
-                      option.slug === "standard"
-                        ? `от ${formatCurrency(option.baseRatePerSqm)} ₽ / м²`
-                        : `${formatCurrency(option.baseRatePerSqm)} ₽ / м² + ${formatCurrency(option.extraRatePerMeter)} ₽ / м.п.`;
+                {/* Simple ceiling option */}
+                <div
+                  className={["rounded-2xl border p-4 text-left transition-all mb-3",
+                    !shadowEnabled && !floatingEnabled
+                      ? "border-slate-950 bg-slate-950 text-white shadow-lg shadow-slate-950/10"
+                      : "border-slate-200 bg-white text-slate-950 hover:border-slate-400 hover:bg-slate-50"
+                  ].join(" ")}
+                >
+                  <button
+                    type="button"
+                    onClick={() => { markInteracted(); setShadowEnabled(false); setFloatingEnabled(false); }}
+                    className="w-full text-left"
+                  >
+                    <p className="text-sm font-semibold">Простой потолок</p>
+                    <p className={["mt-1 text-xs", !shadowEnabled && !floatingEnabled ? "text-white/75" : "text-slate-500"].join(" ")}>
+                      от {formatCurrency(selectedCeiling.baseRatePerSqm)} ₽ / м²
+                    </p>
+                  </button>
+                </div>
 
-                    return (
-                      <OptionCard
-                        key={option.slug}
-                        active={ceilingType === option.slug}
-                        title={option.label}
-                        meta={meta}
-                        onClick={() => handleCeilingTypeChange(option.slug)}
-                      />
-                    );
-                  })}
+                {/* Shadow + Floating checkboxes */}
+                <div className="space-y-3">
+                  <div
+                    className={["rounded-2xl border p-4 text-left transition-all",
+                      shadowEnabled
+                        ? "border-slate-950 bg-slate-950 text-white shadow-lg shadow-slate-950/10"
+                        : "border-slate-200 bg-white text-slate-950 hover:border-slate-400 hover:bg-slate-50"
+                    ].join(" ")}
+                  >
+                    <button type="button" onClick={toggleShadow} className="w-full text-left flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold">Теневой потолок</p>
+                        <p className={["mt-1 text-xs", shadowEnabled ? "text-white/75" : "text-slate-500"].join(" ")}>
+                          {formatCurrency(shadowCeiling.baseRatePerSqm)} ₽ / м² + {formatCurrency(shadowCeiling.extraRatePerMeter)} ₽ / м.п.
+                        </p>
+                      </div>
+                      <span className={["mt-0.5 h-5 w-5 shrink-0 rounded border flex items-center justify-center text-xs",
+                        shadowEnabled ? "border-white bg-white text-slate-950" : "border-slate-300 bg-transparent"
+                      ].join(" ")}>{shadowEnabled ? "✓" : ""}</span>
+                    </button>
+                  </div>
+
+                  <div
+                    className={["rounded-2xl border p-4 text-left transition-all",
+                      floatingEnabled
+                        ? "border-slate-950 bg-slate-950 text-white shadow-lg shadow-slate-950/10"
+                        : "border-slate-200 bg-white text-slate-950 hover:border-slate-400 hover:bg-slate-50"
+                    ].join(" ")}
+                  >
+                    <button type="button" onClick={toggleFloating} className="w-full text-left flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold">Парящий потолок</p>
+                        <p className={["mt-1 text-xs", floatingEnabled ? "text-white/75" : "text-slate-500"].join(" ")}>
+                          {formatCurrency(floatingCeiling.baseRatePerSqm)} ₽ / м² + {formatCurrency(floatingCeiling.extraRatePerMeter)} ₽ / м.п.
+                        </p>
+                      </div>
+                      <span className={["mt-0.5 h-5 w-5 shrink-0 rounded border flex items-center justify-center text-xs",
+                        floatingEnabled ? "border-white bg-white text-slate-950" : "border-slate-300 bg-transparent"
+                      ].join(" ")}>{floatingEnabled ? "✓" : ""}</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mt-4 flex items-center justify-between gap-3">
@@ -1045,31 +1211,31 @@ export function PriceCalculatorClient({
             )}
           </div>
 
-          {/* PROFILE (only special ceiling) */}
-          {hasSpecialCeiling ? (
-            <div ref={profileRef}>
-              {confirmed.profile ? (
-                <SectionCard title={`Длина профиля`}>
+          {/* SHADOW PROFILE (if shadow enabled) */}
+          {shadowEnabled ? (
+            <div ref={shadowProfileRef}>
+              {confirmed.shadowProfile ? (
+                <SectionCard title={`Теневой профиль`}>
                   <SummaryRow
-                    label={selectedCeiling.extraLabel ?? "Профиль"}
-                    value={`${ceilingLength} м.п. (${ceilingLengthAuto ? "авто 1:1" : "вручную"})`}
-                    onEdit={() => beginEdit("profile")}
+                    label="Теневой профиль"
+                    value={`${shadowLength} м.п. (${shadowLengthAuto ? "авто 1:1" : "вручную"})`}
+                    onEdit={() => beginEdit("shadowProfile")}
                   />
                 </SectionCard>
-              ) : activeStep === "profile" ? (
+              ) : activeStep === "shadowProfile" ? (
                 <SectionCard
-                  title={`Длина профиля`}
-                  description={selectedCeiling.extraLabel ?? "Профиль по периметру"}
+                  title={`Теневой профиль`}
+                  description="Профиль по периметру для теневого зазора"
                 >
                   <RangeField
-                    id="ceiling-length-field"
-                    label={`Длина: ${selectedCeiling.extraLabel ?? "профиль"}`}
-                    value={ceilingLength}
+                    id="shadow-length-field"
+                    label="Длина теневого профиля"
+                    value={shadowLength}
                     min={calculator.specialMeters.min}
                     max={calculator.specialMeters.max}
                     step={calculator.specialMeters.step}
                     unit="м.п."
-                    onChange={handleCeilingLengthChange}
+                    onChange={handleShadowLengthChange}
                     showSlider={showSlider}
                     quickValues={[perimeterSuggestion.recommended]}
                   />
@@ -1077,8 +1243,8 @@ export function PriceCalculatorClient({
                   <PerimeterHint
                     area={area}
                     recommended={perimeterSuggestion.recommended}
-                    onApply={applyPerimeterSuggestion}
-                    isAuto={ceilingLengthAuto}
+                    onApply={() => { markInteracted(); setShadowLengthAuto(true); setShadowLength(perimeterSuggestion.recommended); }}
+                    isAuto={shadowLengthAuto}
                   />
 
                   <div className="mt-4 flex items-center justify-between gap-3">
@@ -1086,8 +1252,8 @@ export function PriceCalculatorClient({
                     <Button
                       type="button"
                       variant="secondary"
-                      onClick={() => confirmAndNavigate("profile")}
-                      disabled={!isStepEnabled("profile")}
+                      onClick={() => confirmAndNavigate("shadowProfile")}
+                      disabled={!isStepEnabled("shadowProfile")}
                     >
                       Подтвердить
                     </Button>
@@ -1095,10 +1261,69 @@ export function PriceCalculatorClient({
                 </SectionCard>
               ) : (
                 <CollapsedStep
-                  title={`Длина профиля`}
-                  subtitle={isStepEnabled("profile") ? "Настройте длину профиля" : "Сначала выберите тип потолка"}
-                  enabled={isStepEnabled("profile")}
-                  onOpen={() => openStep("profile")}
+                  title={`Теневой профиль`}
+                  subtitle={isStepEnabled("shadowProfile") ? "Настройте длину" : "Сначала выберите тип потолка"}
+                  enabled={isStepEnabled("shadowProfile")}
+                  onOpen={() => openStep("shadowProfile")}
+                />
+              )}
+            </div>
+          ) : null}
+
+          {/* FLOATING PROFILE (if floating enabled) */}
+          {floatingEnabled ? (
+            <div ref={floatingProfileRef}>
+              {confirmed.floatingProfile ? (
+                <SectionCard title={`Парящий профиль`}>
+                  <SummaryRow
+                    label="Парящий профиль"
+                    value={`${floatingLength} м.п. (${floatingLengthAuto ? "авто 1:1" : "вручную"})`}
+                    onEdit={() => beginEdit("floatingProfile")}
+                  />
+                </SectionCard>
+              ) : activeStep === "floatingProfile" ? (
+                <SectionCard
+                  title={`Парящий профиль`}
+                  description="Профиль по периметру для парящего эффекта"
+                >
+                  <RangeField
+                    id="floating-length-field"
+                    label="Длина парящего профиля"
+                    value={floatingLength}
+                    min={calculator.specialMeters.min}
+                    max={calculator.specialMeters.max}
+                    step={calculator.specialMeters.step}
+                    unit="м.п."
+                    onChange={handleFloatingLengthChange}
+                    showSlider={showSlider}
+                    quickValues={[perimeterSuggestion.recommended]}
+                  />
+
+                  <PerimeterHint
+                    area={area}
+                    recommended={perimeterSuggestion.recommended}
+                    onApply={() => { markInteracted(); setFloatingLengthAuto(true); setFloatingLength(perimeterSuggestion.recommended); }}
+                    isAuto={floatingLengthAuto}
+                  />
+
+                  <div className="mt-4 flex items-center justify-between gap-3">
+                    <p className="text-xs text-slate-500">Оставьте авто 1:1 или измените вручную.</p>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => confirmAndNavigate("floatingProfile")}
+                      disabled={!isStepEnabled("floatingProfile")}
+                    >
+                      Подтвердить
+                    </Button>
+                  </div>
+                </SectionCard>
+              ) : (
+                <CollapsedStep
+                  title={`Парящий профиль`}
+                  subtitle={isStepEnabled("floatingProfile") ? "Настройте длину" : "Сначала выберите тип потолка"}
+                  enabled={isStepEnabled("floatingProfile")}
+                  onOpen={() => openStep("floatingProfile")}
                 />
               )}
             </div>
@@ -1512,8 +1737,9 @@ export function PriceCalculatorClient({
             </p>
 
             <p className="mt-2 text-xs text-white/70">
-              {selectedCeiling.label} · {area} м²
-              {hasSpecialCeiling ? ` · ${ceilingLength} м.п.` : ""}
+              {!shadowEnabled && !floatingEnabled ? "Простой потолок" : `${shadowEnabled ? "Теневой" : ""}${shadowEnabled && floatingEnabled ? " + " : ""}${floatingEnabled ? "Парящий" : ""}`} · {area} м²
+              {shadowEnabled ? ` · теневой ${shadowLength} м.п.` : ""}
+              {floatingEnabled ? ` · парящий ${floatingLength} м.п.` : ""}
             </p>
 
             <div className="mt-6">
@@ -1573,50 +1799,115 @@ export function PriceCalculatorClient({
 
         <SectionCard
           title="Тип потолка"
-          description="Для теневого и парящего профиль считается отдельно (по м.п.)."
+          description="Можно выбрать одновременно теневой и парящий профиль."
         >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {calculator.ceilingTypes.map((option) => {
-              const meta =
-                option.slug === "standard"
-                  ? `от ${formatCurrency(option.baseRatePerSqm)} ₽ / м²`
-                  : `${formatCurrency(option.baseRatePerSqm)} ₽ / м² + ${formatCurrency(option.extraRatePerMeter)} ₽ / м.п.`;
-
-              return (
-                <OptionCard
-                  key={option.slug}
-                  active={ceilingType === option.slug}
-                  title={option.label}
-                  meta={meta}
-                  onClick={() => handleCeilingTypeChange(option.slug)}
-                />
-              );
-            })}
+          {/* Simple ceiling option */}
+          <div
+            className={["rounded-2xl border p-4 text-left transition-all mb-3",
+              !shadowEnabled && !floatingEnabled
+                ? "border-slate-950 bg-slate-950 text-white shadow-lg shadow-slate-950/10"
+                : "border-slate-200 bg-white text-slate-950 hover:border-slate-400 hover:bg-slate-50"
+            ].join(" ")}
+          >
+            <button
+              type="button"
+              onClick={() => { markInteracted(); setShadowEnabled(false); setFloatingEnabled(false); }}
+              className="w-full text-left"
+            >
+              <p className="text-sm font-semibold">Простой потолок</p>
+              <p className={["mt-1 text-xs", !shadowEnabled && !floatingEnabled ? "text-white/75" : "text-slate-500"].join(" ")}>
+                от {formatCurrency(selectedCeiling.baseRatePerSqm)} ₽ / м²
+              </p>
+            </button>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div
+              className={["rounded-2xl border p-4 text-left transition-all",
+                shadowEnabled
+                  ? "border-slate-950 bg-slate-950 text-white shadow-lg shadow-slate-950/10"
+                  : "border-slate-200 bg-white text-slate-950 hover:border-slate-400 hover:bg-slate-50"
+              ].join(" ")}
+            >
+              <button type="button" onClick={toggleShadow} className="w-full text-left flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">Теневой потолок</p>
+                  <p className={["mt-1 text-xs", shadowEnabled ? "text-white/75" : "text-slate-500"].join(" ")}>
+                    {formatCurrency(shadowCeiling.baseRatePerSqm)} ₽ / м² + {formatCurrency(shadowCeiling.extraRatePerMeter)} ₽ / м.п.
+                  </p>
+                </div>
+                <span className={["mt-0.5 h-5 w-5 shrink-0 rounded border flex items-center justify-center text-xs",
+                  shadowEnabled ? "border-white bg-white text-slate-950" : "border-slate-300 bg-transparent"
+                ].join(" ")}>{shadowEnabled ? "✓" : ""}</span>
+              </button>
+            </div>
+            <div
+              className={["rounded-2xl border p-4 text-left transition-all",
+                floatingEnabled
+                  ? "border-slate-950 bg-slate-950 text-white shadow-lg shadow-slate-950/10"
+                  : "border-slate-200 bg-white text-slate-950 hover:border-slate-400 hover:bg-slate-50"
+              ].join(" ")}
+            >
+              <button type="button" onClick={toggleFloating} className="w-full text-left flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">Парящий потолок</p>
+                  <p className={["mt-1 text-xs", floatingEnabled ? "text-white/75" : "text-slate-500"].join(" ")}>
+                    {formatCurrency(floatingCeiling.baseRatePerSqm)} ₽ / м² + {formatCurrency(floatingCeiling.extraRatePerMeter)} ₽ / м.п.
+                  </p>
+                </div>
+                <span className={["mt-0.5 h-5 w-5 shrink-0 rounded border flex items-center justify-center text-xs",
+                  floatingEnabled ? "border-white bg-white text-slate-950" : "border-slate-300 bg-transparent"
+                ].join(" ")}>{floatingEnabled ? "✓" : ""}</span>
+              </button>
+            </div>
           </div>
         </SectionCard>
 
-        {hasSpecialCeiling ? (
+        {shadowEnabled ? (
           <SectionCard
-            title="Длина профиля"
-            description={selectedCeiling.extraLabel ?? "Профиль по периметру"}
+            title="Теневой профиль"
+            description="Профиль по периметру для теневого зазора"
           >
             <RangeField
-              id="ceiling-length-field"
-              label={`Длина: ${selectedCeiling.extraLabel ?? "профиль"}`}
-              value={ceilingLength}
+              id="shadow-length-field-page"
+              label="Длина теневого профиля"
+              value={shadowLength}
               min={calculator.specialMeters.min}
               max={calculator.specialMeters.max}
               step={calculator.specialMeters.step}
               unit="м.п."
-              onChange={handleCeilingLengthChange}
+              onChange={handleShadowLengthChange}
               showSlider
             />
-
             <PerimeterHint
               area={area}
               recommended={perimeterSuggestion.recommended}
-              onApply={applyPerimeterSuggestion}
-              isAuto={ceilingLengthAuto}
+              onApply={() => { markInteracted(); setShadowLengthAuto(true); setShadowLength(perimeterSuggestion.recommended); }}
+              isAuto={shadowLengthAuto}
+            />
+          </SectionCard>
+        ) : null}
+
+        {floatingEnabled ? (
+          <SectionCard
+            title="Парящий профиль"
+            description="Профиль по периметру для парящего эффекта"
+          >
+            <RangeField
+              id="floating-length-field-page"
+              label="Длина парящего профиля"
+              value={floatingLength}
+              min={calculator.specialMeters.min}
+              max={calculator.specialMeters.max}
+              step={calculator.specialMeters.step}
+              unit="м.п."
+              onChange={handleFloatingLengthChange}
+              showSlider
+            />
+            <PerimeterHint
+              area={area}
+              recommended={perimeterSuggestion.recommended}
+              onApply={() => { markInteracted(); setFloatingLengthAuto(true); setFloatingLength(perimeterSuggestion.recommended); }}
+              isAuto={floatingLengthAuto}
             />
           </SectionCard>
         ) : null}
@@ -1863,10 +2154,16 @@ export function PriceCalculatorClient({
 
             <div className="mt-3 space-y-2">
               <PriceRow label="Потолок" value={`${formatCurrency(ceilingBaseTotal)} ₽`} />
-              {ceilingExtraTotal > 0 ? (
+              {shadowExtraTotal > 0 ? (
                 <PriceRow
-                  label={selectedCeiling.extraLabel ?? "Профиль"}
-                  value={`${formatCurrency(ceilingExtraTotal)} ₽`}
+                  label="Теневой профиль"
+                  value={`${formatCurrency(shadowExtraTotal)} ₽`}
+                />
+              ) : null}
+              {floatingExtraTotal > 0 ? (
+                <PriceRow
+                  label="Парящий профиль"
+                  value={`${formatCurrency(floatingExtraTotal)} ₽`}
                 />
               ) : null}
               {lightLinesTotal > 0 ? (
