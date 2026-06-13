@@ -8,7 +8,10 @@ import { TextLink } from "@/components/ui/text-link";
 
 import { legal } from "@/content/legal";
 import { trackFormSubmitSuccess } from "@/lib/analytics";
-import { applyLightingDiscount } from "@/lib/lighting-formulas";
+import {
+  applyLightingOnlyDiscount,
+  applyLightingWithCeilingDiscount,
+} from "@/lib/lighting-formulas";
 
 import {
   getCalculatorSummaryLines,
@@ -96,12 +99,28 @@ export function TrackSaleActionForm({ source }: TrackSaleActionFormProps) {
     }
 
     const lightingTotalRub = Number(snapshot?.lighting?.totalRub ?? 0);
+    const discountMode = String(snapshot?.lightingDiscountMode ?? snapshot?.lighting?.discountMode ?? "none");
+    const fallbackLightingDiscountedRub =
+      discountMode === "with-ceiling"
+        ? applyLightingWithCeilingDiscount(lightingTotalRub)
+        : discountMode === "lighting-only"
+          ? applyLightingOnlyDiscount(lightingTotalRub)
+          : lightingTotalRub;
     const lightingDiscountedRub = Number(
-      snapshot?.lighting?.discountedTotalRub ?? applyLightingDiscount(Number(snapshot?.lighting?.totalRub ?? 0))
+      snapshot?.lighting?.discountedTotalRub ?? fallbackLightingDiscountedRub
     );
 
     const discountApplied = Boolean((snapshot as any)?.lightingDiscountApplied);
-    const discountPercentApplied = Number((snapshot as any)?.lightingDiscountPercentApplied ?? 0);
+    const discountPercentApplied = Number((snapshot as any)?.lightingDiscountPercentApplied ?? snapshot?.lighting?.discountPercentApplied ?? 0);
+    const lightingDiscountAmountRub = Math.max(0, lightingTotalRub - lightingDiscountedRub);
+    const orderIntent =
+      discountMode === "with-ceiling"
+        ? "lighting_with_ceiling"
+        : discountMode === "lighting-only"
+          ? "lighting_only"
+          : (snapshot?.lighting?.items?.length ?? 0) > 0
+            ? "lighting"
+            : "ceiling_only";
 
     const formData = new FormData();
     formData.append("access_key", String(accessKey));
@@ -129,6 +148,9 @@ export function TrackSaleActionForm({ source }: TrackSaleActionFormProps) {
 
     formData.append("lighting_discount_applied", String(discountApplied));
     formData.append("lighting_discount_percent_applied", String(discountPercentApplied));
+    formData.append("lighting_discount_mode", discountMode);
+    formData.append("lighting_discount_amount_rub", String(lightingDiscountAmountRub));
+    formData.append("order_intent", orderIntent);
 
     // legacy
     formData.append("lighting_total", String(lightingTotalRub));
