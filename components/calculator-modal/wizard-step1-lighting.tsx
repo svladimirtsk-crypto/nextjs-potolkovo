@@ -319,7 +319,10 @@ export function WizardStep1Lighting() {
       : options?.initialLightingTab === "recommendations" ? "recommendations"
       : shouldCat ? "catalog" : "recommendations";
     const v: CatalogView = options?.initialLightingView === "selected" ? "selected" : "browse";
-    setActiveTab(t); setCatalogView(v); setStep1CatalogView(v);
+    setActiveTab(t);
+    setCatalogView(v);
+    if (t === "catalog") setStep1CatalogView(v);
+    else setStep1CatalogView(null);
   }, [options, setStep1CatalogView]);
 
   /* ─── Catalog filters ─── */
@@ -1218,7 +1221,7 @@ export function WizardStep1Lighting() {
             <div className="space-y-3">
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
                 <p className="text-sm font-semibold text-emerald-950">Точечные светильники</p>
-                <p className="mt-1 text-xs text-emerald-800">Выберите GX53, MR16 или панели. Прогресс теперь в нижнем футере.</p>
+                <p className="mt-1 text-xs text-emerald-800">Выберите GX53, MR16 или панели.</p>
               </div>
 
               {/* Sub-tabs for point types */}
