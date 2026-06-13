@@ -7,6 +7,24 @@ function fmt(n: number) {
   return new Intl.NumberFormat("ru-RU").format(Math.round(n));
 }
 
+function LightingDiscountPrice({
+  regular,
+  discounted,
+  benefit,
+}: {
+  regular: number;
+  discounted: number;
+  benefit: number;
+}) {
+  return (
+    <>
+      <span className="line-through text-slate-400">{fmt(regular)} ₽</span>{" "}
+      <span>{fmt(discounted)} ₽</span>{" "}
+      <span className="text-emerald-700">−15% (−{fmt(benefit)} ₽)</span>
+    </>
+  );
+}
+
 export function PriceStrip() {
   const {
     ceilingTotal,
@@ -50,14 +68,27 @@ export function PriceStrip() {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm">
         <span className="font-medium">
-          Свет: {fmt(lightingEffectiveTotal)} ₽
+          Свет:{" "}
           {lightingDiscountEligible && appliedLightingBenefit > 0 ? (
-            <span className="text-emerald-700"> −{fmt(appliedLightingBenefit)} ₽</span>
-          ) : null}
+            <LightingDiscountPrice
+              regular={lightingRegularTotal}
+              discounted={lightingEffectiveTotal}
+              benefit={appliedLightingBenefit}
+            />
+          ) : (
+            <>{fmt(lightingEffectiveTotal)} ₽</>
+          )}
         </span>
 
-        {!lightingDiscountEligible ? (
-          <span className="text-slate-500"> · с потолком дешевле на {fmt(potentialLightingBenefit)} ₽</span>
+        {!lightingDiscountEligible && potentialLightingBenefit > 0 ? (
+          <span className="text-slate-500">
+            {" "}· с потолком{" "}
+            <LightingDiscountPrice
+              regular={lightingRegularTotal}
+              discounted={lightingDiscountedTotal}
+              benefit={potentialLightingBenefit}
+            />
+          </span>
         ) : null}
 
         <span className="text-slate-500"> · </span>
@@ -78,14 +109,27 @@ export function PriceStrip() {
           <span className="text-slate-500"> · </span>
 
           <span className="font-medium">
-            Свет: {fmt(lightingEffectiveTotal)} ₽
+            Свет:{" "}
             {lightingDiscountEligible && appliedLightingBenefit > 0 ? (
-              <span className="text-emerald-700"> −{fmt(appliedLightingBenefit)} ₽</span>
-            ) : null}
+              <LightingDiscountPrice
+                regular={lightingRegularTotal}
+                discounted={lightingEffectiveTotal}
+                benefit={appliedLightingBenefit}
+              />
+            ) : (
+              <>{fmt(lightingEffectiveTotal)} ₽</>
+            )}
           </span>
 
-          {!lightingDiscountEligible ? (
-            <span className="text-slate-500"> · с потолком −{fmt(potentialLightingBenefit)} ₽</span>
+          {!lightingDiscountEligible && potentialLightingBenefit > 0 ? (
+            <span className="text-slate-500">
+              {" "}· с потолком{" "}
+              <LightingDiscountPrice
+                regular={lightingRegularTotal}
+                discounted={lightingDiscountedTotal}
+                benefit={potentialLightingBenefit}
+              />
+            </span>
           ) : null}
 
           <span className="text-slate-500"> · </span>
