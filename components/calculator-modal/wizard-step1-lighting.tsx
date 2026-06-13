@@ -118,6 +118,10 @@ function matchesPointSubtype(p: FeedCatalogProduct, sub: PointSubtypeId): boolea
   return d === sub;
 }
 
+function isTrackSystemId(value: unknown): value is TrackSystemId {
+  return value === "COLIBRI_220" || value === "CLARUS_48" || value === "TRACK_220";
+}
+
 function pickAttrs(p: FeedCatalogProduct): { label: string; value: string }[] {
   const a = p.keyAttributes?.length ? p.keyAttributes : p.params;
   return (a ?? []).slice(0, 4).map((x) => ({ label: toText(x.label), value: toText(x.value) }));
@@ -244,67 +248,6 @@ function ThinProgress({ current, required, unit }: { current: number; required: 
   );
 }
 
-type SelectionMetric = {
-  id: string;
-  label: string;
-  current: number;
-  required: number;
-  unit: "м" | "шт.";
-};
-
-function StickySelectionProgress({
-  title,
-  stepText,
-  selectedCount,
-  metrics,
-  onSelectedClick,
-}: {
-  title: string;
-  stepText: string;
-  selectedCount: number;
-  metrics: SelectionMetric[];
-  onSelectedClick: () => void;
-}) {
-  const visibleMetrics = metrics.filter((m) => m.required > 0);
-
-  return (
-    <div className="sticky top-0 z-20 -mx-5 border-y border-slate-200 bg-white/95 px-5 py-2 shadow-sm backdrop-blur">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-            {title}
-          </p>
-          <p className="truncate text-xs font-semibold text-slate-950">{stepText}</p>
-        </div>
-
-        <button
-          type="button"
-          onClick={onSelectedClick}
-          className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-200"
-        >
-          {selectedCount > 0 ? `${selectedCount} поз.` : "Пусто"}
-        </button>
-      </div>
-
-      {visibleMetrics.length > 0 ? (
-        <div className="mt-1.5 grid gap-1.5 sm:grid-cols-3">
-          {visibleMetrics.map((m) => (
-            <div key={m.id} className="min-w-0">
-              <div className="mb-0.5 flex items-center justify-between gap-2 text-[10px] text-slate-500">
-                <span className="truncate">{m.label}</span>
-                <span className={m.current >= m.required ? "font-semibold text-emerald-700" : "text-slate-500"}>
-                  {m.unit === "м" ? fmtM(m.current) : fmt(m.current)}/{m.unit === "м" ? fmtM(m.required) : fmt(m.required)}
-                </span>
-              </div>
-              <ThinProgress current={m.current} required={m.required} unit={m.unit} />
-            </div>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 function ImageQuickPreview({
   image,
   onClose,
@@ -315,28 +258,36 @@ function ImageQuickPreview({
   if (!image) return null;
 
   return (
-    <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] left-3 right-3 z-[160] sm:bottom-auto sm:left-auto sm:right-8 sm:top-24 sm:w-[380px]">
-      <div className="rounded-3xl border border-slate-200 bg-white p-3 shadow-2xl">
-        <div className="mb-2 flex items-start justify-between gap-3">
-          <p className="line-clamp-2 text-sm font-semibold leading-5 text-slate-950">{image.alt}</p>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Закрыть фото"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200"
-          >
-            ✕
-          </button>
+    <>
+      <button
+        type="button"
+        aria-label="Закрыть фото"
+        className="fixed inset-0 z-[159] cursor-default bg-transparent"
+        onClick={onClose}
+      />
+      <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] left-3 right-3 z-[160] sm:bottom-auto sm:left-auto sm:right-8 sm:top-24 sm:w-[380px]">
+        <div className="rounded-3xl border border-slate-200 bg-white p-3 shadow-2xl">
+          <div className="mb-2 flex items-start justify-between gap-3">
+            <p className="line-clamp-2 text-sm font-semibold leading-5 text-slate-950">{image.alt}</p>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Закрыть фото"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200"
+            >
+              ✕
+            </button>
+          </div>
+          <ProductImage
+            src={image.src}
+            alt={image.alt}
+            containerClassName="h-[min(52dvh,420px)] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-3"
+            className="h-full w-full object-contain"
+          />
+          <p className="mt-2 text-center text-[11px] text-slate-500">Кликните вне фото или на крестик, чтобы закрыть.</p>
         </div>
-        <ProductImage
-          src={image.src}
-          alt={image.alt}
-          containerClassName="h-[min(52dvh,420px)] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-3"
-          className="h-full w-full object-contain"
-        />
-        <p className="mt-2 text-center text-[11px] text-slate-500">Фото открыто компактно — можно продолжать подбор.</p>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -486,6 +437,13 @@ export function WizardStep1Lighting() {
   const requiredTrackMeters = showCeilingInUi ? toNumber(snapshot?.derivedInputs?.trackLengthMeters) : 0;
   const requiredPointQty = showCeilingInUi ? toNumber(snapshot?.derivedInputs?.pointSpotsQty) : 0;
   const trackMountType = (snapshot?.derivedInputs?.trackMountType ?? "none") as "built-in" | "surface" | "none";
+
+  type WStep = "system" | "trackProfile" | "trackFixtures" | "points" | "lamps" | "done";
+  const [wStep, setWStep] = useState<WStep>(() =>
+    requiredTrackMeters > 0 ? "trackProfile" : requiredPointQty > 0 ? "points" : "system"
+  );
+  const [wSystem, setWSystem] = useState<TrackSystemId | null>(null);
+  const [wPointTab, setWPointTab] = useState<PointSubtypeId>("GX53");
 
   /* ─── Recommendations ─── */
   const recommendedTrackProfiles = useMemo(() => {
@@ -649,6 +607,52 @@ export function WizardStep1Lighting() {
     });
   }, [productsById]);
 
+  const setTrackProfileQty = useCallback((product: FeedCatalogProduct, nextQtyRaw: number) => {
+    const system = isTrackSystemId(product.system) ? product.system : null;
+    if (!system) return;
+
+    const id = toText(product.productId);
+    const nextQty = normalizeQty(nextQtyRaw, product.unit);
+    const prevQty = toNumber(cartItems[id]);
+
+    setWSystem(system);
+
+    if (prevQty !== nextQty) {
+      trackLightingCartChanged({
+        action: prevQty <= 0 && nextQty > 0 ? "add" : prevQty > 0 && nextQty <= 0 ? "remove" : "change",
+        sku: id,
+        productKind: String(product.kind),
+        qty: nextQty,
+        source: String(options?.source ?? "unknown"),
+      });
+    }
+
+    const clarusPsuVendorCodes = new Set<string>(CLARUS_PSU_VENDOR_CODES);
+
+    setCartItems((prev) => {
+      const next = { ...prev };
+
+      for (const key of Object.keys(prev)) {
+        const p = productsById.get(key);
+        if (!p) continue;
+
+        const isProfile = p.kind === "TRACK_PROFILE";
+        const isTrackProduct =
+          p.kind === "TRACK_PROFILE" || p.kind === "TRACK_FIXTURE" || p.kind === "TRACK_ACCESSORY";
+        const isClarusPsu = clarusPsuVendorCodes.has(toText(p.vendorCode));
+
+        if ((isProfile && key !== id) || (isTrackProduct && p.system !== system) || (isClarusPsu && system !== "CLARUS_48")) {
+          delete next[key];
+        }
+      }
+
+      if (nextQty <= 0) delete next[id];
+      else next[id] = nextQty;
+
+      return next;
+    });
+  }, [cartItems, options?.source, productsById]);
+
   const addMountOneToOne = useCallback((fv: string) => {
     const mv = POINT_TO_MOUNT_VENDOR_CODE[toText(fv)]; if (!mv) return;
     const mid = productIdByVendorCode.get(mv); if (!mid) return;
@@ -691,23 +695,8 @@ export function WizardStep1Lighting() {
   /* ═══════════════════════════════════════════════════
      WIZARD (Подбор tab) — step-by-step guided flow
      ═══════════════════════════════════════════════════ */
-  type WStep = "system" | "trackProfile" | "trackFixtures" | "points" | "lamps" | "done";
-  const [wStep, setWStep] = useState<WStep>("system");
-  const [wSystem, setWSystem] = useState<TrackSystemId | null>(null);
-  const [wPointTab, setWPointTab] = useState<PointSubtypeId>("GX53");
-
   const wizardInitializedRef = useRef(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
-
-  const chooseWizardSystem = useCallback((
-    system: TrackSystemId,
-    recommended?: { product: FeedCatalogProduct; qty: number }
-  ) => {
-    setWSystem(system);
-    clearTrackProductsForSystem(system);
-    if (recommended) setProductQty(recommended.product, recommended.qty);
-    setWStep("trackProfile");
-  }, [clearTrackProductsForSystem, setProductQty]);
 
   const chooseNoTrackFlow = useCallback(() => {
     setWSystem(null);
@@ -743,7 +732,7 @@ export function WizardStep1Lighting() {
       return;
     }
 
-    if (requiredTrackMeters > 0) setWStep("system");
+    if (requiredTrackMeters > 0) setWStep("trackProfile");
     else if (requiredPointQty > 0) setWStep("points");
     else setWStep("system");
   }, [cartEntries, lightingDraft, missingLamps.length, requiredPointQty, requiredTrackMeters]);
@@ -774,20 +763,61 @@ export function WizardStep1Lighting() {
   const systemLabel = (id: TrackSystemId) =>
     id === "COLIBRI_220" ? "COLIBRI 220V" : id === "CLARUS_48" ? "CLARUS 48V" : "ART 220V";
 
+  const selectedTrackSystem = useMemo<TrackSystemId | null>(() => {
+    if (wSystem) return wSystem;
+
+    const trackEntry = cartEntries.find((e) =>
+      e.product.kind === "TRACK_PROFILE" || e.product.kind === "TRACK_FIXTURE" || e.product.kind === "TRACK_ACCESSORY"
+    );
+
+    return isTrackSystemId(trackEntry?.product.system) ? trackEntry.product.system : null;
+  }, [cartEntries, wSystem]);
+
+  const getRecommendedProfileQty = useCallback((product: FeedCatalogProduct): number => {
+    const pieceM = inferPieceLengthMeters(product);
+    if (requiredTrackMeters > 0 && pieceM && pieceM > 0) {
+      return Math.max(1, Math.ceil(requiredTrackMeters / pieceM));
+    }
+    return product.unit === "m" ? Math.max(0.5, requiredTrackMeters || 1) : 1;
+  }, [requiredTrackMeters]);
+
   // Products for each wizard step
   const wTrackProfiles = useMemo(() => {
-    const sys = wSystem ?? "COLIBRI_220";
-    const base = TRACK_PROFILE_WHITELIST[sys] ?? [];
-    const allowed = sys === "TRACK_220" ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST]) : new Set(base);
-    return products.filter((p) => p.kind === "TRACK_PROFILE" && p.system === sys && p.priceRub > 0 && allowed.has(toText(p.vendorCode)))
-      .sort((a, b) => a.priceRub - b.priceRub);
-  }, [wSystem, products]);
+    const systems: TrackSystemId[] = recommendedTrackProfiles.length > 0
+      ? recommendedTrackProfiles.map((r) => r.system)
+      : trackMountType === "built-in"
+        ? ["COLIBRI_220", "CLARUS_48"]
+        : trackMountType === "surface"
+          ? ["TRACK_220"]
+          : ["COLIBRI_220", "CLARUS_48", "TRACK_220"];
+
+    const uniqueSystems = Array.from(new Set(systems));
+    const result: FeedCatalogProduct[] = [];
+
+    for (const sys of uniqueSystems) {
+      const base = TRACK_PROFILE_WHITELIST[sys] ?? [];
+      const allowed = sys === "TRACK_220" ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST]) : new Set(base);
+      result.push(
+        ...products.filter((p) =>
+          p.kind === "TRACK_PROFILE" &&
+          p.system === sys &&
+          p.priceRub > 0 &&
+          allowed.has(toText(p.vendorCode))
+        )
+      );
+    }
+
+    return result.sort((a, b) => {
+      const systemDiff = systemLabel(a.system as TrackSystemId).localeCompare(systemLabel(b.system as TrackSystemId), "ru");
+      return systemDiff || a.priceRub - b.priceRub;
+    });
+  }, [products, recommendedTrackProfiles, trackMountType]);
 
   const wTrackFixtures = useMemo(() => {
-    const sys = wSystem ?? "COLIBRI_220";
-    return products.filter((p) => p.kind === "TRACK_FIXTURE" && p.system === sys && p.priceRub > 0)
+    if (!selectedTrackSystem) return [];
+    return products.filter((p) => p.kind === "TRACK_FIXTURE" && p.system === selectedTrackSystem && p.priceRub > 0)
       .sort((a, b) => a.priceRub - b.priceRub);
-  }, [wSystem, products]);
+  }, [selectedTrackSystem, products]);
 
   const wPointProducts = useMemo(() => {
     return products.filter((p) => matchesPointSubtype(p, wPointTab) && p.priceRub > 0)
@@ -817,6 +847,8 @@ export function WizardStep1Lighting() {
   }, [cartEntries, requiredPointQty]);
 
   const goAfterTrackProfile = useCallback(() => {
+    if (requiredTrackMeters > 0 && !selectedTrackSystem) return;
+
     if (wTrackFixtures.length > 0) {
       setWStep("trackFixtures");
       return;
@@ -830,7 +862,7 @@ export function WizardStep1Lighting() {
       return;
     }
     setWStep("done");
-  }, [lampCurrentTotal, lampRequiredTotal, requiredPointQty, selectedPointQty, wTrackFixtures.length]);
+  }, [lampCurrentTotal, lampRequiredTotal, requiredPointQty, requiredTrackMeters, selectedPointQty, selectedTrackSystem, wTrackFixtures.length]);
 
   const goAfterTrackFixtures = useCallback(() => {
     if (requiredPointQty > 0 && selectedPointQty < requiredPointQty) {
@@ -857,40 +889,18 @@ export function WizardStep1Lighting() {
       setWStep("points");
       return;
     }
-    if (requiredTrackMeters > 0) {
+    if (selectedTrackSystem) {
       setWStep("trackFixtures");
       return;
     }
+    if (requiredTrackMeters > 0) {
+      setWStep("trackProfile");
+      return;
+    }
     setWStep("system");
-  }, [requiredPointQty, requiredTrackMeters]);
+  }, [requiredPointQty, requiredTrackMeters, selectedTrackSystem]);
 
-  const wizardSteps = useMemo(() => (["system", "trackProfile", "trackFixtures", "points", "lamps", "done"] as WStep[]), []);
-  const wizardStepTitles: Record<WStep, string> = {
-    system: "Система",
-    trackProfile: "Профиль",
-    trackFixtures: "Трековые",
-    points: "Точки",
-    lamps: "Лампы",
-    done: "Готово",
-  };
 
-  const selectionMetrics = useMemo<SelectionMetric[]>(() => ([
-    { id: "track", label: "Профиль", current: selectedTrackMeters, required: requiredTrackMeters, unit: "м" },
-    { id: "points", label: "Точки", current: selectedPointQty, required: requiredPointQty, unit: "шт." },
-    { id: "lamps", label: "Лампы", current: lampCurrentTotal, required: lampRequiredTotal, unit: "шт." },
-  ]), [lampCurrentTotal, lampRequiredTotal, requiredPointQty, requiredTrackMeters, selectedPointQty, selectedTrackMeters]);
-
-  const stickyProgressTitle = activeTab === "recommendations"
-    ? `Подбор · ${Math.max(1, wizardSteps.indexOf(wStep) + 1)}/${wizardSteps.length}`
-    : catalogView === "selected"
-      ? "Выбранное"
-      : "Каталог";
-
-  const stickyProgressText = activeTab === "recommendations"
-    ? wizardStepTitles[wStep]
-    : catalogView === "selected"
-      ? "Проверьте комплект и переходите к итогу"
-      : "Можно вручную добавить любую позицию";
 
   /* ─── Scoped catalog products ─── */
   const scopedProducts = useMemo(() => {
@@ -931,14 +941,6 @@ export function WizardStep1Lighting() {
         </TabBtn>
       </div>
 
-      <StickySelectionProgress
-        title={stickyProgressTitle}
-        stepText={stickyProgressText}
-        selectedCount={selectedViewItems.length}
-        metrics={selectionMetrics}
-        onSelectedClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("selected"); }}
-      />
-
       {removedHint && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
           Некоторые позиции удалены из ассортимента и автоматически убраны из выбранного.
@@ -951,107 +953,30 @@ export function WizardStep1Lighting() {
       {activeTab === "recommendations" && (
         <div key="rec-tab" className="animate-fade-in space-y-4">
 
-          {/* ─── STEP: System Selection ─── */}
+          {/* ─── STEP: Manual/no recommendations fallback ─── */}
           {wStep === "system" && (
-            <div className="space-y-3">
-              {!hasRecommendations ? (
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
-                  <p className="font-semibold text-slate-950">Освещение можно подобрать вручную</p>
-                  <p className="mt-1 leading-5">
-                    На шаге потолка не задан трек или количество точечных светильников.
-                    Откройте каталог, если хотите добавить свет, или сразу переходите к итогу.
-                  </p>
-                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                    <button
-                      type="button"
-                      onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}
-                      className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
-                    >
-                      Открыть каталог
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => goToStep(2)}
-                      className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                    >
-                      К итогу →
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="rounded-2xl bg-slate-950 p-4 text-white">
-                    <p className="text-sm font-semibold">Выберите систему трека</p>
-                    <p className="mt-1 text-xs text-white/70">
-                      {trackMountType === "built-in" ? "Встроенный трек → COLIBRI или CLARUS"
-                        : trackMountType === "surface" ? "Накладной трек → система ART"
-                        : "Если трек не нужен — переходите к точечным светильникам"}
-                    </p>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {trackMountType !== "surface" && (
-                      <>
-                        {recommendedTrackProfiles.find((r) => r.system === "COLIBRI_220") && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const rec = recommendedTrackProfiles.find((r) => r.system === "COLIBRI_220");
-                              chooseWizardSystem("COLIBRI_220", rec ? { product: rec.product, qty: rec.qty } : undefined);
-                            }}
-                            className="rounded-2xl border-2 border-blue-400 bg-blue-50 p-4 text-left transition-colors hover:border-blue-600"
-                          >
-                            <p className="text-sm font-semibold text-blue-900">COLIBRI 220V</p>
-                            <p className="mt-1 text-xs text-blue-700">Встроенный · 220V · рекомендуем для простоты</p>
-                          </button>
-                        )}
-                        {recommendedTrackProfiles.find((r) => r.system === "CLARUS_48") && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const rec = recommendedTrackProfiles.find((r) => r.system === "CLARUS_48");
-                              chooseWizardSystem("CLARUS_48", rec ? { product: rec.product, qty: rec.qty } : undefined);
-                            }}
-                            className="rounded-2xl border-2 border-slate-200 bg-white p-4 text-left transition-colors hover:border-slate-400"
-                          >
-                            <p className="text-sm font-semibold text-slate-950">CLARUS 48V</p>
-                            <p className="mt-1 text-xs text-slate-500">Встроенный · 48V · нужен блок питания</p>
-                          </button>
-                        )}
-                      </>
-                    )}
-                    {trackMountType !== "built-in" && recommendedTrackProfiles.find((r) => r.system === "TRACK_220") && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const rec = recommendedTrackProfiles.find((r) => r.system === "TRACK_220");
-                          chooseWizardSystem("TRACK_220", rec ? { product: rec.product, qty: rec.qty } : undefined);
-                        }}
-                        className="rounded-2xl border-2 border-slate-200 bg-white p-4 text-left transition-colors hover:border-slate-400"
-                      >
-                        <p className="text-sm font-semibold text-slate-950">ART 220V</p>
-                        <p className="mt-1 text-xs text-slate-500">Накладной · 220V</p>
-                      </button>
-                    )}
-                  </div>
-
-                  {requiredPointQty > 0 ? (
-                    <button type="button" onClick={chooseNoTrackFlow}
-                      className="w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3 text-sm text-slate-600 hover:bg-slate-100">
-                      Без трека — только точечные →
-                    </button>
-                  ) : null}
-
-                  <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
-                    <p className="font-medium text-slate-700">У меня уже есть освещение</p>
-                    <p className="mt-1">Если всё куплено — просто пропустите этот шаг.</p>
-                    <button type="button" onClick={() => goToStep(2)}
-                      className="mt-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
-                      Пропустить, к итогу →
-                    </button>
-                  </div>
-                </>
-              )}
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+              <p className="font-semibold text-slate-950">Освещение можно подобрать вручную</p>
+              <p className="mt-1 leading-5">
+                На шаге потолка не задан трек или количество точечных светильников.
+                Откройте каталог, если хотите добавить свет, или сразу переходите к итогу.
+              </p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}
+                  className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+                >
+                  Открыть каталог
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goToStep(2)}
+                  className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  К итогу →
+                </button>
+              </div>
             </div>
           )}
 
@@ -1060,9 +985,9 @@ export function WizardStep1Lighting() {
             <div className="space-y-3">
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
                 <p className="text-sm font-semibold text-emerald-950">
-                  Профиль трека: {wSystem ? systemLabel(wSystem) : ""}
+                  Сначала выберите профиль трека
                 </p>
-                <p className="mt-1 text-xs text-emerald-800">Подставили рекомендованный профиль — можно изменить количество.</p>
+                <p className="mt-1 text-xs text-emerald-800">Система определится по выбранному профилю. Потом покажем светильники именно для неё.</p>
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -1071,17 +996,26 @@ export function WizardStep1Lighting() {
                   const qty = toNumber(cartItems[id]);
                   return (
                     <ProductCard key={id} product={p} qty={qty}
-                      onInc={() => setProductQty(p, qty + 1)} onDec={() => setProductQty(p, qty - 1)}
+                      onInc={() => setTrackProfileQty(p, qty > 0 ? qty + 1 : getRecommendedProfileQty(p))}
+                      onDec={() => setTrackProfileQty(p, qty - 1)}
                       onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })} />
                   );
                 })}
               </div>
 
               <div className="flex gap-3">
-                <button type="button" onClick={() => setWStep("system")}
-                  className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">← Назад</button>
-                <button type="button" onClick={goAfterTrackProfile}
-                  className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800">Подтвердить →</button>
+                <button type="button" onClick={chooseNoTrackFlow}
+                  className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                  {requiredPointQty > 0 ? "Без трека" : "Пропустить"}
+                </button>
+                <button
+                  type="button"
+                  onClick={goAfterTrackProfile}
+                  disabled={requiredTrackMeters > 0 && !selectedTrackSystem}
+                  className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-slate-950"
+                >
+                  Подтвердить →
+                </button>
               </div>
             </div>
           )}
@@ -1090,7 +1024,7 @@ export function WizardStep1Lighting() {
           {wStep === "trackFixtures" && (
             <div className="space-y-3">
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
-                <p className="text-sm font-semibold text-emerald-950">Светильники для трека: {wSystem ? systemLabel(wSystem) : ""}</p>
+                <p className="text-sm font-semibold text-emerald-950">Светильники для трека: {selectedTrackSystem ? systemLabel(selectedTrackSystem) : ""}</p>
                 <p className="mt-1 text-xs text-emerald-800">Показываем все светильники выбранной системы.</p>
               </div>
 
@@ -1124,7 +1058,7 @@ export function WizardStep1Lighting() {
             <div className="space-y-3">
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
                 <p className="text-sm font-semibold text-emerald-950">Точечные светильники</p>
-                <p className="mt-1 text-xs text-emerald-800">Выберите GX53, MR16 или панели. Общий прогресс закреплён сверху.</p>
+                <p className="mt-1 text-xs text-emerald-800">Выберите GX53, MR16 или панели. Прогресс теперь в нижнем футере.</p>
               </div>
 
               {/* Sub-tabs for point types */}
@@ -1154,7 +1088,7 @@ export function WizardStep1Lighting() {
               </div>
 
               <div className="flex gap-3">
-                <button type="button" onClick={() => setWStep(requiredTrackMeters > 0 ? "trackFixtures" : "system")}
+                <button type="button" onClick={() => setWStep(selectedTrackSystem ? "trackFixtures" : requiredTrackMeters > 0 ? "trackProfile" : "system")}
                   className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">← Назад</button>
                 <button type="button" onClick={goAfterPoints}
                   className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800">Подтвердить →</button>
