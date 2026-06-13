@@ -159,12 +159,10 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
 
 /* Product card with zoomable image */
 function ProductCard({
-  product, qty, onInc, onDec, onImageClick, onFill, fillLabel,
+  product, qty, onInc, onDec, onImageClick,
 }: {
   product: FeedCatalogProduct; qty: number; onInc: () => void; onDec: () => void;
   onImageClick?: () => void;
-  onFill?: () => void;
-  fillLabel?: string;
 }) {
   const regular = toNumber(product.priceRub);
   const discounted = getDiscountedPrice(regular);
@@ -194,7 +192,7 @@ function ProductCard({
         <div className="mt-2 text-xs">
           <span className="line-through text-slate-400">{fmt(regular)} ₽</span>{" "}
           <span className="font-semibold text-emerald-700">{fmt(discounted)} ₽</span>
-          {benefit > 0 ? <span className="text-slate-500"> · −{fmt(benefit)} ₽</span> : null}
+          {benefit > 0 ? <span className="text-slate-500"> · −15% (−{fmt(benefit)} ₽)</span> : null}
           <span className="text-slate-400"> · с потолком</span>
         </div>
 
@@ -223,16 +221,6 @@ function ProductCard({
           <button type="button" onClick={onInc}
             className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 active:scale-95"
             style={{ minHeight: 44, minWidth: 44 }}>+</button>
-          {onFill ? (
-            <button
-              type="button"
-              onClick={onFill}
-              className="rounded-xl bg-slate-100 px-2.5 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-200"
-              style={{ minHeight: 40 }}
-            >
-              {fillLabel ?? "Добрать"}
-            </button>
-          ) : null}
           <span className="ml-auto text-xs text-slate-500">{product.unit === "m" ? "м" : "шт."}</span>
         </div>
       </div>
@@ -311,7 +299,7 @@ export function WizardStep1Lighting() {
     lightingDraft, setLightingDraft, options,
     step1CatalogView, setStep1CatalogView,
     setStep1FooterAction,
-    goToStep, showCeilingInUi,
+    goToStep, showCeilingInUi, currentStep,
   } = useCalculatorModal();
 
   const [activeTab, setActiveTab] = useState<Tab>("recommendations");
@@ -326,7 +314,7 @@ export function WizardStep1Lighting() {
     });
     if (appliedInitialUiRef.current === key) return;
     appliedInitialUiRef.current = key;
-    const shouldCat = options?.entryMode === "lighting-first" || (options as any)?.initialStep === 1;
+    const shouldCat = options?.entryMode === "lighting-first";
     const t: Tab = options?.initialLightingTab === "catalog" ? "catalog"
       : options?.initialLightingTab === "recommendations" ? "recommendations"
       : shouldCat ? "catalog" : "recommendations";
@@ -429,6 +417,18 @@ export function WizardStep1Lighting() {
     setActiveTab("catalog");
     setCatalogView(step1CatalogView);
   }, [step1CatalogView]);
+
+  const prevCurrentStepRef = useRef(currentStep);
+  useEffect(() => {
+    const prev = prevCurrentStepRef.current;
+    prevCurrentStepRef.current = currentStep;
+
+    if (prev === 0 && currentStep === 1) {
+      setActiveTab("recommendations");
+      setCatalogView("browse");
+      setStep1CatalogView(null);
+    }
+  }, [currentStep, setStep1CatalogView]);
 
   /* ─── Derived cart data ─── */
   const cartEntries = useMemo(() =>
@@ -649,12 +649,11 @@ export function WizardStep1Lighting() {
         const p = productsById.get(key);
         if (!p) continue;
 
-        const isProfile = p.kind === "TRACK_PROFILE";
         const isTrackProduct =
           p.kind === "TRACK_PROFILE" || p.kind === "TRACK_FIXTURE" || p.kind === "TRACK_ACCESSORY";
         const isClarusPsu = clarusPsuVendorCodes.has(toText(p.vendorCode));
 
-        if ((isProfile && key !== id) || (isTrackProduct && p.system !== system) || (isClarusPsu && system !== "CLARUS_48")) {
+        if ((isTrackProduct && p.system !== system) || (isClarusPsu && system !== "CLARUS_48")) {
           delete next[key];
         }
       }
@@ -799,13 +798,7 @@ export function WizardStep1Lighting() {
     return isTrackSystemId(trackEntry?.product.system) ? trackEntry.product.system : null;
   }, [cartEntries, wSystem]);
 
-  const getRecommendedProfileQty = useCallback((product: FeedCatalogProduct): number => {
-    const pieceM = inferPieceLengthMeters(product);
-    if (requiredTrackMeters > 0 && pieceM && pieceM > 0) {
-      return Math.max(1, Math.ceil(requiredTrackMeters / pieceM));
-    }
-    return product.unit === "m" ? Math.max(0.5, requiredTrackMeters || 1) : 1;
-  }, [requiredTrackMeters]);
+
 
   // Products for each wizard step
   const wTrackProfiles = useMemo(() => {
@@ -875,7 +868,7 @@ export function WizardStep1Lighting() {
   }, [cartEntries, requiredPointQty]);
 
   const goAfterTrackProfile = useCallback(() => {
-    if (requiredTrackMeters > 0 && !selectedTrackSystem) return;
+    if (requiredTrackMeters > 0 && (!selectedTrackSystem || selectedTrackMeters < requiredTrackMeters)) return;
 
     if (wTrackFixtures.length > 0) {
       setWStep("trackFixtures");
@@ -890,7 +883,7 @@ export function WizardStep1Lighting() {
       return;
     }
     setWStep("done");
-  }, [lampCurrentTotal, lampRequiredTotal, requiredPointQty, requiredTrackMeters, selectedPointQty, selectedTrackSystem, wTrackFixtures.length]);
+  }, [lampCurrentTotal, lampRequiredTotal, requiredPointQty, requiredTrackMeters, selectedPointQty, selectedTrackMeters, selectedTrackSystem, wTrackFixtures.length]);
 
   const goAfterTrackFixtures = useCallback(() => {
     if (requiredPointQty > 0 && selectedPointQty < requiredPointQty) {
@@ -929,10 +922,19 @@ export function WizardStep1Lighting() {
   }, [requiredPointQty, requiredTrackMeters, selectedTrackSystem]);
 
 
+  const trackComplete = requiredTrackMeters <= 0 || selectedTrackMeters >= requiredTrackMeters;
+  const pointsComplete = requiredPointQty <= 0 || selectedPointQty >= requiredPointQty;
+  const lampsComplete = lampRequiredTotal <= 0 || lampCurrentTotal >= lampRequiredTotal;
+  const requiredSelectionComplete = trackComplete && pointsComplete && lampsComplete;
+
   useEffect(() => {
     if (activeTab !== "recommendations") {
-      setStep1FooterAction(null);
-      return;
+      setStep1FooterAction({
+        label: "К итогу →",
+        disabled: !requiredSelectionComplete,
+        onClick: () => goToStep(2),
+      });
+      return () => setStep1FooterAction(null);
     }
 
     if (wStep === "system") {
@@ -945,13 +947,14 @@ export function WizardStep1Lighting() {
       } else {
         setStep1FooterAction({
           label: "К итогу →",
+          disabled: !requiredSelectionComplete,
           onClick: () => goToStep(2),
         });
       }
     } else if (wStep === "trackProfile") {
       setStep1FooterAction({
         label: "Подтвердить профиль →",
-        disabled: requiredTrackMeters > 0 && !selectedTrackSystem,
+        disabled: requiredTrackMeters > 0 && (!selectedTrackSystem || !trackComplete),
         onClick: goAfterTrackProfile,
       });
     } else if (wStep === "trackFixtures") {
@@ -962,16 +965,19 @@ export function WizardStep1Lighting() {
     } else if (wStep === "points") {
       setStep1FooterAction({
         label: "Подтвердить точки →",
+        disabled: !pointsComplete,
         onClick: goAfterPoints,
       });
     } else if (wStep === "lamps") {
       setStep1FooterAction({
         label: "Подтвердить лампы →",
+        disabled: !lampsComplete,
         onClick: () => setWStep("done"),
       });
     } else {
       setStep1FooterAction({
         label: "К итогу →",
+        disabled: !requiredSelectionComplete,
         onClick: () => goToStep(2),
       });
     }
@@ -983,9 +989,13 @@ export function WizardStep1Lighting() {
     goAfterTrackFixtures,
     goAfterTrackProfile,
     goToStep,
+    lampsComplete,
+    pointsComplete,
+    requiredSelectionComplete,
     requiredTrackMeters,
     selectedTrackSystem,
     setStep1FooterAction,
+    trackComplete,
     wStep,
     wizardSystemOptions.length,
   ]);
@@ -1137,7 +1147,7 @@ export function WizardStep1Lighting() {
                 <p className="text-sm font-semibold text-emerald-950">
                   Профиль трека: {selectedTrackSystem ? systemLabel(selectedTrackSystem) : ""}
                 </p>
-                <p className="mt-1 text-xs text-emerald-800">Одно нажатие «+» добавляет 1 шт. Для быстрого расчёта используйте «Добрать».</p>
+                <p className="mt-1 text-xs text-emerald-800">Одно нажатие «+» добавляет 1 шт. Можно собрать профиль из разных длин.</p>
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -1148,8 +1158,6 @@ export function WizardStep1Lighting() {
                     <ProductCard key={id} product={p} qty={qty}
                       onInc={() => setTrackProfileQty(p, qty + 1)}
                       onDec={() => setTrackProfileQty(p, qty - 1)}
-                      onFill={() => setTrackProfileQty(p, getRecommendedProfileQty(p))}
-                      fillLabel="Добрать"
                       onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })} />
                   );
                 })}
@@ -1163,7 +1171,7 @@ export function WizardStep1Lighting() {
                 <button
                   type="button"
                   onClick={goAfterTrackProfile}
-                  disabled={requiredTrackMeters > 0 && !selectedTrackSystem}
+                  disabled={requiredTrackMeters > 0 && (!selectedTrackSystem || !trackComplete)}
                   className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-slate-950"
                 >
                   Подтвердить →
@@ -1242,8 +1250,14 @@ export function WizardStep1Lighting() {
               <div className="flex gap-3">
                 <button type="button" onClick={() => setWStep(selectedTrackSystem ? "trackFixtures" : requiredTrackMeters > 0 ? "trackProfile" : "system")}
                   className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">← Назад</button>
-                <button type="button" onClick={goAfterPoints}
-                  className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800">Подтвердить →</button>
+                <button
+                  type="button"
+                  onClick={goAfterPoints}
+                  disabled={!pointsComplete}
+                  className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-slate-950"
+                >
+                  Подтвердить →
+                </button>
               </div>
             </div>
           )}
@@ -1322,8 +1336,14 @@ export function WizardStep1Lighting() {
               <div className="flex gap-3">
                 <button type="button" onClick={goBackFromLamps}
                   className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">← Назад</button>
-                <button type="button" onClick={() => setWStep("done")}
-                  className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800">Подтвердить →</button>
+                <button
+                  type="button"
+                  onClick={() => setWStep("done")}
+                  disabled={!lampsComplete}
+                  className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-slate-950"
+                >
+                  Подтвердить →
+                </button>
               </div>
             </div>
           )}
@@ -1365,8 +1385,14 @@ export function WizardStep1Lighting() {
               <div className="flex gap-3">
                 <button type="button" onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}
                   className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Каталог</button>
-                <button type="button" onClick={() => goToStep(2)}
-                  className="flex-1 rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800">К итогу →</button>
+                <button
+                  type="button"
+                  onClick={() => goToStep(2)}
+                  disabled={!requiredSelectionComplete}
+                  className="flex-1 rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-emerald-700"
+                >
+                  К итогу →
+                </button>
               </div>
             </div>
           )}
@@ -1433,11 +1459,18 @@ export function WizardStep1Lighting() {
                     })}
                   </ul>
                   <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-3 text-sm">
-                    <p>Итого: {fmt(selectedTotals.regular)} ₽</p>
-                    <p className="text-emerald-700">С заказом потолка: {fmt(selectedTotals.discounted)} ₽</p>
-                    <p className="text-slate-500">Скидка на свет: −{fmt(selectedTotals.benefit)} ₽</p>
-                    <button type="button" onClick={() => goToStep(2)}
-                      className="mt-3 w-full rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800">К итогу →</button>
+                    <p>Итого: <span className="line-through text-slate-400">{fmt(selectedTotals.regular)} ₽</span></p>
+                    <p className="text-emerald-700">
+                      С заказом потолка: {fmt(selectedTotals.discounted)} ₽ · −15% (−{fmt(selectedTotals.benefit)} ₽)
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => goToStep(2)}
+                      disabled={!requiredSelectionComplete}
+                      className="mt-3 w-full rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-emerald-700"
+                    >
+                      К итогу →
+                    </button>
                   </div>
                 </>
               )}
@@ -1538,14 +1571,23 @@ export function WizardStep1Lighting() {
               {lightingDraft.items?.length ?? 0}
             </span>
             <span className="text-sm font-medium text-slate-950">
-              {fmt(lightingDraft.totalRub ?? 0)} ₽
-              {lightingDraft.discountedTotalRub != null && lightingDraft.discountedTotalRub < (lightingDraft.totalRub ?? 0) && (
-                <span className="ml-1 text-xs text-emerald-700">−{fmt((lightingDraft.totalRub ?? 0) - (lightingDraft.discountedTotalRub ?? 0))} ₽</span>
+              {lightingDraft.discountedTotalRub != null && lightingDraft.discountedTotalRub < (lightingDraft.totalRub ?? 0) ? (
+                <>
+                  <span className="line-through text-slate-400">{fmt(lightingDraft.totalRub ?? 0)} ₽</span>{" "}
+                  <span>{fmt(lightingDraft.discountedTotalRub ?? 0)} ₽</span>
+                  <span className="ml-1 text-xs text-emerald-700">−15% (−{fmt((lightingDraft.totalRub ?? 0) - (lightingDraft.discountedTotalRub ?? 0))} ₽)</span>
+                </>
+              ) : (
+                <>{fmt(lightingDraft.totalRub ?? 0)} ₽</>
               )}
             </span>
           </div>
-          <button type="button" onClick={() => goToStep(2)}
-            className="rounded-xl bg-emerald-700 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-800">
+          <button
+            type="button"
+            onClick={() => goToStep(2)}
+            disabled={!requiredSelectionComplete}
+            className="rounded-xl bg-emerald-700 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-emerald-700"
+          >
             К итогу →
           </button>
         </div>
