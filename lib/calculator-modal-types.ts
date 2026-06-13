@@ -2,6 +2,7 @@ import type { ServiceCalculatorPreset } from "@/content/services";
 
 export type LightingMode = "kit" | "catalog" | "none";
 export type CatalogViewMode = "selected" | "browse";
+export type LightingDiscountMode = "none" | "lighting-only" | "with-ceiling";
 
 export type LightingItem = {
   sku: string;
@@ -27,7 +28,13 @@ export type LightingSnapshot = {
 
   items?: LightingItem[];
   totalRub?: number;
+  /** Effective discounted total for the current order mode. */
   discountedTotalRub?: number;
+  standaloneDiscountedTotalRub?: number;
+  withCeilingDiscountedTotalRub?: number;
+  discountMode?: LightingDiscountMode;
+  discountPercentApplied?: number;
+  discountAmountRub?: number;
 
   userCustomizedLighting: boolean;
   derivedInputsSnapshot?: DerivedInputs;
@@ -73,11 +80,21 @@ export type CalculatorModalContextValue = {
   /** Свет без скидки (по корзине/lightingDraft). */
   lightingRegularTotal: number;
 
-  /** Свет со скидкой (-15%), независимо от eligibility (число “если бы применили”). */
+  /** Свет со скидкой с потолком (−25%), независимо от eligibility (число “если бы применили”). */
   lightingDiscountedTotal: number;
+
+  /** Свет со скидкой −10% для покупки только освещения. */
+  lightingStandaloneTotal: number;
+
+  /** Свет со скидкой −25% при заказе потолка. */
+  lightingWithCeilingTotal: number;
 
   /** Свет, который показываем как “к оплате сейчас” */
   lightingEffectiveTotal: number;
+
+  lightingDiscountMode: LightingDiscountMode;
+  lightingDiscountPercentApplied: number;
+  lightingDiscountAmount: number;
 
   /** Скидка на свет: “разрешена”, когда пользователь подтвердил потолок и перешёл 0 -> 1. */
   lightingDiscountEligible: boolean;
