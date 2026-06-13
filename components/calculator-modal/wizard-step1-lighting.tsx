@@ -159,10 +159,12 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
 
 /* Product card with zoomable image */
 function ProductCard({
-  product, qty, onInc, onDec, onImageClick,
+  product, qty, onInc, onDec, onImageClick, onFill, fillLabel,
 }: {
   product: FeedCatalogProduct; qty: number; onInc: () => void; onDec: () => void;
   onImageClick?: () => void;
+  onFill?: () => void;
+  fillLabel?: string;
 }) {
   const regular = toNumber(product.priceRub);
   const discounted = getDiscountedPrice(regular);
@@ -221,6 +223,16 @@ function ProductCard({
           <button type="button" onClick={onInc}
             className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 active:scale-95"
             style={{ minHeight: 44, minWidth: 44 }}>+</button>
+          {onFill ? (
+            <button
+              type="button"
+              onClick={onFill}
+              className="rounded-xl bg-slate-100 px-2.5 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-200"
+              style={{ minHeight: 40 }}
+            >
+              {fillLabel ?? "Добрать"}
+            </button>
+          ) : null}
           <span className="ml-auto text-xs text-slate-500">{product.unit === "m" ? "м" : "шт."}</span>
         </div>
       </div>
@@ -298,6 +310,7 @@ export function WizardStep1Lighting() {
   const {
     lightingDraft, setLightingDraft, options,
     step1CatalogView, setStep1CatalogView,
+    setStep1FooterAction,
     goToStep, showCeilingInUi,
   } = useCalculatorModal();
 
@@ -440,7 +453,7 @@ export function WizardStep1Lighting() {
 
   type WStep = "system" | "trackProfile" | "trackFixtures" | "points" | "lamps" | "done";
   const [wStep, setWStep] = useState<WStep>(() =>
-    requiredTrackMeters > 0 ? "trackProfile" : requiredPointQty > 0 ? "points" : "system"
+    requiredTrackMeters > 0 ? "system" : requiredPointQty > 0 ? "points" : "system"
   );
   const [wSystem, setWSystem] = useState<TrackSystemId | null>(null);
   const [wPointTab, setWPointTab] = useState<PointSubtypeId>("GX53");
@@ -698,6 +711,12 @@ export function WizardStep1Lighting() {
   const wizardInitializedRef = useRef(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
+  const chooseWizardSystem = useCallback((system: TrackSystemId) => {
+    setWSystem(system);
+    clearTrackProductsForSystem(system);
+    setWStep("trackProfile");
+  }, [clearTrackProductsForSystem]);
+
   const chooseNoTrackFlow = useCallback(() => {
     setWSystem(null);
     clearTrackProductsForSystem(null);
@@ -732,7 +751,7 @@ export function WizardStep1Lighting() {
       return;
     }
 
-    if (requiredTrackMeters > 0) setWStep("trackProfile");
+    if (requiredTrackMeters > 0) setWStep("system");
     else if (requiredPointQty > 0) setWStep("points");
     else setWStep("system");
   }, [cartEntries, lightingDraft, missingLamps.length, requiredPointQty, requiredTrackMeters]);
@@ -763,6 +782,13 @@ export function WizardStep1Lighting() {
   const systemLabel = (id: TrackSystemId) =>
     id === "COLIBRI_220" ? "COLIBRI 220V" : id === "CLARUS_48" ? "CLARUS 48V" : "ART 220V";
 
+  const wizardSystemOptions = useMemo<TrackSystemId[]>(() => {
+    if (requiredTrackMeters <= 0) return [];
+    if (trackMountType === "built-in") return ["COLIBRI_220", "CLARUS_48"];
+    if (trackMountType === "surface") return ["TRACK_220"];
+    return ["COLIBRI_220", "CLARUS_48", "TRACK_220"];
+  }, [requiredTrackMeters, trackMountType]);
+
   const selectedTrackSystem = useMemo<TrackSystemId | null>(() => {
     if (wSystem) return wSystem;
 
@@ -783,13 +809,15 @@ export function WizardStep1Lighting() {
 
   // Products for each wizard step
   const wTrackProfiles = useMemo(() => {
-    const systems: TrackSystemId[] = recommendedTrackProfiles.length > 0
-      ? recommendedTrackProfiles.map((r) => r.system)
-      : trackMountType === "built-in"
-        ? ["COLIBRI_220", "CLARUS_48"]
-        : trackMountType === "surface"
-          ? ["TRACK_220"]
-          : ["COLIBRI_220", "CLARUS_48", "TRACK_220"];
+    const systems: TrackSystemId[] = selectedTrackSystem
+      ? [selectedTrackSystem]
+      : recommendedTrackProfiles.length > 0
+        ? recommendedTrackProfiles.map((r) => r.system)
+        : trackMountType === "built-in"
+          ? ["COLIBRI_220", "CLARUS_48"]
+          : trackMountType === "surface"
+            ? ["TRACK_220"]
+            : ["COLIBRI_220", "CLARUS_48", "TRACK_220"];
 
     const uniqueSystems = Array.from(new Set(systems));
     const result: FeedCatalogProduct[] = [];
@@ -811,7 +839,7 @@ export function WizardStep1Lighting() {
       const systemDiff = systemLabel(a.system as TrackSystemId).localeCompare(systemLabel(b.system as TrackSystemId), "ru");
       return systemDiff || a.priceRub - b.priceRub;
     });
-  }, [products, recommendedTrackProfiles, trackMountType]);
+  }, [products, recommendedTrackProfiles, selectedTrackSystem, trackMountType]);
 
   const wTrackFixtures = useMemo(() => {
     if (!selectedTrackSystem) return [];
@@ -901,6 +929,66 @@ export function WizardStep1Lighting() {
   }, [requiredPointQty, requiredTrackMeters, selectedTrackSystem]);
 
 
+  useEffect(() => {
+    if (activeTab !== "recommendations") {
+      setStep1FooterAction(null);
+      return;
+    }
+
+    if (wStep === "system") {
+      if (wizardSystemOptions.length > 0) {
+        setStep1FooterAction({
+          label: "Выберите систему",
+          disabled: true,
+          onClick: () => undefined,
+        });
+      } else {
+        setStep1FooterAction({
+          label: "К итогу →",
+          onClick: () => goToStep(2),
+        });
+      }
+    } else if (wStep === "trackProfile") {
+      setStep1FooterAction({
+        label: "Подтвердить профиль →",
+        disabled: requiredTrackMeters > 0 && !selectedTrackSystem,
+        onClick: goAfterTrackProfile,
+      });
+    } else if (wStep === "trackFixtures") {
+      setStep1FooterAction({
+        label: "Подтвердить светильники →",
+        onClick: goAfterTrackFixtures,
+      });
+    } else if (wStep === "points") {
+      setStep1FooterAction({
+        label: "Подтвердить точки →",
+        onClick: goAfterPoints,
+      });
+    } else if (wStep === "lamps") {
+      setStep1FooterAction({
+        label: "Подтвердить лампы →",
+        onClick: () => setWStep("done"),
+      });
+    } else {
+      setStep1FooterAction({
+        label: "К итогу →",
+        onClick: () => goToStep(2),
+      });
+    }
+
+    return () => setStep1FooterAction(null);
+  }, [
+    activeTab,
+    goAfterPoints,
+    goAfterTrackFixtures,
+    goAfterTrackProfile,
+    goToStep,
+    requiredTrackMeters,
+    selectedTrackSystem,
+    setStep1FooterAction,
+    wStep,
+    wizardSystemOptions.length,
+  ]);
 
   /* ─── Scoped catalog products ─── */
   const scopedProducts = useMemo(() => {
@@ -953,31 +1041,93 @@ export function WizardStep1Lighting() {
       {activeTab === "recommendations" && (
         <div key="rec-tab" className="animate-fade-in space-y-4">
 
-          {/* ─── STEP: Manual/no recommendations fallback ─── */}
+          {/* ─── STEP: Track System ─── */}
           {wStep === "system" && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
-              <p className="font-semibold text-slate-950">Освещение можно подобрать вручную</p>
-              <p className="mt-1 leading-5">
-                На шаге потолка не задан трек или количество точечных светильников.
-                Откройте каталог, если хотите добавить свет, или сразу переходите к итогу.
-              </p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}
-                  className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
-                >
-                  Открыть каталог
-                </button>
-                <button
-                  type="button"
-                  onClick={() => goToStep(2)}
-                  className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  К итогу →
-                </button>
+            wizardSystemOptions.length > 0 ? (
+              <div className="space-y-3">
+                <div className="rounded-2xl bg-slate-950 p-4 text-white">
+                  <p className="text-sm font-semibold">Сначала выберите систему трека</p>
+                  <p className="mt-1 text-xs text-white/70">
+                    {trackMountType === "built-in"
+                      ? "Для встроенного трека подойдут COLIBRI или CLARUS."
+                      : trackMountType === "surface"
+                        ? "Для накладного трека используем ART 220V."
+                        : "Система определит подходящие профили и светильники."}
+                  </p>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {wizardSystemOptions.map((system) => {
+                    const isRecommended = system === "COLIBRI_220" && trackMountType === "built-in";
+                    return (
+                      <button
+                        key={system}
+                        type="button"
+                        onClick={() => chooseWizardSystem(system)}
+                        className={[
+                          "rounded-2xl border-2 p-4 text-left transition-colors",
+                          isRecommended
+                            ? "border-blue-400 bg-blue-50 hover:border-blue-600"
+                            : "border-slate-200 bg-white hover:border-slate-400",
+                        ].join(" ")}
+                      >
+                        <p className={isRecommended ? "text-sm font-semibold text-blue-900" : "text-sm font-semibold text-slate-950"}>
+                          {systemLabel(system)}
+                        </p>
+                        <p className={isRecommended ? "mt-1 text-xs text-blue-700" : "mt-1 text-xs text-slate-500"}>
+                          {system === "COLIBRI_220"
+                            ? "220V · проще в подборе"
+                            : system === "CLARUS_48"
+                              ? "48V · нужен блок питания"
+                              : "Накладной · 220V"}
+                          {isRecommended ? " · рекомендуется" : ""}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {requiredPointQty > 0 ? (
+                  <button type="button" onClick={chooseNoTrackFlow}
+                    className="w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3 text-sm text-slate-600 hover:bg-slate-100">
+                    Без трека — только точечные →
+                  </button>
+                ) : null}
+
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
+                  <p className="font-medium text-slate-700">У меня уже есть освещение</p>
+                  <p className="mt-1">Если всё куплено — можно пропустить подбор.</p>
+                  <button type="button" onClick={() => goToStep(2)}
+                    className="mt-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
+                    Пропустить, к итогу →
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+                <p className="font-semibold text-slate-950">Освещение можно подобрать вручную</p>
+                <p className="mt-1 leading-5">
+                  На шаге потолка не задан трек или количество точечных светильников.
+                  Откройте каталог, если хотите добавить свет, или сразу переходите к итогу.
+                </p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}
+                    className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+                  >
+                    Открыть каталог
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => goToStep(2)}
+                    className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    К итогу →
+                  </button>
+                </div>
+              </div>
+            )
           )}
 
           {/* ─── STEP: Track Profiles ─── */}
@@ -985,9 +1135,9 @@ export function WizardStep1Lighting() {
             <div className="space-y-3">
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
                 <p className="text-sm font-semibold text-emerald-950">
-                  Сначала выберите профиль трека
+                  Профиль трека: {selectedTrackSystem ? systemLabel(selectedTrackSystem) : ""}
                 </p>
-                <p className="mt-1 text-xs text-emerald-800">Система определится по выбранному профилю. Потом покажем светильники именно для неё.</p>
+                <p className="mt-1 text-xs text-emerald-800">Одно нажатие «+» добавляет 1 шт. Для быстрого расчёта используйте «Добрать».</p>
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -996,17 +1146,19 @@ export function WizardStep1Lighting() {
                   const qty = toNumber(cartItems[id]);
                   return (
                     <ProductCard key={id} product={p} qty={qty}
-                      onInc={() => setTrackProfileQty(p, qty > 0 ? qty + 1 : getRecommendedProfileQty(p))}
+                      onInc={() => setTrackProfileQty(p, qty + 1)}
                       onDec={() => setTrackProfileQty(p, qty - 1)}
+                      onFill={() => setTrackProfileQty(p, getRecommendedProfileQty(p))}
+                      fillLabel="Добрать"
                       onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })} />
                   );
                 })}
               </div>
 
               <div className="flex gap-3">
-                <button type="button" onClick={chooseNoTrackFlow}
+                <button type="button" onClick={() => setWStep("system")}
                   className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                  {requiredPointQty > 0 ? "Без трека" : "Пропустить"}
+                  ← Система
                 </button>
                 <button
                   type="button"
@@ -1282,8 +1434,8 @@ export function WizardStep1Lighting() {
                   </ul>
                   <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-3 text-sm">
                     <p>Итого: {fmt(selectedTotals.regular)} ₽</p>
-                    <p className="text-emerald-700">С заказом потолка (−15%): {fmt(selectedTotals.discounted)} ₽</p>
-                    <p className="text-slate-500">Ваша выгода: {fmt(selectedTotals.benefit)} ₽</p>
+                    <p className="text-emerald-700">С заказом потолка: {fmt(selectedTotals.discounted)} ₽</p>
+                    <p className="text-slate-500">Скидка на свет: −{fmt(selectedTotals.benefit)} ₽</p>
                     <button type="button" onClick={() => goToStep(2)}
                       className="mt-3 w-full rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800">К итогу →</button>
                   </div>
@@ -1388,7 +1540,7 @@ export function WizardStep1Lighting() {
             <span className="text-sm font-medium text-slate-950">
               {fmt(lightingDraft.totalRub ?? 0)} ₽
               {lightingDraft.discountedTotalRub != null && lightingDraft.discountedTotalRub < (lightingDraft.totalRub ?? 0) && (
-                <span className="ml-1 text-xs text-emerald-700">−15%</span>
+                <span className="ml-1 text-xs text-emerald-700">−{fmt((lightingDraft.totalRub ?? 0) - (lightingDraft.discountedTotalRub ?? 0))} ₽</span>
               )}
             </span>
           </div>
