@@ -175,6 +175,12 @@ export function WizardStep2Summary() {
       : toNumber(modal.lightingDiscountedTotal);
 
   const lightingDiscountEligible: boolean = Boolean(modal.lightingDiscountEligible);
+  const lightingRegularTotal: number =
+    typeof modal.lightingRegularTotal === "number" ? modal.lightingRegularTotal : lightingEffectiveTotal;
+  const lightingDiscountedTotal: number =
+    typeof modal.lightingDiscountedTotal === "number" ? modal.lightingDiscountedTotal : lightingEffectiveTotal;
+  const lightingAppliedBenefit = Math.max(0, lightingRegularTotal - lightingEffectiveTotal);
+  const lightingPotentialBenefit = Math.max(0, lightingRegularTotal - lightingDiscountedTotal);
 
   const ceilingTotal: number = typeof modal.ceilingTotal === "number" ? modal.ceilingTotal : 0;
 
@@ -315,12 +321,14 @@ export function WizardStep2Summary() {
           {lightingEffectiveTotal > 0 ? (
             <span>
               Свет {fmt(lightingEffectiveTotal)} ₽
-              {lightingDiscountEligible ? <span className="text-emerald-400"> −15%</span> : null}
+              {lightingDiscountEligible && lightingAppliedBenefit > 0 ? (
+                <span className="text-emerald-400"> −{fmt(lightingAppliedBenefit)} ₽</span>
+              ) : null}
             </span>
           ) : null}
         </div>
         {!lightingDiscountEligible && lightingEffectiveTotal > 0 ? (
-          <p className="mt-2 text-xs text-white/50">С заказом потолка — скидка −15% на свет</p>
+          <p className="mt-2 text-xs text-white/50">С заказом потолка свет дешевле на {fmt(lightingPotentialBenefit)} ₽</p>
         ) : null}
       </div>
 
@@ -394,7 +402,7 @@ export function WizardStep2Summary() {
                 ))}
               </ul>
               {lightingDiscountEligible ? (
-                <p className="mt-1 text-xs text-emerald-700 font-medium">Скидка −15% учтена</p>
+                <p className="mt-1 text-xs text-emerald-700 font-medium">Скидка на свет учтена: −{fmt(lightingAppliedBenefit)} ₽</p>
               ) : null}
             </div>
           ) : null}
@@ -413,7 +421,7 @@ export function WizardStep2Summary() {
         <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
           <p className="font-semibold">Свет дешевле с натяжным потолком</p>
           <p className="mt-1 text-blue-900/80">
-            При заказе потолка скидка −15% на всё освещение.
+            При заказе потолка свет дешевле на {fmt(lightingPotentialBenefit)} ₽.
           </p>
           <button
             type="button"
