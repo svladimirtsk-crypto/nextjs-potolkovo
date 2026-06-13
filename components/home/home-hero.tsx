@@ -55,13 +55,17 @@ export function HomeHero() {
             ) : null}
 
             <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
-              <Button href="#action" variant="secondary" className="w-full sm:w-auto">
-                {hero.primaryCtaLabel}
-              </Button>
-              <span className="text-sm text-white/60 hidden sm:inline">или</span>
-              <Button href="#price" variant="ghost" className="w-full sm:w-auto !text-white/80 hover:!text-white border border-white/20 hover:border-white/40 hover:bg-white/10">
+              <Button href="#price" variant="secondary" className="w-full sm:w-auto">
                 Рассчитать стоимость
               </Button>
+              <span className="hidden text-sm text-white/60 sm:inline">или</span>
+              <Button href="#action" variant="ghost" className="w-full border border-white/20 !text-white/80 hover:border-white/40 hover:bg-white/10 hover:!text-white sm:w-auto">
+                {hero.primaryCtaLabel}
+              </Button>
+            </div>
+
+            <div className="mt-5 inline-flex rounded-2xl border border-emerald-300/30 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-100">
+              Освещение с потолком — скидка −25%
             </div>
 
             <div className="mt-8 flex flex-wrap gap-2.5">
