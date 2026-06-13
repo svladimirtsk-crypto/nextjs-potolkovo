@@ -90,7 +90,7 @@ export function TrackSaleCatalogSection({
                     Нужна установка в потолок?
                   </p>
                   <p className="mt-0.5 text-sm text-slate-500">
-                    Посчитать монтаж и натяжной потолок со скидкой −15% на свет
+                    Посчитать монтаж и натяжной потолок со скидкой −25% на свет
                   </p>
                 </div>
                 <span
