@@ -28,7 +28,16 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
 }
 
 export function CalculatorModal() {
-  const { isOpen, currentStep, closeCalculator, goToStep, options, lightingDraft, lightingDraft: hasLightingData } = useCalculatorModal();
+  const {
+    isOpen,
+    currentStep,
+    closeCalculator,
+    goToStep,
+    options,
+    lightingDraft,
+    lightingDraft: hasLightingData,
+    step1FooterAction,
+  } = useCalculatorModal();
   const { snapshot } = usePriceCalculatorBridge();
 
   const panelRef = useRef<HTMLDivElement>(null);
@@ -375,13 +384,23 @@ export function CalculatorModal() {
                 <div className="flex flex-col items-end gap-1">
                   <button
                     type="button"
-                    onClick={() => goToStep((currentStep + 1) as WizardStep)}
-                    disabled={isNextDisabled}
-                    aria-disabled={isNextDisabled}
+                    onClick={() => {
+                      if (currentStep === 1 && step1FooterAction) {
+                        step1FooterAction.onClick();
+                        return;
+                      }
+                      goToStep((currentStep + 1) as WizardStep);
+                    }}
+                    disabled={currentStep === 1 && step1FooterAction ? Boolean(step1FooterAction.disabled) : isNextDisabled}
+                    aria-disabled={currentStep === 1 && step1FooterAction ? Boolean(step1FooterAction.disabled) : isNextDisabled}
                     className="flex h-12 items-center rounded-2xl bg-slate-950 px-6 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-slate-950"
                     style={{ minHeight: 48 }}
                   >
-                    {currentStep === 1 && (lightingDraft?.items?.length ?? 0) > 0 ? "К итогу →" : "Далее →"}
+                    {currentStep === 1 && step1FooterAction
+                      ? step1FooterAction.label
+                      : currentStep === 1 && (lightingDraft?.items?.length ?? 0) > 0
+                        ? "К итогу →"
+                        : "Далее →"}
                   </button>
                 </div>
               ) : (
