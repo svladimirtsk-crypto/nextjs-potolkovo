@@ -8,6 +8,7 @@ import { isSnapshotValid } from "@/lib/calculator-snapshot-guard";
 import { trackWizardConfirm } from "@/lib/analytics";
 import { useCalculatorModal } from "./calculator-modal-context";
 import { PriceStrip } from "./price-strip";
+import { LightingFooterProgress } from "./lighting-footer-progress";
 import { WizardStep0Calculator } from "./wizard-step0-calculator";
 import { WizardStep1Lighting } from "./wizard-step1-lighting";
 import { WizardStep2Summary } from "./wizard-step2-summary";
@@ -37,6 +38,7 @@ export function CalculatorModal() {
 
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [renderedSteps, setRenderedSteps] = useState<Set<WizardStep>>(() => new Set());
 
   // P1.3: Swipe-to-close state
   const [dragY, setDragY] = useState(0);
@@ -44,6 +46,21 @@ export function CalculatorModal() {
   const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => setMounted(true), []);
+
+  // Keep visited steps mounted so confirmed user choices do not reset on back navigation.
+  useEffect(() => {
+    if (!isOpen) {
+      setRenderedSteps(new Set());
+      return;
+    }
+
+    setRenderedSteps((prev) => {
+      if (prev.has(currentStep)) return prev;
+      const next = new Set(prev);
+      next.add(currentStep);
+      return next;
+    });
+  }, [currentStep, isOpen]);
 
   // Scroll content to top when step changes
   useEffect(() => {
@@ -304,18 +321,30 @@ export function CalculatorModal() {
 
           {/* Content */}
           <div ref={contentRef} className="flex-1 overflow-y-auto px-5 py-5">
-            {currentStep === 0 ? (
-              <div key="step0" className="animate-fade-slide-in">
+            {(renderedSteps.has(0) || (isOpen && currentStep === 0)) ? (
+              <div
+                key="step0"
+                aria-hidden={currentStep !== 0}
+                className={currentStep === 0 ? "animate-fade-slide-in" : "hidden"}
+              >
                 <WizardStep0Calculator preset={options?.preset} />
               </div>
             ) : null}
-            {currentStep === 1 ? (
-              <div key="step1" className="animate-fade-slide-in">
+            {(renderedSteps.has(1) || (isOpen && currentStep === 1)) ? (
+              <div
+                key="step1"
+                aria-hidden={currentStep !== 1}
+                className={currentStep === 1 ? "animate-fade-slide-in" : "hidden"}
+              >
                 <WizardStep1Lighting />
               </div>
             ) : null}
-            {currentStep === 2 ? (
-              <div key="step2" className="animate-fade-slide-in">
+            {(renderedSteps.has(2) || (isOpen && currentStep === 2)) ? (
+              <div
+                key="step2"
+                aria-hidden={currentStep !== 2}
+                className={currentStep === 2 ? "animate-fade-slide-in" : "hidden"}
+              >
                 <WizardStep2Summary />
               </div>
             ) : null}
@@ -327,6 +356,7 @@ export function CalculatorModal() {
             // P1.2: iOS safe-area for footer
             style={{ paddingBottom: "max(env(safe-area-inset-bottom), 16px)" }}
           >
+            <LightingFooterProgress />
             <div className="flex items-center justify-between gap-3">
               {currentStep > 0 ? (
                 <button
