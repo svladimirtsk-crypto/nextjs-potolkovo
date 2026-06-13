@@ -1,4 +1,11 @@
-type ReviewItem = (typeof import("@/content/homepage").homepage.trust.reviews)[number];
+type ReviewItem = {
+  authorName: string;
+  sourceLabel: string;
+  resultLabel?: string;
+  highlightQuote?: string;
+  quote: string;
+  objectType?: string;
+};
 
 type ReviewCardProps = {
   item: ReviewItem;
