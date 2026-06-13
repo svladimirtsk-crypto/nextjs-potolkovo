@@ -177,13 +177,17 @@ export function WizardStep2Summary() {
       ? modal.lightingEffectiveTotal
       : toNumber(modal.lightingDiscountedTotal);
 
-  const lightingDiscountEligible: boolean = Boolean(modal.lightingDiscountEligible);
+  const lightingDiscountMode = String(modal.lightingDiscountMode ?? "none");
+  const lightingDiscountEligible: boolean = lightingDiscountMode === "with-ceiling" || Boolean(modal.lightingDiscountEligible);
   const lightingRegularTotal: number =
     typeof modal.lightingRegularTotal === "number" ? modal.lightingRegularTotal : lightingEffectiveTotal;
-  const lightingDiscountedTotal: number =
-    typeof modal.lightingDiscountedTotal === "number" ? modal.lightingDiscountedTotal : lightingEffectiveTotal;
+  const lightingStandaloneTotal: number =
+    typeof modal.lightingStandaloneTotal === "number" ? modal.lightingStandaloneTotal : lightingEffectiveTotal;
+  const lightingWithCeilingTotal: number =
+    typeof modal.lightingWithCeilingTotal === "number" ? modal.lightingWithCeilingTotal : toNumber(modal.lightingDiscountedTotal);
+  const lightingAppliedPercent = lightingDiscountMode === "with-ceiling" ? 25 : lightingDiscountMode === "lighting-only" ? 10 : 0;
   const lightingAppliedBenefit = Math.max(0, lightingRegularTotal - lightingEffectiveTotal);
-  const lightingPotentialBenefit = Math.max(0, lightingRegularTotal - lightingDiscountedTotal);
+  const lightingPotentialBenefit = Math.max(0, lightingRegularTotal - lightingWithCeilingTotal);
 
   const ceilingTotal: number = typeof modal.ceilingTotal === "number" ? modal.ceilingTotal : 0;
 
@@ -330,7 +334,7 @@ export function WizardStep2Summary() {
                 <>
                   <span className="line-through text-white/35">{fmt(lightingRegularTotal)} ₽</span>{" "}
                   <span>{fmt(lightingEffectiveTotal)} ₽</span>{" "}
-                  <span className="text-emerald-400">−15% (−{fmt(lightingAppliedBenefit)} ₽)</span>
+                  <span className="text-emerald-400">−{lightingAppliedPercent}% (−{fmt(lightingAppliedBenefit)} ₽)</span>
                 </>
               ) : (
                 <>{fmt(lightingEffectiveTotal)} ₽</>
@@ -338,10 +342,10 @@ export function WizardStep2Summary() {
             </span>
           ) : null}
         </div>
-        {!lightingDiscountEligible && lightingEffectiveTotal > 0 ? (
+        {lightingDiscountMode !== "with-ceiling" && lightingEffectiveTotal > 0 && lightingWithCeilingTotal > 0 ? (
           <p className="mt-2 text-xs text-white/50">
-            С заказом потолка: <span className="line-through text-white/35">{fmt(lightingRegularTotal)} ₽</span>{" "}
-            {fmt(lightingDiscountedTotal)} ₽ −15% (−{fmt(lightingPotentialBenefit)} ₽)
+            С потолком: <span className="line-through text-white/35">{fmt(lightingRegularTotal)} ₽</span>{" "}
+            {fmt(lightingWithCeilingTotal)} ₽ −25% (−{fmt(lightingPotentialBenefit)} ₽)
           </p>
         ) : null}
       </div>
@@ -399,9 +403,14 @@ export function WizardStep2Summary() {
                   </li>
                 ))}
               </ul>
-              {lightingDiscountEligible ? (
+              {lightingAppliedPercent > 0 ? (
                 <p className="mt-1 text-xs text-emerald-700 font-medium">
-                  Скидка на свет учтена: {fmt(lightingRegularTotal)} ₽ −15% (−{fmt(lightingAppliedBenefit)} ₽)
+                  Скидка на свет учтена: {fmt(lightingRegularTotal)} ₽ −{lightingAppliedPercent}% (−{fmt(lightingAppliedBenefit)} ₽)
+                </p>
+              ) : null}
+              {lightingDiscountMode !== "with-ceiling" && lightingWithCeilingTotal > 0 ? (
+                <p className="mt-1 text-xs text-slate-500">
+                  С потолком: {fmt(lightingRegularTotal)} ₽ −25% (−{fmt(lightingPotentialBenefit)} ₽) = {fmt(lightingWithCeilingTotal)} ₽
                 </p>
               ) : null}
             </div>
@@ -417,11 +426,11 @@ export function WizardStep2Summary() {
       </details>
 
       {/* Discount hint */}
-      {!lightingDiscountEligible && lightingEffectiveTotal > 0 ? (
+      {lightingDiscountMode !== "with-ceiling" && lightingEffectiveTotal > 0 ? (
         <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
           <p className="font-semibold">Свет дешевле с натяжным потолком</p>
           <p className="mt-1 text-blue-900/80">
-            При заказе потолка свет дешевле на {fmt(lightingPotentialBenefit)} ₽.
+            При заказе потолка скидка на свет будет −25%: {fmt(lightingWithCeilingTotal)} ₽ вместо {fmt(lightingRegularTotal)} ₽.
           </p>
           <button
             type="button"
