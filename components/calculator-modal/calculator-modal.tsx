@@ -48,6 +48,7 @@ export function CalculatorModal() {
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
   const [renderedSteps, setRenderedSteps] = useState<Set<WizardStep>>(() => new Set());
+  const [isActionFormVisible, setIsActionFormVisible] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
@@ -71,6 +72,38 @@ export function CalculatorModal() {
     if (contentRef.current) {
       contentRef.current.scrollTo({ top: 0 });
     }
+  }, [currentStep]);
+
+  useEffect(() => {
+    setIsActionFormVisible(false);
+    if (currentStep !== 2) return;
+
+    const root = contentRef.current;
+    if (!root) return;
+
+    let observer: IntersectionObserver | null = null;
+    let frame = 0;
+
+    const setupObserver = () => {
+      const target = root.querySelector<HTMLElement>("#modal-action-form");
+      if (!target) {
+        frame = requestAnimationFrame(setupObserver);
+        return;
+      }
+
+      observer = new IntersectionObserver(
+        ([entry]) => setIsActionFormVisible(Boolean(entry?.isIntersecting)),
+        { root, threshold: 0.08 }
+      );
+      observer.observe(target);
+    };
+
+    frame = requestAnimationFrame(setupObserver);
+
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      observer?.disconnect();
+    };
   }, [currentStep]);
 
   const snapshotValid = isSnapshotValid(snapshot);
@@ -259,7 +292,7 @@ export function CalculatorModal() {
           aria-modal={isOpen ? "true" : undefined}
           aria-labelledby="calc-modal-title"
           // P1.1: full-screen bottom sheet on mobile
-          className={`w-full max-h-[92dvh] flex flex-col rounded-t-2xl bg-white shadow-2xl lg:max-h-[90dvh] lg:max-w-5xl lg:rounded-2xl xl:max-w-6xl ${transitionClass} ${
+          className={`calculator-modal-panel w-full max-h-[92dvh] flex flex-col rounded-t-2xl bg-white shadow-2xl lg:max-h-[90dvh] lg:max-w-5xl lg:rounded-2xl xl:max-w-6xl ${transitionClass} ${
             modalActive
               ? "translate-y-0 opacity-100 lg:scale-100 pointer-events-auto"
               : "translate-y-4 opacity-0 lg:scale-95 pointer-events-none"
@@ -367,6 +400,8 @@ export function CalculatorModal() {
                         : "Далее →"}
                   </button>
                 </div>
+              ) : isActionFormVisible ? (
+                <div />
               ) : (
                 <button
                   type="button"
