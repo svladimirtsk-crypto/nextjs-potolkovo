@@ -45,7 +45,7 @@ export const catalog: Catalog = {
   supplierHomepageUrl: "https://eksmarket.ru",
   discountPercentForCeilingOrder: 15,
   disclaimer:
-    "Цены и наличие могут меняться. Подтвердим актуальную цену при оформлении заявки. Скидка 15% действует при заказе натяжных потолков.",
+    "Цены и наличие могут меняться. Подтвердим актуальную цену при оформлении заявки. Скидка 10% действует на освещение отдельно, 25% — при заказе натяжных потолков.",
   updatedAt: "2025-07-18",
   categories: [
     { id: "panels-loft",    title: "Панели LOFT" },
