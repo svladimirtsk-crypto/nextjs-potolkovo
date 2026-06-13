@@ -28,6 +28,13 @@ export type CalculatorLeadSnapshot = {
   ceilingExtraRatePerMeter: number | null;
   ceilingExtraTotal: number;
 
+  shadowEnabled?: boolean;
+  shadowLength?: number | null;
+  shadowExtraTotal?: number;
+  floatingEnabled?: boolean;
+  floatingLength?: number | null;
+  floatingExtraTotal?: number;
+
   lightLinesEnabled: boolean;
   lightLinesLabel: string | null;
   lightLinesLength: number | null;
@@ -142,6 +149,16 @@ export function getCalculatorSummaryLines(
         snapshot.ceilingExtraRatePerMeter
       )} ₽`
     );
+  }
+
+  // Shadow + Floating separate lines
+  if (snapshot.shadowEnabled && snapshot.shadowLength != null) {
+    const shadowTotal = toNumber(snapshot.shadowExtraTotal);
+    lines.push(`Теневой профиль: ${snapshot.shadowLength} м.п. × ${formatCurrency(shadowTotal / (snapshot.shadowLength || 1))} ₽`);
+  }
+  if (snapshot.floatingEnabled && snapshot.floatingLength != null) {
+    const floatingTotal = toNumber(snapshot.floatingExtraTotal);
+    lines.push(`Парящий профиль: ${snapshot.floatingLength} м.п. × ${formatCurrency(floatingTotal / (snapshot.floatingLength || 1))} ₽`);
   }
 
   if (
