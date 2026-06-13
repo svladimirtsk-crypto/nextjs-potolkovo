@@ -2,7 +2,12 @@
 
 import { Button } from "@/components/ui/button";
 import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
-import { applyLightingDiscount } from "@/lib/lighting-formulas";
+import {
+  LIGHTING_ONLY_DISCOUNT_PERCENT,
+  applyLightingOnlyDiscount,
+  applyLightingWithCeilingDiscount,
+  calcLightingDiscountAmount,
+} from "@/lib/lighting-formulas";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 import { REMOVED_COLIBRI_VENDOR_CODES } from "@/lib/catalog-ui-config";
 import { trackKitClicked } from "@/lib/analytics";
@@ -38,7 +43,8 @@ export function LightKitCtaButton({ title, items, source }: LightKitCtaButtonPro
     if (filteredItems.length === 0) return;
 
     const totalRub = filteredItems.reduce((sum, i) => sum + i.qty * i.priceRub, 0);
-    const discountedTotalRub = applyLightingDiscount(totalRub);
+    const discountedTotalRub = applyLightingOnlyDiscount(totalRub);
+    const withCeilingDiscountedTotalRub = applyLightingWithCeilingDiscount(totalRub);
 
     // YM: kit clicked
     trackKitClicked({
@@ -54,6 +60,11 @@ export function LightKitCtaButton({ title, items, source }: LightKitCtaButtonPro
       items: filteredItems.map((i) => ({ ...i })),
       totalRub,
       discountedTotalRub,
+      standaloneDiscountedTotalRub: discountedTotalRub,
+      withCeilingDiscountedTotalRub,
+      discountMode: "lighting-only",
+      discountPercentApplied: LIGHTING_ONLY_DISCOUNT_PERCENT,
+      discountAmountRub: calcLightingDiscountAmount(totalRub, discountedTotalRub),
       userCustomizedLighting: true,
     };
 
@@ -69,7 +80,7 @@ export function LightKitCtaButton({ title, items, source }: LightKitCtaButtonPro
 
   return (
     <Button type="button" className="w-full justify-center" onClick={handleClick}>
-      Хочу такой
+      Хочу такой −10%
     </Button>
   );
 }
