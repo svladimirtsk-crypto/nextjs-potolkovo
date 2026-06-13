@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useMemo,
+  useEffect,
   useState,
   type ReactNode,
 } from "react";
@@ -98,6 +99,18 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   const setStep1FooterAction = useCallback((action: Step1FooterAction | null) => {
     setStep1FooterActionState(action);
   }, []);
+
+  // Синхронизируем выбранное освещение в общий snapshot, чтобы оно уходило в заявку на почту.
+  useEffect(() => {
+    setSnapshot((prev) => {
+      if (!prev) return prev;
+      if (prev.lighting === lightingDraft) return prev;
+      return {
+        ...prev,
+        lighting: lightingDraft ?? undefined,
+      };
+    });
+  }, [lightingDraft, setSnapshot]);
 
   const openCalculator = useCallback(
     (opts?: OpenCalculatorOptions) => {
