@@ -354,9 +354,21 @@ export function WizardStep2Summary() {
                 <span>Потолок (работы)</span>
                 <span className="font-semibold text-slate-950">{fmt(ceilingTotal)} ₽</span>
               </div>
+              {snapshot?.shadowEnabled && snapshot.shadowLength != null && (snapshot.shadowExtraTotal ?? 0) > 0 ? (
+                <div className="flex justify-between">
+                  <span>Теневой профиль ({snapshot.shadowLength} м.п.)</span>
+                  <span className="font-semibold text-slate-950">{fmt(snapshot.shadowExtraTotal ?? 0)} ₽</span>
+                </div>
+              ) : null}
+              {snapshot?.floatingEnabled && snapshot.floatingLength != null && (snapshot.floatingExtraTotal ?? 0) > 0 ? (
+                <div className="flex justify-between">
+                  <span>Парящий профиль ({snapshot.floatingLength} м.п.)</span>
+                  <span className="font-semibold text-slate-950">{fmt(snapshot.floatingExtraTotal ?? 0)} ₽</span>
+                </div>
+              ) : null}
               {canReconcileInstall && extraInstallTotal > 0 ? (
                 <div className="flex justify-between">
-                  <span>Монтаж по свету (досчёт)</span>
+                  <span>Установка светильников</span>
                   <span className="font-semibold text-slate-950">{fmt(extraInstallTotal)} ₽</span>
                 </div>
               ) : null}
@@ -368,7 +380,7 @@ export function WizardStep2Summary() {
             </div>
           )}
 
-          {lightingItems.length > 0 ? (
+          {lightingItems.length > 0 && lightingEffectiveTotal > 0 ? (
             <div className="pt-2">
               <p className="font-semibold text-slate-950">
                 Освещение{kitDisplayName ? ` — ${kitDisplayName}` : ""}
@@ -397,7 +409,7 @@ export function WizardStep2Summary() {
       </details>
 
       {/* Discount hint */}
-      {!lightingDiscountEligible ? (
+      {!lightingDiscountEligible && lightingEffectiveTotal > 0 ? (
         <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
           <p className="font-semibold">Свет дешевле с натяжным потолком</p>
           <p className="mt-1 text-blue-900/80">
