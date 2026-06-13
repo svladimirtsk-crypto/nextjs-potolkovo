@@ -11,7 +11,12 @@ import { Section } from "@/components/ui/section";
 import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
 import type { FeedCatalogProduct, FeedCatalogResult } from "@/lib/eks-feed2-catalog";
 
-import { applyLightingDiscount } from "@/lib/lighting-formulas";
+import {
+  LIGHTING_ONLY_DISCOUNT_PERCENT,
+  applyLightingOnlyDiscount,
+  applyLightingWithCeilingDiscount,
+  calcLightingDiscountAmount,
+} from "@/lib/lighting-formulas";
 import { detectSocket, getDiscountedPrice, getRequiredLampSocket } from "@/lib/feed2-products";
 
 import {
@@ -100,8 +105,8 @@ function productToLightingItem(product: FeedCatalogProduct, qty: number): Lighti
   };
 }
 
-function benefitRub(priceRub: number): number {
-  return Math.max(0, Math.round(priceRub - getDiscountedPrice(priceRub)));
+function benefitRub(priceRub: number, discountPercent: number): number {
+  return Math.max(0, Math.round(priceRub - getDiscountedPrice(priceRub, discountPercent)));
 }
 
 function ProductCard({
@@ -116,8 +121,10 @@ function ProductCard({
   onInc: () => void;
 }) {
   const regular = toNumber(product.priceRub);
-  const discounted = getDiscountedPrice(regular);
-  const benefit = benefitRub(regular);
+  const lightingOnly = getDiscountedPrice(regular, 10);
+  const withCeiling = getDiscountedPrice(regular, 25);
+  const lightingOnlyBenefit = benefitRub(regular, 10);
+  const withCeilingBenefit = benefitRub(regular, 25);
 
   const allAttrs = (product.keyAttributes?.length ? product.keyAttributes : product.params)
     .slice(0, 4)
@@ -170,11 +177,11 @@ function ProductCard({
           ) : null}
 
           <div className="mt-3 text-xs">
-            <span className="line-through text-slate-400">{fmt(regular)} ₽</span>
-            {" "}
-            <span className="font-semibold text-emerald-700">{fmt(discounted)} ₽</span>
-            {benefit > 0 ? <span className="text-slate-500"> · выгода {fmt(benefit)} ₽</span> : null}
-            <span className="text-slate-400"> · с потолком</span>
+            <span className="line-through text-slate-400">{fmt(regular)} ₽</span>{" "}
+            <span className="font-semibold text-emerald-700">{fmt(lightingOnly)} ₽</span>
+            <span className="text-slate-500"> · −10% (−{fmt(lightingOnlyBenefit)} ₽)</span>
+            <br />
+            <span className="text-blue-700">С потолком: {fmt(withCeiling)} ₽ · −25% (−{fmt(withCeilingBenefit)} ₽)</span>
           </div>
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -266,7 +273,10 @@ export function CatalogSectionClient({ data }: Props) {
     return selectedEntries.reduce((sum, entry) => sum + entry.qty * toNumber(entry.product.priceRub), 0);
   }, [selectedEntries]);
 
-  const discountedSelectedTotal = useMemo(() => applyLightingDiscount(selectedTotal), [selectedTotal]);
+  const lightingOnlySelectedTotal = useMemo(() => applyLightingOnlyDiscount(selectedTotal), [selectedTotal]);
+  const withCeilingSelectedTotal = useMemo(() => applyLightingWithCeilingDiscount(selectedTotal), [selectedTotal]);
+  const lightingOnlyBenefit = Math.max(0, selectedTotal - lightingOnlySelectedTotal);
+  const withCeilingBenefit = Math.max(0, selectedTotal - withCeilingSelectedTotal);
 
   // ===== Dependencies (mounts / lamps / PSU) =====
   const mountRequiredByVendor = useMemo(() => {
@@ -428,13 +438,19 @@ export function CatalogSectionClient({ data }: Props) {
     }
 
     const totalRub = items.reduce((sum, item) => sum + item.qty * item.priceRub, 0);
-    const discountedTotalRub = applyLightingDiscount(totalRub);
+    const discountedTotalRub = applyLightingOnlyDiscount(totalRub);
+    const withCeilingDiscountedTotalRub = applyLightingWithCeilingDiscount(totalRub);
 
     const initialLighting: LightingSnapshot = {
       mode: "catalog",
       items,
       totalRub,
       discountedTotalRub,
+      standaloneDiscountedTotalRub: discountedTotalRub,
+      withCeilingDiscountedTotalRub,
+      discountMode: "lighting-only",
+      discountPercentApplied: LIGHTING_ONLY_DISCOUNT_PERCENT,
+      discountAmountRub: calcLightingDiscountAmount(totalRub, discountedTotalRub),
       userCustomizedLighting: true,
     };
 
@@ -445,6 +461,73 @@ export function CatalogSectionClient({ data }: Props) {
       initialLightingView: "selected",
       initialLighting,
       source: "track-sale-page",
+    });
+  };
+
+  const openLightingOrder = () => {
+    const items: LightingItem[] = selectedEntries.map((entry) => productToLightingItem(entry.product, entry.qty));
+
+    if (items.length === 0) return;
+
+    const totalRub = items.reduce((sum, item) => sum + item.qty * item.priceRub, 0);
+    const discountedTotalRub = applyLightingOnlyDiscount(totalRub);
+    const withCeilingDiscountedTotalRub = applyLightingWithCeilingDiscount(totalRub);
+
+    const initialLighting: LightingSnapshot = {
+      mode: "catalog",
+      items,
+      totalRub,
+      discountedTotalRub,
+      standaloneDiscountedTotalRub: discountedTotalRub,
+      withCeilingDiscountedTotalRub,
+      discountMode: "lighting-only",
+      discountPercentApplied: LIGHTING_ONLY_DISCOUNT_PERCENT,
+      discountAmountRub: calcLightingDiscountAmount(totalRub, discountedTotalRub),
+      userCustomizedLighting: true,
+    };
+
+    openCalculator({
+      entryMode: "lighting-first",
+      initialStep: 2,
+      initialLightingTab: "catalog",
+      initialLightingView: "selected",
+      initialLighting,
+      source: "track-sale-page-lighting-only",
+    });
+  };
+
+  const openWithCeiling = () => {
+    const items: LightingItem[] = selectedEntries.map((entry) => productToLightingItem(entry.product, entry.qty));
+
+    if (items.length === 0) {
+      openCalculator({ initialStep: 0, source: "track-sale-add-ceiling-empty" });
+      return;
+    }
+
+    const totalRub = items.reduce((sum, item) => sum + item.qty * item.priceRub, 0);
+    const discountedTotalRub = applyLightingOnlyDiscount(totalRub);
+    const withCeilingDiscountedTotalRub = applyLightingWithCeilingDiscount(totalRub);
+
+    const initialLighting: LightingSnapshot = {
+      mode: "catalog",
+      items,
+      totalRub,
+      discountedTotalRub,
+      standaloneDiscountedTotalRub: discountedTotalRub,
+      withCeilingDiscountedTotalRub,
+      discountMode: "lighting-only",
+      discountPercentApplied: LIGHTING_ONLY_DISCOUNT_PERCENT,
+      discountAmountRub: calcLightingDiscountAmount(totalRub, discountedTotalRub),
+      userCustomizedLighting: true,
+    };
+
+    openCalculator({
+      entryMode: "lighting-first",
+      initialStep: 0,
+      initialLightingTab: "catalog",
+      initialLightingView: "selected",
+      initialLighting,
+      source: "track-sale-page-add-ceiling",
     });
   };
 
@@ -732,10 +815,26 @@ export function CatalogSectionClient({ data }: Props) {
             </div>
 
             <div className="mt-3 text-sm text-slate-800">
-              <p>Итого: {fmt(selectedTotal)} ₽</p>
-              <p className="text-emerald-700">
-                С потолком (−15%): {fmt(discountedSelectedTotal)} ₽
-              </p>
+              <p>Без скидки: <span className="line-through text-slate-400">{fmt(selectedTotal)} ₽</span></p>
+              <p className="text-emerald-700">Только свет: {fmt(lightingOnlySelectedTotal)} ₽ · −10% (−{fmt(lightingOnlyBenefit)} ₽)</p>
+              <p className="text-blue-700">С потолком: {fmt(withCeilingSelectedTotal)} ₽ · −25% (−{fmt(withCeilingBenefit)} ₽)</p>
+            </div>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={openLightingOrder}
+                className="rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-semibold text-white hover:bg-slate-800"
+              >
+                Купить освещение −10%
+              </button>
+              <button
+                type="button"
+                onClick={openWithCeiling}
+                className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+              >
+                Добавить потолок −25%
+              </button>
             </div>
           </div>
         ) : null}
