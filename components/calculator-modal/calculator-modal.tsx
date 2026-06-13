@@ -31,6 +31,7 @@ export function CalculatorModal() {
   const { snapshot } = usePriceCalculatorBridge();
 
   const panelRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
@@ -43,6 +44,13 @@ export function CalculatorModal() {
   const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => setMounted(true), []);
+
+  // Scroll content to top when step changes
+  useEffect(() => {
+    if (contentRef.current) {
+      contentRef.current.scrollTo({ top: 0 });
+    }
+  }, [currentStep]);
 
   const snapshotValid = isSnapshotValid(snapshot);
 
@@ -295,7 +303,7 @@ export function CalculatorModal() {
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto px-5 py-5">
+          <div ref={contentRef} className="flex-1 overflow-y-auto px-5 py-5">
             {currentStep === 0 ? (
               <div key="step0" className="animate-fade-slide-in">
                 <WizardStep0Calculator preset={options?.preset} />
