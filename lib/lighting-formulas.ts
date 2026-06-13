@@ -1,11 +1,34 @@
 // lib/lighting-formulas.ts
 import type { LightingItem } from "@/lib/calculator-modal-types";
 
-export const LIGHTING_DISCOUNT_RATE = 0.15;
+export const LIGHTING_ONLY_DISCOUNT_RATE = 0.10;
+export const LIGHTING_WITH_CEILING_DISCOUNT_RATE = 0.25;
 
-export function applyLightingDiscount(totalRub: number): number {
+export const LIGHTING_ONLY_DISCOUNT_PERCENT = 10;
+export const LIGHTING_WITH_CEILING_DISCOUNT_PERCENT = 25;
+
+// Backward-compatible alias: the main ceiling scenario now uses −25%.
+export const LIGHTING_DISCOUNT_RATE = LIGHTING_WITH_CEILING_DISCOUNT_RATE;
+
+export function applyLightingDiscount(totalRub: number, discountRate = LIGHTING_WITH_CEILING_DISCOUNT_RATE): number {
   if (!Number.isFinite(totalRub) || totalRub <= 0) return 0;
-  return Math.round(totalRub * (1 - LIGHTING_DISCOUNT_RATE));
+  const safeRate = Number.isFinite(discountRate) ? Math.min(1, Math.max(0, discountRate)) : 0;
+  return Math.round(totalRub * (1 - safeRate));
+}
+
+export function applyLightingOnlyDiscount(totalRub: number): number {
+  return applyLightingDiscount(totalRub, LIGHTING_ONLY_DISCOUNT_RATE);
+}
+
+export function applyLightingWithCeilingDiscount(totalRub: number): number {
+  return applyLightingDiscount(totalRub, LIGHTING_WITH_CEILING_DISCOUNT_RATE);
+}
+
+export function calcLightingDiscountAmount(totalRub: number, discountedRub: number): number {
+  const total = Number(totalRub ?? 0);
+  const discounted = Number(discountedRub ?? 0);
+  if (!Number.isFinite(total) || !Number.isFinite(discounted)) return 0;
+  return Math.max(0, Math.round(total - discounted));
 }
 
 export function scaleKitItemQty(
