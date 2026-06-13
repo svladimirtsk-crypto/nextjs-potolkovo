@@ -482,6 +482,36 @@ export function WizardStep1Lighting() {
     return map;
   }, [products]);
 
+  // Rehydrate cartItems from existing lightingDraft when navigating back to Step1
+  const rehydratedRef = useRef(false);
+  useEffect(() => {
+    if (rehydratedRef.current) return;
+    if (!lightingDraft || lightingDraft.mode !== "catalog" || !lightingDraft.items?.length) return;
+
+    rehydratedRef.current = true;
+    const next: CartItems = {};
+    let removedAny = false;
+
+    for (const item of lightingDraft.items) {
+      const incomingSku = toText(item.sku);
+      const byProductId = productsById.get(incomingSku);
+      const byVendorCodeId = productIdByVendorCode.get(incomingSku);
+      const resolvedId = byProductId ? incomingSku : toText(byVendorCodeId ?? "");
+
+      if (!resolvedId) { removedAny = true; continue; }
+      const resolvedProduct = productsById.get(resolvedId);
+      if (!resolvedProduct) { removedAny = true; continue; }
+      if (REMOVED_COLIBRI_VENDOR_CODES.has(toText(resolvedProduct.vendorCode))) { removedAny = true; continue; }
+
+      next[resolvedId] = toNumber(item.qty);
+    }
+
+    if (Object.keys(next).length > 0) {
+      setCartItems(next);
+      setRemovedHint(removedAny);
+    }
+  }, [lightingDraft, productsById, productIdByVendorCode]);
+
   useEffect(() => {
     if (!step1CatalogView) return;
     setCatalogView(step1CatalogView);
@@ -645,6 +675,7 @@ export function WizardStep1Lighting() {
 
   // Track which recommendations were dismissed
   const [dismissedRecs, setDismissedRecs] = useState<Set<string>>(new Set());
+
   const dismissRec = (key: string) =>
     setDismissedRecs((prev) => new Set(prev).add(key));
 
@@ -659,17 +690,19 @@ export function WizardStep1Lighting() {
   };
 
   const acceptAllRecommendations = () => {
-    for (const rec of recommendedTrackProfiles) {
-      if (!dismissedRecs.has(`track-${rec.system}`)) {
-        setProductQty(rec.product, rec.qty);
-      }
+    // Only add the FIRST (cheapest) track profile, not all systems
+    const firstTrack = recommendedTrackProfiles[0];
+    if (firstTrack && !dismissedRecs.has(`track-${firstTrack.system}`)) {
+      setProductQty(firstTrack.product, firstTrack.qty);
+      dismissRec(`track-${firstTrack.system}`);
     }
-    for (const rec of recommendedPointFixtures) {
-      if (!dismissedRecs.has(`point-${rec.product.productId}`)) {
-        setProductQty(rec.product, requiredPointQty);
-      }
+    // Only add the FIRST (cheapest) point fixture, not all 3
+    const firstPoint = recommendedPointFixtures[0];
+    if (firstPoint && !dismissedRecs.has(`point-${firstPoint.product.productId}`)) {
+      setProductQty(firstPoint.product, requiredPointQty);
+      dismissRec(`point-${firstPoint.product.productId}`);
     }
-    setDismissedRecs(new Set()); // clear all dismissals
+    setDismissedRecs(new Set());
   };
 
   const visibleTrackRecs = recommendedTrackProfiles.filter(
@@ -884,6 +917,69 @@ export function WizardStep1Lighting() {
     return out;
   }, [lampCurrentBySocket, lampRequiredBySocket]);
 
+  // ===== Guided wizard sub-steps =====
+  type WizardSubStep = "system" | "tracks" | "points" | "lamps" | "done";
+  const [wizardSubStep, setWizardSubStep] = useState<WizardSubStep>("system");
+  const [confirmedSystem, setConfirmedSystem] = useState<TrackSystemId | null>(null);
+
+  // Auto-advance wizard sub-step based on cart state
+  const wizardTrackInCart = useMemo(() => {
+    return cartEntries.some(
+      (e) => e.product.kind === "TRACK_PROFILE" && (!confirmedSystem || e.product.system === confirmedSystem)
+    );
+  }, [cartEntries, confirmedSystem]);
+
+  const wizardPointsInCart = useMemo(() => {
+    return cartEntries.some((e) => e.product.kind === "SPOT_FIXTURE" || isPanelProduct(e.product));
+  }, [cartEntries]);
+
+  const wizardLampsOk = useMemo(() => {
+    return missingLamps.length === 0;
+  }, [missingLamps]);
+
+  // Determine initial wizard sub-step based on cart state
+  useEffect(() => {
+    if (cartEntries.length === 0) {
+      setWizardSubStep("system");
+    } else if (!wizardTrackInCart && !wizardPointsInCart) {
+      setWizardSubStep("system");
+    } else if (wizardTrackInCart && !wizardPointsInCart) {
+      setWizardSubStep("points");
+    } else if (wizardPointsInCart && !wizardLampsOk) {
+      setWizardSubStep("lamps");
+    } else {
+      setWizardSubStep("done");
+    }
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const confirmSystemChoice = (systemId: TrackSystemId) => {
+    setConfirmedSystem(systemId);
+    // Auto-add cheapest track profile for chosen system
+    const rec = recommendedTrackProfiles.find((r) => r.system === systemId);
+    if (rec) {
+      setProductQty(rec.product, rec.qty);
+    }
+    setWizardSubStep("tracks");
+  };
+
+  const confirmTracks = () => {
+    setWizardSubStep("points");
+  };
+
+  const confirmPoints = () => {
+    if (missingLamps.length > 0) {
+      setWizardSubStep("lamps");
+    } else {
+      setWizardSubStep("done");
+    }
+  };
+
+  const confirmLamps = () => {
+    setWizardSubStep("done");
+  };
+
   const setCatalogViewAndSync = (view: CatalogView) => {
     setCatalogView(view);
     setStep1CatalogView(view);
@@ -994,70 +1090,6 @@ export function WizardStep1Lighting() {
     setQuery("");
   };
 
-  const trackAssembled = useMemo(() => {
-    const result: Record<TrackSystemId, boolean> = {
-      COLIBRI_220: false,
-      CLARUS_48: false,
-      TRACK_220: false,
-    };
-
-    for (const system of ["COLIBRI_220", "CLARUS_48", "TRACK_220"] as TrackSystemId[]) {
-      const hasFixture = cartEntries.some(
-        (entry) => entry.product.system === system && entry.product.kind === "TRACK_FIXTURE"
-      );
-
-      const base = TRACK_PROFILE_WHITELIST[system] ?? [];
-      const allowed =
-        system === "TRACK_220"
-          ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST])
-          : new Set(base);
-
-      const hasProfile = cartEntries.some(
-        (entry) =>
-          entry.product.system === system &&
-          entry.product.kind === "TRACK_PROFILE" &&
-          allowed.has(toText(entry.product.vendorCode))
-      );
-
-      result[system] = hasFixture && hasProfile;
-    }
-
-    return result;
-  }, [cartEntries]);
-
-  const pointCompleted = useMemo(() => {
-    const fixtures = cartEntries.filter((entry) => {
-      const socket = getRequiredLampSocket(entry.product);
-      if (socket) return true;
-
-      const vendorCode = toText(entry.product.vendorCode);
-      return POINT_TO_MOUNT_VENDOR_CODE[vendorCode] !== undefined;
-    });
-
-    if (fixtures.length === 0) return false;
-
-    const lampQtyBySocket: Record<LampSocket, number> = {
-      GX53: toNumber(lampCurrentBySocket.GX53),
-      MR16: toNumber(lampCurrentBySocket.MR16),
-    };
-
-    return fixtures.every((entry) => {
-      const vendorCode = toText(entry.product.vendorCode);
-
-      const mountVendor = POINT_TO_MOUNT_VENDOR_CODE[vendorCode];
-      const mountOk = mountVendor
-        ? toNumber(cartItems[toText(productIdByVendorCode.get(mountVendor) ?? "")]) >= entry.qty
-        : true;
-
-      const socket = getRequiredLampSocket(entry.product);
-      const lampOk = socket
-        ? lampQtyBySocket[socket] >= toNumber(lampRequiredBySocket[socket])
-        : true;
-
-      return mountOk && lampOk;
-    });
-  }, [cartEntries, cartItems, lampCurrentBySocket, lampRequiredBySocket, productIdByVendorCode]);
-
   const scopedProducts = useMemo(() => {
     let scoped: FeedCatalogProduct[] = [];
 
@@ -1120,14 +1152,15 @@ export function WizardStep1Lighting() {
 
   return (
     <div className="space-y-4">
-      {/* Progress */}
+      {/* Progress — only show in catalog tab */}
+      {activeTab === "catalog" ? (
       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-slate-950">Прогресс по сборке</p>
             <p className="mt-1 text-xs text-slate-600">
               Для трека учитываем метры{" "}
-              <span className="font-semibold">профиля/шинопровода</span>.
+              <span className="font-semibold">профиля</span>.
             </p>
           </div>
 
@@ -1185,28 +1218,18 @@ export function WizardStep1Lighting() {
         ) : null}
 
         {progressHasTargets && progressDone ? (
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-            <div className="text-sm text-emerald-950">
-              <p className="font-semibold">Отлично — комплект собран по расчёту.</p>
-              <p className="mt-1 text-xs text-emerald-900/80">
-                Можно переходить к завершению.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => goToStep(2)}
-              className="rounded-xl bg-emerald-700 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-800"
-            >
-              Готово, к итогу →
-            </button>
+          <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+            <p className="text-sm font-semibold text-emerald-950">Отлично — комплект собран по расчёту. ✓</p>
+            <p className="mt-1 text-xs text-emerald-900/80">
+              Можно переходить к завершению.
+            </p>
           </div>
         ) : null}
 
         {!lightingDiscountEligible ? (
           <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
             <p className="font-semibold">Скидка −15% на свет действует при заказе потолка.</p>
-            <p className="mt-1 text-blue-900/80">Подтвердите шаг 1 — и скидка применится.</p>
+            <p className="mt-1 text-blue-900/80">Рассчитайте потолок — и скидка −15% применится.</p>
             <button
               type="button"
               onClick={() => goToStep(0)}
@@ -1217,6 +1240,7 @@ export function WizardStep1Lighting() {
           </div>
         ) : null}
       </div>
+      ) : null}
 
       {/* P2.1: Tabs in one row: Подбор / Каталог / Выбранное (N) */}
       <div className="flex flex-wrap gap-2">
@@ -1300,153 +1324,406 @@ export function WizardStep1Lighting() {
                 {requiredTrackMeters > 0 && requiredPointQty > 0 ? " · " : ""}
                 {requiredPointQty > 0 ? `${requiredPointQty} точечных светильников` : ""}
               </p>
-              {snapshot?.derivedInputs?.trackMountType === "built-in" ? (
-                <p className="mt-1 text-xs text-blue-800/70">Вы выбрали встроенный трек → системы COLIBRI / CLARUS</p>
-              ) : snapshot?.derivedInputs?.trackMountType === "surface" ? (
-                <p className="mt-1 text-xs text-blue-800/70">Вы выбрали накладной трек → система ART</p>
-              ) : null}
             </div>
           ) : null}
 
-          {/* Quick accept all */}
-          {hasVisibleRecs && cartEntries.length === 0 ? (
-            <button
-              type="button"
-              onClick={acceptAllRecommendations}
-              className="w-full rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
-            >
-              Добавить все рекомендации
-            </button>
+          {/* Step-by-step guided wizard */}
+          {/* SUB-STEP: System selection */}
+          {wizardSubStep === "system" && requiredTrackMeters > 0 ? (
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-slate-950 bg-slate-950 p-4 text-white">
+                <p className="text-sm font-semibold">Шаг 1 — Выберите систему трека</p>
+                <p className="mt-1 text-xs text-white/70">
+                  {snapshot?.derivedInputs?.trackMountType === "built-in"
+                    ? "Встроенный трек → системы для врезного монтажа"
+                    : snapshot?.derivedInputs?.trackMountType === "surface"
+                      ? "Накладной трек → система для поверхностного монтажа"
+                      : "Определите тип монтажа трека"}
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                {snapshot?.derivedInputs?.trackMountType !== "surface" && (
+                  <>
+                    {(() => {
+                      const colibriRec = recommendedTrackProfiles.find((r) => r.system === "COLIBRI_220");
+                      const regular = colibriRec ? toNumber(colibriRec.product.priceRub) : 0;
+                      const discounted = getDiscountedPrice(regular);
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => confirmSystemChoice("COLIBRI_220")}
+                          className="rounded-2xl border-2 border-blue-300 bg-blue-50 p-4 text-left hover:border-blue-500 hover:bg-blue-100 transition-colors"
+                        >
+                          <p className="text-sm font-semibold text-blue-900">COLIBRI 220V</p>
+                          <p className="mt-1 text-xs text-blue-800">Встроенный · 220V · рекоменд.</p>
+                          {colibriRec ? (
+                            <p className="mt-2 text-xs text-blue-700">
+                              Профиль: {colibriRec.qty} шт. ≈ {fmtMeters(colibriRec.totalMeters)} м · от {fmt(discounted)} ₽/шт
+                            </p>
+                          ) : null}
+                        </button>
+                      );
+                    })()}
+                    {(() => {
+                      const clarusRec = recommendedTrackProfiles.find((r) => r.system === "CLARUS_48");
+                      const regular = clarusRec ? toNumber(clarusRec.product.priceRub) : 0;
+                      const discounted = getDiscountedPrice(regular);
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => confirmSystemChoice("CLARUS_48")}
+                          className="rounded-2xl border-2 border-slate-200 bg-white p-4 text-left hover:border-slate-400 hover:bg-slate-50 transition-colors"
+                        >
+                          <p className="text-sm font-semibold text-slate-950">CLARUS 48V</p>
+                          <p className="mt-1 text-xs text-slate-600">Встроенный · 48V · нужен блок питания</p>
+                          {clarusRec ? (
+                            <p className="mt-2 text-xs text-slate-500">
+                              Профиль: {clarusRec.qty} шт. ≈ {fmtMeters(clarusRec.totalMeters)} м · от {fmt(discounted)} ₽/шт
+                            </p>
+                          ) : null}
+                        </button>
+                      );
+                    })()}
+                  </>
+                )}
+                {snapshot?.derivedInputs?.trackMountType !== "built-in" && (
+                  (() => {
+                    const artRec = recommendedTrackProfiles.find((r) => r.system === "TRACK_220");
+                    const regular = artRec ? toNumber(artRec.product.priceRub) : 0;
+                    const discounted = getDiscountedPrice(regular);
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => confirmSystemChoice("TRACK_220")}
+                        className="rounded-2xl border-2 border-slate-200 bg-white p-4 text-left hover:border-slate-400 hover:bg-slate-50 transition-colors"
+                      >
+                        <p className="text-sm font-semibold text-slate-950">ART 220V</p>
+                        <p className="mt-1 text-xs text-slate-600">Накладной · 220V</p>
+                        {artRec ? (
+                          <p className="mt-2 text-xs text-slate-500">
+                            Профиль: {artRec.qty} шт. ≈ {fmtMeters(artRec.totalMeters)} м · от {fmt(discounted)} ₽/шт
+                          </p>
+                        ) : null}
+                      </button>
+                    );
+                  })()
+                )}
+              </div>
+
+              {/* Skip tracks option */}
+              <button
+                type="button"
+                onClick={() => setWizardSubStep("points")}
+                className="w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3 text-sm text-slate-600 hover:bg-slate-100"
+              >
+                Без трека — только точечные →
+              </button>
+            </div>
+          ) : wizardSubStep === "system" && requiredTrackMeters <= 0 && requiredPointQty > 0 ? (
+            /* No track needed — go straight to points */
+            (() => { setWizardSubStep("points"); return null; })()
           ) : null}
 
-          {/* Track profile recommendations */}
-          {visibleTrackRecs.map((rec) => {
-            const regular = toNumber(rec.product.priceRub);
-            const discounted = getDiscountedPrice(regular);
-            const benefit = computeBenefit(regular, discounted);
-            const alreadyInCart = toNumber(cartItems[rec.product.productId]) > 0;
-            const systemLabel = rec.system === "COLIBRI_220" ? "COLIBRI 220V" : rec.system === "CLARUS_48" ? "CLARUS 48V" : "ART 220V";
+          {/* SUB-STEP: Track profiles/fixtures confirmation */}
+          {wizardSubStep === "tracks" ? (
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <p className="text-sm font-semibold text-emerald-950">
+                  Шаг 2 — Профиль трека{confirmedSystem ? `: ${confirmedSystem === "COLIBRI_220" ? "COLIBRI 220V" : confirmedSystem === "CLARUS_48" ? "CLARUS 48V" : "ART 220V"}` : ""}
+                </p>
+                <p className="mt-1 text-xs text-emerald-800">
+                  {selectedTrackMeters > 0
+                    ? `В корзине ${fmtMeters(selectedTrackMeters)} м профиля`
+                    : "Добавьте профиль трека"}
+                </p>
+              </div>
 
-            return (
-              <div key={`track-rec-${rec.system}`} className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="flex items-start gap-3">
-                  <div className="shrink-0">
-                    <ProductImage src={toText(rec.product.coverImage)} alt={toText(rec.product.name)} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="text-xs font-semibold text-blue-700">{systemLabel} · Профиль</p>
-                        <p className="mt-1 text-sm font-semibold text-slate-950">{toText(rec.product.name)}</p>
+              {/* Show track profile product cards for selected system */}
+              {(() => {
+                const system = confirmedSystem ?? "COLIBRI_220";
+                const base = TRACK_PROFILE_WHITELIST[system] ?? [];
+                const allowed =
+                  system === "TRACK_220"
+                    ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST])
+                    : new Set(base);
+
+                const trackProfiles = products
+                  .filter(
+                    (p) =>
+                      p.kind === "TRACK_PROFILE" &&
+                      p.system === system &&
+                      p.priceRub > 0 &&
+                      allowed.has(toText(p.vendorCode))
+                  )
+                  .sort((a, b) => a.priceRub - b.priceRub)
+                  .slice(0, 4);
+
+                const trackFixtures = products
+                  .filter(
+                    (p) =>
+                      p.kind === "TRACK_FIXTURE" &&
+                      p.system === system &&
+                      p.priceRub > 0
+                  )
+                  .sort((a, b) => a.priceRub - b.priceRub)
+                  .slice(0, 4);
+
+                return (
+                  <>
+                    {trackProfiles.length > 0 ? (
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold text-slate-500">ПРОФИЛЬ</p>
+                        {trackProfiles.map((product) => {
+                          const id = toText(product.productId);
+                          const qty = toNumber(cartItems[id]);
+                          const step = product.unit === "m" ? 0.5 : 1;
+                          return (
+                            <ProductCard
+                              key={id}
+                              product={product}
+                              qty={qty}
+                              onInc={() => setProductQty(product, qty + step)}
+                              onDec={() => setProductQty(product, qty - step)}
+                            />
+                          );
+                        })}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => dismissRec(`track-${rec.system}`)}
-                        className="text-slate-400 hover:text-slate-600 text-xs"
-                        aria-label="Убрать рекомендацию"
-                      >
-                        ✕
-                      </button>
-                    </div>
+                    ) : null}
+                    {trackFixtures.length > 0 ? (
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold text-slate-500">СВЕТИЛЬНИКИ ДЛЯ ТРЕКА</p>
+                        {trackFixtures.map((product) => {
+                          const id = toText(product.productId);
+                          const qty = toNumber(cartItems[id]);
+                          const step = product.unit === "m" ? 0.5 : 1;
+                          return (
+                            <ProductCard
+                              key={id}
+                              product={product}
+                              qty={qty}
+                              onInc={() => setProductQty(product, qty + step)}
+                              onDec={() => setProductQty(product, qty - step)}
+                            />
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </>
+                );
+              })()}
 
-                    <p className="mt-1 text-xs text-slate-600">
-                      {rec.qty} шт. ≈ {fmtMeters(rec.totalMeters)} м · {fmt(regular)} ₽/шт
-                    </p>
-                    <p className="mt-1 text-xs">
-                      <span className="line-through text-slate-400">{fmt(regular * rec.qty)} ₽</span>
-                      {" "}
-                      <span className="font-semibold text-emerald-700">{fmt(discounted * rec.qty)} ₽</span>
-                      {benefit > 0 ? <span className="text-slate-500"> · выгода {fmt(benefit * rec.qty)} ₽</span> : null}
-                      <span className="text-slate-400"> · с потолком</span>
-                    </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setWizardSubStep("system")}
+                  className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  ← Назад
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmTracks}
+                  className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+                >
+                  Подтвердить →
+                </button>
+              </div>
+            </div>
+          ) : null}
 
-                    <div className="mt-3">
-                      {alreadyInCart ? (
-                        <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                          ✓ В корзине
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => acceptTrackRecommendation(rec)}
-                          className="rounded-xl bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
-                        >
-                          Добавить {rec.qty} шт.
-                        </button>
-                      )}
-                    </div>
+          {/* SUB-STEP: Point fixtures */}
+          {wizardSubStep === "points" && requiredPointQty > 0 ? (
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <p className="text-sm font-semibold text-emerald-950">Шаг 3 — Точечные светильники</p>
+                <p className="mt-1 text-xs text-emerald-800">
+                  {selectedPointQty > 0
+                    ? `В корзине ${selectedPointQty} шт. (рекомендуется ${requiredPointQty})`
+                    : `Рекомендуется ${requiredPointQty} шт.`}
+                </p>
+              </div>
+
+              {(() => {
+                const pointProducts = products
+                  .filter((p) => p.kind === "SPOT_FIXTURE" && p.priceRub > 0 && !isPanelProduct(p))
+                  .sort((a, b) => a.priceRub - b.priceRub)
+                  .slice(0, 6);
+
+                return (
+                  <div className="space-y-2">
+                    {pointProducts.map((product) => {
+                      const id = toText(product.productId);
+                      const qty = toNumber(cartItems[id]);
+                      return (
+                        <ProductCard
+                          key={id}
+                          product={product}
+                          qty={qty}
+                          onInc={() => setProductQty(product, qty + 1)}
+                          onDec={() => setProductQty(product, qty - 1)}
+                        />
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setWizardSubStep(requiredTrackMeters > 0 ? "tracks" : "system")}
+                  className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  ← Назад
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmPoints}
+                  className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+                >
+                  Подтвердить →
+                </button>
+              </div>
+            </div>
+          ) : wizardSubStep === "points" && requiredPointQty <= 0 ? (
+            (() => { setWizardSubStep("done"); return null; })()
+          ) : null}
+
+          {/* SUB-STEP: Lamps */}
+          {wizardSubStep === "lamps" && missingLamps.length > 0 ? (
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                <p className="text-sm font-semibold text-amber-950">Шаг 4 — Лампы</p>
+                <p className="mt-1 text-xs text-amber-800">
+                  Для светильников нужны лампы (1:1)
+                </p>
+              </div>
+
+              {missingLamps.map((m) => (
+                <div key={m.socket} className="rounded-2xl border border-slate-200 bg-white p-4 space-y-2">
+                  <p className="text-sm font-semibold text-slate-950">
+                    Лампы {m.socket}: нужно {m.requiredQty} шт., в корзине {m.currentQty} шт.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => addCheapestLampsOneToOne(m.socket)}
+                      className="rounded-xl bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                    >
+                      Добавить {m.requiredQty - m.currentQty} шт. (самые доступные)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => gotoLamps(m.socket)}
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      Выбрать в каталоге →
+                    </button>
                   </div>
                 </div>
+              ))}
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setWizardSubStep("points")}
+                  className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  ← Назад
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmLamps}
+                  className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+                >
+                  Подтвердить →
+                </button>
               </div>
-            );
-          })}
+            </div>
+          ) : wizardSubStep === "lamps" && missingLamps.length === 0 ? (
+            (() => { setWizardSubStep("done"); return null; })()
+          ) : null}
 
-          {/* Point fixture recommendations */}
-          {visiblePointRecs.map((rec) => {
-            const regular = toNumber(rec.product.priceRub);
-            const discounted = getDiscountedPrice(regular);
-            const benefit = computeBenefit(regular, discounted);
-            const alreadyInCart = toNumber(cartItems[rec.product.productId]) > 0;
+          {/* SUB-STEP: Done */}
+          {wizardSubStep === "done" ? (
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <p className="text-sm font-semibold text-emerald-950">✓ Комплект собран</p>
+                <p className="mt-1 text-xs text-emerald-800">
+                  {lightingDraft?.items?.length ?? 0} поз. в корзине
+                  {lightingDraft?.totalRub ? ` · ${fmt(lightingDraft.totalRub)} ₽` : ""}
+                </p>
+              </div>
 
-            return (
-              <div key={`point-rec-${rec.product.productId}`} className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="flex items-start gap-3">
-                  <div className="shrink-0">
-                    <ProductImage src={toText(rec.product.coverImage)} alt={toText(rec.product.name)} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="text-xs font-semibold text-slate-500">Точечный светильник</p>
-                        <p className="mt-1 text-sm font-semibold text-slate-950">{toText(rec.product.name)}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => dismissRec(`point-${rec.product.productId}`)}
-                        className="text-slate-400 hover:text-slate-600 text-xs"
-                        aria-label="Убрать рекомендацию"
-                      >
-                        ✕
-                      </button>
-                    </div>
+              {missingMounts.map((item) => (
+                <div
+                  key={`${item.fixtureVendorCode}-${item.mountVendorCode}`}
+                  className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
+                >
+                  <p className="font-semibold">Не хватает закладных</p>
+                  <p className="mt-1 text-amber-900/80">
+                    Для <span className="font-semibold">{item.fixtureName}</span> нужна закладная{" "}
+                    <span className="font-semibold">{item.mountName}</span>.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => addMountOneToOne(item.fixtureVendorCode)}
+                    className="mt-3 rounded-xl bg-amber-700 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-800"
+                  >
+                    Добавить 1:1
+                  </button>
+                </div>
+              ))}
 
-                    <p className="mt-1 text-xs text-slate-600">
-                      {requiredPointQty} шт. · {fmt(regular)} ₽/шт
-                    </p>
-                    <p className="mt-1 text-xs">
-                      <span className="line-through text-slate-400">{fmt(regular * requiredPointQty)} ₽</span>
-                      {" "}
-                      <span className="font-semibold text-emerald-700">{fmt(discounted * requiredPointQty)} ₽</span>
-                      {benefit > 0 ? <span className="text-slate-500"> · выгода {fmt(benefit * requiredPointQty)} ₽</span> : null}
-                      <span className="text-slate-400"> · с потолком</span>
-                    </p>
-
-                    <div className="mt-3">
-                      {alreadyInCart ? (
-                        <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                          ✓ В корзине
-                        </span>
-                      ) : (
+              {hasClarusInCart && clarusPsuQty < 1 ? (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-950">
+                  <p className="font-semibold">Для системы CLARUS обязателен блок питания.</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {CLARUS_PSU_VENDOR_CODES.map((vendor) => {
+                      const id = productIdByVendorCode.get(vendor);
+                      if (!id) return null;
+                      const product = productsById.get(id);
+                      if (!product) return null;
+                      return (
                         <button
+                          key={vendor}
                           type="button"
-                          onClick={() => acceptPointRecommendation(rec)}
-                          className="rounded-xl bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                          onClick={() => setClarusPsu(id)}
+                          className="rounded-xl bg-rose-700 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-800"
                         >
-                          Добавить {requiredPointQty} шт.
+                          {toText(product.name)}
                         </button>
-                      )}
-                    </div>
+                      );
+                    })}
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              ) : null}
 
-          {/* "У меня уже есть" option */}
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("catalog")}
+                  className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Каталог
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goToStep(2)}
+                  className="flex-1 rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800"
+                >
+                  К итогу →
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {/* "У меня уже есть" option — always visible */}
           {hasRecommendations ? (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
               <p className="font-medium text-slate-700">У меня уже есть освещение</p>
-              <p className="mt-1">Если трек или светильники уже куплены — просто пропустите этот шаг. Мы учтём только установку.</p>
+              <p className="mt-1">Если трек или светильники уже куплены — просто пропустите. Мы учтём только установку.</p>
               <button
                 type="button"
                 onClick={() => goToStep(2)}
@@ -1462,7 +1739,6 @@ export function WizardStep1Lighting() {
             <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
               <p className="font-semibold text-slate-950">Выберите освещение в каталоге</p>
               <p className="mt-1">Перейдите в каталог, чтобы подобрать трековые системы и светильники.</p>
-
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -1492,88 +1768,6 @@ export function WizardStep1Lighting() {
               >
                 Или выберите в каталоге →
               </button>
-            </div>
-          ) : null}
-
-          {/* Existing warnings for mounts/lamps/PSU */}
-          {missingMounts.map((item) => (
-            <div
-              key={`${item.fixtureVendorCode}-${item.mountVendorCode}`}
-              className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
-            >
-              <p className="font-semibold">Не хватает закладных 1:1</p>
-              <p className="mt-1 text-amber-900/80">
-                Для <span className="font-semibold">{item.fixtureName}</span> нужна закладная{" "}
-                <span className="font-semibold">{item.mountName}</span>.
-              </p>
-              <p className="mt-2">
-                Нужно: <span className="font-semibold">{item.requiredQty}</span> шт., в корзине:{" "}
-                <span className="font-semibold">{item.currentQty}</span> шт.
-              </p>
-              <button
-                type="button"
-                onClick={() => addMountOneToOne(item.fixtureVendorCode)}
-                className="mt-3 rounded-xl bg-amber-700 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-800"
-              >
-                Добавить 1:1
-              </button>
-            </div>
-          ))}
-
-          {missingLamps.map((m) => (
-            <div
-              key={m.socket}
-              className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950"
-            >
-              <p className="font-semibold">Не хватает ламп {m.socket} (1:1)</p>
-              <p className="mt-2">
-                Нужно: <span className="font-semibold">{m.requiredQty}</span> шт., в корзине:{" "}
-                <span className="font-semibold">{m.currentQty}</span> шт.
-              </p>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => gotoLamps(m.socket)}
-                  className="rounded-xl border border-blue-300 bg-white px-3 py-2 text-xs font-semibold text-blue-800 hover:bg-blue-100"
-                >
-                  Выбрать лампы →
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => addCheapestLampsOneToOne(m.socket)}
-                  className="rounded-xl bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800"
-                >
-                  Добавить 1:1 (самые доступные)
-                </button>
-              </div>
-            </div>
-          ))}
-
-          {hasClarusInCart && clarusPsuQty < 1 ? (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-950">
-              <p className="font-semibold">Для системы CLARUS обязателен минимум 1 блок питания.</p>
-
-              <div className="mt-3 flex flex-wrap gap-2">
-                {CLARUS_PSU_VENDOR_CODES.map((vendor) => {
-                  const id = productIdByVendorCode.get(vendor);
-                  if (!id) return null;
-                  const product = productsById.get(id);
-                  if (!product) return null;
-
-                  return (
-                    <button
-                      key={vendor}
-                      type="button"
-                      onClick={() => setClarusPsu(id)}
-                      className="rounded-xl bg-rose-700 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-800"
-                    >
-                      {toText(product.name)}
-                    </button>
-                  );
-                })}
-              </div>
             </div>
           ) : null}
         </div>
@@ -1629,7 +1823,7 @@ export function WizardStep1Lighting() {
                               ) : null}
 
                               <p className="mt-2 text-xs text-slate-700">
-                                Qty: {item.qty} • {fmt(regular)} ₽/шт • со скидкой {fmt(discounted)} ₽/шт
+                                {item.qty} шт. • {fmt(regular)} ₽/шт • со скидкой {fmt(discounted)} ₽/шт
                               </p>
 
                               <button
@@ -1657,6 +1851,13 @@ export function WizardStep1Lighting() {
                     <p>Итого: {fmt(selectedTotals.regular)} ₽</p>
                     <p className="text-emerald-700">С заказом потолка (−15%): {fmt(selectedTotals.discounted)} ₽</p>
                     <p className="text-slate-500">Ваша выгода: {fmt(selectedTotals.benefit)} ₽</p>
+                    <button
+                      type="button"
+                      onClick={() => goToStep(2)}
+                      className="mt-3 w-full rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800"
+                    >
+                      К итогу →
+                    </button>
                   </div>
                 </>
               )}
@@ -1872,25 +2073,13 @@ export function WizardStep1Lighting() {
               ) : null}
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setCatalogView("selected");
-                setActiveTab("catalog");
-              }}
-              className="rounded-xl border border-emerald-300 bg-white px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-100"
-            >
-              Посмотреть
-            </button>
-            <button
-              type="button"
-              onClick={() => goToStep(2)}
-              className="rounded-xl bg-emerald-700 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-800"
-            >
-              К итогу →
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => goToStep(2)}
+            className="rounded-xl bg-emerald-700 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-800"
+          >
+            К итогу →
+          </button>
         </div>
       ) : null}
     </div>
