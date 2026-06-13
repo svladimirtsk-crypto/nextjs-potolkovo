@@ -6,7 +6,10 @@ import { Container } from "@/components/ui/container";
 import { Heading } from "@/components/ui/heading";
 import { Section } from "@/components/ui/section";
 
-import { applyLightingDiscount } from "@/lib/lighting-formulas";
+import {
+  applyLightingOnlyDiscount,
+  applyLightingWithCeilingDiscount,
+} from "@/lib/lighting-formulas";
 import { detectSocket } from "@/lib/feed2-products";
 import { isRemovedColibriVendorCode } from "@/lib/catalog-ui-config";
 
@@ -187,9 +190,11 @@ function buildKitHallway(products: FeedCatalogProduct[]): KitCard | null {
 
 function calcTotals(items: LightingItem[]) {
   const totalRub = items.reduce((sum, i) => sum + i.qty * i.priceRub, 0);
-  const discountedTotalRub = applyLightingDiscount(totalRub);
-  const benefitRub = Math.max(0, Math.round(totalRub - discountedTotalRub));
-  return { totalRub, discountedTotalRub, benefitRub };
+  const lightingOnlyRub = applyLightingOnlyDiscount(totalRub);
+  const withCeilingRub = applyLightingWithCeilingDiscount(totalRub);
+  const lightingOnlyBenefitRub = Math.max(0, Math.round(totalRub - lightingOnlyRub));
+  const withCeilingBenefitRub = Math.max(0, Math.round(totalRub - withCeilingRub));
+  return { totalRub, lightingOnlyRub, withCeilingRub, lightingOnlyBenefitRub, withCeilingBenefitRub };
 }
 
 export function LightKitShowcase() {
@@ -212,7 +217,7 @@ export function LightKitShowcase() {
 
         <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {kits.map((kit) => {
-            const { totalRub, discountedTotalRub, benefitRub } = calcTotals(kit.items);
+            const { totalRub, lightingOnlyRub, withCeilingRub, lightingOnlyBenefitRub, withCeilingBenefitRub } = calcTotals(kit.items);
 
             return (
               <article
@@ -251,16 +256,15 @@ export function LightKitShowcase() {
                   <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                       <p className="text-sm text-slate-600">
-                        Сумма: <span className="font-semibold text-slate-950">{fmtRub(totalRub)} ₽</span>
+                        Без скидки: <span className="font-semibold text-slate-950 line-through decoration-slate-400">{fmtRub(totalRub)} ₽</span>
                       </p>
                       <p className="text-sm text-emerald-700">
-                        Со скидкой:{" "}
-                        <span className="font-semibold">{fmtRub(discountedTotalRub)} ₽</span>
+                        Только свет: <span className="font-semibold">{fmtRub(lightingOnlyRub)} ₽</span> · −10% (−{fmtRub(lightingOnlyBenefitRub)} ₽)
+                      </p>
+                      <p className="text-sm text-blue-700">
+                        С потолком: <span className="font-semibold">{fmtRub(withCeilingRub)} ₽</span> · −25% (−{fmtRub(withCeilingBenefitRub)} ₽)
                       </p>
                     </div>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Экономия {fmtRub(benefitRub)} ₽ (−15% при заказе потолка)
-                    </p>
                   </div>
 
                   <div className="mt-5">
