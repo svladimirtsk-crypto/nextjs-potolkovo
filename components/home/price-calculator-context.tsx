@@ -226,7 +226,7 @@ export function getCalculatorSummaryLines(
   const grand = toNumber(snapshot.grandTotal);
   if (grand > baseTotal + 0.5) {
     const extra = Math.max(0, grand - baseTotal);
-    lines.push(`Досчёт монтажа по свету: ${formatCurrency(extra)} ₽`);
+    lines.push(`Установка светильников: ${formatCurrency(extra)} ₽`);
   }
 
   return lines;
