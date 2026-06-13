@@ -5,6 +5,7 @@ import { ServicePageLayoutV2 } from "../_components/ServicePageLayoutV2";
 import { ServiceHero } from "../_components/ServiceHero";
 import { ServiceActionSection } from "../_components/ServiceActionSection";
 import { ServiceRelatedServices } from "../_components/ServiceRelatedServices";
+import { TrackSaleScenarioSection } from "./_components/TrackSaleScenarioSection";
 import { LightKitShowcase } from "./_components/LightKitShowcase";
 import { LightCustomSection } from "./_components/LightCustomSection";
 import { CatalogSection } from "./_components/CatalogSection";
@@ -35,7 +36,12 @@ export default function ProdazhaTrekovogoOsveshcheniyaPage() {
     <ServicePageLayoutV2
       service={service}
       hero={<ServiceHero service={service} />}
-      proof={<LightKitShowcase />}
+      proof={
+        <>
+          <TrackSaleScenarioSection />
+          <LightKitShowcase />
+        </>
+      }
       price={
         <>
           <LightCustomSection />
