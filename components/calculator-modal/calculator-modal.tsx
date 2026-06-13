@@ -49,11 +49,6 @@ export function CalculatorModal() {
   const [visible, setVisible] = useState(false);
   const [renderedSteps, setRenderedSteps] = useState<Set<WizardStep>>(() => new Set());
 
-  // P1.3: Swipe-to-close state
-  const [dragY, setDragY] = useState(0);
-  const touchStartRef = useRef(0);
-  const [isDragging, setIsDragging] = useState(false);
-
   useEffect(() => setMounted(true), []);
 
   // Keep visited steps mounted so confirmed user choices do not reset on back navigation.
@@ -114,29 +109,8 @@ export function CalculatorModal() {
       if (!confirmed) return;
     }
     setVisible(false);
-    setDragY(0);
     closeCalculator();
   }, [closeCalculator, hasAnyData]);
-
-  // P1.3: Swipe-to-close handlers
-  const onTouchStart = useCallback((e: React.TouchEvent) => {
-    if (window.innerWidth >= 1024) return; // только на мобиле
-    touchStartRef.current = e.touches[0].clientY;
-    setIsDragging(true);
-  }, []);
-
-  const onTouchMove = useCallback((e: React.TouchEvent) => {
-    if (window.innerWidth >= 1024) return;
-    const y = e.touches[0].clientY - touchStartRef.current;
-    if (y > 0) setDragY(y);
-  }, []);
-
-  const onTouchEnd = useCallback(() => {
-    if (window.innerWidth >= 1024) return;
-    setIsDragging(false);
-    if (dragY > 200) requestClose();
-    else setDragY(0);
-  }, [dragY, requestClose]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -165,7 +139,6 @@ export function CalculatorModal() {
   useEffect(() => {
     if (isOpen) return;
     setVisible(false);
-    setDragY(0);
     if (!previousFocusRef.current) return;
     previousFocusRef.current.focus();
     previousFocusRef.current = null;
@@ -285,21 +258,12 @@ export function CalculatorModal() {
           role="dialog"
           aria-modal={isOpen ? "true" : undefined}
           aria-labelledby="calc-modal-title"
-          // P1.1: full-screen bottom sheet on mobile + P1.3: drag transform
+          // P1.1: full-screen bottom sheet on mobile
           className={`w-full max-h-[92dvh] flex flex-col rounded-t-2xl bg-white shadow-2xl lg:max-h-[90dvh] lg:max-w-5xl lg:rounded-2xl xl:max-w-6xl ${transitionClass} ${
             modalActive
               ? "translate-y-0 opacity-100 lg:scale-100 pointer-events-auto"
               : "translate-y-4 opacity-0 lg:scale-95 pointer-events-none"
           } max-sm:fixed max-sm:inset-0 max-sm:max-h-screen max-sm:rounded-none max-sm:animate-slideUp`}
-          // P1.3: swipe-to-close
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-          style={
-            isDragging && dragY > 0
-              ? { transform: `translateY(${dragY}px)`, transition: "none" }
-              : undefined
-          }
         >
           {/* Header */}
           <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4">
