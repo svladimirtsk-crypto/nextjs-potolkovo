@@ -5,13 +5,14 @@ import type { ServicePageContent } from "@/content/services";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 
-const PRIMARY_CTA_LABEL = "Записаться на бесплатный замер";
-
 type ServiceHeroProps = {
   service: ServicePageContent;
 };
 
 export function ServiceHero({ service }: ServiceHeroProps) {
+  const isTrackSalePage = service.slug === "prodazha-trekovogo-osveshcheniya";
+  const primaryHref = isTrackSalePage ? "#price" : "#action";
+
   return (
     <section
       id="hero"
@@ -66,17 +67,23 @@ export function ServiceHero({ service }: ServiceHeroProps) {
             </div>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-              <Button href="#action" className="justify-center">
-                {PRIMARY_CTA_LABEL}
+              <Button href={primaryHref} className="justify-center">
+                {service.hero.primaryCtaLabel}
               </Button>
 
-              <Button
-                href={contacts.telegramUrl}
-                variant="secondary"
-                className="justify-center"
-              >
-                {service.hero.secondaryTelegramCtaLabel}
-              </Button>
+              {isTrackSalePage ? (
+                <Button href="#price" variant="secondary" className="justify-center">
+                  Добавить потолок −25%
+                </Button>
+              ) : (
+                <Button
+                  href={contacts.telegramUrl}
+                  variant="secondary"
+                  className="justify-center"
+                >
+                  {service.hero.secondaryTelegramCtaLabel}
+                </Button>
+              )}
             </div>
 
             <p className="mt-4 text-sm leading-6 text-slate-600">
