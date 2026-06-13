@@ -133,12 +133,16 @@ export function getCalculatorSummaryLines(
   if (!snapshot) return [];
 
   const lines: string[] = [
+    "Расчёт потолка:",
     `Площадь: ${snapshot.area} м²`,
     `Тип потолка: ${snapshot.ceilingTypeLabel}`,
-    `Полотно: ${snapshot.area} м² × ${formatCurrency(snapshot.ceilingBaseRate)} ₽`,
+    `Полотно: ${snapshot.area} м² × ${formatCurrency(snapshot.ceilingBaseRate)} ₽ = ${formatCurrency(snapshot.ceilingBaseTotal)} ₽`,
   ];
 
+  // Старое единое поле оставляем как fallback для одиночного спецпрофиля.
   if (
+    !snapshot.shadowEnabled &&
+    !snapshot.floatingEnabled &&
     snapshot.ceilingExtraTotal > 0 &&
     snapshot.ceilingExtraLabel &&
     snapshot.ceilingLength &&
@@ -147,18 +151,24 @@ export function getCalculatorSummaryLines(
     lines.push(
       `${snapshot.ceilingExtraLabel}: ${snapshot.ceilingLength} м.п. × ${formatCurrency(
         snapshot.ceilingExtraRatePerMeter
-      )} ₽`
+      )} ₽ = ${formatCurrency(snapshot.ceilingExtraTotal)} ₽`
     );
   }
 
   // Shadow + Floating separate lines
   if (snapshot.shadowEnabled && snapshot.shadowLength != null) {
     const shadowTotal = toNumber(snapshot.shadowExtraTotal);
-    lines.push(`Теневой профиль: ${snapshot.shadowLength} м.п. × ${formatCurrency(shadowTotal / (snapshot.shadowLength || 1))} ₽`);
+    const shadowRate = shadowTotal / (snapshot.shadowLength || 1);
+    lines.push(
+      `Теневой профиль: ${snapshot.shadowLength} м.п. × ${formatCurrency(shadowRate)} ₽ = ${formatCurrency(shadowTotal)} ₽`
+    );
   }
   if (snapshot.floatingEnabled && snapshot.floatingLength != null) {
     const floatingTotal = toNumber(snapshot.floatingExtraTotal);
-    lines.push(`Парящий профиль: ${snapshot.floatingLength} м.п. × ${formatCurrency(floatingTotal / (snapshot.floatingLength || 1))} ₽`);
+    const floatingRate = floatingTotal / (snapshot.floatingLength || 1);
+    lines.push(
+      `Парящий профиль: ${snapshot.floatingLength} м.п. × ${formatCurrency(floatingRate)} ₽ = ${formatCurrency(floatingTotal)} ₽`
+    );
   }
 
   if (
@@ -171,7 +181,7 @@ export function getCalculatorSummaryLines(
     lines.push(
       `${snapshot.lightLinesLabel}: ${snapshot.lightLinesLength} м.п. × ${formatCurrency(
         snapshot.lightLinesRatePerMeter
-      )} ₽`
+      )} ₽ = ${formatCurrency(snapshot.lightLinesTotal)} ₽`
     );
   }
 
@@ -184,7 +194,7 @@ export function getCalculatorSummaryLines(
     lines.push(
       `${snapshot.corniceLabel}: ${snapshot.corniceLength} м.п. × ${formatCurrency(
         snapshot.corniceRatePerMeter
-      )} ₽`
+      )} ₽ = ${formatCurrency(snapshot.corniceTotal)} ₽`
     );
   }
 
@@ -197,7 +207,7 @@ export function getCalculatorSummaryLines(
     lines.push(
       `${snapshot.trackLabel}: ${snapshot.trackLength} м.п. × ${formatCurrency(
         snapshot.trackRatePerMeter
-      )} ₽`
+      )} ₽ = ${formatCurrency(snapshot.trackTotal)} ₽`
     );
   }
 
@@ -208,25 +218,26 @@ export function getCalculatorSummaryLines(
 
   if (chandeliersEnabled && chandeliersTotal > 0 && chandeliersCount !== null) {
     lines.push(
-      `Установка люстр: ${chandeliersCount} шт. × ${formatCurrency(chandeliersRate)} ₽`
+      `Установка люстр: ${chandeliersCount} шт. × ${formatCurrency(chandeliersRate)} ₽ = ${formatCurrency(chandeliersTotal)} ₽`
     );
   }
 
   if (snapshot.lightsEnabled && snapshot.lightsTotal > 0 && snapshot.lightsCount !== null) {
     lines.push(
-      `Светильники: ${snapshot.lightsCount} шт. × ${formatCurrency(
+      `Установка точечных светильников: ${snapshot.lightsCount} шт. × ${formatCurrency(
         snapshot.lightsRatePerUnit
-      )} ₽`
+      )} ₽ = ${formatCurrency(snapshot.lightsTotal)} ₽`
     );
   }
 
   const baseTotal = toNumber(snapshot.total);
-  lines.push(`Потолок (работы): ${formatCurrency(baseTotal)} ₽`);
+  lines.push(`Итого потолок / работы: ${formatCurrency(baseTotal)} ₽`);
 
   const grand = toNumber(snapshot.grandTotal);
   if (grand > baseTotal + 0.5) {
     const extra = Math.max(0, grand - baseTotal);
     lines.push(`Установка светильников: ${formatCurrency(extra)} ₽`);
+    lines.push(`Итого потолок с досчётом монтажа: ${formatCurrency(grand)} ₽`);
   }
 
   return lines;
@@ -262,13 +273,13 @@ export function getLightingSummaryLines(
   if (discountApplied) {
     if (discounted != null) {
       const benefit = Math.max(0, Number(total ?? 0) - Number(discounted));
-      lines.push(` Скидка на свет: −${formatCurrency(benefit)} ₽`);
+      lines.push(` Скидка на свет: ${formatCurrency(Number(total ?? 0))} ₽ −15% (−${formatCurrency(benefit)} ₽)`);
       lines.push(` Свет со скидкой: ${formatCurrency(discounted)} ₽`);
     }
   } else if (hasPotentialDiscount) {
     // важно: не выдаём это как применённую скидку — это “при условии потолка”
     const benefit = Math.max(0, Number(total ?? 0) - Number(discounted));
-    lines.push(` Если с потолком: дешевле на ${formatCurrency(benefit)} ₽`);
+    lines.push(` Если с потолком: ${formatCurrency(Number(total ?? 0))} ₽ −15% (−${formatCurrency(benefit)} ₽)`);
     lines.push(` Свет с потолком: ${formatCurrency(discounted!)} ₽`);
   }
 
