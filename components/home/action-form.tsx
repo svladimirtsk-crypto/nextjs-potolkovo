@@ -10,7 +10,10 @@ import {
   trackFormSubmitSuccess,
   trackPhoneValidated,
 } from "@/lib/analytics";
-import { applyLightingDiscount } from "@/lib/lighting-formulas";
+import {
+  applyLightingOnlyDiscount,
+  applyLightingWithCeilingDiscount,
+} from "@/lib/lighting-formulas";
 
 import {
   getCalculatorSummaryLines,
@@ -183,17 +186,32 @@ export function ActionForm({ source, onSuccess }: ActionFormProps) {
     const lightingItemsCount = Number(snapshot?.lighting?.items?.length ?? 0);
     const lightingTotalRub = toNumber(snapshot?.lighting?.totalRub ?? 0);
 
-    // если discountedTotalRub уже сохранён в snapshot — используем его.
-    // иначе считаем “потенциальную скидку” (для менеджера).
+    const discountMode = String(snapshot?.lightingDiscountMode ?? snapshot?.lighting?.discountMode ?? "none");
+    const fallbackLightingDiscountedRub =
+      discountMode === "with-ceiling"
+        ? applyLightingWithCeilingDiscount(lightingTotalRub)
+        : discountMode === "lighting-only"
+          ? applyLightingOnlyDiscount(lightingTotalRub)
+          : lightingTotalRub;
+
     const lightingDiscountedRub = toNumber(
-      snapshot?.lighting?.discountedTotalRub ?? applyLightingDiscount(lightingTotalRub)
+      snapshot?.lighting?.discountedTotalRub ?? fallbackLightingDiscountedRub
     );
 
     const discountApplied = Boolean(snapshot?.lightingDiscountApplied);
-    const discountPercentApplied = Number(snapshot?.lightingDiscountPercentApplied ?? 0);
+    const discountPercentApplied = Number(snapshot?.lightingDiscountPercentApplied ?? snapshot?.lighting?.discountPercentApplied ?? 0);
+    const lightingDiscountAmountRub = Math.max(0, lightingTotalRub - lightingDiscountedRub);
 
     // Effective: what customer actually pays for lighting (with or without discount)
     const lightingEffectiveRub = discountApplied ? lightingDiscountedRub : lightingTotalRub;
+    const orderIntent =
+      discountMode === "with-ceiling"
+        ? "lighting_with_ceiling"
+        : discountMode === "lighting-only"
+          ? "lighting_only"
+          : lightingItemsCount > 0
+            ? "lighting"
+            : "ceiling_only";
 
     // ===== Ceiling / works numbers (Step0) =====
     const area = toNumber(snapshot?.area ?? 0);
@@ -292,6 +310,9 @@ export function ActionForm({ source, onSuccess }: ActionFormProps) {
     formData.append("lighting_discounted_total_rub", String(lightingDiscountedRub));
     formData.append("lighting_discount_applied", String(discountApplied));
     formData.append("lighting_discount_percent_applied", String(discountPercentApplied));
+    formData.append("lighting_discount_mode", discountMode);
+    formData.append("lighting_discount_amount_rub", String(lightingDiscountAmountRub));
+    formData.append("order_intent", orderIntent);
 
     formData.append("ceiling_area_m2", String(area));
     formData.append("ceiling_type_label", ceilingTypeLabel);
