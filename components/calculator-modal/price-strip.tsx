@@ -11,6 +11,8 @@ export function PriceStrip() {
   const {
     ceilingTotal,
     lightingEffectiveTotal,
+    lightingRegularTotal,
+    lightingDiscountedTotal,
     lightingDiscountEligible,
     showCeilingInUi,
     grandTotal,
@@ -19,6 +21,8 @@ export function PriceStrip() {
   } = useCalculatorModal();
 
   const hasLighting = lightingEffectiveTotal > 0;
+  const appliedLightingBenefit = Math.max(0, lightingRegularTotal - lightingEffectiveTotal);
+  const potentialLightingBenefit = Math.max(0, lightingRegularTotal - lightingDiscountedTotal);
 
   // P2.17: Price change animation key
   const prevTotalRef = useRef(grandTotal);
@@ -47,11 +51,13 @@ export function PriceStrip() {
       <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm">
         <span className="font-medium">
           Свет: {fmt(lightingEffectiveTotal)} ₽
-          {lightingDiscountEligible ? <span className="text-emerald-700"> −15%</span> : null}
+          {lightingDiscountEligible && appliedLightingBenefit > 0 ? (
+            <span className="text-emerald-700"> −{fmt(appliedLightingBenefit)} ₽</span>
+          ) : null}
         </span>
 
         {!lightingDiscountEligible ? (
-          <span className="text-slate-500"> · скидка −15% при заказе потолка</span>
+          <span className="text-slate-500"> · с потолком дешевле на {fmt(potentialLightingBenefit)} ₽</span>
         ) : null}
 
         <span className="text-slate-500"> · </span>
@@ -73,11 +79,13 @@ export function PriceStrip() {
 
           <span className="font-medium">
             Свет: {fmt(lightingEffectiveTotal)} ₽
-            {lightingDiscountEligible ? <span className="text-emerald-700"> −15%</span> : null}
+            {lightingDiscountEligible && appliedLightingBenefit > 0 ? (
+              <span className="text-emerald-700"> −{fmt(appliedLightingBenefit)} ₽</span>
+            ) : null}
           </span>
 
           {!lightingDiscountEligible ? (
-            <span className="text-slate-500"> · с потолком −15%</span>
+            <span className="text-slate-500"> · с потолком −{fmt(potentialLightingBenefit)} ₽</span>
           ) : null}
 
           <span className="text-slate-500"> · </span>
