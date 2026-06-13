@@ -22,7 +22,7 @@ export const TRACK_SYSTEMS: { id: TrackSystemId; label: string }[] = [
 
 export const TRACK_GROUPS: { id: TrackGroupId; label: string }[] = [
   { id: "TRACK_FIXTURE", label: "Светильники" },
-  { id: "TRACK_PROFILE", label: "Профили/шинопроводы" },
+  { id: "TRACK_PROFILE", label: "Профили" },
   { id: "TRACK_ACCESSORY", label: "Аксессуары" },
 ];
 
