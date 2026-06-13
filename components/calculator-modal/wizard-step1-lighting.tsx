@@ -6,7 +6,12 @@ import snapshotData from "@/data/eks-feed2-snapshot.json";
 import type { FeedCatalogParam, FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
 import { trackLightingCartChanged } from "@/lib/analytics";
-import { applyLightingDiscount } from "@/lib/lighting-formulas";
+import {
+  LIGHTING_ONLY_DISCOUNT_PERCENT,
+  LIGHTING_WITH_CEILING_DISCOUNT_PERCENT,
+  applyLightingOnlyDiscount,
+  applyLightingWithCeilingDiscount,
+} from "@/lib/lighting-formulas";
 import {
   buildProductsIndex,
   computeBenefit,
@@ -159,13 +164,14 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
 
 /* Product card with zoomable image */
 function ProductCard({
-  product, qty, onInc, onDec, onImageClick,
+  product, qty, onInc, onDec, onImageClick, discountPercent,
 }: {
   product: FeedCatalogProduct; qty: number; onInc: () => void; onDec: () => void;
   onImageClick?: () => void;
+  discountPercent: number;
 }) {
   const regular = toNumber(product.priceRub);
-  const discounted = getDiscountedPrice(regular);
+  const discounted = getDiscountedPrice(regular, discountPercent);
   const benefit = computeBenefit(regular, discounted);
   const [showDetails, setShowDetails] = useState(false);
   return (
@@ -192,7 +198,7 @@ function ProductCard({
         <div className="mt-2 text-xs">
           <span className="line-through text-slate-400">{fmt(regular)} ₽</span>{" "}
           <span className="font-semibold text-emerald-700">{fmt(discounted)} ₽</span>
-          {benefit > 0 ? <span className="text-slate-500"> · −15% (−{fmt(benefit)} ₽)</span> : null}
+          {benefit > 0 ? <span className="text-slate-500"> · −{discountPercent}% (−{fmt(benefit)} ₽)</span> : null}
           <span className="text-slate-400"> · с потолком</span>
         </div>
 
@@ -300,6 +306,7 @@ export function WizardStep1Lighting() {
     step1CatalogView, setStep1CatalogView,
     setStep1FooterAction,
     goToStep, showCeilingInUi, currentStep,
+    lightingDiscountMode, lightingEffectiveTotal, lightingRegularTotal,
   } = useCalculatorModal();
 
   const [activeTab, setActiveTab] = useState<Tab>("recommendations");
@@ -575,7 +582,16 @@ export function WizardStep1Lighting() {
     skipNextEmptySyncRef.current = false;
     const items: LightingItem[] = cartEntries.map((e) => ({ sku: toText(e.productId), name: toText(e.product.name), qty: e.qty, priceRub: toNumber(e.product.priceRub) }));
     const totalRub = items.reduce((s, i) => s + i.qty * i.priceRub, 0);
-    setLightingDraft({ mode: "catalog", items, totalRub, discountedTotalRub: applyLightingDiscount(totalRub), userCustomizedLighting: true, derivedInputsSnapshot: snapshot?.derivedInputs });
+    setLightingDraft({
+      mode: "catalog",
+      items,
+      totalRub,
+      discountedTotalRub: applyLightingOnlyDiscount(totalRub),
+      standaloneDiscountedTotalRub: applyLightingOnlyDiscount(totalRub),
+      withCeilingDiscountedTotalRub: applyLightingWithCeilingDiscount(totalRub),
+      userCustomizedLighting: true,
+      derivedInputsSnapshot: snapshot?.derivedInputs,
+    });
   }, [cartEntries, setLightingDraft, snapshot?.derivedInputs]);
 
   /* ─── setProductQty ─── */
@@ -699,10 +715,27 @@ export function WizardStep1Lighting() {
     [cartEntries]);
 
   const selectedTotals = useMemo(() => {
-    const reg = selectedViewItems.reduce((s, x) => s + x.item.qty * x.item.priceRub, 0);
-    const disc = applyLightingDiscount(reg);
-    return { regular: reg, discounted: disc, benefit: Math.max(0, reg - disc) };
-  }, [selectedViewItems]);
+    const regular = selectedViewItems.reduce((sum, x) => sum + x.item.qty * x.item.priceRub, 0);
+    const standalone = applyLightingOnlyDiscount(regular);
+    const withCeiling = applyLightingWithCeilingDiscount(regular);
+    const effective = lightingDiscountMode === "with-ceiling" ? withCeiling : standalone;
+    const effectivePercent = lightingDiscountMode === "with-ceiling"
+      ? LIGHTING_WITH_CEILING_DISCOUNT_PERCENT
+      : LIGHTING_ONLY_DISCOUNT_PERCENT;
+    return {
+      regular,
+      standalone,
+      withCeiling,
+      effective,
+      effectivePercent,
+      effectiveBenefit: Math.max(0, regular - effective),
+      withCeilingBenefit: Math.max(0, regular - withCeiling),
+    };
+  }, [lightingDiscountMode, selectedViewItems]);
+
+  const cardDiscountPercent = lightingDiscountMode === "with-ceiling"
+    ? LIGHTING_WITH_CEILING_DISCOUNT_PERCENT
+    : LIGHTING_ONLY_DISCOUNT_PERCENT;
 
   /* ─── Image zoom state ─── */
   const [zoomImage, setZoomImage] = useState<{ src: string; alt: string } | null>(null);
@@ -1161,7 +1194,8 @@ export function WizardStep1Lighting() {
                     <ProductCard key={id} product={p} qty={qty}
                       onInc={() => setTrackProfileQty(p, qty + 1)}
                       onDec={() => setTrackProfileQty(p, qty - 1)}
-                      onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })} />
+                      onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })}
+                      discountPercent={cardDiscountPercent} />
                   );
                 })}
               </div>
@@ -1199,7 +1233,8 @@ export function WizardStep1Lighting() {
                     return (
                       <ProductCard key={id} product={p} qty={qty}
                         onInc={() => setProductQty(p, qty + 1)} onDec={() => setProductQty(p, qty - 1)}
-                        onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })} />
+                        onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })}
+                      discountPercent={cardDiscountPercent} />
                     );
                   })}
                 </div>
@@ -1245,7 +1280,8 @@ export function WizardStep1Lighting() {
                   return (
                     <ProductCard key={id} product={p} qty={qty}
                       onInc={() => setProductQty(p, qty + 1)} onDec={() => setProductQty(p, qty - 1)}
-                      onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })} />
+                      onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })}
+                      discountPercent={cardDiscountPercent} />
                   );
                 })}
               </div>
@@ -1323,6 +1359,7 @@ export function WizardStep1Lighting() {
                               onInc={() => setProductQty(p, qty + 1)}
                               onDec={() => setProductQty(p, qty - 1)}
                               onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })}
+                              discountPercent={cardDiscountPercent}
                             />
                           );
                         })}
@@ -1441,7 +1478,7 @@ export function WizardStep1Lighting() {
                   <ul className="space-y-3">
                     {selectedViewItems.map(({ item, product }) => {
                       const regular = item.priceRub;
-                      const discounted = getDiscountedPrice(regular);
+                      const discounted = getDiscountedPrice(regular, selectedTotals.effectivePercent);
                       const productId = toText(product.productId);
                       return (
                         <li key={toText(item.sku)} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
@@ -1450,7 +1487,7 @@ export function WizardStep1Lighting() {
                             <div className="min-w-0">
                               <p className="break-words text-sm font-semibold text-slate-950">{toText(item.name)}</p>
                               <p className="mt-2 text-xs text-slate-700">
-                                {item.qty} шт. · {fmt(regular)} ₽/шт · со скидкой {fmt(discounted)} ₽/шт
+                                {item.qty} шт. · {fmt(regular)} ₽/шт · со скидкой −{selectedTotals.effectivePercent}%: {fmt(discounted)} ₽/шт
                               </p>
                               <button type="button" onClick={() => setCartItems((prev) => { const n = { ...prev }; delete n[productId]; return n; })}
                                 aria-label={`Удалить ${item.name}`}
@@ -1464,8 +1501,13 @@ export function WizardStep1Lighting() {
                   <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-3 text-sm">
                     <p>Итого: <span className="line-through text-slate-400">{fmt(selectedTotals.regular)} ₽</span></p>
                     <p className="text-emerald-700">
-                      С заказом потолка: {fmt(selectedTotals.discounted)} ₽ · −15% (−{fmt(selectedTotals.benefit)} ₽)
+                      Сейчас: {fmt(selectedTotals.effective)} ₽ · −{selectedTotals.effectivePercent}% (−{fmt(selectedTotals.effectiveBenefit)} ₽)
                     </p>
+                    {lightingDiscountMode !== "with-ceiling" ? (
+                      <p className="text-slate-500">
+                        С потолком: {fmt(selectedTotals.withCeiling)} ₽ · −25% (−{fmt(selectedTotals.withCeilingBenefit)} ₽)
+                      </p>
+                    ) : null}
                     <button
                       type="button"
                       onClick={() => goToStep(2)}
@@ -1553,7 +1595,8 @@ export function WizardStep1Lighting() {
                   return (
                     <ProductCard key={id} product={p} qty={qty}
                       onInc={() => setProductQty(p, qty + step)} onDec={() => setProductQty(p, qty - step)}
-                      onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })} />
+                      onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })}
+                      discountPercent={cardDiscountPercent} />
                   );
                 })}
               </div>
@@ -1574,14 +1617,16 @@ export function WizardStep1Lighting() {
               {lightingDraft.items?.length ?? 0}
             </span>
             <span className="text-sm font-medium text-slate-950">
-              {lightingDraft.discountedTotalRub != null && lightingDraft.discountedTotalRub < (lightingDraft.totalRub ?? 0) ? (
+              {lightingRegularTotal > lightingEffectiveTotal ? (
                 <>
-                  <span className="line-through text-slate-400">{fmt(lightingDraft.totalRub ?? 0)} ₽</span>{" "}
-                  <span>{fmt(lightingDraft.discountedTotalRub ?? 0)} ₽</span>
-                  <span className="ml-1 text-xs text-emerald-700">−15% (−{fmt((lightingDraft.totalRub ?? 0) - (lightingDraft.discountedTotalRub ?? 0))} ₽)</span>
+                  <span className="line-through text-slate-400">{fmt(lightingRegularTotal)} ₽</span>{" "}
+                  <span>{fmt(lightingEffectiveTotal)} ₽</span>
+                  <span className="ml-1 text-xs text-emerald-700">
+                    −{lightingDiscountMode === "with-ceiling" ? 25 : 10}% (−{fmt(lightingRegularTotal - lightingEffectiveTotal)} ₽)
+                  </span>
                 </>
               ) : (
-                <>{fmt(lightingDraft.totalRub ?? 0)} ₽</>
+                <>{fmt(lightingRegularTotal)} ₽</>
               )}
             </span>
           </div>
