@@ -252,7 +252,6 @@ export function getLightingSummaryLines(
 
   if (total != null) lines.push(` Оборудование: ${formatCurrency(total)} ₽`);
 
-  const percent = snapshot?.lightingDiscountPercentApplied ?? 15;
   const discountApplied = Boolean(snapshot?.lightingDiscountApplied);
 
   const hasPotentialDiscount =
@@ -262,11 +261,15 @@ export function getLightingSummaryLines(
 
   if (discountApplied) {
     if (discounted != null) {
-      lines.push(` Со скидкой ${percent}%: ${formatCurrency(discounted)} ₽`);
+      const benefit = Math.max(0, Number(total ?? 0) - Number(discounted));
+      lines.push(` Скидка на свет: −${formatCurrency(benefit)} ₽`);
+      lines.push(` Свет со скидкой: ${formatCurrency(discounted)} ₽`);
     }
   } else if (hasPotentialDiscount) {
     // важно: не выдаём это как применённую скидку — это “при условии потолка”
-    lines.push(` Если с потолком (−${percent}%): ${formatCurrency(discounted!)} ₽`);
+    const benefit = Math.max(0, Number(total ?? 0) - Number(discounted));
+    lines.push(` Если с потолком: дешевле на ${formatCurrency(benefit)} ₽`);
+    lines.push(` Свет с потолком: ${formatCurrency(discounted!)} ₽`);
   }
 
   return lines;
