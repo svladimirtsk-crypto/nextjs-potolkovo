@@ -1,0 +1,236 @@
+"use client";
+
+import { useMemo } from "react";
+
+import snapshotData from "@/data/eks-feed2-snapshot.json";
+import type { FeedCatalogParam, FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
+import { buildProductsIndex, detectSocket, getRequiredLampSocket } from "@/lib/feed2-products";
+import { REMOVED_COLIBRI_VENDOR_CODES, type LampSocket } from "@/lib/catalog-ui-config";
+import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
+import { calcTrackProfileMeters } from "@/lib/product-length-meters";
+import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
+import { useCalculatorModal } from "./calculator-modal-context";
+
+function toText(value: unknown): string {
+  return String(value ?? "").trim();
+}
+
+function toNumber(value: unknown): number {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function fmt(value: number): string {
+  return new Intl.NumberFormat("ru-RU").format(Math.round(value));
+}
+
+function fmtM(value: number): string {
+  return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 }).format(value);
+}
+
+function toNumOrNull(value: unknown): number | null {
+  const n = Number(value ?? NaN);
+  return Number.isFinite(n) ? n : null;
+}
+
+function toParams(input: unknown): FeedCatalogParam[] {
+  if (!Array.isArray(input)) return [];
+  return input
+    .map((item) => {
+      const x = item as { label?: unknown; value?: unknown };
+      return { label: toText(x?.label), value: toText(x?.value) };
+    })
+    .filter((item) => item.label.length > 0 && item.value.length > 0);
+}
+
+function normalizeProduct(raw: unknown): FeedCatalogProduct | null {
+  const p = raw as Record<string, unknown>;
+  const vendorCode = toText(p.vendorCode);
+  const offerId = toText(p.offerId);
+  const name = toText(p.name);
+  if (!name || (!vendorCode && !offerId)) return null;
+
+  const productIdRaw = toText(p.productId);
+  const productId = productIdRaw || `feed2-${vendorCode || offerId || name}`;
+  const images = Array.isArray(p.images)
+    ? p.images.map((item) => toText(item)).filter(Boolean)
+    : [];
+
+  return {
+    productId: toText(productId),
+    vendorCode,
+    offerId,
+    name,
+    url: toText(p.url),
+    categoryId: toText(p.categoryId),
+    categoryPath: toText(p.categoryPath),
+    images,
+    coverImage: toText(p.coverImage) || images[0] || "",
+    priceRub: toNumber(p.priceRub),
+    available: Boolean(p.available ?? true),
+    params: toParams(p.params),
+    keyAttributes: toParams(p.keyAttributes),
+    system: (toText(p.system) || "UNKNOWN") as FeedCatalogProduct["system"],
+    kind: (toText(p.kind) || "OTHER") as FeedCatalogProduct["kind"],
+    unit: (toText(p.unit) === "m" ? "m" : "pcs") as FeedCatalogProduct["unit"],
+    lengthMeters: toNumOrNull(p.lengthMeters),
+    pieceLengthMeters: toNumOrNull(p.pieceLengthMeters),
+  };
+}
+
+function isPanelProduct(product: FeedCatalogProduct): boolean {
+  const text = `${toText(product.name)} ${toText(product.categoryPath)}`.toLowerCase();
+  return text.includes("панел") || text.includes("panel") || text.includes("600x600") || text.includes("595x595");
+}
+
+type Metric = {
+  id: string;
+  label: string;
+  current: number;
+  required: number;
+  unit: "м" | "шт.";
+};
+
+function MiniBar({ current, required, unit }: { current: number; required: number; unit: "м" | "шт." }) {
+  if (required <= 0) return null;
+
+  const done = current >= required;
+  const pct = Math.min(100, Math.round((current / required) * 100));
+
+  return (
+    <div className="min-w-0">
+      <div className="mb-0.5 flex items-center justify-between gap-2 text-[10px] text-slate-500">
+        <span className={done ? "font-semibold text-emerald-700" : "text-slate-500"}>
+          {unit === "м" ? fmtM(current) : fmt(current)}/{unit === "м" ? fmtM(required) : fmt(required)} {unit}
+        </span>
+      </div>
+      <div className="h-1 rounded-full bg-slate-200">
+        <div
+          className={done ? "h-1 rounded-full bg-emerald-600" : "h-1 rounded-full bg-slate-950"}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+export function LightingFooterProgress() {
+  const { currentStep, lightingDraft, showCeilingInUi } = useCalculatorModal();
+  const { snapshot } = usePriceCalculatorBridge();
+
+  const products = useMemo(() => {
+    const raw = (snapshotData as { products?: unknown[] })?.products ?? [];
+    return raw
+      .map(normalizeProduct)
+      .filter((item): item is FeedCatalogProduct => Boolean(item))
+      .map((product) => applyVendorOverrides(product))
+      .filter((product) => !REMOVED_COLIBRI_VENDOR_CODES.has(toText(product.vendorCode)));
+  }, []);
+
+  const productsById = useMemo(() => buildProductsIndex(products), [products]);
+
+  const productIdByVendorCode = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const product of products) {
+      const vendorCode = toText(product.vendorCode);
+      const productId = toText(product.productId);
+      if (vendorCode && productId) map.set(vendorCode, productId);
+    }
+    return map;
+  }, [products]);
+
+  const cartEntries = useMemo(() => {
+    const items = lightingDraft?.mode === "catalog" ? (lightingDraft.items ?? []) : [];
+
+    return items
+      .map((item) => {
+        const sku = toText(item.sku);
+        const byProduct = productsById.get(sku);
+        const byVendor = productIdByVendorCode.get(sku);
+        const productId = byProduct ? sku : toText(byVendor ?? "");
+        const product = productId ? productsById.get(productId) : null;
+        if (!product) return null;
+        return { productId, product, qty: toNumber(item.qty) };
+      })
+      .filter((entry): entry is { productId: string; product: FeedCatalogProduct; qty: number } => Boolean(entry));
+  }, [lightingDraft, productIdByVendorCode, productsById]);
+
+  const selectedTrackMeters = useMemo(() => {
+    return cartEntries.reduce((sum, entry) => {
+      return entry.product.kind === "TRACK_PROFILE" ? sum + calcTrackProfileMeters(entry.product, entry.qty) : sum;
+    }, 0);
+  }, [cartEntries]);
+
+  const selectedPointQty = useMemo(() => {
+    return cartEntries.reduce((sum, entry) => {
+      return entry.product.kind === "SPOT_FIXTURE" || isPanelProduct(entry.product) ? sum + entry.qty : sum;
+    }, 0);
+  }, [cartEntries]);
+
+  const lampRequiredBySocket = useMemo(() => {
+    const result: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
+    for (const entry of cartEntries) {
+      if (entry.product.kind === "LAMP") continue;
+      const socket = getRequiredLampSocket(entry.product);
+      if (socket) result[socket] += entry.qty;
+    }
+    return result;
+  }, [cartEntries]);
+
+  const lampCurrentBySocket = useMemo(() => {
+    const result: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
+    for (const entry of cartEntries) {
+      if (entry.product.kind !== "LAMP") continue;
+      const socket = detectSocket(entry.product);
+      if (socket === "GX53" || socket === "MR16") result[socket] += entry.qty;
+    }
+    return result;
+  }, [cartEntries]);
+
+  const requiredTrackMeters = showCeilingInUi ? toNumber(snapshot?.derivedInputs?.trackLengthMeters) : 0;
+  const requiredPointQty = showCeilingInUi ? toNumber(snapshot?.derivedInputs?.pointSpotsQty) : 0;
+  const requiredLampQty = (Object.keys(lampRequiredBySocket) as LampSocket[]).reduce(
+    (sum, socket) => sum + lampRequiredBySocket[socket],
+    0
+  );
+  const currentLampQty = (Object.keys(lampCurrentBySocket) as LampSocket[]).reduce(
+    (sum, socket) => sum + (lampRequiredBySocket[socket] > 0 ? lampCurrentBySocket[socket] : 0),
+    0
+  );
+
+  const metrics: Metric[] = [
+    { id: "track", label: "Профиль", current: selectedTrackMeters, required: requiredTrackMeters, unit: "м" },
+    { id: "points", label: "Точки", current: selectedPointQty, required: requiredPointQty, unit: "шт." },
+    { id: "lamps", label: "Лампы", current: currentLampQty, required: requiredLampQty, unit: "шт." },
+  ];
+
+  const visibleMetrics = metrics.filter((metric) => metric.required > 0);
+  const selectedCount = cartEntries.filter((entry) => entry.qty > 0).length;
+
+  if (currentStep !== 1) return null;
+  if (visibleMetrics.length === 0 && selectedCount === 0) return null;
+
+  return (
+    <div className="mb-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
+      <div className="mb-1 flex items-center justify-between gap-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Прогресс подбора</p>
+        {selectedCount > 0 ? (
+          <p className="text-[11px] font-semibold text-slate-600">Выбрано: {selectedCount} поз.</p>
+        ) : null}
+      </div>
+
+      {visibleMetrics.length > 0 ? (
+        <div className="grid grid-cols-3 gap-2">
+          {visibleMetrics.map((metric) => (
+            <div key={metric.id} className="min-w-0">
+              <p className="mb-0.5 truncate text-[10px] font-medium text-slate-500">{metric.label}</p>
+              <MiniBar current={metric.current} required={metric.required} unit={metric.unit} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-slate-600">Позиции добавлены вручную — можно перейти к итогу.</p>
+      )}
+    </div>
+  );
+}
