@@ -16,7 +16,7 @@ export function LightCustomSection() {
           <Heading
             eyebrow="Свой вариант"
             title="Хотите подобрать самостоятельно?"
-            description="Откройте каталог прямо в калькуляторе — выберите позиции, количество и сразу увидите итоговую стоимость со скидкой 15%."
+            description="Выберите позиции и количество: только освещение — со скидкой 10%, вместе с потолком — скидка 25% на свет."
             align="center"
           />
 
@@ -34,7 +34,7 @@ export function LightCustomSection() {
               }
               className="justify-center py-6 text-base"
             >
-              Открыть каталог в калькуляторе
+              Подобрать освещение −10%
             </Button>
 
             <Button
@@ -48,7 +48,7 @@ export function LightCustomSection() {
               }
               className="justify-center"
             >
-              Рассчитать потолок
+              Добавить потолок −25%
             </Button>
           </div>
 
