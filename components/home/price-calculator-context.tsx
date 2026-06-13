@@ -13,6 +13,7 @@ import {
 import {
   getKitDisplayName,
   type DerivedInputs,
+  type LightingDiscountMode,
   type LightingSnapshot,
 } from "@/lib/calculator-modal-types";
 
@@ -74,7 +75,9 @@ export type CalculatorLeadSnapshot = {
 
   // аналитика по скидке на свет
   lightingDiscountApplied?: boolean;
-  lightingDiscountPercentApplied?: number; // например 15
+  lightingDiscountPercentApplied?: number;
+  lightingDiscountMode?: LightingDiscountMode;
+  lightingDiscountAmountRub?: number;
 };
 
 type PriceCalculatorContextValue = {
@@ -251,36 +254,49 @@ export function getLightingSummaryLines(
 
   const lines: string[] = [];
 
+  const discountMode = snapshot?.lightingDiscountMode ?? lighting.discountMode ?? "none";
+  const discountPercent =
+    snapshot?.lightingDiscountPercentApplied ??
+    lighting.discountPercentApplied ??
+    (discountMode === "with-ceiling" ? 25 : discountMode === "lighting-only" ? 10 : 0);
+
+  const total = toNumber(lighting.totalRub);
+  const discounted = lighting.discountedTotalRub != null ? toNumber(lighting.discountedTotalRub) : total;
+  const benefit = Math.max(0, total - discounted);
+  const withCeilingTotal = lighting.withCeilingDiscountedTotalRub != null
+    ? toNumber(lighting.withCeilingDiscountedTotalRub)
+    : Math.round(total * 0.75);
+  const withCeilingBenefit = Math.max(0, total - withCeilingTotal);
+
+  const orderType =
+    discountMode === "with-ceiling"
+      ? "Тип заявки: освещение + потолок"
+      : discountMode === "lighting-only"
+        ? "Тип заявки: только освещение"
+        : "Тип заявки: освещение";
+  lines.push(orderType);
+
   const displayName = getKitDisplayName(lighting);
   lines.push(displayName ? `Освещение - ${displayName}:` : "Освещение (из каталога):");
 
   for (const item of lighting.items ?? []) {
-    lines.push(` - ${item.name} × ${item.qty} × ${formatCurrency(item.priceRub)} ₽`);
+    const qty = toNumber(item.qty);
+    const price = toNumber(item.priceRub);
+    lines.push(` - ${item.name} × ${qty} × ${formatCurrency(price)} ₽ = ${formatCurrency(qty * price)} ₽`);
   }
 
-  const total = lighting.totalRub;
-  const discounted = lighting.discountedTotalRub;
+  if (total > 0) lines.push(` Свет без скидки: ${formatCurrency(total)} ₽`);
 
-  if (total != null) lines.push(` Оборудование: ${formatCurrency(total)} ₽`);
+  if (discountMode !== "none" && discounted > 0) {
+    lines.push(` Скидка на свет: ${formatCurrency(total)} ₽ −${discountPercent}% (−${formatCurrency(benefit)} ₽)`);
+    lines.push(` Итого свет: ${formatCurrency(discounted)} ₽`);
+  }
 
-  const discountApplied = Boolean(snapshot?.lightingDiscountApplied);
-
-  const hasPotentialDiscount =
-    total != null &&
-    discounted != null &&
-    Math.abs(Number(total) - Number(discounted)) >= 1;
-
-  if (discountApplied) {
-    if (discounted != null) {
-      const benefit = Math.max(0, Number(total ?? 0) - Number(discounted));
-      lines.push(` Скидка на свет: ${formatCurrency(Number(total ?? 0))} ₽ −15% (−${formatCurrency(benefit)} ₽)`);
-      lines.push(` Свет со скидкой: ${formatCurrency(discounted)} ₽`);
-    }
-  } else if (hasPotentialDiscount) {
-    // важно: не выдаём это как применённую скидку — это “при условии потолка”
-    const benefit = Math.max(0, Number(total ?? 0) - Number(discounted));
-    lines.push(` Если с потолком: ${formatCurrency(Number(total ?? 0))} ₽ −15% (−${formatCurrency(benefit)} ₽)`);
-    lines.push(` Свет с потолком: ${formatCurrency(discounted!)} ₽`);
+  if (discountMode !== "with-ceiling" && total > 0) {
+    const extraBenefit = Math.max(0, discounted - withCeilingTotal);
+    lines.push(` Если добавить потолок: ${formatCurrency(total)} ₽ −25% (−${formatCurrency(withCeilingBenefit)} ₽)`);
+    lines.push(` Свет с потолком: ${formatCurrency(withCeilingTotal)} ₽`);
+    if (extraBenefit > 0) lines.push(` Дополнительная выгода с потолком: ${formatCurrency(extraBenefit)} ₽`);
   }
 
   return lines;
