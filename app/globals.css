@@ -132,6 +132,16 @@ body.modal-open .mobile-sticky-cta {
   display: none !important;
 }
 
+/* Modal mobile taps: do not let touch gestures/double-tap zoom eat the first click */
+.calculator-modal-panel button,
+.calculator-modal-panel a,
+.calculator-modal-panel input,
+.calculator-modal-panel select,
+.calculator-modal-panel textarea,
+.calculator-modal-panel [role="button"] {
+  touch-action: manipulation;
+}
+
 /* V-3: calc-sticky-bar выше mobile-sticky-cta */
 .calc-sticky-bar {
   z-index: 41 !important;
