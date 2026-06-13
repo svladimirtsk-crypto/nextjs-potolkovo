@@ -35,6 +35,12 @@ export type LightingSnapshot = {
 
 export type WizardStep = 0 | 1 | 2;
 
+export type Step1FooterAction = {
+  label: string;
+  disabled?: boolean;
+  onClick: () => void;
+};
+
 export type OpenCalculatorOptions = {
   preset?: ServiceCalculatorPreset;
   forcePreset?: boolean;
@@ -90,6 +96,9 @@ export type CalculatorModalContextValue = {
 
   step1CatalogView: CatalogViewMode | null;
   setStep1CatalogView: (view: CatalogViewMode | null) => void;
+
+  step1FooterAction: Step1FooterAction | null;
+  setStep1FooterAction: (action: Step1FooterAction | null) => void;
 };
 
 export function getKitDisplayName(
