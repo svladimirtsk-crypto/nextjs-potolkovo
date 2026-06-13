@@ -12,7 +12,10 @@ import { calcTrackProfileMeters } from "@/lib/product-length-meters";
 import { contacts } from "@/content/contacts";
 
 import { ActionForm } from "@/components/home/action-form";
-import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
+import {
+  getCalculatorSummaryLines,
+  usePriceCalculatorBridge,
+} from "@/components/home/price-calculator-context";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 
 import { getKitDisplayName } from "@/lib/calculator-modal-types";
@@ -194,6 +197,8 @@ export function WizardStep2Summary() {
   const { snapshot, setSnapshot } = usePriceCalculatorBridge();
   const lighting = snapshot?.lighting ?? lightingDraft ?? null;
 
+  const ceilingSummaryLines = useMemo(() => getCalculatorSummaryLines(snapshot), [snapshot]);
+
   const kitDisplayName = useMemo(() => getKitDisplayName(lighting), [lighting]);
 
   const lightingItems: CatalogLightingItem[] = useMemo(() => {
@@ -320,15 +325,24 @@ export function WizardStep2Summary() {
           {showCeilingInUi && lightingEffectiveTotal > 0 ? <span>+</span> : null}
           {lightingEffectiveTotal > 0 ? (
             <span>
-              Свет {fmt(lightingEffectiveTotal)} ₽
+              Свет{" "}
               {lightingDiscountEligible && lightingAppliedBenefit > 0 ? (
-                <span className="text-emerald-400"> −{fmt(lightingAppliedBenefit)} ₽</span>
-              ) : null}
+                <>
+                  <span className="line-through text-white/35">{fmt(lightingRegularTotal)} ₽</span>{" "}
+                  <span>{fmt(lightingEffectiveTotal)} ₽</span>{" "}
+                  <span className="text-emerald-400">−15% (−{fmt(lightingAppliedBenefit)} ₽)</span>
+                </>
+              ) : (
+                <>{fmt(lightingEffectiveTotal)} ₽</>
+              )}
             </span>
           ) : null}
         </div>
         {!lightingDiscountEligible && lightingEffectiveTotal > 0 ? (
-          <p className="mt-2 text-xs text-white/50">С заказом потолка свет дешевле на {fmt(lightingPotentialBenefit)} ₽</p>
+          <p className="mt-2 text-xs text-white/50">
+            С заказом потолка: <span className="line-through text-white/35">{fmt(lightingRegularTotal)} ₽</span>{" "}
+            {fmt(lightingDiscountedTotal)} ₽ −15% (−{fmt(lightingPotentialBenefit)} ₽)
+          </p>
         ) : null}
       </div>
 
@@ -357,30 +371,14 @@ export function WizardStep2Summary() {
         </summary>
         <div className="border-t border-slate-200 px-4 py-3 text-sm text-slate-700 space-y-2">
           {showCeilingInUi ? (
-            <>
-              <div className="flex justify-between">
-                <span>Потолок (работы)</span>
-                <span className="font-semibold text-slate-950">{fmt(ceilingTotal)} ₽</span>
-              </div>
-              {snapshot?.shadowEnabled && snapshot.shadowLength != null && (snapshot.shadowExtraTotal ?? 0) > 0 ? (
-                <div className="flex justify-between">
-                  <span>Теневой профиль ({snapshot.shadowLength} м.п.)</span>
-                  <span className="font-semibold text-slate-950">{fmt(snapshot.shadowExtraTotal ?? 0)} ₽</span>
-                </div>
-              ) : null}
-              {snapshot?.floatingEnabled && snapshot.floatingLength != null && (snapshot.floatingExtraTotal ?? 0) > 0 ? (
-                <div className="flex justify-between">
-                  <span>Парящий профиль ({snapshot.floatingLength} м.п.)</span>
-                  <span className="font-semibold text-slate-950">{fmt(snapshot.floatingExtraTotal ?? 0)} ₽</span>
-                </div>
-              ) : null}
-              {canReconcileInstall && extraInstallTotal > 0 ? (
-                <div className="flex justify-between">
-                  <span>Установка светильников</span>
-                  <span className="font-semibold text-slate-950">{fmt(extraInstallTotal)} ₽</span>
-                </div>
-              ) : null}
-            </>
+            <div className="rounded-xl bg-slate-50 p-3">
+              <p className="mb-2 font-semibold text-slate-950">Расчёт потолка</p>
+              <ul className="space-y-1 text-slate-700">
+                {ceilingSummaryLines.map((line) => (
+                  <li key={line} className="leading-5">{line}</li>
+                ))}
+              </ul>
+            </div>
           ) : (
             <div className="flex justify-between">
               <span>Потолок</span>
@@ -402,7 +400,9 @@ export function WizardStep2Summary() {
                 ))}
               </ul>
               {lightingDiscountEligible ? (
-                <p className="mt-1 text-xs text-emerald-700 font-medium">Скидка на свет учтена: −{fmt(lightingAppliedBenefit)} ₽</p>
+                <p className="mt-1 text-xs text-emerald-700 font-medium">
+                  Скидка на свет учтена: {fmt(lightingRegularTotal)} ₽ −15% (−{fmt(lightingAppliedBenefit)} ₽)
+                </p>
               ) : null}
             </div>
           ) : null}
