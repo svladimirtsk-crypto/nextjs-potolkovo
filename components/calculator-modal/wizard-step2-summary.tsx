@@ -350,6 +350,31 @@ export function WizardStep2Summary() {
         ) : null}
       </div>
 
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm sm:hidden">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-slate-500">Потолок</span>
+          <span className="font-semibold text-slate-950">{showCeilingInUi ? `${fmt(ceilingTotal)} ₽` : "—"}</span>
+        </div>
+        {lightingEffectiveTotal > 0 ? (
+          <>
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <span className="text-slate-500">Свет</span>
+              <span className="font-semibold text-slate-950">{fmt(lightingEffectiveTotal)} ₽</span>
+            </div>
+            {lightingAppliedBenefit > 0 ? (
+              <div className="mt-2 flex items-center justify-between gap-3 text-emerald-700">
+                <span>Скидка на свет</span>
+                <span className="font-semibold">−{fmt(lightingAppliedBenefit)} ₽</span>
+              </div>
+            ) : null}
+          </>
+        ) : null}
+        <div className="mt-3 border-t border-slate-200 pt-3 flex items-center justify-between gap-3">
+          <span className="font-semibold text-slate-950">Итого</span>
+          <span className="text-lg font-bold text-slate-950">~{fmt(grandTotal)} ₽</span>
+        </div>
+      </div>
+
       {/* Edit buttons row */}
       <div className="flex flex-wrap gap-2">
         <button
