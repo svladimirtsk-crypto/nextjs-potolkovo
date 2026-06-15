@@ -359,12 +359,12 @@ export function CalculatorModal() {
           role="dialog"
           aria-modal={isOpen ? "true" : undefined}
           aria-labelledby="calc-modal-title"
-          // P1.1: full-screen bottom sheet on mobile
-          className={`calculator-modal-panel w-full max-h-[92dvh] flex flex-col rounded-t-2xl bg-white shadow-2xl lg:h-[94dvh] lg:w-[96vw] lg:max-h-[94dvh] lg:max-w-[1440px] lg:rounded-2xl ${transitionClass} ${
+          // Fullscreen calculator wizard on all viewports
+          className={`calculator-modal-panel fixed inset-0 flex h-[100dvh] max-h-[100dvh] w-screen max-w-none flex-col overflow-hidden rounded-none bg-white shadow-none ${transitionClass} ${
             modalActive
-              ? "translate-y-0 opacity-100 lg:scale-100 pointer-events-auto"
-              : "translate-y-4 opacity-0 lg:scale-95 pointer-events-none"
-          } max-sm:fixed max-sm:inset-0 max-sm:max-h-screen max-sm:rounded-none max-sm:animate-slideUp`}
+              ? "translate-y-0 opacity-100 pointer-events-auto"
+              : "translate-y-0 opacity-0 pointer-events-none"
+          }`}
         >
           {/* Header */}
           <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4 max-sm:px-4 max-sm:py-3">
