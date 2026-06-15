@@ -29,6 +29,19 @@ export function HomePrice() {
           </p>
         </div>
 
+        <div className="mt-8 grid gap-3 sm:grid-cols-3">
+          {[
+            { title: "1. Потолок", text: "Площадь, профиль, карнизы и монтаж." },
+            { title: "2. Освещение", text: "Каталог треков, точек и ламп со скидкой −25%." },
+            { title: "3. Итог", text: "Смета уйдёт в заявку вместе с составом." },
+          ].map((item) => (
+            <div key={item.title} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left">
+              <p className="text-sm font-semibold text-slate-950">{item.title}</p>
+              <p className="mt-1 text-sm leading-6 text-slate-600">{item.text}</p>
+            </div>
+          ))}
+        </div>
+
         <div className="mt-10 sm:mt-12">
           <CalculatorTeaser source="homepage" />
         </div>
