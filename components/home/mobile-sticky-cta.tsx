@@ -20,13 +20,16 @@ export function MobileStickyCta() {
   const [isVisible, setIsVisible]             = useState(false);
   const [isActionVisible, setIsActionVisible] = useState(false);
   const [isPriceVisible, setIsPriceVisible]   = useState(false);
+  const [isHeroVisible, setIsHeroVisible]     = useState(true);
 
   const priceObserverRef  = useRef<IntersectionObserver | null>(null);
   const actionObserverRef = useRef<IntersectionObserver | null>(null);
+  const heroObserverRef   = useRef<IntersectionObserver | null>(null);
 
   useEffect(() => {
   const priceSection = document.getElementById("price");
   const actionSection = document.getElementById("action");
+  const heroSection = document.getElementById("hero");
 
   const priceObserverOptions: IntersectionObserverInit = {
     root: null,
@@ -39,6 +42,13 @@ export function MobileStickyCta() {
     rootMargin: "0px 0px 0px 0px",
     threshold: 0,
   };
+
+  if (heroSection) {
+    heroObserverRef.current = new IntersectionObserver(([entry]) => {
+      setIsHeroVisible(entry.isIntersecting);
+    }, { root: null, rootMargin: "0px 0px -35% 0px", threshold: 0 });
+    heroObserverRef.current.observe(heroSection);
+  }
 
   if (priceSection) {
     priceObserverRef.current = new IntersectionObserver(([entry]) => {
@@ -55,16 +65,17 @@ export function MobileStickyCta() {
   }
 
   return () => {
+    heroObserverRef.current?.disconnect();
     priceObserverRef.current?.disconnect();
     actionObserverRef.current?.disconnect();
   };
 }, []);
 
   useEffect(() => {
-    if (isActionVisible) { setIsVisible(false); return; }
+    if (isActionVisible || isHeroVisible) { setIsVisible(false); return; }
     const scrolled = typeof window !== "undefined" && window.scrollY > 300;
     setIsVisible(isPriceVisible || scrolled);
-  }, [isActionVisible, isPriceVisible]);
+  }, [isActionVisible, isHeroVisible, isPriceVisible]);
 
   const showCalculatedState = isPriceVisible || (hasInteracted && !!snapshot);
 
