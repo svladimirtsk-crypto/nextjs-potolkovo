@@ -52,24 +52,27 @@ export function PriceStrip() {
     }
   }, [grandTotal]);
 
-  // placeholder на шаге 0 пока ничего не выбрано
   if (!showCeilingInUi && !hasLighting) {
     if (currentStep !== 0) return null;
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
+      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm max-sm:px-3 max-sm:py-2 max-sm:text-xs">
         Выберите параметры — стоимость появится здесь
       </div>
     );
   }
 
-  const lightingPrice =
-    lightingDiscountMode === "with-ceiling" ? (
-      <DiscountPrice regular={lightingRegularTotal} discounted={lightingWithCeilingTotal} percent={25} />
-    ) : lightingDiscountMode === "lighting-only" ? (
-      <DiscountPrice regular={lightingRegularTotal} discounted={lightingStandaloneTotal} percent={10} />
-    ) : (
-      <>{fmt(lightingEffectiveTotal)} ₽</>
-    );
+  const lightingPercent = lightingDiscountMode === "with-ceiling" ? 25 : lightingDiscountMode === "lighting-only" ? 10 : 0;
+  const lightingDiscounted = lightingDiscountMode === "with-ceiling"
+    ? lightingWithCeilingTotal
+    : lightingDiscountMode === "lighting-only"
+      ? lightingStandaloneTotal
+      : lightingEffectiveTotal;
+
+  const lightingPrice = lightingPercent > 0 && lightingRegularTotal > lightingDiscounted ? (
+    <DiscountPrice regular={lightingRegularTotal} discounted={lightingDiscounted} percent={lightingPercent} />
+  ) : (
+    <>{fmt(lightingEffectiveTotal)} ₽</>
+  );
 
   const withCeilingHint =
     hasLighting && lightingDiscountMode !== "with-ceiling" && lightingWithCeilingTotal > 0 ? (
@@ -79,43 +82,64 @@ export function PriceStrip() {
       </span>
     ) : null;
 
-  // Lighting-first: показываем только свет, потолок — аккуратной подсказкой
-  if (!showCeilingInUi && hasLighting) {
-    const showHint = options?.entryMode === "lighting-first";
-    return (
-      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm">
-        <span className="font-medium">Свет: {lightingPrice}</span>
-        {withCeilingHint}
+  const mobileSubtitle = (() => {
+    if (!showCeilingInUi && hasLighting) {
+      if (lightingDiscountMode === "lighting-only") {
+        return `Свет −10%: ${fmt(lightingEffectiveTotal)} ₽`;
+      }
+      return `Свет: ${fmt(lightingEffectiveTotal)} ₽`;
+    }
 
-        <span className="text-slate-500"> · </span>
-        <span className="text-slate-700">Итого по свету: ~{fmt(grandTotal)} ₽</span>
+    if (hasLighting) {
+      const benefit = Math.max(0, lightingRegularTotal - lightingEffectiveTotal);
+      return `Потолок ${fmt(ceilingTotal)} ₽ · свет ${fmt(lightingEffectiveTotal)} ₽${benefit > 0 ? ` · выгода ${fmt(benefit)} ₽` : ""}`;
+    }
 
-        {showHint ? <span className="text-slate-500"> · Потолок — можно добавить на следующем шаге</span> : null}
-      </div>
-    );
-  }
+    return `Потолок ${fmt(ceilingTotal)} ₽`;
+  })();
 
-  // Обычный режим: потолок показываем всегда
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm">
-      <span className="font-medium">Потолок: {fmt(ceilingTotal)} ₽</span>
+    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm max-sm:px-3 max-sm:py-2">
+      <div className="sm:hidden">
+        <p key={animKey} className="text-sm font-bold text-slate-950 animate-pulse-once">
+          Итого: ~{fmt(grandTotal)} ₽
+        </p>
+        <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500">
+          {mobileSubtitle}
+        </p>
+      </div>
 
-      {hasLighting ? (
-        <>
-          <span className="text-slate-500"> · </span>
-          <span className="font-medium">Свет: {lightingPrice}</span>
-          {withCeilingHint}
-          <span className="text-slate-500"> · </span>
-          <span key={animKey} className="font-semibold inline-block animate-pulse-once">
-            Итого: ~{fmt(grandTotal)} ₽
-          </span>
-        </>
-      ) : (
-        <span key={animKey} className="font-semibold inline-block animate-pulse-once">
-          {" "}
-          · Итого: ~{fmt(grandTotal)} ₽
-        </span>
-      )}
+      <div className="hidden sm:block">
+        {!showCeilingInUi && hasLighting ? (
+          <>
+            <span className="font-medium">Свет: {lightingPrice}</span>
+            {withCeilingHint}
+            <span className="text-slate-500"> · </span>
+            <span className="text-slate-700">Итого по свету: ~{fmt(grandTotal)} ₽</span>
+            {options?.entryMode === "lighting-first" ? <span className="text-slate-500"> · Потолок — можно добавить на следующем шаге</span> : null}
+          </>
+        ) : (
+          <>
+            <span className="font-medium">Потолок: {fmt(ceilingTotal)} ₽</span>
+            {hasLighting ? (
+              <>
+                <span className="text-slate-500"> · </span>
+                <span className="font-medium">Свет: {lightingPrice}</span>
+                {withCeilingHint}
+                <span className="text-slate-500"> · </span>
+                <span key={animKey} className="font-semibold inline-block animate-pulse-once">
+                  Итого: ~{fmt(grandTotal)} ₽
+                </span>
+              </>
+            ) : (
+              <span key={animKey} className="font-semibold inline-block animate-pulse-once">
+                {" "}
+                · Итого: ~{fmt(grandTotal)} ₽
+              </span>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
