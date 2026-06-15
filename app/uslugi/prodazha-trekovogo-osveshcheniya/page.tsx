@@ -9,6 +9,7 @@ import { TrackSaleScenarioSection } from "./_components/TrackSaleScenarioSection
 import { LightKitShowcase } from "./_components/LightKitShowcase";
 import { LightCustomSection } from "./_components/LightCustomSection";
 import { CatalogSection } from "./_components/CatalogSection";
+import { TrackSaleSystemGuideSection } from "./_components/TrackSaleSystemGuideSection";
 import { TrackSaleFaqSection } from "./_components/TrackSaleFaqSection";
 import { TrackSaleOrderingSection } from "./_components/TrackSaleOrderingSection";
 
@@ -45,6 +46,7 @@ export default function ProdazhaTrekovogoOsveshcheniyaPage() {
       price={
         <>
           <LightCustomSection />
+          <TrackSaleSystemGuideSection />
           <CatalogSection />
         </>
       }
