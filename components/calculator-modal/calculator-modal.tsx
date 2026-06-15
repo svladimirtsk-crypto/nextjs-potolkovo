@@ -49,6 +49,8 @@ export function CalculatorModal() {
   const [visible, setVisible] = useState(false);
   const [renderedSteps, setRenderedSteps] = useState<Set<WizardStep>>(() => new Set());
   const [isActionFormVisible, setIsActionFormVisible] = useState(false);
+  const [step0HasConfirmButton, setStep0HasConfirmButton] = useState(false);
+  const [step0FooterLabel, setStep0FooterLabel] = useState("Подтвердить →");
 
   useEffect(() => setMounted(true), []);
 
@@ -105,6 +107,64 @@ export function CalculatorModal() {
       observer?.disconnect();
     };
   }, [currentStep]);
+
+  useEffect(() => {
+    if (currentStep !== 0) {
+      setStep0HasConfirmButton(false);
+      return;
+    }
+
+    const isMobile = () => typeof window !== "undefined" && window.matchMedia("(max-width: 639px)").matches;
+
+    const getConfirmLabel = (button: HTMLButtonElement | null) => {
+      if (!button) return "Подтвердить →";
+      const classes = button.classList;
+      if (classes.contains("step0-confirm-area")) return "Подтвердить площадь →";
+      if (classes.contains("step0-confirm-ceiling")) return "Подтвердить тип →";
+      if (classes.contains("step0-confirm-shadow")) return "Подтвердить профиль →";
+      if (classes.contains("step0-confirm-floating")) return "Подтвердить профиль →";
+      if (classes.contains("step0-confirm-light-lines")) return "Подтвердить линии →";
+      if (classes.contains("step0-confirm-cornice")) return "Подтвердить карниз →";
+      if (classes.contains("step0-confirm-track")) return "Подтвердить трек →";
+      if (classes.contains("step0-confirm-chandeliers")) return "Подтвердить люстры →";
+      if (classes.contains("step0-confirm-lights")) return "Подтвердить точки →";
+      return "Подтвердить →";
+    };
+
+    const update = () => {
+      if (!isMobile()) {
+        setStep0HasConfirmButton(false);
+        setStep0FooterLabel("Подтвердить →");
+        return;
+      }
+
+      const button = contentRef.current?.querySelector<HTMLButtonElement>(
+        ".step0-confirm-button:not(:disabled)"
+      ) ?? null;
+      setStep0HasConfirmButton(Boolean(button));
+      setStep0FooterLabel(getConfirmLabel(button));
+    };
+
+    update();
+
+    const root = contentRef.current;
+    if (!root) return;
+
+    const observer = new MutationObserver(update);
+    observer.observe(root, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class", "disabled", "style", "aria-hidden"],
+    });
+
+    window.addEventListener("resize", update);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, [currentStep, renderedSteps]);
 
   const snapshotValid = isSnapshotValid(snapshot);
 
@@ -236,34 +296,42 @@ export function CalculatorModal() {
   const transitionClass = reducedMotion ? "" : "transition-all duration-200";
   const modalActive = isOpen && visible;
 
+  const hasLightingSelected = Boolean(
+    lightingDraft && lightingDraft.mode !== "none" && (lightingDraft.items?.length ?? 0) > 0
+  );
+
   // P0.6: Progress bar
   const ProgressBar = () => (
-    <div className="flex items-center gap-3" role="progressbar" aria-valuenow={currentStep + 1} aria-valuemin={1} aria-valuemax={3}>
+    <div className="flex items-center gap-3 max-sm:gap-2" role="progressbar" aria-valuenow={currentStep + 1} aria-valuemin={1} aria-valuemax={3}>
       {[0, 1, 2].map((i) => {
         const isCurrent = i === currentStep;
         const isPast = i < currentStep;
         const canVisit = i < currentStep;
         const stepLabels = ["Потолок", "Свет", "Итог"];
+        const isSkippedLighting = i === 1 && isPast && !hasLightingSelected;
+        const visualDone = isPast && !isSkippedLighting;
         return (
           <button
             key={i}
             onClick={() => canVisit && goToStep(i as WizardStep)}
             disabled={!canVisit && !isCurrent}
-            aria-label={`Шаг ${i + 1}: ${stepLabels[i]}`}
-            className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
+            aria-label={`Шаг ${i + 1}: ${isSkippedLighting ? "Свет пропущен" : stepLabels[i]}`}
+            className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-all max-sm:px-2.5 max-sm:py-1 max-sm:text-[11px] ${
               isCurrent
                 ? "bg-slate-950 text-white"
-                : isPast
-                  ? "bg-slate-200 text-slate-700 cursor-pointer hover:bg-slate-300"
-                  : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                : isSkippedLighting
+                  ? "bg-slate-100 text-slate-500 cursor-pointer hover:bg-slate-200"
+                  : isPast
+                    ? "bg-slate-200 text-slate-700 cursor-pointer hover:bg-slate-300"
+                    : "bg-slate-100 text-slate-400 cursor-not-allowed"
             }`}
           >
-            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
-              isPast ? "bg-slate-950 text-white" : ""
+            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold max-sm:h-4 max-sm:w-4 max-sm:text-[9px] ${
+              visualDone ? "bg-slate-950 text-white" : isSkippedLighting ? "bg-slate-200 text-slate-500" : ""
             }`}>
-              {isPast ? "✓" : i + 1}
+              {visualDone ? "✓" : isSkippedLighting ? "—" : i + 1}
             </span>
-            <span className="hidden sm:inline">{stepLabels[i]}</span>
+            <span className="hidden sm:inline">{isSkippedLighting ? "Свет —" : stepLabels[i]}</span>
           </button>
         );
       })}
@@ -292,20 +360,20 @@ export function CalculatorModal() {
           aria-modal={isOpen ? "true" : undefined}
           aria-labelledby="calc-modal-title"
           // P1.1: full-screen bottom sheet on mobile
-          className={`calculator-modal-panel w-full max-h-[92dvh] flex flex-col rounded-t-2xl bg-white shadow-2xl lg:max-h-[90dvh] lg:max-w-5xl lg:rounded-2xl xl:max-w-6xl ${transitionClass} ${
+          className={`calculator-modal-panel w-full max-h-[92dvh] flex flex-col rounded-t-2xl bg-white shadow-2xl lg:h-[94dvh] lg:w-[96vw] lg:max-h-[94dvh] lg:max-w-[1440px] lg:rounded-2xl ${transitionClass} ${
             modalActive
               ? "translate-y-0 opacity-100 lg:scale-100 pointer-events-auto"
               : "translate-y-4 opacity-0 lg:scale-95 pointer-events-none"
           } max-sm:fixed max-sm:inset-0 max-sm:max-h-screen max-sm:rounded-none max-sm:animate-slideUp`}
         >
           {/* Header */}
-          <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4">
+          <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4 max-sm:px-4 max-sm:py-3">
             <div>
-              <h2 id="calc-modal-title" className="text-lg font-semibold text-slate-950">
+              <h2 id="calc-modal-title" className="text-lg font-semibold text-slate-950 max-sm:text-base">
                 {stepTitle}
               </h2>
               {/* P0.6: progress bar instead of text */}
-              <div className="mt-2">
+              <div className="mt-2 max-sm:mt-1.5">
                 <ProgressBar />
               </div>
             </div>
@@ -321,12 +389,15 @@ export function CalculatorModal() {
           </div>
 
           {/* P2.14: Sticky PriceStrip */}
-          <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-5 py-3">
+          <div className={[
+            "sticky top-0 z-10 border-b border-slate-200 bg-white px-5 py-3 max-sm:px-4 max-sm:py-2",
+            currentStep === 2 ? "max-sm:hidden" : "",
+          ].join(" ")}>
             <PriceStrip />
           </div>
 
           {/* Content */}
-          <div ref={contentRef} className="flex-1 overflow-y-auto px-5 py-5">
+          <div ref={contentRef} className="flex-1 overflow-y-auto px-5 py-5 max-sm:px-4 max-sm:py-4 max-sm:pb-36">
             {(renderedSteps.has(0) || (isOpen && currentStep === 0)) ? (
               <div
                 key="step0"
@@ -358,7 +429,7 @@ export function CalculatorModal() {
 
           {/* Footer */}
           <div
-            className="shrink-0 border-t border-slate-200 px-5 py-4"
+            className="shrink-0 border-t border-slate-200 px-5 py-4 max-sm:px-4 max-sm:py-3"
             // P1.2: iOS safe-area for footer
             style={{ paddingBottom: "max(env(safe-area-inset-bottom), 16px)" }}
           >
@@ -368,7 +439,7 @@ export function CalculatorModal() {
                 <button
                   type="button"
                   onClick={() => goToStep((currentStep - 1) as WizardStep)}
-                  className="h-12 rounded-2xl px-5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                  className="h-12 rounded-2xl px-5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 max-sm:h-11 max-sm:px-3"
                   style={{ minHeight: 48 }}
                 >
                   ← Назад
@@ -382,6 +453,15 @@ export function CalculatorModal() {
                   <button
                     type="button"
                     onClick={() => {
+                      if (currentStep === 0 && step0HasConfirmButton) {
+                        const button = contentRef.current?.querySelector<HTMLButtonElement>(
+                          ".step0-confirm-button:not(:disabled)"
+                        );
+                        if (button) {
+                          button.click();
+                          return;
+                        }
+                      }
                       if (currentStep === 1 && step1FooterAction) {
                         step1FooterAction.onClick();
                         return;
@@ -390,14 +470,16 @@ export function CalculatorModal() {
                     }}
                     disabled={currentStep === 1 && step1FooterAction ? Boolean(step1FooterAction.disabled) : isNextDisabled}
                     aria-disabled={currentStep === 1 && step1FooterAction ? Boolean(step1FooterAction.disabled) : isNextDisabled}
-                    className="flex h-12 items-center rounded-2xl bg-slate-950 px-6 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-slate-950"
+                    className="flex h-12 items-center rounded-2xl bg-slate-950 px-6 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-slate-950 max-sm:h-11 max-sm:px-5"
                     style={{ minHeight: 48 }}
                   >
-                    {currentStep === 1 && step1FooterAction
-                      ? step1FooterAction.label
-                      : currentStep === 1 && (lightingDraft?.items?.length ?? 0) > 0
-                        ? "К итогу →"
-                        : "Далее →"}
+                    {currentStep === 0 && step0HasConfirmButton
+                      ? step0FooterLabel
+                      : currentStep === 1 && step1FooterAction
+                        ? step1FooterAction.label
+                        : currentStep === 1 && (lightingDraft?.items?.length ?? 0) > 0
+                          ? "К итогу →"
+                          : "Далее →"}
                   </button>
                 </div>
               ) : isActionFormVisible ? (
@@ -409,7 +491,7 @@ export function CalculatorModal() {
                     trackWizardConfirm(String(options?.source ?? "unknown"));
                     scrollToInlineForm();
                   }}
-                  className="flex h-12 items-center rounded-2xl bg-slate-950 px-6 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+                  className="flex h-12 items-center rounded-2xl bg-slate-950 px-6 text-sm font-semibold text-white transition-colors hover:bg-slate-800 max-sm:h-11 max-sm:px-5"
                   style={{ minHeight: 48 }}
                 >
                   Записаться на замер →
