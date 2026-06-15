@@ -66,6 +66,21 @@ export function ServiceHero({ service }: ServiceHeroProps) {
               </div>
             </div>
 
+            {isTrackSalePage ? (
+              <div className="mt-6 grid max-w-2xl gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                  <p className="text-2xl font-bold tracking-tight text-emerald-700">−10%</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-950">Только освещение</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-600">Если потолок уже готов или нужен только комплект света.</p>
+                </div>
+                <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                  <p className="text-2xl font-bold tracking-tight text-blue-700">−25%</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-950">Освещение + потолок</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-600">Максимальная выгода и правильные узлы монтажа.</p>
+                </div>
+              </div>
+            ) : null}
+
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <Button href={primaryHref} className="justify-center">
                 {service.hero.primaryCtaLabel}
