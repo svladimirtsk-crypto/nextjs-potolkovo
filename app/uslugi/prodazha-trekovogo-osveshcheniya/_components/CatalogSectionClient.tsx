@@ -125,6 +125,22 @@ function ProductCard({
   const withCeiling = getDiscountedPrice(regular, 25);
   const lightingOnlyBenefit = benefitRub(regular, 10);
   const withCeilingBenefit = benefitRub(regular, 25);
+  const systemBadge = product.system === "COLIBRI_220"
+    ? "COLIBRI"
+    : product.system === "CLARUS_48"
+      ? "CLARUS"
+      : product.system === "TRACK_220"
+        ? "ART"
+        : null;
+  const kindBadge = product.kind === "TRACK_PROFILE"
+    ? "Профиль"
+    : product.kind === "TRACK_FIXTURE"
+      ? "Трековый свет"
+      : product.kind === "SPOT_FIXTURE" || isPanelProduct(product)
+        ? "Точка"
+        : product.kind === "LAMP"
+          ? "Лампа"
+          : null;
 
   const allAttrs = (product.keyAttributes?.length ? product.keyAttributes : product.params)
     .slice(0, 4)
@@ -148,6 +164,16 @@ function ProductCard({
         </div>
 
         <div className="min-w-0">
+          {(systemBadge || kindBadge) ? (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {systemBadge ? (
+                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">{systemBadge}</span>
+              ) : null}
+              {kindBadge ? (
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">{kindBadge}</span>
+              ) : null}
+            </div>
+          ) : null}
           <p className="text-sm font-semibold text-slate-950 break-words">{toText(product.name)}</p>
 
           {/* V-20: vendor code hidden from main card */}
@@ -568,7 +594,7 @@ export function CatalogSectionClient({ data }: Props) {
   }, [lampSocket, pointSubtype, products, query, section, trackGroup, trackSystem]);
 
   return (
-    <Section className="py-10">
+    <Section className={selectedEntries.length > 0 ? "py-10 max-sm:pb-44" : "py-10"}>
       <Container>
         <div className="flex items-start justify-between gap-6">
           <Heading title="Каталог освещения" />
@@ -660,7 +686,7 @@ export function CatalogSectionClient({ data }: Props) {
         ) : null}
 
         {/* Controls */}
-        <div className="mt-8 flex flex-wrap gap-2">
+        <div className="mt-8 flex gap-2 overflow-x-auto pb-1 no-scrollbar sm:flex-wrap">
           {CATALOG_SECTIONS.map((item) => (
             <button
               key={item.id}
@@ -671,7 +697,7 @@ export function CatalogSectionClient({ data }: Props) {
                 setVisibleCount(24);
               }}
               className={[
-                "rounded-xl px-3 py-2 text-sm font-medium",
+                "whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium",
                 section === item.id ? "bg-slate-950 text-white" : "bg-white text-slate-700 hover:bg-slate-50",
                 "border border-slate-200",
               ].join(" ")}
@@ -682,7 +708,7 @@ export function CatalogSectionClient({ data }: Props) {
         </div>
 
         {section === "track-systems" ? (
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar sm:flex-wrap">
             {TRACK_SYSTEMS.map((system) => (
               <button
                 key={system.id}
@@ -692,7 +718,7 @@ export function CatalogSectionClient({ data }: Props) {
                   setQuery("");
                 }}
                 className={[
-                  "rounded-xl px-3 py-1.5 text-xs",
+                  "whitespace-nowrap rounded-xl px-3 py-1.5 text-xs",
                   trackSystem === system.id ? "bg-slate-900 text-white" : "bg-white text-slate-700",
                   "border border-slate-200",
                 ].join(" ")}
@@ -710,7 +736,7 @@ export function CatalogSectionClient({ data }: Props) {
                   setQuery("");
                 }}
                 className={[
-                  "rounded-xl px-3 py-1.5 text-xs",
+                  "whitespace-nowrap rounded-xl px-3 py-1.5 text-xs",
                   trackGroup === group.id ? "bg-slate-900 text-white" : "bg-white text-slate-700",
                   "border border-slate-200",
                 ].join(" ")}
@@ -722,7 +748,7 @@ export function CatalogSectionClient({ data }: Props) {
         ) : null}
 
         {section === "point-fixtures" ? (
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar sm:flex-wrap">
             {POINT_SUBTYPES.map((subtype) => (
               <button
                 key={subtype.id}
@@ -732,7 +758,7 @@ export function CatalogSectionClient({ data }: Props) {
                   setQuery("");
                 }}
                 className={[
-                  "rounded-xl px-3 py-1.5 text-xs",
+                  "whitespace-nowrap rounded-xl px-3 py-1.5 text-xs",
                   pointSubtype === subtype.id ? "bg-slate-900 text-white" : "bg-white text-slate-700",
                   "border border-slate-200",
                 ].join(" ")}
@@ -744,7 +770,7 @@ export function CatalogSectionClient({ data }: Props) {
         ) : null}
 
         {section === "lamps" ? (
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar sm:flex-wrap">
             {(["GX53", "MR16"] as LampSocket[]).map((socket) => (
               <button
                 key={socket}
@@ -754,7 +780,7 @@ export function CatalogSectionClient({ data }: Props) {
                   setQuery("");
                 }}
                 className={[
-                  "rounded-xl px-3 py-1.5 text-xs",
+                  "whitespace-nowrap rounded-xl px-3 py-1.5 text-xs",
                   lampSocket === socket ? "bg-slate-900 text-white" : "bg-white text-slate-700",
                   "border border-slate-200",
                 ].join(" ")}
@@ -777,7 +803,7 @@ export function CatalogSectionClient({ data }: Props) {
 
         {/* Selected mini-bar */}
         {selectedEntries.length > 0 ? (
-          <div className="sticky top-[calc(var(--header-height)+0.75rem)] z-30 mt-6 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-lg shadow-slate-950/5 backdrop-blur">
+          <div className="sticky top-[calc(var(--header-height)+0.75rem)] z-30 mt-6 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-lg shadow-slate-950/5 backdrop-blur max-sm:hidden">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm font-semibold text-slate-950">Выбрано: {selectedEntries.length} поз.</p>
 
@@ -835,6 +861,36 @@ export function CatalogSectionClient({ data }: Props) {
               >
                 Добавить потолок −25%
               </button>
+            </div>
+          </div>
+        ) : null}
+
+        {selectedEntries.length > 0 ? (
+          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 shadow-[0_-8px_28px_rgba(15,23,42,0.12)] backdrop-blur sm:hidden" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}>
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-slate-950">Выбрано: {selectedEntries.length} поз.</p>
+                <p className="mt-0.5 text-xs text-slate-600">
+                  Свет −10%: <span className="font-semibold text-emerald-700">{fmt(lightingOnlySelectedTotal)} ₽</span>
+                </p>
+                <p className="text-[11px] text-blue-700">С потолком −25%: {fmt(withCeilingSelectedTotal)} ₽</p>
+              </div>
+              <div className="grid shrink-0 gap-1.5">
+                <button
+                  type="button"
+                  onClick={openLightingOrder}
+                  className="rounded-xl bg-slate-950 px-3 py-2 text-[11px] font-semibold text-white"
+                >
+                  Купить −10%
+                </button>
+                <button
+                  type="button"
+                  onClick={openWithCeiling}
+                  className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-[11px] font-semibold text-blue-700"
+                >
+                  С потолком −25%
+                </button>
+              </div>
             </div>
           </div>
         ) : null}
