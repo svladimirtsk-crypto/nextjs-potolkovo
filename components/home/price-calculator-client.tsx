@@ -108,11 +108,11 @@ function SectionCard({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-4 sm:p-5">
-      <div className="mb-4">
+    <section className="rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-4 sm:p-5 max-sm:rounded-2xl max-sm:p-3">
+      <div className="mb-4 max-sm:mb-3">
         <p className="text-sm font-semibold text-slate-950">{title}</p>
         {description ? (
-          <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p>
+          <p className="mt-1 text-sm leading-6 text-slate-600 max-sm:text-[13px] max-sm:leading-5">{description}</p>
         ) : null}
       </div>
       {children}
@@ -138,7 +138,7 @@ function SummaryRow({
   onEdit: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-200">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-200 max-sm:px-3 max-sm:py-2.5">
       <p className="flex items-center gap-2 text-sm text-slate-700">
         <CompactBadge>✓</CompactBadge>
         <span>
@@ -148,7 +148,7 @@ function SummaryRow({
       <button
         type="button"
         onClick={onEdit}
-        className="rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200 hover:text-slate-950"
+        className="rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200 hover:text-slate-950 max-sm:px-2.5 max-sm:py-1"
       >
         Изменить
       </button>
@@ -169,7 +169,7 @@ function CollapsedStep({
 }) {
   return (
     <SectionCard title={title}>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-200">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-200 max-sm:px-3 max-sm:py-2.5">
         <p className="text-sm text-slate-700">{subtitle}</p>
         <Button type="button" variant="secondary" onClick={onOpen} disabled={!enabled}>
           Открыть
@@ -196,7 +196,7 @@ function OptionCard({
       onClick={onClick}
       aria-pressed={active}
       className={[
-        "rounded-2xl border p-4 text-left transition-all",
+        "rounded-2xl border p-4 text-left transition-all max-sm:p-3",
         "flex h-full flex-col",
         active
           ? "border-slate-950 bg-slate-950 text-white shadow-lg shadow-slate-950/10"
@@ -205,10 +205,10 @@ function OptionCard({
     >
       <div className="flex flex-1 items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 text-sm font-semibold leading-5">{title}</p>
+          <p className="line-clamp-2 text-sm font-semibold leading-5 max-sm:text-[13px]">{title}</p>
           <p
             className={[
-              "mt-1 line-clamp-2 text-xs leading-5",
+              "mt-1 line-clamp-2 text-xs leading-5 max-sm:text-[11px] max-sm:leading-4",
               active ? "text-white/75" : "text-slate-500",
             ].join(" ")}
           >
@@ -276,16 +276,16 @@ function RangeField({
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-4">
-        <label htmlFor={id} className="text-sm font-medium text-slate-700">
+      <div className="flex items-center justify-between gap-4 max-sm:items-start max-sm:gap-3">
+        <label htmlFor={id} className="text-sm font-medium text-slate-700 max-sm:max-w-[8rem] max-sm:text-[13px] max-sm:leading-5">
           {label}
         </label>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 max-sm:gap-1.5">
           <button
             type="button"
             onClick={dec}
-            className="h-8 w-8 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-900 hover:bg-slate-50"
+            className="h-8 w-8 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-900 hover:bg-slate-50 max-sm:h-7 max-sm:w-7"
             aria-label="Уменьшить"
           >
             −
@@ -313,15 +313,15 @@ function RangeField({
               if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
             }}
             inputMode={isIntegerStep ? "numeric" : "decimal"}
-            className="w-20 rounded-full bg-white px-3 py-1 text-sm font-semibold text-slate-950 shadow-sm ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 sm:w-24"
+            className="w-20 rounded-full bg-white px-3 py-1 text-sm font-semibold text-slate-950 shadow-sm ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 sm:w-24 max-sm:w-16 max-sm:px-2 max-sm:text-center"
           />
 
-          <span className="text-sm font-semibold text-slate-950">{unit}</span>
+          <span className="text-sm font-semibold text-slate-950 max-sm:text-xs">{unit}</span>
 
           <button
             type="button"
             onClick={inc}
-            className="h-8 w-8 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-900 hover:bg-slate-50"
+            className="h-8 w-8 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-900 hover:bg-slate-50 max-sm:h-7 max-sm:w-7"
             aria-label="Увеличить"
           >
             +
@@ -330,7 +330,7 @@ function RangeField({
       </div>
 
       {quickValues && quickValues.length > 0 ? (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2 max-sm:flex-nowrap max-sm:gap-1.5 max-sm:overflow-x-auto max-sm:pb-1 no-scrollbar">
           {quickValues.map((q) => {
             const active = Math.abs(value - q) < 0.0001;
             return (
@@ -339,7 +339,7 @@ function RangeField({
                 type="button"
                 onClick={() => onChange(normalize(q))}
                 className={[
-                  "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+                  "rounded-full px-3 py-1 text-xs font-semibold transition-colors max-sm:shrink-0 max-sm:px-2.5 max-sm:py-1 max-sm:text-[11px]",
                   active
                     ? "bg-slate-950 text-white"
                     : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50",
@@ -389,19 +389,19 @@ function PerimeterHint({
   isAuto: boolean;
 }) {
   return (
-    <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white p-4">
-      <p className="text-sm leading-6 text-slate-600">
+    <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white p-4 max-sm:mt-3 max-sm:p-3">
+      <p className="text-sm leading-6 text-slate-600 max-sm:text-xs max-sm:leading-5">
         Для площади <span className="font-semibold text-slate-950">{area} м²</span>{" "}
         ориентир по профилю:{" "}
         <span className="font-semibold text-slate-950">{recommended} м.п.</span>{" "}
         (1:1).
       </p>
 
-      <div className="mt-2 flex flex-wrap items-center gap-3">
+      <div className="mt-2 flex flex-wrap items-center gap-3 max-sm:gap-2">
         <button
           type="button"
           onClick={onApply}
-          className="text-sm font-semibold text-slate-950 underline underline-offset-4 hover:text-slate-700"
+          className="text-sm font-semibold text-slate-950 underline underline-offset-4 hover:text-slate-700 max-sm:text-xs"
         >
           Подставить 1:1
         </button>
@@ -1061,9 +1061,9 @@ export function PriceCalculatorClient({
 
     return (
       <>
-      <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:p-8">
+      <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:p-8 max-sm:gap-3 max-sm:border-0 max-sm:bg-transparent max-sm:p-0 max-sm:shadow-none">
         {/* LEFT */}
-        <div className="min-w-0 space-y-5">
+        <div className="min-w-0 space-y-5 max-sm:space-y-3">
           {/* intro removed — visual noise */}
 
           {/* AREA */}
@@ -1090,9 +1090,9 @@ export function PriceCalculatorClient({
                   showSlider={showSlider}
                   quickValues={[10, 15, 20, 25, 30, 40, 50, 60, 80]}
                 />
-                <div className="mt-4 flex items-center justify-between gap-3">
+                <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
                   <p className="text-xs text-slate-500">Пресет или введите вручную. Для больших площадей — просто наберите число.</p>
-                  <Button type="button" variant="secondary" onClick={() => confirmAndNavigate("area")}>
+                  <Button type="button" variant="secondary" className="step0-confirm-button step0-confirm-area max-sm:hidden" onClick={() => confirmAndNavigate("area")}>
                     Подтвердить
                   </Button>
                 </div>
@@ -1189,11 +1189,12 @@ export function PriceCalculatorClient({
                   </div>
                 </div>
 
-                <div className="mt-4 flex items-center justify-between gap-3">
+                <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
                   <p className="text-xs text-slate-500">Выберите вариант и подтвердите.</p>
                   <Button
                     type="button"
                     variant="secondary"
+                    className="step0-confirm-button step0-confirm-ceiling max-sm:hidden"
                     onClick={() => confirmAndNavigate("ceiling")}
                     disabled={!isStepEnabled("ceiling")}
                   >
@@ -1247,11 +1248,12 @@ export function PriceCalculatorClient({
                     isAuto={shadowLengthAuto}
                   />
 
-                  <div className="mt-4 flex items-center justify-between gap-3">
+                  <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
                     <p className="text-xs text-slate-500">Оставьте авто 1:1 или измените вручную.</p>
                     <Button
                       type="button"
                       variant="secondary"
+                      className="step0-confirm-button step0-confirm-shadow max-sm:hidden"
                       onClick={() => confirmAndNavigate("shadowProfile")}
                       disabled={!isStepEnabled("shadowProfile")}
                     >
@@ -1306,11 +1308,12 @@ export function PriceCalculatorClient({
                     isAuto={floatingLengthAuto}
                   />
 
-                  <div className="mt-4 flex items-center justify-between gap-3">
+                  <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
                     <p className="text-xs text-slate-500">Оставьте авто 1:1 или измените вручную.</p>
                     <Button
                       type="button"
                       variant="secondary"
+                      className="step0-confirm-button step0-confirm-floating max-sm:hidden"
                       onClick={() => confirmAndNavigate("floatingProfile")}
                       disabled={!isStepEnabled("floatingProfile")}
                     >
@@ -1381,11 +1384,12 @@ export function PriceCalculatorClient({
                   </div>
                 ) : null}
 
-                <div className="mt-4 flex items-center justify-between gap-3">
+                <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
                   <p className="text-xs text-slate-500">Выберите вариант и подтвердите.</p>
                   <Button
                     type="button"
                     variant="secondary"
+                    className="step0-confirm-button step0-confirm-light-lines max-sm:hidden"
                     onClick={() => confirmAndNavigate("lightLines")}
                     disabled={!isStepEnabled("lightLines")}
                   >
@@ -1456,11 +1460,12 @@ export function PriceCalculatorClient({
                   </div>
                 ) : null}
 
-                <div className="mt-4 flex items-center justify-between gap-3">
+                <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
                   <p className="text-xs text-slate-500">Выберите вариант и подтвердите.</p>
                   <Button
                     type="button"
                     variant="secondary"
+                    className="step0-confirm-button step0-confirm-cornice max-sm:hidden"
                     onClick={() => confirmAndNavigate("cornice")}
                     disabled={!isStepEnabled("cornice")}
                   >
@@ -1544,11 +1549,12 @@ export function PriceCalculatorClient({
                   </div>
                 ) : null}
 
-                <div className="mt-4 flex items-center justify-between gap-3">
+                <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
                   <p className="text-xs text-slate-500">Выберите вариант и подтвердите.</p>
                   <Button
                     type="button"
                     variant="secondary"
+                    className="step0-confirm-button step0-confirm-track max-sm:hidden"
                     onClick={() => confirmAndNavigate("track")}
                     disabled={!isStepEnabled("track")}
                   >
@@ -1623,11 +1629,12 @@ export function PriceCalculatorClient({
                   </div>
                 ) : null}
 
-                <div className="mt-4 flex items-center justify-between gap-3">
+                <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
                   <p className="text-xs text-slate-500">Выберите вариант и подтвердите.</p>
                   <Button
                     type="button"
                     variant="secondary"
+                    className="step0-confirm-button step0-confirm-chandeliers max-sm:hidden"
                     onClick={() => confirmAndNavigate("chandeliers")}
                     disabled={!isStepEnabled("chandeliers")}
                   >
@@ -1705,11 +1712,12 @@ export function PriceCalculatorClient({
                   </div>
                 ) : null}
 
-                <div className="mt-4 flex items-center justify-between gap-3">
+                <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
                   <p className="text-xs text-slate-500">Выберите вариант и подтвердите.</p>
                   <Button
                     type="button"
                     variant="secondary"
+                    className="step0-confirm-button step0-confirm-lights max-sm:hidden"
                     onClick={() => confirmAndNavigate("lights")}
                     disabled={!isStepEnabled("lights")}
                   >
@@ -1780,8 +1788,8 @@ export function PriceCalculatorClient({
 
   // ===== NON-COMPACT (страница): обычный режим с breakdown =====
   return (
-    <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:p-8">
-      <div className="min-w-0 space-y-5">
+    <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:p-8 max-sm:gap-3 max-sm:border-0 max-sm:bg-transparent max-sm:p-0 max-sm:shadow-none">
+      <div className="min-w-0 space-y-5 max-sm:space-y-3">
         <SectionCard title="Площадь помещения">
           <RangeField
             id="area-field"
