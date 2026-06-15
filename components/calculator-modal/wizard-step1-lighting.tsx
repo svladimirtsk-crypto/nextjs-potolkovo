@@ -155,7 +155,7 @@ function getScrollParent(node: HTMLElement | null): HTMLElement | null {
 function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
   return (
     <button type="button" onClick={onClick}
-      className={["rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+      className={["rounded-xl px-3 py-2 text-sm font-medium transition-colors max-sm:px-2.5 max-sm:py-1.5 max-sm:text-xs",
         active ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"].join(" ")}>
       {children}
     </button>
@@ -173,15 +173,35 @@ function ProductCard({
   const regular = toNumber(product.priceRub);
   const discounted = getDiscountedPrice(regular, discountPercent);
   const benefit = computeBenefit(regular, discounted);
+  const systemBadge = product.system === "COLIBRI_220"
+    ? "COLIBRI"
+    : product.system === "CLARUS_48"
+      ? "CLARUS"
+      : product.system === "TRACK_220"
+        ? "ART"
+        : null;
+  const kindBadge = product.kind === "TRACK_PROFILE"
+    ? "Профиль"
+    : product.kind === "TRACK_FIXTURE"
+      ? "Трековый свет"
+      : product.kind === "SPOT_FIXTURE" || isPanelProduct(product)
+        ? "Точка"
+        : product.kind === "LAMP"
+          ? "Лампа"
+          : null;
   const [showDetails, setShowDetails] = useState(false);
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white max-sm:grid max-sm:grid-cols-[5.75rem_1fr] max-sm:gap-2.5 max-sm:p-2.5">
       {/* Image — clickable for zoom */}
       <div
-        className="relative cursor-zoom-in bg-slate-100"
+        className="relative cursor-zoom-in bg-slate-100 max-sm:rounded-xl"
         onClick={onImageClick}
       >
-        <ProductImage src={toText(product.coverImage)} alt={toText(product.name)} />
+        <ProductImage
+          src={toText(product.coverImage)}
+          alt={toText(product.name)}
+          containerClassName="aspect-square h-32 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-3 max-sm:h-[5.25rem] max-sm:p-1.5"
+        />
         {qty > 0 && (
           <span className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-[11px] font-bold text-white">
             {product.unit === "m" ? qty.toFixed(1) : qty}
@@ -190,16 +210,26 @@ function ProductCard({
       </div>
 
       {/* Body */}
-      <div className="p-4">
-        <p className="break-words text-sm font-semibold text-slate-950 leading-snug">
+      <div className="p-4 max-sm:p-0">
+        {(systemBadge || kindBadge) ? (
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {systemBadge ? (
+              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 max-sm:px-1.5 max-sm:text-[9px]">{systemBadge}</span>
+            ) : null}
+            {kindBadge ? (
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600 max-sm:px-1.5 max-sm:text-[9px]">{kindBadge}</span>
+            ) : null}
+          </div>
+        ) : null}
+        <p className="break-words text-sm font-semibold text-slate-950 leading-snug max-sm:text-[12px] max-sm:leading-4">
           {toText(product.name)}
         </p>
 
-        <div className="mt-2 text-xs">
+        <div className="mt-2 text-xs leading-5 max-sm:mt-1.5 max-sm:text-[11px] max-sm:leading-4">
           <span className="line-through text-slate-400">{fmt(regular)} ₽</span>{" "}
           <span className="font-semibold text-emerald-700">{fmt(discounted)} ₽</span>
           {benefit > 0 ? <span className="text-slate-500"> · −{discountPercent}% (−{fmt(benefit)} ₽)</span> : null}
-          <span className="text-slate-400"> · с потолком</span>
+          <span className="text-slate-400"> · {discountPercent >= 25 ? "с потолком" : "только свет"}</span>
         </div>
 
         {pickAttrs(product).length > 0 || toText(product.vendorCode) ? (
@@ -217,17 +247,17 @@ function ProductCard({
         )}
 
         {/* Qty controls */}
-        <div className="mt-3 flex items-center gap-2">
+        <div className="mt-3 flex items-center gap-2 max-sm:mt-2 max-sm:gap-1.5">
           <button type="button" onClick={onDec}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 active:scale-95"
-            style={{ minHeight: 44, minWidth: 44 }}>−</button>
-          <span className="min-w-[2.5rem] text-center text-sm font-semibold text-slate-950">
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 active:scale-95 max-sm:h-9 max-sm:w-9"
+            style={{ minHeight: 36, minWidth: 36 }}>−</button>
+          <span className="min-w-[2.5rem] text-center text-sm font-semibold text-slate-950 max-sm:min-w-[2rem]">
             {product.unit === "m" ? Number(qty.toFixed(1)) : qty}
           </span>
           <button type="button" onClick={onInc}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 active:scale-95"
-            style={{ minHeight: 44, minWidth: 44 }}>+</button>
-          <span className="ml-auto text-xs text-slate-500">{product.unit === "m" ? "м" : "шт."}</span>
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 active:scale-95 max-sm:h-9 max-sm:w-9"
+            style={{ minHeight: 36, minWidth: 36 }}>+</button>
+          <span className="ml-auto text-xs text-slate-500 max-sm:text-[11px]">{product.unit === "m" ? "м" : "шт."}</span>
         </div>
       </div>
     </div>
@@ -963,13 +993,33 @@ export function WizardStep1Lighting() {
   const lampsComplete = lampRequiredTotal <= 0 || lampCurrentTotal >= lampRequiredTotal;
   const requiredSelectionComplete = trackComplete && pointsComplete && lampsComplete;
 
+  const missingTrackMeters = Math.max(0, requiredTrackMeters - selectedTrackMeters);
+  const missingPointQty = Math.max(0, requiredPointQty - selectedPointQty);
+  const missingLampQty = Math.max(0, lampRequiredTotal - lampCurrentTotal);
+
+  const missingAction = useMemo(() => {
+    if (missingTrackMeters > 0) {
+      return { label: selectedTrackSystem ? "Добрать профиль →" : "Выбрать систему →", step: selectedTrackSystem ? "trackProfile" : "system" } as const;
+    }
+    if (missingPointQty > 0) return { label: "Выбрать точки →", step: "points" } as const;
+    if (missingLampQty > 0) return { label: "Добавить лампы →", step: "lamps" } as const;
+    return null;
+  }, [missingLampQty, missingPointQty, missingTrackMeters, selectedTrackSystem]);
+
+  const goToMissingAction = useCallback(() => {
+    if (!missingAction) return;
+    setActiveTab("recommendations");
+    setCatalogViewAndSync("browse");
+    setWStep(missingAction.step);
+  }, [missingAction]);
+
   useEffect(() => {
     if (activeTab !== "recommendations") {
-      setStep1FooterAction({
-        label: "К итогу →",
-        disabled: !requiredSelectionComplete,
-        onClick: () => goToStep(2),
-      });
+      setStep1FooterAction(
+        missingAction
+          ? { label: missingAction.label, onClick: goToMissingAction }
+          : { label: "К итогу →", onClick: () => goToStep(2) }
+      );
       return () => setStep1FooterAction(null);
     }
 
@@ -1011,11 +1061,11 @@ export function WizardStep1Lighting() {
         onClick: () => setWStep("done"),
       });
     } else {
-      setStep1FooterAction({
-        label: "К итогу →",
-        disabled: !requiredSelectionComplete,
-        onClick: () => goToStep(2),
-      });
+      setStep1FooterAction(
+        missingAction
+          ? { label: missingAction.label, onClick: goToMissingAction }
+          : { label: "К итогу →", onClick: () => goToStep(2) }
+      );
     }
 
     return () => setStep1FooterAction(null);
@@ -1024,9 +1074,11 @@ export function WizardStep1Lighting() {
     goAfterPoints,
     goAfterTrackFixtures,
     goAfterTrackProfile,
+    goToMissingAction,
     goToStep,
     lampsComplete,
     pointsComplete,
+    missingAction,
     requiredSelectionComplete,
     requiredTrackMeters,
     selectedTrackSystem,
@@ -1067,7 +1119,7 @@ export function WizardStep1Lighting() {
       <ImageQuickPreview image={zoomImage} onClose={() => setZoomImage(null)} />
 
       {/* ─── Tabs ─── */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar max-sm:-mx-5 max-sm:px-5">
         <TabBtn active={activeTab === "recommendations"} onClick={() => setActiveTab("recommendations")}>Подбор</TabBtn>
         <TabBtn active={activeTab === "catalog" && catalogView === "browse"} onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}>Каталог</TabBtn>
         <TabBtn active={activeTab === "catalog" && catalogView === "selected"} onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("selected"); }}>
@@ -1422,7 +1474,7 @@ export function WizardStep1Lighting() {
                 </div>
               )}
 
-              <div className="flex gap-3">
+              <div className="flex gap-3 max-sm:hidden">
                 <button type="button" onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}
                   className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Каталог</button>
                 <button
@@ -1439,7 +1491,7 @@ export function WizardStep1Lighting() {
 
 
           {hasRecommendations && (
-            <div className="text-center">
+            <div className="text-center max-sm:hidden">
               <button type="button" onClick={() => setActiveTab("catalog")}
                 className="text-sm font-medium text-slate-500 underline decoration-slate-300 underline-offset-4 hover:text-slate-800">
                 Или выберите в каталоге →
@@ -1512,7 +1564,7 @@ export function WizardStep1Lighting() {
                       type="button"
                       onClick={() => goToStep(2)}
                       disabled={!requiredSelectionComplete}
-                      className="mt-3 w-full rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-emerald-700"
+                      className="mt-3 w-full rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-emerald-700 max-sm:hidden"
                     >
                       К итогу →
                     </button>
@@ -1522,10 +1574,10 @@ export function WizardStep1Lighting() {
             </div>
           ) : (
             <>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar max-sm:-mx-5 max-sm:px-5">
                 {CATALOG_SECTIONS.map((item) => (
                   <button key={item.id} type="button" onClick={() => { setSection(item.id); setQuery(""); }}
-                    className={["rounded-xl border border-slate-200 px-3 py-2 text-sm",
+                    className={["whitespace-nowrap rounded-xl border border-slate-200 px-3 py-2 text-sm max-sm:px-2.5 max-sm:py-1.5 max-sm:text-xs",
                       section === item.id ? "bg-slate-950 text-white" : "bg-white text-slate-700 hover:bg-slate-50"].join(" ")}>
                     {item.label}
                   </button>
@@ -1533,13 +1585,13 @@ export function WizardStep1Lighting() {
               </div>
 
               {section === "track-systems" && (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar max-sm:-mx-5 max-sm:px-5">
                   {TRACK_SYSTEMS.map((sys) => {
                     const isActive = trackSystem === sys.id;
                     const isRec = sys.id === "COLIBRI_220";
                     return (
                       <button key={sys.id} type="button" onClick={() => { setTrackSystem(sys.id); setQuery(""); }}
-                        className={["rounded-xl border px-3 py-1.5 text-xs transition-colors",
+                        className={["whitespace-nowrap rounded-xl border px-3 py-1.5 text-xs transition-colors max-sm:px-2.5",
                           isActive ? (isRec ? "bg-blue-600 text-white border-blue-600" : "bg-slate-900 text-white border-slate-900")
                           : (isRec ? "border-blue-300 bg-blue-50 text-blue-800 hover:bg-blue-100" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50")].join(" ")}>
                         {sys.label}{isRec && !isActive ? <span className="ml-1 text-[10px] opacity-70">● рек.</span> : null}
@@ -1548,7 +1600,7 @@ export function WizardStep1Lighting() {
                   })}
                   {TRACK_GROUPS.map((g) => (
                     <button key={g.id} type="button" onClick={() => { setTrackGroup(g.id); setQuery(""); }}
-                      className={["rounded-xl border border-slate-200 px-3 py-1.5 text-xs",
+                      className={["whitespace-nowrap rounded-xl border border-slate-200 px-3 py-1.5 text-xs max-sm:px-2.5",
                         trackGroup === g.id ? "bg-slate-900 text-white" : "bg-white text-slate-700"].join(" ")}>
                       {g.label}
                     </button>
@@ -1557,10 +1609,10 @@ export function WizardStep1Lighting() {
               )}
 
               {section === "point-fixtures" && (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar max-sm:-mx-5 max-sm:px-5">
                   {POINT_SUBTYPES.map((st) => (
                     <button key={st.id} type="button" onClick={() => { setPointSubtype(st.id); setQuery(""); }}
-                      className={["rounded-xl border border-slate-200 px-3 py-1.5 text-xs",
+                      className={["whitespace-nowrap rounded-xl border border-slate-200 px-3 py-1.5 text-xs max-sm:px-2.5",
                         pointSubtype === st.id ? "bg-slate-900 text-white" : "bg-white text-slate-700"].join(" ")}>
                       {st.label}
                     </button>
@@ -1569,10 +1621,10 @@ export function WizardStep1Lighting() {
               )}
 
               {section === "lamps" && (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar max-sm:-mx-5 max-sm:px-5">
                   {(["GX53", "MR16"] as LampSocket[]).map((s) => (
                     <button key={s} type="button" onClick={() => { setLampSocket(s); setQuery(""); }}
-                      className={["rounded-xl border border-slate-200 px-3 py-1.5 text-xs",
+                      className={["whitespace-nowrap rounded-xl border border-slate-200 px-3 py-1.5 text-xs max-sm:px-2.5",
                         lampSocket === s ? "bg-slate-900 text-white" : "bg-white text-slate-700"].join(" ")}>
                       {s} {lampCurrentBySocket[s] > 0 ? `(${lampCurrentBySocket[s]}/${lampRequiredBySocket[s]})` : ""}
                     </button>
@@ -1611,7 +1663,7 @@ export function WizardStep1Lighting() {
 
       {/* ─── Cart summary pill ─── */}
       {lightingDraft?.mode === "catalog" && (lightingDraft.items?.length ?? 0) > 0 && (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 flex items-center justify-between gap-3">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 flex items-center justify-between gap-3 max-sm:hidden">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">
               {lightingDraft.items?.length ?? 0}
