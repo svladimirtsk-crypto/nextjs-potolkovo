@@ -6,6 +6,7 @@ import { homepage } from "@/content/homepage";
 import type { ServiceCalculatorPreset } from "@/content/services";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   type CalculatorLeadSnapshot,
   usePriceCalculatorBridge,
@@ -1639,9 +1640,24 @@ export function PriceCalculatorClient({
           {isRoomScopeMulti ? (
             <SectionCard
               title="Помещения в расчёте"
-              description="Вы можете считать комнаты по очереди и видеть общий итог по объекту. В каждом помещении своя конфигурация профилей, карнизов и света."
+              description="Считайте комнаты по очереди: у каждой помещения своя конфигурация, а справа и внизу сразу виден общий итог по объекту."
             >
-              <div className="flex flex-wrap gap-2">
+              <div className="grid gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-200 sm:grid-cols-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Сейчас редактируете</p>
+                  <p className="mt-2 text-lg font-semibold text-slate-950">{roomLabel}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Помещений</p>
+                  <p className="mt-2 text-lg font-semibold text-slate-950">{effectiveRooms.length}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Общий ориентир</p>
+                  <p className="mt-2 text-lg font-semibold text-slate-950">{formatCurrency(displayTotal)} ₽</p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
                 {effectiveRooms.map((room) => {
                   const isActive = room.id === activeRoomId;
                   const roomSnapshot = calcRoomSnapshot(room);
@@ -1661,22 +1677,31 @@ export function PriceCalculatorClient({
                       <p className={isActive ? "mt-1 text-xs text-white/70" : "mt-1 text-xs text-slate-500"}>
                         {room.area} м² · {formatCurrency(roomSnapshot.total)} ₽
                       </p>
+                      {isActive ? (
+                        <p className="mt-1 text-[11px] font-medium text-white/60">Сейчас редактируется</p>
+                      ) : null}
                     </button>
                   );
                 })}
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-2">
-                {ROOM_TYPE_OPTIONS.map((label) => (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() => addRoom(label)}
-                    className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-                  >
-                    + {label}
-                  </button>
-                ))}
+              <div className="mt-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Добавить помещение</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {ROOM_TYPE_OPTIONS.map((label) => (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => addRoom(label)}
+                      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                    >
+                      + {label}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  Добавьте все нужные комнаты — итог по объекту будет суммироваться автоматически.
+                </p>
               </div>
 
               {rooms.length > 1 ? (
@@ -1736,11 +1761,11 @@ export function PriceCalculatorClient({
                           type="button"
                           onClick={() => {
                             markInteracted();
-                            setRoomLabel(label === "Другое" ? roomLabel : label);
+                            if (label !== "Другое") setRoomLabel(label);
                           }}
                           className={[
                             "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
-                            roomLabel === label
+                            label !== "Другое" && roomLabel === label
                               ? "bg-slate-950 text-white"
                               : "bg-slate-100 text-slate-700 hover:bg-slate-200",
                           ].join(" ")}
@@ -1748,6 +1773,20 @@ export function PriceCalculatorClient({
                           {label}
                         </button>
                       ))}
+                    </div>
+                    <div className="mt-4">
+                      <Input
+                        label="Название помещения"
+                        value={roomLabel}
+                        onChange={(event) => {
+                          markInteracted();
+                          setRoomLabel(event.target.value);
+                        }}
+                        placeholder="Например: Кухня-гостиная"
+                      />
+                      <p className="mt-2 text-xs text-slate-500">
+                        Это название будет видно в общем списке помещений и в итоговом расчёте.
+                      </p>
                     </div>
                   </div>
                 ) : null}
@@ -2495,7 +2534,7 @@ export function PriceCalculatorClient({
 
             <div className="mt-6">
               <Button type="button" className="w-full" onClick={onPrimaryCtaClick ?? (() => scrollToAction())}>
-                {homepage.price.primaryCtaLabel}
+                {isRoomScopeMulti ? "К общему итогу →" : homepage.price.primaryCtaLabel}
               </Button>
             </div>
           </div>
@@ -2508,7 +2547,7 @@ export function PriceCalculatorClient({
         >
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-xs text-slate-500">Итого от</p>
+              <p className="text-xs text-slate-500">{isRoomScopeMulti ? "Общий итог" : "Итого от"}</p>
               <p className="text-lg font-bold tracking-tight text-slate-950">
                 {formatCurrency(displayTotal)} ₽
               </p>
