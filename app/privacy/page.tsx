@@ -1,137 +1,155 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { HomeFooter } from "@/components/home/home-footer";
+import { Container } from "@/components/ui/container";
+import { contacts } from "@/content/contacts";
+
 export const metadata: Metadata = {
-  title: "Политика конфиденциальности — ПОТОЛКОВО",
+  title: { absolute: "Политика конфиденциальности — ПОТОЛКОВО" },
   description: "Политика конфиденциальности и обработки персональных данных сайта ПОТОЛКОВО.",
+  alternates: {
+    canonical: "/privacy",
+  },
 };
 
-export default function PrivacyPage() {
-  return (
-    <div style={{
-      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-      color: "#1a1a1a", background: "#fafafa", minHeight: "100vh",
-    }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html { scroll-behavior: smooth; }
-      `}</style>
-
-      {/* Header */}
-      <header style={{
-        padding: "24px clamp(24px,5vw,80px)", borderBottom: "1px solid #e8e8e8",
-        display: "flex", justifyContent: "space-between", alignItems: "center",
-      }}>
-        <Link href="/" style={{
-          fontFamily: "'JetBrains Mono', monospace", fontSize: 18, fontWeight: 700,
-          letterSpacing: 3, textTransform: "uppercase", color: "#1a1a1a", textDecoration: "none",
-        }}>
-          ПОТОЛКОВО
-        </Link>
-        <Link href="/" style={{
-          fontSize: 14, fontWeight: 500, color: "#666", textDecoration: "none",
-          borderBottom: "1px solid #ddd", paddingBottom: 2,
-        }}>
-          ← На главную
-        </Link>
-      </header>
-
-      {/* Content */}
-      <main style={{ maxWidth: 800, margin: "0 auto", padding: "80px clamp(24px,5vw,80px)" }}>
-        <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 32, letterSpacing: -1 }}>
-          Политика конфиденциальности
-        </h1>
-        <p style={{ fontSize: 13, color: "#999", marginBottom: 40, fontFamily: "'JetBrains Mono', monospace" }}>
-          Дата последнего обновления: {new Date().toLocaleDateString("ru-RU")}
-        </p>
-
-        {[
-          {
-            title: "1. Общие положения",
-            text: `Настоящая Политика конфиденциальности определяет порядок обработки и защиты персональных данных физических лиц, использующих сайт potolkovo-msk.ru (далее — «Сайт»).
+const privacySections = [
+  {
+    title: "1. Общие положения",
+    text: `Настоящая Политика конфиденциальности определяет порядок обработки и защиты персональных данных физических лиц, использующих сайт potolkovo-msk.ru (далее — «Сайт»).
 
 Оператором персональных данных является Владимир (далее — «Оператор»), оказывающий услуги по установке натяжных потолков в Москве и Московской области.
 
 Заполняя формы на Сайте и предоставляя свои персональные данные, Пользователь выражает согласие с данной Политикой.`,
-          },
-          {
-            title: "2. Какие данные мы собираем",
-            text: `Оператор собирает следующие персональные данные:
+  },
+  {
+    title: "2. Какие данные мы собираем",
+    text: `Оператор собирает следующие персональные данные:
 • Имя (или псевдоним);
 • Номер телефона;
 • Содержание сообщения (описание задачи).
 
-Данные собираются исключительно через форму заявки на Сайте и передаются Оператору посредством сервиса Web3Forms.`,
-          },
-          {
-            title: "3. Цели обработки данных",
-            text: `Персональные данные обрабатываются в целях:
+Данные собираются исключительно через формы на Сайте и передаются Оператору для связи по запросу Пользователя.`,
+  },
+  {
+    title: "3. Цели обработки данных",
+    text: `Персональные данные обрабатываются в целях:
 • Связи с Пользователем для обсуждения заказа;
 • Расчёта стоимости и согласования условий работы;
 • Выполнения договорных обязательств.
 
-Данные не используются для рассылок, рекламы или иных целей без согласия Пользователя.`,
-          },
-          {
-            title: "4. Передача данных третьим лицам",
-            text: `Оператор не передаёт персональные данные третьим лицам, за исключением случаев:
+Данные не используются для рекламных рассылок без отдельного согласия Пользователя.`,
+  },
+  {
+    title: "4. Передача данных третьим лицам",
+    text: `Оператор не передаёт персональные данные третьим лицам, за исключением случаев:
 • Прямого согласия Пользователя;
 • Требований законодательства Российской Федерации.
 
-Для передачи данных из формы на Сайте используется сервис Web3Forms (web3forms.com), который выступает техническим посредником и не хранит данные на постоянной основе.`,
-          },
-          {
-            title: "5. Защита данных",
-            text: `Оператор принимает необходимые организационные и технические меры для защиты персональных данных от неправомерного доступа, изменения, раскрытия или уничтожения.
+Для передачи данных из форм может использоваться технический сервис-посредник, обеспечивающий доставку заявки Оператору.`,
+  },
+  {
+    title: "5. Защита данных",
+    text: `Оператор принимает необходимые организационные и технические меры для защиты персональных данных от неправомерного доступа, изменения, раскрытия или уничтожения.
 
 Сайт использует защищённое соединение (HTTPS).`,
-          },
-          {
-            title: "6. Хранение данных",
-            text: `Персональные данные хранятся до момента выполнения целей обработки, но не более 1 (одного) года с момента последнего взаимодействия с Пользователем.
+  },
+  {
+    title: "6. Хранение данных",
+    text: `Персональные данные хранятся до момента выполнения целей обработки, но не дольше срока, необходимого для связи по заявке и выполнения обязательств.
 
-Пользователь вправе в любой момент потребовать удаления своих данных, направив запрос на potolkovo_msk@mail.ru.`,
-          },
-          {
-            title: "7. Права пользователя",
-            text: `Пользователь имеет право:
+Пользователь вправе потребовать удаление своих данных, направив запрос на электронную почту, указанную в разделе контактов.`,
+  },
+  {
+    title: "7. Права пользователя",
+    text: `Пользователь имеет право:
 • Запрашивать информацию о своих персональных данных;
 • Требовать их исправления или удаления;
 • Отозвать согласие на обработку.
 
 Для реализации прав направьте письмо на potolkovo_msk@mail.ru.`,
-          },
-          {
-            title: "8. Файлы cookie",
-            text: `Сайт может использовать файлы cookie и аналогичные технологии для обеспечения работоспособности и анализа посещаемости. Пользователь может отключить cookie в настройках своего браузера.`,
-          },
-          {
-            title: "9. Изменения политики",
-            text: `Оператор оставляет за собой право вносить изменения в настоящую Политику. Актуальная версия всегда доступна по адресу potolkovo-msk.ru/privacy.`,
-          },
-          {
-            title: "10. Контакты",
-            text: `По вопросам, связанным с обработкой персональных данных:
+  },
+  {
+    title: "8. Файлы cookie",
+    text: `Сайт может использовать файлы cookie и аналогичные технологии для обеспечения работоспособности и анализа посещаемости. Пользователь может отключить cookie в настройках своего браузера.`,
+  },
+  {
+    title: "9. Изменения политики",
+    text: `Оператор оставляет за собой право вносить изменения в настоящую Политику. Актуальная версия всегда доступна по адресу potolkovo-msk.ru/privacy.`,
+  },
+  {
+    title: "10. Контакты",
+    text: `По вопросам, связанным с обработкой персональных данных:
 • Email: potolkovo_msk@mail.ru
 • Телефон: +7 905 521 99 09
 • Telegram: @potolkovo_msk`,
-          },
-        ].map((section, i) => (
-          <div key={i} style={{ marginBottom: 32 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>{section.title}</h2>
-            <p style={{ fontSize: 15, lineHeight: 1.8, color: "#555", whiteSpace: "pre-line" }}>{section.text}</p>
-          </div>
-        ))}
-      </main>
+  },
+] as const;
 
-      {/* Footer */}
-      <footer style={{
-        padding: "32px clamp(24px,5vw,80px)", borderTop: "1px solid #e8e8e8",
-        textAlign: "center", fontSize: 13, color: "#999",
-      }}>
-        © {new Date().getFullYear()} ПОТОЛКОВО. Все права защищены.
-      </footer>
-    </div>
+export default function PrivacyPage() {
+  return (
+    <>
+      <header className="border-b border-slate-200 bg-white">
+        <Container className="flex min-h-[var(--header-height)] items-center justify-between gap-4">
+          <Link
+            href="/"
+            className="inline-flex shrink-0 items-center font-mono text-sm font-bold uppercase tracking-[0.24em] text-slate-950 sm:text-[15px]"
+            aria-label={contacts.brandName}
+          >
+            {contacts.brandShortName}
+          </Link>
+
+          <Link
+            href="/"
+            className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950"
+          >
+            ← На главную
+          </Link>
+        </Container>
+      </header>
+
+      <main className="bg-slate-50 py-14 sm:py-16 lg:py-20">
+        <Container>
+          <div className="mx-auto max-w-4xl rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8 lg:p-10">
+            <div className="border-b border-slate-200 pb-6">
+              <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                <Link href="/" className="transition-colors hover:text-slate-950">
+                  Главная
+                </Link>
+                <span>/</span>
+                <span className="text-slate-950">Политика конфиденциальности</span>
+              </div>
+
+              <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
+                Политика конфиденциальности
+              </h1>
+
+              <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
+                Ниже описано, какие данные сайт получает через формы заявки, для чего они используются и
+                как можно запросить их удаление или уточнение.
+              </p>
+
+              <p className="mt-4 text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
+                Дата обновления: {new Date().toLocaleDateString("ru-RU")}
+              </p>
+            </div>
+
+            <div className="mt-8 space-y-8">
+              {privacySections.map((section) => (
+                <section key={section.title}>
+                  <h2 className="text-lg font-semibold text-slate-950 sm:text-xl">
+                    {section.title}
+                  </h2>
+                  <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600 sm:text-base">
+                    {section.text}
+                  </p>
+                </section>
+              ))}
+            </div>
+          </div>
+        </Container>
+      </main>
+      <HomeFooter />
+    </>
   );
 }
