@@ -61,6 +61,8 @@ export function ProofModalClient({
   onPrev,
   onNext,
 }: ProofModalClientProps) {
+  const { openCalculator } = useCalculatorModal();
+
   const isOpen = selectedIndex !== null;
   const item = selectedIndex !== null ? items[selectedIndex] : null;
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -86,7 +88,8 @@ export function ProofModalClient({
   }, [isOpen, onClose, onPrev, onNext]);
 
   useEffect(() => {
-    setActiveImageIndex(0);
+    const frame = requestAnimationFrame(() => setActiveImageIndex(0));
+    return () => cancelAnimationFrame(frame);
   }, [selectedIndex]);
 
   const asset = useMemo(() => {
@@ -116,9 +119,6 @@ export function ProofModalClient({
   const safeImageIndex = Math.min(activeImageIndex, Math.max(gallery.length - 1, 0));
   const activeImage = gallery[safeImageIndex] ?? asset.src;
   const price = splitPriceLabel(item.priceLabel);
-
-  // P1.8: Open calculator with preset from case
-  const { openCalculator } = useCalculatorModal();
 
   const handleWantSame = () => {
     onClose();
