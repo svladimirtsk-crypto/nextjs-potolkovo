@@ -322,11 +322,17 @@ export function WizardStep2Summary() {
               Изменить комнаты
             </button>
           </div>
+          <div className="mt-4 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-medium text-slate-600">Общий ориентир по объекту</span>
+              <span className="text-lg font-semibold text-slate-950">{fmt(resolvedGrandTotal)} ₽</span>
+            </div>
+          </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {roomBreakdown.map((room) => (
+            {roomBreakdown.map((room, index) => (
               <div key={room.id} className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-semibold text-slate-950">{room.label}</p>
+                  <p className="text-sm font-semibold text-slate-950">{index + 1}. {room.label}</p>
                   <span className="text-sm font-semibold text-slate-950">{fmt(room.totalRub)} ₽</span>
                 </div>
                 <p className="mt-2 text-xs text-slate-500">{room.area} м² · {room.ceilingTypeLabel}</p>
