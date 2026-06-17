@@ -22,6 +22,21 @@ export function HomeAction() {
               description={actionContent.sectionSubtitle}
             />
 
+            <div className="mt-6 flex flex-wrap gap-2.5">
+              {[
+                "Перезвоню лично",
+                "Замер бесплатно",
+                "Смета до старта",
+              ].map((item) => (
+                <span
+                  key={item}
+                  className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700"
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+
             <div className="mt-8 max-w-xl rounded-[2rem] border border-slate-200 bg-slate-50 p-6 shadow-[0_10px_28px_rgba(15,23,42,0.04)] sm:p-8">
               {actionContent.formTitle ? (
                 <h3 className="text-xl font-semibold tracking-tight text-slate-950">
@@ -39,6 +54,13 @@ export function HomeAction() {
             <h3 className="text-xl font-semibold tracking-tight text-slate-950">
               {actionContent.secondaryContactsTitle}
             </h3>
+
+            <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950">
+              <p className="font-semibold">Что получите после заявки</p>
+              <p className="mt-1 text-emerald-900/80">
+                Уточню задачу, сориентирую по решению и заранее проговорю, из чего сложится смета.
+              </p>
+            </div>
 
             <div className="mt-6 space-y-5">
               <div>
