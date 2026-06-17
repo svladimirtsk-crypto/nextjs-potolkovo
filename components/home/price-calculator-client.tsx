@@ -110,6 +110,44 @@ function buildCeilingTypeLabel(room: Pick<RoomConfig, "shadowEnabled" | "floatin
   return `${room.shadowEnabled ? "Теневой" : ""}${room.shadowEnabled && room.floatingEnabled ? " + " : ""}${room.floatingEnabled ? "Парящий" : ""}`;
 }
 
+function createEmptySelectionSnapshot(calculationScope?: CalculationScope | null): CalculatorLeadSnapshot {
+  return {
+    area: 0,
+    calculationScope: calculationScope ?? undefined,
+    ceilingTypeLabel: "Параметры не выбраны",
+    ceilingBaseRate: 0,
+    ceilingBaseTotal: 0,
+    ceilingExtraLabel: null,
+    ceilingLength: null,
+    ceilingExtraRatePerMeter: null,
+    ceilingExtraTotal: 0,
+    lightLinesEnabled: false,
+    lightLinesLabel: null,
+    lightLinesLength: null,
+    lightLinesRatePerMeter: null,
+    lightLinesTotal: 0,
+    corniceLabel: null,
+    corniceLength: null,
+    corniceRatePerMeter: null,
+    corniceTotal: 0,
+    trackLabel: null,
+    trackLength: null,
+    trackRatePerMeter: null,
+    trackTotal: 0,
+    lightsEnabled: false,
+    lightsCount: null,
+    lightsRatePerUnit: calculator.lights.ratePerUnit,
+    lightsTotal: 0,
+    total: 0,
+    derivedInputs: {
+      pointSpotsQty: 0,
+      trackMountType: "none",
+      trackLengthMeters: 0,
+      recommendedTrackSpotsQty: 0,
+    },
+  };
+}
+
 function calcRoomSnapshot(room: RoomConfig): CalculatorLeadSnapshot {
   const shadowCeiling = calculator.ceilingTypes.find((item) => item.slug === "shadow") ?? calculator.ceilingTypes[0];
   const floatingCeiling = calculator.ceilingTypes.find((item) => item.slug === "floating") ?? calculator.ceilingTypes[0];
@@ -1142,8 +1180,17 @@ export function PriceCalculatorClient({
     applyRoomConfig(room);
   }, [activeRoomId, calculationScope, compactSections, rooms]);
 
+  const isSelectionPending =
+    compactSections &&
+    (calculationScope === null || (calculationScope === "room" && (!activeRoomId || isChoosingRoom)));
+
   const currentSnapshot = useMemo<CalculatorLeadSnapshot>(
-    () => ({
+    () => {
+      if (isSelectionPending) {
+        return createEmptySelectionSnapshot(calculationScope);
+      }
+
+      return {
       area,
       calculationScope: calculationScope ?? undefined,
       ceilingTypeLabel: !shadowEnabled && !floatingEnabled
@@ -1222,7 +1269,8 @@ export function PriceCalculatorClient({
 
       total,
       derivedInputs,
-    }),
+    };
+    },
     [
       area,
       calculationScope,
@@ -1447,7 +1495,7 @@ export function PriceCalculatorClient({
       const state = roomConfirmedMap[room.id];
       return !(state && compactSteps.every((step) => state[step]));
     }) ?? null;
-  const showRoomManager = isRoomScopeMulti && !isChoosingRoom && (completedRoomsCount > 0 || effectiveRooms.length > 1);
+  const showRoomManager = isRoomScopeMulti && effectiveRooms.length > 0 && (completedRoomsCount > 0 || effectiveRooms.length > 1);
   const roomProgressMap = effectiveRooms.reduce<Record<string, { done: number; total: number }>>(
     (acc, room) => {
       const state = roomConfirmedMap[room.id];
@@ -1938,6 +1986,9 @@ export function PriceCalculatorClient({
                         if (!confirmed) return;
                       }
                       setCalculationScope("object");
+                      setRooms([]);
+                      setRoomConfirmedMap({});
+                      setActiveRoomId(null);
                       setIsChoosingRoom(false);
                     }}
                   />
