@@ -5,10 +5,10 @@ import {
 } from "@/lib/home-proof-pricing";
 
 const homeCalculator: HomeCalculatorConfig = {
-  areaMin: 10,
+  areaMin: 1,
   areaMax: 100,
   areaStep: 1,
-  areaDefault: 10,
+  areaDefault: 1,
   perimeterHintMinMultiplier: 4,
   perimeterHintMaxMultiplier: 4.5,
   specialMeters: { min: 1, max: 150, step: 1 },
