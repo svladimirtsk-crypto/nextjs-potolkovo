@@ -14,7 +14,7 @@ import { ServiceTrustSection } from "../_components/ServiceTrustSection";
 const service = getRequiredServicePageBySlug("tenevoy-profil");
 
 export const metadata: Metadata = {
-  title: service.metadata.title,
+  title: { absolute: service.metadata.title },
   description: service.metadata.description,
   keywords: service.metadata.keywords,
   alternates: {
