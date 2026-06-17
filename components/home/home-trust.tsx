@@ -9,6 +9,10 @@ import { FounderBlock } from "./founder-block";
 const trust = homepage.trust;
 
 export function HomeTrust() {
+  const hasExternalRating = Boolean(
+    trust.externalRatingValue || trust.externalRatingSource || trust.externalRatingUrl
+  );
+
   return (
     <Section id="trust" className="bg-slate-50">
       <Container>
@@ -22,6 +26,7 @@ export function HomeTrust() {
           <FounderBlock />
         </div>
 
+        {hasExternalRating ? (
         <div className="mt-8 rounded-[2rem] border border-slate-200 bg-white p-5 sm:p-6 lg:p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -51,6 +56,7 @@ export function HomeTrust() {
             ) : null}
           </div>
         </div>
+        ) : null}
 
         {trust.stats?.length ? (
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
