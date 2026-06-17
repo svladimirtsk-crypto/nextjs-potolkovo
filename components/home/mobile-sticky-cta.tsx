@@ -72,9 +72,17 @@ export function MobileStickyCta() {
 }, []);
 
   useEffect(() => {
-    if (isActionVisible || isHeroVisible) { setIsVisible(false); return; }
-    const scrolled = typeof window !== "undefined" && window.scrollY > 300;
-    setIsVisible(isPriceVisible || scrolled);
+    const frame = requestAnimationFrame(() => {
+      if (isActionVisible || isHeroVisible) {
+        setIsVisible(false);
+        return;
+      }
+
+      const scrolled = typeof window !== "undefined" && window.scrollY > 300;
+      setIsVisible(isPriceVisible || scrolled);
+    });
+
+    return () => cancelAnimationFrame(frame);
   }, [isActionVisible, isHeroVisible, isPriceVisible]);
 
   const showCalculatedState = isPriceVisible || (hasInteracted && !!snapshot);
