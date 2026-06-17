@@ -109,7 +109,7 @@ type ParseCounters = {
 };
 
 const FEED_URL = "https://eksmarket.ru/api/personal/feed2/";
-const DISCOUNT_PERCENT = 15;
+const DISCOUNT_PERCENT = 25;
 
 const WHITELIST: readonly WhitelistMeta[] = [
   { id: "21" },
