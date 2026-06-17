@@ -405,8 +405,11 @@ export function CatalogSectionClient({ data }: Props) {
 
   const clarusPsuQty = useMemo(() => {
     return selectedEntries
-      .filter((e) => CLARUS_PSU_VENDOR_CODES.includes(toText(e.product.vendorCode) as any))
-      .reduce((sum, e) => sum + e.qty, 0);
+      .filter((entry) => {
+        const vendorCode = toText(entry.product.vendorCode);
+        return CLARUS_PSU_VENDOR_CODES.some((code) => code === vendorCode);
+      })
+      .reduce((sum, entry) => sum + entry.qty, 0);
   }, [selectedEntries]);
 
   const setClarusPsu = (productId: string) => {
