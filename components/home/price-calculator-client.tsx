@@ -21,6 +21,7 @@ const CHANDELIERS_INSTALL_RATE_PER_UNIT = 1000;
 type CeilingType = (typeof calculator.ceilingTypes)[number]["slug"] | "shadow-floating";
 type CorniceType = (typeof calculator.cornices)[number]["slug"];
 type TrackType = (typeof calculator.tracks)[number]["slug"];
+type CalculationScope = "room" | "object";
 
 type PerimeterSuggestion = { recommended: number };
 
@@ -394,10 +395,8 @@ function PerimeterHint({
   return (
     <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white p-4 max-sm:mt-3 max-sm:p-3">
       <p className="text-sm leading-6 text-slate-600 max-sm:text-xs max-sm:leading-5">
-        Для площади <span className="font-semibold text-slate-950">{area} м²</span>{" "}
-        ориентир по профилю:{" "}
-        <span className="font-semibold text-slate-950">{recommended} м.п.</span>{" "}
-        (1:1).
+        Если профиль идёт по всей комнате, ориентир для площади <span className="font-semibold text-slate-950">{area} м²</span>{" "}
+        — <span className="font-semibold text-slate-950">{recommended} м.п.</span>. Если профиль нужен только частично, введите фактические метры вручную.
       </p>
 
       <div className="mt-2 flex flex-wrap items-center gap-3 max-sm:gap-2">
@@ -471,6 +470,7 @@ export function PriceCalculatorClient({
   const { setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
 
   const resolvedAreaDefault = preset?.areaDefault ?? calculator.areaDefault;
+  const resolvedCalculationScope = (preset?.calculationScopeDefault ?? "room") as CalculationScope;
   const resolvedCeilingType = (preset?.ceilingType ?? "standard") as CeilingType;
   const resolvedCorniceType = preset?.corniceType ?? "none";
   const resolvedTrackType = preset?.trackType ?? "none";
@@ -478,6 +478,7 @@ export function PriceCalculatorClient({
   const resolvedLightsCount =
     preset?.lightsCount ?? calculator.lights.countDefault;
 
+  const [calculationScope, setCalculationScope] = useState<CalculationScope>(resolvedCalculationScope);
   const [area, setArea] = useState<number>(resolvedAreaDefault);
   const [ceilingType, setCeilingType] =
     useState<CeilingType>(resolvedCeilingType);
@@ -496,28 +497,37 @@ export function PriceCalculatorClient({
   const [ceilingLengthAuto, setCeilingLengthAuto] = useState<boolean>(true);
 
   const [shadowLength, setShadowLength] = useState<number>(
-    () => getPerimeterSuggestion(resolvedAreaDefault).recommended
+    () => preset?.shadowLengthDefault ?? getPerimeterSuggestion(resolvedAreaDefault).recommended
   );
-  const [shadowLengthAuto, setShadowLengthAuto] = useState<boolean>(true);
+  const [shadowLengthAuto, setShadowLengthAuto] = useState<boolean>(preset?.shadowLengthDefault == null);
   const [floatingLength, setFloatingLength] = useState<number>(
-    () => getPerimeterSuggestion(resolvedAreaDefault).recommended
+    () => preset?.floatingLengthDefault ?? getPerimeterSuggestion(resolvedAreaDefault).recommended
   );
-  const [floatingLengthAuto, setFloatingLengthAuto] = useState<boolean>(true);
+  const [floatingLengthAuto, setFloatingLengthAuto] = useState<boolean>(preset?.floatingLengthDefault == null);
 
-  const [lightLinesEnabled, setLightLinesEnabled] = useState<boolean>(false);
+  const [lightLinesEnabled, setLightLinesEnabled] = useState<boolean>(preset?.lightLinesEnabled ?? false);
   const [lightLinesLength, setLightLinesLength] = useState<number>(
-    calculator.lightLineMeters.default
+    preset?.lightLinesLengthDefault ?? calculator.lightLineMeters.default
   );
 
   const [corniceType, setCorniceType] =
     useState<CorniceType>(resolvedCorniceType);
   const [corniceLength, setCorniceLength] = useState<number>(
-    calculator.corniceMeters.default
+    preset?.corniceLengthDefault ?? calculator.corniceMeters.default
+  );
+  const [corniceLightingEnabled, setCorniceLightingEnabled] = useState<boolean>(
+    preset?.corniceLightingEnabled ?? false
+  );
+  const [corniceLightingLength, setCorniceLightingLength] = useState<number>(
+    preset?.corniceLightingLengthDefault ?? preset?.corniceLengthDefault ?? calculator.corniceMeters.default
+  );
+  const [corniceLightingPowerSupplies, setCorniceLightingPowerSupplies] = useState<number>(
+    preset?.corniceLightingPowerSuppliesDefault ?? calculator.corniceLighting.powerSupplyDefault
   );
 
   const [trackType, setTrackType] = useState<TrackType>(resolvedTrackType);
   const [trackLength, setTrackLength] = useState<number>(
-    calculator.trackMeters.default
+    preset?.trackLengthDefault ?? calculator.trackMeters.default
   );
 
   // NEW: Установка люстр
@@ -733,6 +743,14 @@ export function PriceCalculatorClient({
       ? corniceLength * selectedCornice.ratePerMeter
       : 0;
 
+  const corniceLightingMetersTotal = corniceLightingEnabled
+    ? corniceLightingLength * calculator.corniceLighting.ratePerMeter
+    : 0;
+  const corniceLightingPowerSupplyTotal = corniceLightingEnabled
+    ? corniceLightingPowerSupplies * calculator.corniceLighting.powerSupplyRate
+    : 0;
+  const corniceLightingTotal = corniceLightingMetersTotal + corniceLightingPowerSupplyTotal;
+
   const trackTotal =
     selectedTrack.ratePerMeter > 0
       ? trackLength * selectedTrack.ratePerMeter
@@ -751,6 +769,7 @@ export function PriceCalculatorClient({
     ceilingExtraTotal +
     lightLinesTotal +
     corniceTotal +
+    corniceLightingTotal +
     trackTotal +
     chandeliersTotal +
     lightsTotal;
@@ -778,6 +797,7 @@ export function PriceCalculatorClient({
   const snapshot = useMemo<CalculatorLeadSnapshot>(
     () => ({
       area,
+      calculationScope,
       ceilingTypeLabel: !shadowEnabled && !floatingEnabled
         ? "Простой потолок"
         : `${shadowEnabled ? "Теневой" : ""}${shadowEnabled && floatingEnabled ? " + " : ""}${floatingEnabled ? "Парящий" : ""}`,
@@ -823,6 +843,17 @@ export function PriceCalculatorClient({
       corniceRatePerMeter:
         selectedCornice.ratePerMeter > 0 ? selectedCornice.ratePerMeter : null,
       corniceTotal,
+      corniceLightingEnabled,
+      corniceLightingLabel: corniceLightingEnabled ? calculator.corniceLighting.label : null,
+      corniceLightingLength: corniceLightingEnabled ? corniceLightingLength : null,
+      corniceLightingRatePerMeter: corniceLightingEnabled
+        ? calculator.corniceLighting.ratePerMeter
+        : null,
+      corniceLightingPowerSupplies: corniceLightingEnabled ? corniceLightingPowerSupplies : null,
+      corniceLightingPowerSupplyRate: corniceLightingEnabled
+        ? calculator.corniceLighting.powerSupplyRate
+        : null,
+      corniceLightingTotal,
 
       trackLabel:
         selectedTrack.ratePerMeter > 0 ? selectedTrack.label : null,
@@ -846,6 +877,7 @@ export function PriceCalculatorClient({
     }),
     [
       area,
+      calculationScope,
       selectedCeiling,
       ceilingBaseRate,
       ceilingBaseTotal,
@@ -866,6 +898,10 @@ export function PriceCalculatorClient({
       selectedCornice,
       corniceLength,
       corniceTotal,
+      corniceLightingEnabled,
+      corniceLightingLength,
+      corniceLightingPowerSupplies,
+      corniceLightingTotal,
       selectedTrack,
       trackLength,
       trackTotal,
@@ -1058,7 +1094,7 @@ export function PriceCalculatorClient({
 
     const corniceValue =
       selectedCornice.ratePerMeter > 0
-        ? `${selectedCornice.label}, ${corniceLength} м.п.`
+        ? `${selectedCornice.label}, ${corniceLength} м.п.${corniceLightingEnabled ? ` · подсветка ${corniceLightingLength} м.п. · БП ${corniceLightingPowerSupplies} шт.` : ""}`
         : "не нужен";
 
     const trackValue =
@@ -1082,16 +1118,39 @@ export function PriceCalculatorClient({
             {confirmed.area ? (
               <SectionCard title={`Площадь`}>
                 <SummaryRow
-                  label="Площадь"
-                  value={`${area} м²`}
+                  label="Расчёт"
+                  value={`${calculationScope === "object" ? "Весь объект" : "Отдельное помещение"} · ${area} м²`}
                   onEdit={() => beginEdit("area")}
                 />
               </SectionCard>
             ) : activeStep === "area" ? (
-              <SectionCard title={`Площадь`}>
+              <SectionCard
+                title={`Площадь`}
+                description="Сначала выберите формат расчёта. Площадь считается отдельно, а профили и узлы — только по нужным участкам в метрах."
+              >
+                <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <OptionCard
+                    active={calculationScope === "room"}
+                    title="Отдельное помещение"
+                    meta="Кухня, спальня, гостиная, санузел и другие помещения поэтапно"
+                    onClick={() => {
+                      markInteracted();
+                      setCalculationScope("room");
+                    }}
+                  />
+                  <OptionCard
+                    active={calculationScope === "object"}
+                    title="Весь объект"
+                    meta="Квартира или дом целиком, если уже понятен общий объём"
+                    onClick={() => {
+                      markInteracted();
+                      setCalculationScope("object");
+                    }}
+                  />
+                </div>
                 <RangeField
                   id="area-field"
-                  label="Выберите площадь"
+                  label={calculationScope === "object" ? "Укажите общую площадь объекта" : "Выберите площадь помещения"}
                   value={area}
                   min={calculator.areaMin}
                   max={calculator.areaMax}
@@ -1135,7 +1194,7 @@ export function PriceCalculatorClient({
             ) : activeStep === "ceiling" ? (
               <SectionCard
                 title={`Тип потолка`}
-                description="Можно выбрать одновременно теневой и парящий профиль."
+                description="Базовая площадь считается отдельно. Теневой и парящий указывайте только на нужных участках — они не обязаны идти по всему периметру."
               >
                 {/* Simple ceiling option */}
                 <div
@@ -1237,7 +1296,7 @@ export function PriceCalculatorClient({
               ) : activeStep === "shadowProfile" ? (
                 <SectionCard
                   title={`Теневой профиль`}
-                  description="Профиль по периметру для теневого зазора"
+                  description="Укажите только те метры, где действительно нужен теневой зазор. Это может быть не весь периметр комнаты."
                 >
                   <RangeField
                     id="shadow-length-field"
@@ -1297,7 +1356,7 @@ export function PriceCalculatorClient({
               ) : activeStep === "floatingProfile" ? (
                 <SectionCard
                   title={`Парящий профиль`}
-                  description="Профиль по периметру для парящего эффекта"
+                  description="Укажите только те метры, где нужен парящий эффект. Это может быть одна стена, ниша или отдельный участок."
                 >
                   <RangeField
                     id="floating-length-field"
@@ -1453,7 +1512,7 @@ export function PriceCalculatorClient({
                 </div>
 
                 {selectedCornice.ratePerMeter > 0 ? (
-                  <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+                  <div className="mt-4 space-y-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
                     <RangeField
                       id="cornice-length"
                       label="Длина карниза"
@@ -1468,6 +1527,63 @@ export function PriceCalculatorClient({
                       }}
                       showSlider={showSlider}
                     />
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <OptionCard
+                        active={!corniceLightingEnabled}
+                        title="Без подсветки карниза"
+                        meta="Только карнизный узел без дополнительной LED-подсветки"
+                        onClick={() => {
+                          markInteracted();
+                          setCorniceLightingEnabled(false);
+                        }}
+                      />
+                      <OptionCard
+                        active={corniceLightingEnabled}
+                        title="Добавить подсветку"
+                        meta={`+${formatCurrency(calculator.corniceLighting.ratePerMeter)} ₽ / м.п. + блок ${formatCurrency(calculator.corniceLighting.powerSupplyRate)} ₽`}
+                        onClick={() => {
+                          markInteracted();
+                          setCorniceLightingEnabled(true);
+                          setCorniceLightingLength((prev) => Math.max(1, Math.round(prev || corniceLength)));
+                          setCorniceLightingPowerSupplies((prev) => Math.max(1, Math.round(prev || 1)));
+                        }}
+                      />
+                    </div>
+
+                    {corniceLightingEnabled ? (
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <RangeField
+                          id="cornice-lighting-length"
+                          label="Подсветка карниза"
+                          value={corniceLightingLength}
+                          min={1}
+                          max={calculator.corniceMeters.max}
+                          step={1}
+                          unit="м.п."
+                          onChange={(value) => {
+                            markInteracted();
+                            setCorniceLightingLength(value);
+                          }}
+                          showSlider={showSlider}
+                        />
+                        <RangeField
+                          id="cornice-lighting-psu"
+                          label="Блоки питания"
+                          value={corniceLightingPowerSupplies}
+                          min={1}
+                          max={10}
+                          step={1}
+                          unit="шт."
+                          onChange={(value) => {
+                            markInteracted();
+                            setCorniceLightingPowerSupplies(value);
+                          }}
+                          showSlider={showSlider}
+                          quickValues={[1, 2, 3]}
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
 
@@ -1756,7 +1872,7 @@ export function PriceCalculatorClient({
             </p>
 
             <p className="mt-2 text-xs text-white/70">
-              {!shadowEnabled && !floatingEnabled ? "Простой потолок" : `${shadowEnabled ? "Теневой" : ""}${shadowEnabled && floatingEnabled ? " + " : ""}${floatingEnabled ? "Парящий" : ""}`} · {area} м²
+              {calculationScope === "object" ? "Весь объект" : "Отдельное помещение"} · {!shadowEnabled && !floatingEnabled ? "Простой потолок" : `${shadowEnabled ? "Теневой" : ""}${shadowEnabled && floatingEnabled ? " + " : ""}${floatingEnabled ? "Парящий" : ""}`} · {area} м²
               {shadowEnabled ? ` · теневой ${shadowLength} м.п.` : ""}
               {floatingEnabled ? ` · парящий ${floatingLength} м.п.` : ""}
             </p>
@@ -1801,10 +1917,33 @@ export function PriceCalculatorClient({
   return (
     <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:p-8 max-sm:gap-3 max-sm:border-0 max-sm:bg-transparent max-sm:p-0 max-sm:shadow-none">
       <div className="min-w-0 space-y-5 max-sm:space-y-3">
-        <SectionCard title="Площадь помещения">
+        <SectionCard
+          title="Площадь"
+          description="Сначала выберите формат расчёта. Площадь считается отдельно, а профили и узлы — только по фактическим метрам."
+        >
+          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <OptionCard
+              active={calculationScope === "room"}
+              title="Отдельное помещение"
+              meta="Кухня, спальня, гостиная, санузел и другие помещения поэтапно"
+              onClick={() => {
+                markInteracted();
+                setCalculationScope("room");
+              }}
+            />
+            <OptionCard
+              active={calculationScope === "object"}
+              title="Весь объект"
+              meta="Квартира или дом целиком, если уже понятен общий объём"
+              onClick={() => {
+                markInteracted();
+                setCalculationScope("object");
+              }}
+            />
+          </div>
           <RangeField
             id="area-field"
-            label="Выберите площадь"
+            label={calculationScope === "object" ? "Укажите общую площадь объекта" : "Выберите площадь помещения"}
             value={area}
             min={calculator.areaMin}
             max={calculator.areaMax}
@@ -1818,7 +1957,7 @@ export function PriceCalculatorClient({
 
         <SectionCard
           title="Тип потолка"
-          description="Можно выбрать одновременно теневой и парящий профиль."
+          description="Базовая площадь считается отдельно. Теневой и парящий указывайте только на нужных участках — они не обязаны идти по всему периметру."
         >
           {/* Simple ceiling option */}
           <div
@@ -1884,7 +2023,7 @@ export function PriceCalculatorClient({
         {shadowEnabled ? (
           <SectionCard
             title="Теневой профиль"
-            description="Профиль по периметру для теневого зазора"
+            description="Укажите только те метры, где действительно нужен теневой зазор. Это может быть не весь периметр комнаты."
           >
             <RangeField
               id="shadow-length-field-page"
@@ -1909,7 +2048,7 @@ export function PriceCalculatorClient({
         {floatingEnabled ? (
           <SectionCard
             title="Парящий профиль"
-            description="Профиль по периметру для парящего эффекта"
+            description="Укажите только те метры, где нужен парящий эффект. Это может быть одна стена, ниша или отдельный участок."
           >
             <RangeField
               id="floating-length-field-page"
@@ -1995,7 +2134,7 @@ export function PriceCalculatorClient({
           </div>
 
           {selectedCornice.ratePerMeter > 0 ? (
-            <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+            <div className="mt-4 space-y-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
               <RangeField
                 id="cornice-length"
                 label="Длина карниза"
@@ -2010,6 +2149,63 @@ export function PriceCalculatorClient({
                 }}
                 showSlider
               />
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <OptionCard
+                  active={!corniceLightingEnabled}
+                  title="Без подсветки карниза"
+                  meta="Только карнизный узел без дополнительной LED-подсветки"
+                  onClick={() => {
+                    markInteracted();
+                    setCorniceLightingEnabled(false);
+                  }}
+                />
+                <OptionCard
+                  active={corniceLightingEnabled}
+                  title="Добавить подсветку"
+                  meta={`+${formatCurrency(calculator.corniceLighting.ratePerMeter)} ₽ / м.п. + блок ${formatCurrency(calculator.corniceLighting.powerSupplyRate)} ₽`}
+                  onClick={() => {
+                    markInteracted();
+                    setCorniceLightingEnabled(true);
+                    setCorniceLightingLength((prev) => Math.max(1, Math.round(prev || corniceLength)));
+                    setCorniceLightingPowerSupplies((prev) => Math.max(1, Math.round(prev || 1)));
+                  }}
+                />
+              </div>
+
+              {corniceLightingEnabled ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <RangeField
+                    id="cornice-lighting-length-page"
+                    label="Подсветка карниза"
+                    value={corniceLightingLength}
+                    min={1}
+                    max={calculator.corniceMeters.max}
+                    step={1}
+                    unit="м.п."
+                    onChange={(value) => {
+                      markInteracted();
+                      setCorniceLightingLength(value);
+                    }}
+                    showSlider
+                  />
+                  <RangeField
+                    id="cornice-lighting-psu-page"
+                    label="Блоки питания"
+                    value={corniceLightingPowerSupplies}
+                    min={1}
+                    max={10}
+                    step={1}
+                    unit="шт."
+                    onChange={(value) => {
+                      markInteracted();
+                      setCorniceLightingPowerSupplies(value);
+                    }}
+                    showSlider
+                    quickValues={[1, 2, 3]}
+                  />
+                </div>
+              ) : null}
             </div>
           ) : null}
         </SectionCard>
@@ -2193,6 +2389,9 @@ export function PriceCalculatorClient({
               ) : null}
               {corniceTotal > 0 ? (
                 <PriceRow label={selectedCornice.label} value={`${formatCurrency(corniceTotal)} ₽`} />
+              ) : null}
+              {corniceLightingTotal > 0 ? (
+                <PriceRow label={calculator.corniceLighting.label} value={`${formatCurrency(corniceLightingTotal)} ₽`} />
               ) : null}
               {trackTotal > 0 ? (
                 <PriceRow label={selectedTrack.label} value={`${formatCurrency(trackTotal)} ₽`} />
