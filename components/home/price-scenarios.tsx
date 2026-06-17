@@ -2,9 +2,24 @@
 
 import { homepage } from "@/content/homepage";
 
-// Безопасное получение данных
-const priceData = homepage.price as any;
-const scenarios = (priceData.scenarios || []) as any[];
+type PriceScenario = {
+  slug: string;
+  serviceType: string;
+  title: string;
+  roomType: string;
+  areaLabel: string;
+  priceLabel: string;
+  includesLabel?: string;
+  note?: string;
+  highlight?: boolean;
+};
+
+type PriceScenariosSource = {
+  scenarios?: PriceScenario[];
+};
+
+const priceData = homepage.price as PriceScenariosSource;
+const scenarios = Array.isArray(priceData.scenarios) ? priceData.scenarios : [];
 
 function getOptionalString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim().length ? value : undefined;
@@ -58,21 +73,23 @@ export function PriceScenarios() {
             </div>
 
             <div className="mt-8">
-              <p className={`font-mono text-xs uppercase tracking-[0.18em] ${
-                isHighlighted ? "text-white/50" : "text-slate-400"
-              }`}>
+              <p
+                className={`font-mono text-xs uppercase tracking-[0.18em] ${
+                  isHighlighted ? "text-white/50" : "text-slate-400"
+                }`}
+              >
                 {scenario.areaLabel}
               </p>
 
               <div className="mt-3 flex items-end gap-2">
-                <p className="text-4xl font-bold tracking-tight sm:text-5xl">
-                  {price.main}
-                </p>
+                <p className="text-4xl font-bold tracking-tight sm:text-5xl">{price.main}</p>
 
                 {price.suffix ? (
-                  <span className={`pb-1 text-sm font-medium ${
-                    isHighlighted ? "text-white/60" : "text-slate-500"
-                  }`}>
+                  <span
+                    className={`pb-1 text-sm font-medium ${
+                      isHighlighted ? "text-white/60" : "text-slate-500"
+                    }`}
+                  >
                     {price.suffix}
                   </span>
                 ) : null}
@@ -80,17 +97,25 @@ export function PriceScenarios() {
             </div>
 
             <div className="mt-6 space-y-3">
-              {scenario.includesLabel && (
-                <p className={`text-sm leading-6 ${isHighlighted ? "text-white/78" : "text-slate-600"}`}>
+              {scenario.includesLabel ? (
+                <p
+                  className={`text-sm leading-6 ${
+                    isHighlighted ? "text-white/78" : "text-slate-600"
+                  }`}
+                >
                   {scenario.includesLabel}
                 </p>
-              )}
+              ) : null}
 
-              {note && (
-                <p className={`text-sm leading-6 ${isHighlighted ? "text-white/60" : "text-slate-500"}`}>
+              {note ? (
+                <p
+                  className={`text-sm leading-6 ${
+                    isHighlighted ? "text-white/60" : "text-slate-500"
+                  }`}
+                >
                   {note}
                 </p>
-              )}
+              ) : null}
             </div>
           </article>
         );
