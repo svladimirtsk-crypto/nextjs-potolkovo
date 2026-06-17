@@ -9,7 +9,6 @@ import { scrollToAnchorTarget } from "@/lib/scroll-to-anchor";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 
-const PRIMARY_CTA_LABEL = "Записаться на бесплатный замер";
 
 const priorityRank = {
   high: 0,
@@ -185,7 +184,7 @@ export function HomeHeader() {
 
           <Button href="#action" className="whitespace-nowrap px-4 sm:px-5">
             <span className="sm:hidden">Замер</span>
-            <span className="hidden sm:inline">{PRIMARY_CTA_LABEL}</span>
+            <span className="hidden sm:inline">{homepage.header.primaryCtaLabel}</span>
           </Button>
         </div>
       </Container>
