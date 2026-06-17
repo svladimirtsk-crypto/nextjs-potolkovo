@@ -620,7 +620,6 @@ type PriceCalculatorClientProps = {
 
   // P0.1: callback for the dark card CTA button
   onPrimaryCtaClick?: () => void;
-  onSkipToSummaryClick?: () => void;
 
   // V-3: Mobile sticky bottom bar — disabled in modal context
   showMobileStickyBar?: boolean;
@@ -632,7 +631,6 @@ export function PriceCalculatorClient({
   prefillFromLighting = null,
   prefillFromLightingTrigger = 0,
   onPrimaryCtaClick,
-  onSkipToSummaryClick,
   showMobileStickyBar = true,
 }: PriceCalculatorClientProps) {
   const { setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
@@ -1632,6 +1630,9 @@ export function PriceCalculatorClient({
 
   const promptAddRoom = () => {
     setIsChoosingRoom(true);
+    setConfirmed(getConfirmedStateForBlankRoom());
+    setResumeStep(null);
+    setActiveStep("area");
     requestAnimationFrame(() => {
       requestAnimationFrame(() => scrollToStep("area", "smooth"));
     });
@@ -1876,17 +1877,7 @@ export function PriceCalculatorClient({
                       className="step0-confirm-button step0-confirm-room-light"
                       onClick={onPrimaryCtaClick ?? (() => scrollToAction())}
                     >
-                      К свету →
-                    </Button>
-                  ) : null}
-                  {isCurrentRoomComplete ? (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="step0-confirm-button step0-confirm-room-summary"
-                      onClick={onSkipToSummaryClick ?? (() => scrollToAction())}
-                    >
-                      Свет не нужен — к итогу
+                      Перейти к подбору освещения →
                     </Button>
                   ) : null}
                   <Button type="button" variant="secondary" onClick={promptAddRoom}>
@@ -2787,7 +2778,7 @@ export function PriceCalculatorClient({
                   ? isCurrentRoomComplete
                     ? nextIncompleteRoom
                       ? "К следующей комнате →"
-                      : "К свету →"
+                      : "Перейти к подбору освещения →"
                     : "Продолжить помещение →"
                   : homepage.price.primaryCtaLabel}
               </Button>
@@ -2831,7 +2822,7 @@ export function PriceCalculatorClient({
                 ? isCurrentRoomComplete
                   ? nextIncompleteRoom
                     ? "Следующая комната →"
-                    : "К свету →"
+                    : "К подбору освещения →"
                   : "Продолжить →"
                 : homepage.price.primaryCtaLabel}
             </Button>
