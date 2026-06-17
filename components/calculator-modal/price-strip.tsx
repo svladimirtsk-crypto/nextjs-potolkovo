@@ -46,10 +46,11 @@ export function PriceStrip() {
   const prevTotalRef = useRef(grandTotal);
   const [animKey, setAnimKey] = useState(0);
   useEffect(() => {
-    if (grandTotal !== prevTotalRef.current) {
-      prevTotalRef.current = grandTotal;
-      setAnimKey((k) => k + 1);
-    }
+    if (grandTotal === prevTotalRef.current) return;
+
+    prevTotalRef.current = grandTotal;
+    const frame = requestAnimationFrame(() => setAnimKey((k) => k + 1));
+    return () => cancelAnimationFrame(frame);
   }, [grandTotal]);
 
   if (!showCeilingInUi && !hasLighting) {
