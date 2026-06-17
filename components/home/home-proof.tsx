@@ -42,12 +42,17 @@ export function HomeProof() {
     <Section id="proof" className="bg-slate-950 text-white">
       <Container>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <Heading
-            eyebrow="Работы"
-            title={proof.sectionTitle}
-            description={proof.sectionIntro}
-            tone="dark"
-          />
+          <div>
+            <Heading
+              eyebrow="Работы"
+              title={proof.sectionTitle}
+              description={proof.sectionIntro}
+              tone="dark"
+            />
+            <p className="mt-4 text-sm text-white/60">
+              Цены в карточках считаются по той же логике, что и в калькуляторе: потолок, узлы и освещение показываются прозрачно.
+            </p>
+          </div>
         </div>
 
         {/* Mobile: swipe */}
