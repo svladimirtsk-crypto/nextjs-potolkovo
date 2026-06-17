@@ -19,6 +19,7 @@ import {
 
 export type CalculatorLeadSnapshot = {
   area: number;
+  calculationScope?: "room" | "object";
 
   ceilingTypeLabel: string;
   ceilingBaseRate: number;
@@ -46,6 +47,13 @@ export type CalculatorLeadSnapshot = {
   corniceLength: number | null;
   corniceRatePerMeter: number | null;
   corniceTotal: number;
+  corniceLightingEnabled?: boolean;
+  corniceLightingLabel?: string | null;
+  corniceLightingLength?: number | null;
+  corniceLightingRatePerMeter?: number | null;
+  corniceLightingPowerSupplies?: number | null;
+  corniceLightingPowerSupplyRate?: number | null;
+  corniceLightingTotal?: number;
 
   trackLabel: string | null;
   trackLength: number | null;
@@ -137,6 +145,7 @@ export function getCalculatorSummaryLines(
 
   const lines: string[] = [
     "Расчёт потолка:",
+    `Формат расчёта: ${snapshot.calculationScope === "object" ? "весь объект" : "отдельное помещение"}`,
     `Площадь: ${snapshot.area} м²`,
     `Тип потолка: ${snapshot.ceilingTypeLabel}`,
     `Полотно: ${snapshot.area} м² × ${formatCurrency(snapshot.ceilingBaseRate)} ₽ = ${formatCurrency(snapshot.ceilingBaseTotal)} ₽`,
@@ -199,6 +208,32 @@ export function getCalculatorSummaryLines(
         snapshot.corniceRatePerMeter
       )} ₽ = ${formatCurrency(snapshot.corniceTotal)} ₽`
     );
+  }
+
+  if (
+    snapshot.corniceLightingEnabled &&
+    toNumber(snapshot.corniceLightingTotal) > 0 &&
+    snapshot.corniceLightingLabel &&
+    snapshot.corniceLightingLength &&
+    snapshot.corniceLightingRatePerMeter !== null
+  ) {
+    lines.push(
+      `${snapshot.corniceLightingLabel}: ${snapshot.corniceLightingLength} м.п. × ${formatCurrency(
+        toNumber(snapshot.corniceLightingRatePerMeter)
+      )} ₽ = ${formatCurrency(toNumber(snapshot.corniceLightingLength) * toNumber(snapshot.corniceLightingRatePerMeter))} ₽`
+    );
+
+    if (
+      snapshot.corniceLightingPowerSupplies &&
+      snapshot.corniceLightingPowerSupplyRate !== null &&
+      toNumber(snapshot.corniceLightingPowerSupplies) > 0
+    ) {
+      lines.push(
+        `Блок питания подсветки: ${snapshot.corniceLightingPowerSupplies} шт. × ${formatCurrency(
+          toNumber(snapshot.corniceLightingPowerSupplyRate)
+        )} ₽ = ${formatCurrency(toNumber(snapshot.corniceLightingPowerSupplies) * toNumber(snapshot.corniceLightingPowerSupplyRate))} ₽`
+      );
+    }
   }
 
   if (
