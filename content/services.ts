@@ -26,6 +26,7 @@ export type ServiceCalculatorPreset = {
   ceilingType: CalculatorCeilingType;
   areaDefault?: number;
   calculationScopeDefault?: "room" | "object";
+  roomLabelDefault?: string;
   corniceType?: CalculatorCorniceType;
   corniceLengthDefault?: number;
   corniceLightingEnabled?: boolean;
