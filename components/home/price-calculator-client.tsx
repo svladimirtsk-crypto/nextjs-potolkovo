@@ -639,6 +639,9 @@ export function PriceCalculatorClient({
 
   const resolvedAreaDefault = preset?.areaDefault ?? calculator.areaDefault;
   const resolvedCalculationScope = (preset?.calculationScopeDefault ?? "room") as CalculationScope;
+  const initialCompactCalculationScope = compactSections
+    ? ((preset?.calculationScopeDefault ?? null) as CalculationScope | null)
+    : resolvedCalculationScope;
   const resolvedCeilingType = (preset?.ceilingType ?? "standard") as CeilingType;
   const resolvedCorniceType = preset?.corniceType ?? "none";
   const resolvedTrackType = preset?.trackType ?? "none";
@@ -646,7 +649,7 @@ export function PriceCalculatorClient({
   const resolvedLightsCount =
     preset?.lightsCount ?? calculator.lights.countDefault;
 
-  const [calculationScope, setCalculationScope] = useState<CalculationScope>(resolvedCalculationScope);
+  const [calculationScope, setCalculationScope] = useState<CalculationScope | null>(initialCompactCalculationScope);
   const [area, setArea] = useState<number>(resolvedAreaDefault);
   const [ceilingType, setCeilingType] =
     useState<CeilingType>(resolvedCeilingType);
@@ -709,11 +712,11 @@ export function PriceCalculatorClient({
   const roomSequenceRef = useRef(2);
   const roomApplyLockRef = useRef(false);
   const [rooms, setRooms] = useState<RoomConfig[]>(() =>
-    resolvedCalculationScope === "room" && compactSections
+    initialCompactCalculationScope === "room"
       ? [
           {
             id: "room-1",
-            label: preset?.roomLabelDefault ?? "Помещение 1",
+            label: preset?.roomLabelDefault ?? "",
             area: resolvedAreaDefault,
             ceilingType: resolvedCeilingType,
             shadowEnabled: resolvedCeilingType === "shadow" || resolvedCeilingType === "shadow-floating",
@@ -744,7 +747,7 @@ export function PriceCalculatorClient({
       : []
   );
   const [activeRoomId, setActiveRoomId] = useState<string | null>(
-    resolvedCalculationScope === "room" && compactSections ? "room-1" : null
+    initialCompactCalculationScope === "room" ? "room-1" : null
   );
 
   // чтобы prefill не перетирал ручные правки
@@ -1069,10 +1072,24 @@ export function PriceCalculatorClient({
 
   useEffect(() => {
     if (!compactSections) return;
+
     if (calculationScope !== "room") {
       setActiveRoomId(null);
+      return;
     }
-  }, [calculationScope, compactSections]);
+
+    if (rooms.length > 0 && activeRoomId) return;
+
+    const initialRoom = buildBlankRoom(preset?.roomLabelDefault);
+    roomSequenceRef.current += 1;
+    setRooms([initialRoom]);
+    setRoomConfirmedMap({ [initialRoom.id]: getConfirmedStateForBlankRoom() });
+    setActiveRoomId(initialRoom.id);
+    setConfirmed(getConfirmedStateForBlankRoom());
+    setResumeStep(null);
+    setActiveStep("area");
+    applyRoomConfig(initialRoom);
+  }, [activeRoomId, calculationScope, compactSections, preset?.roomLabelDefault, rooms.length]);
 
   const applyRoomConfig = (room: RoomConfig) => {
     roomApplyLockRef.current = true;
@@ -1119,7 +1136,7 @@ export function PriceCalculatorClient({
   const currentSnapshot = useMemo<CalculatorLeadSnapshot>(
     () => ({
       area,
-      calculationScope,
+      calculationScope: calculationScope ?? undefined,
       ceilingTypeLabel: !shadowEnabled && !floatingEnabled
         ? "Простой потолок"
         : `${shadowEnabled ? "Теневой" : ""}${shadowEnabled && floatingEnabled ? " + " : ""}${floatingEnabled ? "Парящий" : ""}`,
@@ -1421,6 +1438,7 @@ export function PriceCalculatorClient({
       const state = roomConfirmedMap[room.id];
       return !(state && compactSteps.every((step) => state[step]));
     }) ?? null;
+  const showRoomManager = isRoomScopeMulti && (completedRoomsCount > 0 || effectiveRooms.length > 1);
   const roomProgressMap = effectiveRooms.reduce<Record<string, { done: number; total: number }>>(
     (acc, room) => {
       const state = roomConfirmedMap[room.id];
@@ -1706,7 +1724,7 @@ export function PriceCalculatorClient({
       <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:p-8 max-sm:gap-3 max-sm:border-0 max-sm:bg-transparent max-sm:p-0 max-sm:shadow-none">
         {/* LEFT */}
         <div className="min-w-0 space-y-5 max-sm:space-y-3">
-          {isRoomScopeMulti && effectiveRooms.length > 0 ? (
+          {showRoomManager ? (
             <SectionCard
               title="Помещения в расчёте"
               description="Считайте комнаты по очереди: у каждой помещения своя конфигурация, а справа и внизу сразу виден общий итог по объекту."
@@ -1815,18 +1833,41 @@ export function PriceCalculatorClient({
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {!isCurrentRoomComplete && currentRoomPendingStep ? (
-                    <Button type="button" onClick={() => openStep(currentRoomPendingStep)}>
+                    <Button
+                      type="button"
+                      className="step0-confirm-button step0-confirm-room-continue"
+                      onClick={() => openStep(currentRoomPendingStep)}
+                    >
                       Продолжить помещение →
                     </Button>
                   ) : null}
                   {isCurrentRoomComplete && nextIncompleteRoom ? (
-                    <Button type="button" variant="secondary" onClick={() => switchToRoom(nextIncompleteRoom.id)}>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="step0-confirm-button step0-confirm-room-next"
+                      onClick={() => switchToRoom(nextIncompleteRoom.id)}
+                    >
                       К следующей комнате →
                     </Button>
                   ) : null}
                   {isCurrentRoomComplete ? (
-                    <Button type="button" onClick={onPrimaryCtaClick ?? (() => scrollToAction())}>
-                      К общему итогу →
+                    <Button
+                      type="button"
+                      className="step0-confirm-button step0-confirm-room-light"
+                      onClick={onPrimaryCtaClick ?? (() => scrollToAction())}
+                    >
+                      К свету →
+                    </Button>
+                  ) : null}
+                  {isCurrentRoomComplete ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="step0-confirm-button step0-confirm-room-summary"
+                      onClick={onSkipToSummaryClick ?? (() => scrollToAction())}
+                    >
+                      Свет не нужен — к итогу
                     </Button>
                   ) : null}
                   <Button type="button" variant="secondary" onClick={() => addRoom()}>
@@ -1843,7 +1884,7 @@ export function PriceCalculatorClient({
               <SectionCard title={`Площадь`}>
                 <SummaryRow
                   label="Расчёт"
-                  value={`${calculationScope === "object" ? "Весь объект" : roomLabel} · ${area} м²`}
+                  value={`${calculationScope === "object" ? "Весь объект" : (roomLabel || "Одна комната")} · ${area} м²`}
                   onEdit={() => beginEdit("area")}
                 />
               </SectionCard>
@@ -1874,7 +1915,7 @@ export function PriceCalculatorClient({
                 </div>
                 {calculationScope === "room" ? (
                   <div className="mb-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
-                    <p className="text-sm font-medium text-slate-700">Тип помещения</p>
+                    <p className="text-sm font-medium text-slate-700">Какое помещение считаете?</p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       {ROOM_TYPE_OPTIONS.map((label) => (
                         <button
@@ -1897,7 +1938,7 @@ export function PriceCalculatorClient({
                     </div>
                     <div className="mt-4">
                       <Input
-                        label="Название помещения"
+                        label="Своё название помещения"
                         value={roomLabel}
                         onChange={(event) => {
                           markInteracted();
@@ -1911,24 +1952,32 @@ export function PriceCalculatorClient({
                     </div>
                   </div>
                 ) : null}
-                <RangeField
-                  id="area-field"
-                  label={calculationScope === "object" ? "Укажите общую площадь объекта" : "Выберите площадь помещения"}
-                  value={area}
-                  min={calculator.areaMin}
-                  max={calculator.areaMax}
-                  step={calculator.areaStep}
-                  unit="м²"
-                  onChange={handleAreaChange}
-                  showSlider={showSlider}
-                  quickValues={[10, 15, 20, 25, 30, 40, 50, 60, 80]}
-                />
-                <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
-                  <p className="text-xs text-slate-500">Пресет или введите вручную. Для больших площадей — просто наберите число.</p>
-                  <Button type="button" variant="secondary" className="step0-confirm-button step0-confirm-area max-sm:hidden" onClick={() => confirmAndNavigate("area")}>
-                    Подтвердить
-                  </Button>
-                </div>
+                {calculationScope ? (
+                  <>
+                    <RangeField
+                      id="area-field"
+                      label={calculationScope === "object" ? "Укажите общую площадь объекта" : "Выберите площадь помещения"}
+                      value={area}
+                      min={calculator.areaMin}
+                      max={calculator.areaMax}
+                      step={calculator.areaStep}
+                      unit="м²"
+                      onChange={handleAreaChange}
+                      showSlider={showSlider}
+                      quickValues={[10, 15, 20, 25, 30, 40, 50, 60, 80]}
+                    />
+                    <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
+                      <p className="text-xs text-slate-500">Пресет или введите вручную. Для больших площадей — просто наберите число.</p>
+                      <Button type="button" variant="secondary" className="step0-confirm-button step0-confirm-area max-sm:hidden" onClick={() => confirmAndNavigate("area")}>
+                        Подтвердить
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-sm text-slate-600">
+                    Сначала выберите, что хотите посчитать: одну комнату или весь объект целиком.
+                  </div>
+                )}
               </SectionCard>
             ) : (
               <CollapsedStep
@@ -2638,8 +2687,10 @@ export function PriceCalculatorClient({
 
             <p className="mt-2 text-xs text-white/70">
               {isRoomScopeMulti
-                ? `${effectiveRooms.length} ${effectiveRooms.length === 1 ? "помещение" : effectiveRooms.length < 5 ? "помещения" : "помещений"} · сейчас редактируете: ${roomLabel}`
-                : `${calculationScope === "object" ? "Весь объект" : "Отдельное помещение"} · ${!shadowEnabled && !floatingEnabled ? "Простой потолок" : `${shadowEnabled ? "Теневой" : ""}${shadowEnabled && floatingEnabled ? " + " : ""}${floatingEnabled ? "Парящий" : ""}`} · ${area} м²${shadowEnabled ? ` · теневой ${shadowLength} м.п.` : ""}${floatingEnabled ? ` · парящий ${floatingLength} м.п.` : ""}`}
+                ? `${effectiveRooms.length} ${effectiveRooms.length === 1 ? "помещение" : effectiveRooms.length < 5 ? "помещения" : "помещений"} · сейчас редактируете: ${roomLabel || "комнату"}`
+                : calculationScope
+                  ? `${calculationScope === "object" ? "Весь объект" : "Одна комната"} · ${!shadowEnabled && !floatingEnabled ? "Простой потолок" : `${shadowEnabled ? "Теневой" : ""}${shadowEnabled && floatingEnabled ? " + " : ""}${floatingEnabled ? "Парящий" : ""}`} · ${area} м²${shadowEnabled ? ` · теневой ${shadowLength} м.п.` : ""}${floatingEnabled ? ` · парящий ${floatingLength} м.п.` : ""}`
+                  : "Сначала выберите, что хотите посчитать: одну комнату или весь объект."}
             </p>
 
             {isRoomScopeMulti ? (
@@ -2673,7 +2724,7 @@ export function PriceCalculatorClient({
                   ? isCurrentRoomComplete
                     ? nextIncompleteRoom
                       ? "К следующей комнате →"
-                      : "К общему итогу →"
+                      : "К свету →"
                     : "Продолжить помещение →"
                   : homepage.price.primaryCtaLabel}
               </Button>
@@ -2717,7 +2768,7 @@ export function PriceCalculatorClient({
                 ? isCurrentRoomComplete
                   ? nextIncompleteRoom
                     ? "Следующая комната →"
-                    : "Итог по объекту →"
+                    : "К свету →"
                   : "Продолжить →"
                 : homepage.price.primaryCtaLabel}
             </Button>
