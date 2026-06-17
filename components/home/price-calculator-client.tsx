@@ -1482,6 +1482,15 @@ export function PriceCalculatorClient({
   const currentRoomPendingStep = compactSteps.find(
     (step) => !currentRoomConfirmedState?.[step]
   ) ?? null;
+  const step0Phase = calculationScope === null
+    ? "choose-mode"
+    : calculationScope === "object"
+      ? "edit-object"
+      : !activeRoomId || isChoosingRoom
+        ? effectiveRooms.length === 0
+          ? "choose-first-room"
+          : "choose-next-room"
+        : "edit-room";
   const isCurrentRoomComplete = Boolean(
     currentRoomConfirmedState && compactSteps.every((step) => currentRoomConfirmedState[step])
   );
@@ -1848,7 +1857,7 @@ export function PriceCalculatorClient({
                           </span>
                         ) : (
                           <span className={isActive ? "rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white/80" : "rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700"}>
-                            {progress.done}/{progress.total}
+                            В работе
                           </span>
                         )}
                       </div>
@@ -1955,101 +1964,96 @@ export function PriceCalculatorClient({
               </SectionCard>
             ) : activeStep === "area" ? (
               <SectionCard
-                title={`Площадь`}
-                description="Сначала выберите формат расчёта. Площадь считается отдельно, а профили и узлы — только по нужным участкам в метрах."
+                title={
+                  step0Phase === "choose-mode"
+                    ? "Что хотите посчитать?"
+                    : step0Phase === "choose-first-room"
+                      ? "Добавьте первое помещение"
+                      : step0Phase === "choose-next-room"
+                        ? "Добавьте ещё помещение"
+                        : "Площадь"
+                }
+                description={
+                  step0Phase === "choose-mode"
+                    ? "Сначала выберите сценарий расчёта. Площадь считается отдельно, а профили и узлы — только по нужным участкам в метрах."
+                    : step0Phase === "choose-first-room" || step0Phase === "choose-next-room"
+                      ? "Выберите комнату, а затем задайте её площадь и параметры потолка."
+                      : "Площадь считается отдельно, а профили и узлы — только по нужным участкам в метрах."
+                }
               >
-                <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <OptionCard
-                    active={calculationScope === "room"}
-                    title="Одна комната"
-                    meta="Быстрый расчёт для кухни, спальни, гостиной, санузла или другой комнаты"
-                    onClick={() => {
-                      markInteracted();
-                      if (
-                        calculationScope === "object" &&
-                        (area !== calculator.areaDefault || shadowEnabled || floatingEnabled || lightLinesEnabled || corniceType !== "none" || trackType !== "none" || lightsEnabled || chandeliersEnabled || corniceLightingEnabled)
-                      ) {
-                        const confirmed = window.confirm("Переключить режим расчёта? Прогресс по текущему сценарию будет сброшен.");
-                        if (!confirmed) return;
-                      }
-                      setCalculationScope("room");
-                      setRooms([]);
-                      setRoomConfirmedMap({});
-                      setActiveRoomId(null);
-                      setIsChoosingRoom(true);
-                    }}
-                  />
-                  <OptionCard
-                    active={calculationScope === "object"}
-                    title="Вся квартира или дом"
-                    meta="Если хотите прикинуть бюджет по объекту целиком одной суммой"
-                    onClick={() => {
-                      markInteracted();
-                      if (
-                        calculationScope === "room" &&
-                        (effectiveRooms.length > 0 || completedRoomsCount > 0)
-                      ) {
-                        const confirmed = window.confirm("Переключить режим расчёта? Прогресс по комнатам будет сброшен.");
-                        if (!confirmed) return;
-                      }
-                      setCalculationScope("object");
-                      setRooms([]);
-                      setRoomConfirmedMap({});
-                      setActiveRoomId(null);
-                      setIsChoosingRoom(false);
-                    }}
-                  />
-                </div>
-                {calculationScope === "room" ? (
-                  !activeRoomId || isChoosingRoom ? (
-                    <div className="mb-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
-                      <p className="text-sm font-medium text-slate-700">Добавьте {completedRoomsCount > 0 ? "ещё" : "первое"} помещение</p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {ROOM_TYPE_OPTIONS.map((label) => (
-                          <button
-                            key={label}
-                            type="button"
-                            onClick={() => {
-                              markInteracted();
-                              createRoomFromSelection(label);
-                            }}
-                            className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-                          >
-                            + {label}
-                          </button>
-                        ))}
-                      </div>
-                      <p className="mt-3 text-xs text-slate-500">
-                        Сначала выберите комнату, а затем задайте её площадь и параметры потолка.
-                      </p>
-                      <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
-                        <p className="text-xs text-slate-500">Выберите нужное помещение выше.</p>
-                        <Button type="button" variant="secondary" className="step0-confirm-button step0-confirm-room-picker max-sm:hidden" onClick={promptAddRoom}>
-                          Выбрать помещение
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mb-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
-                      <p className="text-sm font-medium text-slate-700">Название помещения</p>
-                      <div className="mt-4">
-                        <Input
-                          label="Своё название помещения"
-                          value={roomLabel}
-                          onChange={(event) => {
+                {step0Phase === "choose-mode" ? (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <OptionCard
+                      active={calculationScope === "room"}
+                      title="Одна комната"
+                      meta="Быстрый расчёт для кухни, спальни, гостиной, санузла или другой комнаты"
+                      onClick={() => {
+                        markInteracted();
+                        if (
+                          calculationScope === "object" &&
+                          (area !== calculator.areaDefault || shadowEnabled || floatingEnabled || lightLinesEnabled || corniceType !== "none" || trackType !== "none" || lightsEnabled || chandeliersEnabled || corniceLightingEnabled)
+                        ) {
+                          const confirmed = window.confirm("Переключить режим расчёта? Прогресс по текущему сценарию будет сброшен.");
+                          if (!confirmed) return;
+                        }
+                        setCalculationScope("room");
+                        setRooms([]);
+                        setRoomConfirmedMap({});
+                        setActiveRoomId(null);
+                        setIsChoosingRoom(true);
+                      }}
+                    />
+                    <OptionCard
+                      active={calculationScope === "object"}
+                      title="Вся квартира или дом"
+                      meta="Если хотите прикинуть бюджет по объекту целиком одной суммой"
+                      onClick={() => {
+                        markInteracted();
+                        if (
+                          calculationScope === "room" &&
+                          (effectiveRooms.length > 0 || completedRoomsCount > 0)
+                        ) {
+                          const confirmed = window.confirm("Переключить режим расчёта? Прогресс по комнатам будет сброшен.");
+                          if (!confirmed) return;
+                        }
+                        setCalculationScope("object");
+                        setRooms([]);
+                        setRoomConfirmedMap({});
+                        setActiveRoomId(null);
+                        setIsChoosingRoom(false);
+                      }}
+                    />
+                  </div>
+                ) : step0Phase === "choose-first-room" || step0Phase === "choose-next-room" ? (
+                  <div className="rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+                    <div className="flex flex-wrap gap-2">
+                      {ROOM_TYPE_OPTIONS.map((label) => (
+                        <button
+                          key={label}
+                          type="button"
+                          onClick={() => {
                             markInteracted();
-                            setRoomLabel(event.target.value);
+                            createRoomFromSelection(label);
                           }}
-                          placeholder="Например: Кухня-гостиная"
-                        />
-                        <p className="mt-2 text-xs text-slate-500">
-                          Это название будет видно в общем списке помещений и в итоговом расчёте.
-                        </p>
-                      </div>
+                          className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                        >
+                          + {label}
+                        </button>
+                      ))}
                     </div>
-                  )
-                ) : null}
-                {calculationScope === "object" ? (
+                    <p className="mt-3 text-xs text-slate-500">
+                      {step0Phase === "choose-first-room"
+                        ? "Сначала выберите первое помещение, а затем задайте его площадь и параметры потолка."
+                        : "Выберите следующее помещение выше, и затем задайте его площадь и параметры потолка."}
+                    </p>
+                    <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
+                      <p className="text-xs text-slate-500">Выберите нужное помещение выше.</p>
+                      <Button type="button" variant="secondary" className="step0-confirm-button step0-confirm-room-picker max-sm:hidden" onClick={promptAddRoom}>
+                        Выбрать помещение
+                      </Button>
+                    </div>
+                  </div>
+                ) : step0Phase === "edit-object" ? (
                   <>
                     <RangeField
                       id="area-field"
@@ -2070,8 +2074,25 @@ export function PriceCalculatorClient({
                       </Button>
                     </div>
                   </>
-                ) : calculationScope === "room" && activeRoomId && !isChoosingRoom ? (
+                ) : (
                   <>
+                    <div className="mb-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+                      <p className="text-sm font-medium text-slate-700">Название помещения</p>
+                      <div className="mt-4">
+                        <Input
+                          label="Своё название помещения"
+                          value={roomLabel}
+                          onChange={(event) => {
+                            markInteracted();
+                            setRoomLabel(event.target.value);
+                          }}
+                          placeholder="Например: Кухня-гостиная"
+                        />
+                        <p className="mt-2 text-xs text-slate-500">
+                          Это название будет видно в общем списке помещений и в итоговом расчёте.
+                        </p>
+                      </div>
+                    </div>
                     <RangeField
                       id="area-field"
                       label="Выберите площадь помещения"
@@ -2091,10 +2112,6 @@ export function PriceCalculatorClient({
                       </Button>
                     </div>
                   </>
-                ) : (
-                  <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-sm text-slate-600">
-                    Сначала выберите, что хотите посчитать: одну комнату или весь объект целиком.
-                  </div>
                 )}
               </SectionCard>
             ) : (
