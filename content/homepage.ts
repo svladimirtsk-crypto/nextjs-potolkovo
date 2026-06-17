@@ -172,6 +172,7 @@ export const homepage = {
         actionPreset: {
           ceilingType: "shadow",
           calculationScopeDefault: "room",
+          roomLabelDefault: "Кухня-гостиная",
           areaDefault: 18,
           shadowLengthDefault: 19,
           trackType: "built-in",
