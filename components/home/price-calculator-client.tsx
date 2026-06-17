@@ -1679,7 +1679,6 @@ export function PriceCalculatorClient({
 
   const promptAddRoom = () => {
     setIsChoosingRoom(true);
-    setConfirmed(getConfirmedStateForBlankRoom());
     setResumeStep(null);
     setActiveStep("area");
     requestAnimationFrame(() => {
@@ -1946,7 +1945,7 @@ export function PriceCalculatorClient({
 
           {/* AREA */}
           <div ref={areaRef}>
-            {confirmed.area ? (
+            {confirmed.area && !(calculationScope === "room" && isChoosingRoom) ? (
               <SectionCard title={`Площадь`}>
                 <SummaryRow
                   label="Расчёт"
@@ -2023,6 +2022,12 @@ export function PriceCalculatorClient({
                       <p className="mt-3 text-xs text-slate-500">
                         Сначала выберите комнату, а затем задайте её площадь и параметры потолка.
                       </p>
+                      <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
+                        <p className="text-xs text-slate-500">Выберите нужное помещение выше.</p>
+                        <Button type="button" variant="secondary" className="step0-confirm-button step0-confirm-room-picker max-sm:hidden" onClick={promptAddRoom}>
+                          Выбрать помещение
+                        </Button>
+                      </div>
                     </div>
                   ) : (
                     <div className="mb-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
