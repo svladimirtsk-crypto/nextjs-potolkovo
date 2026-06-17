@@ -68,15 +68,17 @@ export function ServiceHero({ service }: ServiceHeroProps) {
 
             {isTrackSalePage ? (
               <div className="mt-6 grid max-w-2xl gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                  <p className="text-2xl font-bold tracking-tight text-emerald-700">−10%</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-950">Только освещение</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-600">Если потолок уже готов или нужен только комплект света.</p>
+                <div className="discount-stamp discount-stamp-emerald">
+                  <div className="discount-stamp-shine" aria-hidden="true" />
+                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-700">Только свет</p>
+                  <p className="mt-1 text-4xl font-black tracking-tight text-emerald-700">−10%</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-950">купить оборудование отдельно</p>
                 </div>
-                <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
-                  <p className="text-2xl font-bold tracking-tight text-blue-700">−25%</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-950">Освещение + потолок</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-600">Максимальная выгода и правильные узлы монтажа.</p>
+                <div className="discount-stamp discount-stamp-blue">
+                  <div className="discount-stamp-shine" aria-hidden="true" />
+                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700">С потолком</p>
+                  <p className="mt-1 text-4xl font-black tracking-tight text-blue-700">−25%</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-950">максимальная выгода на свет</p>
                 </div>
               </div>
             ) : null}
