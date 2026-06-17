@@ -37,6 +37,18 @@ type CompactStepId =
   | "chandeliers"
   | "lights";
 
+const ALL_COMPACT_STEPS: CompactStepId[] = [
+  "area",
+  "ceiling",
+  "shadowProfile",
+  "floatingProfile",
+  "lightLines",
+  "cornice",
+  "track",
+  "chandeliers",
+  "lights",
+];
+
 type RoomConfig = {
   id: string;
   label: string;
@@ -1400,6 +1412,9 @@ export function PriceCalculatorClient({
   const [roomConfirmedMap, setRoomConfirmedMap] = useState<Record<string, Record<CompactStepId, boolean>>>({});
 
   const currentRoomConfirmedState = activeRoomId ? roomConfirmedMap[activeRoomId] : null;
+  const currentRoomPendingStep = compactSteps.find(
+    (step) => !currentRoomConfirmedState?.[step]
+  ) ?? null;
   const isCurrentRoomComplete = Boolean(
     currentRoomConfirmedState && compactSteps.every((step) => currentRoomConfirmedState[step])
   );
@@ -1413,6 +1428,17 @@ export function PriceCalculatorClient({
       const state = roomConfirmedMap[room.id];
       return !(state && compactSteps.every((step) => state[step]));
     }) ?? null;
+  const roomProgressMap = effectiveRooms.reduce<Record<string, { done: number; total: number }>>(
+    (acc, room) => {
+      const state = roomConfirmedMap[room.id];
+      const done = state
+        ? ALL_COMPACT_STEPS.reduce((sum, step) => sum + (state[step] ? 1 : 0), 0)
+        : 0;
+      acc[room.id] = { done, total: ALL_COMPACT_STEPS.length };
+      return acc;
+    },
+    {}
+  );
 
   const getConfirmedStateForBlankRoom = (): Record<CompactStepId, boolean> => ({
     area: false,
@@ -1534,9 +1560,9 @@ export function PriceCalculatorClient({
     applyRoomConfig(room);
   };
 
-  const addRoom = (label?: string) => {
+  const buildBlankRoom = (label?: string): RoomConfig => {
     const nextLabel = label && label !== "Другое" ? label : `Помещение ${roomSequenceRef.current}`;
-    const nextRoom: RoomConfig = {
+    return {
       id: `room-${roomSequenceRef.current}`,
       label: nextLabel,
       area: calculator.areaDefault,
@@ -1561,7 +1587,10 @@ export function PriceCalculatorClient({
       lightsEnabled: false,
       lightsCount: calculator.lights.countDefault,
     };
+  };
 
+  const addRoom = (label?: string) => {
+    const nextRoom = buildBlankRoom(label);
     roomSequenceRef.current += 1;
     setRooms((prev) => [...prev, nextRoom]);
     setRoomConfirmedMap((prev) => ({
@@ -1709,6 +1738,8 @@ export function PriceCalculatorClient({
                 {effectiveRooms.map((room) => {
                   const isActive = room.id === activeRoomId;
                   const roomSnapshot = calcRoomSnapshot(room);
+                  const progress = roomProgressMap[room.id] ?? { done: 0, total: ALL_COMPACT_STEPS.length };
+                  const isDone = progress.done === progress.total;
                   return (
                     <button
                       key={room.id}
@@ -1723,13 +1754,13 @@ export function PriceCalculatorClient({
                     >
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-sm font-semibold">{room.label}</p>
-                        {roomConfirmedMap[room.id] && compactSteps.every((step) => roomConfirmedMap[room.id][step]) ? (
+                        {isDone ? (
                           <span className={isActive ? "rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white" : "rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700"}>
                             Готово
                           </span>
                         ) : (
                           <span className={isActive ? "rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white/80" : "rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700"}>
-                            В работе
+                            {progress.done}/{progress.total}
                           </span>
                         )}
                       </div>
@@ -1782,9 +1813,16 @@ export function PriceCalculatorClient({
                     ? nextIncompleteRoom
                       ? `Комната «${roomLabel}» готова. Можно перейти к следующему помещению или сразу посмотреть общий итог.`
                       : "Все текущие помещения заполнены. Можно добавить ещё одну комнату или перейти к общему итогу."
-                    : "Сначала подтвердите текущие шаги для этой комнаты: площадь, конфигурацию и дополнительные узлы."}
+                    : currentRoomPendingStep
+                      ? `Следующий шаг для комнаты «${roomLabel}»: ${currentRoomPendingStep === "area" ? "площадь" : currentRoomPendingStep === "ceiling" ? "конфигурация потолка" : currentRoomPendingStep === "shadowProfile" ? "теневой профиль" : currentRoomPendingStep === "floatingProfile" ? "парящий профиль" : currentRoomPendingStep === "lightLines" ? "световые линии" : currentRoomPendingStep === "cornice" ? "карниз" : currentRoomPendingStep === "track" ? "трек" : currentRoomPendingStep === "chandeliers" ? "люстры" : "точечные светильники"}.`
+                      : "Сначала подтвердите текущие шаги для этой комнаты: площадь, конфигурацию и дополнительные узлы."}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
+                  {!isCurrentRoomComplete && currentRoomPendingStep ? (
+                    <Button type="button" onClick={() => openStep(currentRoomPendingStep)}>
+                      Продолжить помещение →
+                    </Button>
+                  ) : null}
                   {isCurrentRoomComplete && nextIncompleteRoom ? (
                     <Button type="button" variant="secondary" onClick={() => switchToRoom(nextIncompleteRoom.id)}>
                       К следующей комнате →
@@ -2620,8 +2658,28 @@ export function PriceCalculatorClient({
             ) : null}
 
             <div className="mt-6 space-y-2">
-              <Button type="button" className="w-full" onClick={onPrimaryCtaClick ?? (() => scrollToAction())}>
-                {isRoomScopeMulti ? "К общему итогу →" : homepage.price.primaryCtaLabel}
+              <Button
+                type="button"
+                className="w-full"
+                onClick={
+                  isRoomScopeMulti
+                    ? isCurrentRoomComplete
+                      ? (nextIncompleteRoom
+                          ? () => switchToRoom(nextIncompleteRoom.id)
+                          : onPrimaryCtaClick ?? (() => scrollToAction()))
+                      : currentRoomPendingStep
+                        ? () => openStep(currentRoomPendingStep)
+                        : undefined
+                    : onPrimaryCtaClick ?? (() => scrollToAction())
+                }
+              >
+                {isRoomScopeMulti
+                  ? isCurrentRoomComplete
+                    ? nextIncompleteRoom
+                      ? "К следующей комнате →"
+                      : "К общему итогу →"
+                    : "Продолжить помещение →"
+                  : homepage.price.primaryCtaLabel}
               </Button>
               {isRoomScopeMulti ? (
                 <Button type="button" variant="secondary" className="w-full" onClick={() => addRoom()}>
@@ -2644,8 +2702,28 @@ export function PriceCalculatorClient({
                 {formatCurrency(displayTotal)} ₽
               </p>
             </div>
-            <Button type="button" className="whitespace-nowrap shrink-0" onClick={onPrimaryCtaClick ?? (() => scrollToAction())}>
-              {isRoomScopeMulti ? "Итог по объекту →" : homepage.price.primaryCtaLabel}
+            <Button
+              type="button"
+              className="whitespace-nowrap shrink-0"
+              onClick={
+                isRoomScopeMulti
+                  ? isCurrentRoomComplete
+                    ? (nextIncompleteRoom
+                        ? () => switchToRoom(nextIncompleteRoom.id)
+                        : onPrimaryCtaClick ?? (() => scrollToAction()))
+                    : currentRoomPendingStep
+                      ? () => openStep(currentRoomPendingStep)
+                      : undefined
+                  : onPrimaryCtaClick ?? (() => scrollToAction())
+              }
+            >
+              {isRoomScopeMulti
+                ? isCurrentRoomComplete
+                  ? nextIncompleteRoom
+                    ? "Следующая комната →"
+                    : "Итог по объекту →"
+                  : "Продолжить →"
+                : homepage.price.primaryCtaLabel}
             </Button>
           </div>
         </div>
