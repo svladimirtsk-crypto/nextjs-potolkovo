@@ -153,8 +153,6 @@ export function CalculatorModal() {
   useEffect(() => {
     if (currentStep !== 0) return;
 
-    const isMobile = () => typeof window !== "undefined" && window.matchMedia("(max-width: 639px)").matches;
-
     const getConfirmLabel = (button: HTMLButtonElement | null) => {
       if (!button) return "Подтвердить →";
       const classes = button.classList;
@@ -175,12 +173,6 @@ export function CalculatorModal() {
     };
 
     const update = () => {
-      if (!isMobile()) {
-        setStep0HasConfirmButtonState(false);
-        setStep0FooterLabelState("Подтвердить →");
-        return;
-      }
-
       const button = contentRef.current?.querySelector<HTMLButtonElement>(
         ".step0-confirm-button:not(:disabled)"
       ) ?? null;
