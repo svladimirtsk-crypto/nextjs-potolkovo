@@ -2,7 +2,22 @@ import Image from "next/image";
 
 import { homeAssets } from "@/content/home-assets";
 
-type ProofItem = (typeof import("@/content/homepage").homepage.proof.items)[number];
+type ProofItem = {
+  slug: string;
+  title: string;
+  serviceType: string;
+  roomType: string;
+  summary: string;
+  areaLabel?: string;
+  timelineLabel?: string;
+  priceLabel?: string;
+  imageAssetKey: string;
+  alt: string;
+  ctaLabel: string;
+  actionTargetId: string;
+  addressLabel?: string;
+  budgetNote?: string;
+};
 
 type ProofCardProps = {
   item: ProofItem;
@@ -88,6 +103,12 @@ export function ProofCard({ item, mode, onOpen }: ProofCardProps) {
                 {item.roomType}
               </span>
 
+              {item.addressLabel ? (
+                <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
+                  {item.addressLabel}
+                </span>
+              ) : null}
+
               {item.areaLabel ? (
                 <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700">
                   {item.areaLabel}
@@ -100,6 +121,12 @@ export function ProofCard({ item, mode, onOpen }: ProofCardProps) {
                 </span>
               ) : null}
             </div>
+
+            {item.summary ? (
+              <p className="line-clamp-3 text-sm leading-6 text-slate-600">
+                {item.summary}
+              </p>
+            ) : null}
 
             {item.priceLabel ? (
               <div className="border-t border-slate-200 pt-3">
@@ -124,6 +151,10 @@ export function ProofCard({ item, mode, onOpen }: ProofCardProps) {
                     </span>
                   ) : null}
                 </div>
+
+                {item.budgetNote ? (
+                  <p className="mt-2 text-xs leading-5 text-slate-500">{item.budgetNote}</p>
+                ) : null}
               </div>
             ) : null}
           </div>
