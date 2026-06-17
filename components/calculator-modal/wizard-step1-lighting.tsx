@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import snapshotData from "@/data/eks-feed2-snapshot.json";
-import type { FeedCatalogParam, FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
+import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
 import { trackLightingCartChanged } from "@/lib/analytics";
 import {
@@ -19,6 +19,7 @@ import {
   getDiscountedPrice,
   getRequiredLampSocket,
 } from "@/lib/feed2-products";
+import { normalizeFeedCatalogProducts, toNumber, toText } from "@/lib/feed2-snapshot-normalize";
 
 import {
   CATALOG_SECTIONS,
@@ -55,47 +56,12 @@ type Tab = "recommendations" | "catalog";
 type CatalogView = "selected" | "browse";
 type CartItems = Record<string, number>;
 
-function toText(v: unknown): string { return String(v ?? "").trim(); }
-function toNumber(v: unknown): number { const n = Number(v ?? 0); return Number.isFinite(n) ? n : 0; }
 function fmt(v: number): string { return new Intl.NumberFormat("ru-RU").format(Math.round(v)); }
 function fmtM(v: number): string { return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 }).format(v); }
-function toNumOrNull(v: unknown): number | null { const n = Number(v ?? NaN); return Number.isFinite(n) ? n : null; }
 
 function normalizeQty(raw: number, unit: "pcs" | "m"): number {
   const step = unit === "m" ? 0.5 : 1;
   return Math.max(0, Math.round(raw / step) * step);
-}
-
-function toParams(input: unknown): FeedCatalogParam[] {
-  if (!Array.isArray(input)) return [];
-  return (input as any[]).map((x) => ({ label: toText(x?.label), value: toText(x?.value) }))
-    .filter((i) => i.label.length > 0 && i.value.length > 0);
-}
-
-function normalizeProduct(raw: unknown): FeedCatalogProduct | null {
-  const p = raw as Record<string, unknown>;
-  const vendorCode = toText((p as any).vendorCode);
-  const offerId = toText((p as any).offerId);
-  const name = toText((p as any).name);
-  if (!name || (!vendorCode && !offerId)) return null;
-  const productIdRaw = toText((p as any).productId);
-  const productId = productIdRaw || `feed2-${vendorCode || offerId || name}`;
-  const images = Array.isArray((p as any).images)
-    ? ((p as any).images as unknown[]).map(toText).filter(Boolean) : [];
-  return {
-    productId: toText(productId), vendorCode, offerId, name,
-    url: toText((p as any).url), categoryId: toText((p as any).categoryId),
-    categoryPath: toText((p as any).categoryPath), images,
-    coverImage: toText((p as any).coverImage) || images[0] || "",
-    priceRub: toNumber((p as any).priceRub),
-    available: Boolean((p as any).available ?? true),
-    params: toParams((p as any).params), keyAttributes: toParams((p as any).keyAttributes),
-    system: (toText((p as any).system) || "UNKNOWN") as FeedCatalogProduct["system"],
-    kind: (toText((p as any).kind) || "OTHER") as FeedCatalogProduct["kind"],
-    unit: (toText((p as any).unit) === "m" ? "m" : "pcs") as FeedCatalogProduct["unit"],
-    lengthMeters: toNumOrNull((p as any).lengthMeters),
-    pieceLengthMeters: toNumOrNull((p as any).pieceLengthMeters),
-  };
 }
 
 function isPanelProduct(p: FeedCatalogProduct): boolean {
@@ -346,8 +312,11 @@ export function WizardStep1Lighting() {
   const appliedInitialUiRef = useRef<string | null>(null);
   useEffect(() => {
     const key = JSON.stringify({
-      em: options?.entryMode, is: (options as any)?.initialStep,
-      lt: options?.initialLightingTab, lv: options?.initialLightingView, s: options?.source,
+      em: options?.entryMode,
+      is: options?.initialStep,
+      lt: options?.initialLightingTab,
+      lv: options?.initialLightingView,
+      s: options?.source,
     });
     if (appliedInitialUiRef.current === key) return;
     appliedInitialUiRef.current = key;
@@ -377,11 +346,9 @@ export function WizardStep1Lighting() {
   /* ─── Products index ─── */
   const products = useMemo(() => {
     const raw = (snapshotData as { products?: unknown[] })?.products ?? [];
-    return raw
-      .map(normalizeProduct)
-      .filter((item): item is FeedCatalogProduct => Boolean(item))
-      .map((p) => applyVendorOverrides(p))
-      .filter((p) => !REMOVED_COLIBRI_VENDOR_CODES.has(toText(p.vendorCode)));
+    return normalizeFeedCatalogProducts(raw)
+      .map((product) => applyVendorOverrides(product))
+      .filter((product) => !REMOVED_COLIBRI_VENDOR_CODES.has(toText(product.vendorCode)));
   }, []);
 
   const productsById = useMemo(() => buildProductsIndex(products), [products]);
@@ -582,7 +549,15 @@ export function WizardStep1Lighting() {
   }, [cartItems, productIdByVendorCode, productsById]);
 
   const hasClarusInCart = useMemo(() => cartEntries.some((e) => e.product.system === "CLARUS_48"), [cartEntries]);
-  const clarusPsuQty = useMemo(() => cartEntries.filter((e) => CLARUS_PSU_VENDOR_CODES.includes(toText(e.product.vendorCode) as any)).reduce((s, e) => s + e.qty, 0), [cartEntries]);
+  const clarusPsuQty = useMemo(
+    () =>
+      cartEntries
+        .filter((entry) =>
+          CLARUS_PSU_VENDOR_CODES.some((vendorCode) => vendorCode === toText(entry.product.vendorCode))
+        )
+        .reduce((sum, entry) => sum + entry.qty, 0),
+    [cartEntries]
+  );
 
   /* ─── Auto-sync mounts ─── */
   useEffect(() => {
@@ -738,7 +713,10 @@ export function WizardStep1Lighting() {
   }, [productIdByVendorCode]);
 
   /* ─── Navigation helpers ─── */
-  const setCatalogViewAndSync = (v: CatalogView) => { setCatalogView(v); setStep1CatalogView(v); };
+  const setCatalogViewAndSync = useCallback((view: CatalogView) => {
+    setCatalogView(view);
+    setStep1CatalogView(view);
+  }, [setStep1CatalogView]);
   /* ─── Selected view ─── */
   const selectedViewItems = useMemo(() =>
     cartEntries.map((e) => ({ product: e.product, item: { sku: toText(e.productId), name: toText(e.product.name), qty: e.qty, priceRub: toNumber(e.product.priceRub) } })),
@@ -1011,7 +989,7 @@ export function WizardStep1Lighting() {
     setActiveTab("recommendations");
     setCatalogViewAndSync("browse");
     setWStep(missingAction.step);
-  }, [missingAction]);
+  }, [missingAction, setCatalogViewAndSync]);
 
   useEffect(() => {
     if (activeTab !== "recommendations") {
