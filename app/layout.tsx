@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import { Inter, JetBrains_Mono } from "next/font/google";
 
+import { JsonLd } from "@/components/seo/json-ld";
+import { buildLocalBusinessSchema } from "@/lib/seo-schema";
+
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -77,15 +80,14 @@ export default function RootLayout({
           `}
         </Script>
 
-        <noscript>
-          <div>
-            <img
-              src="https://mc.yandex.ru/watch/107200362"
-              style={{ position: "absolute", left: "-9999px" }}
-              alt=""
-            />
-          </div>
-        </noscript>
+        <JsonLd data={buildLocalBusinessSchema()} />
+
+        <noscript
+          dangerouslySetInnerHTML={{
+            __html:
+              '<div><img src="https://mc.yandex.ru/watch/107200362" style="position:absolute;left:-9999px" alt="" /></div>',
+          }}
+        />
 
         <Providers>{children}</Providers>
       </body>
