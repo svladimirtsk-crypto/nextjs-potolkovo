@@ -20,7 +20,7 @@ export const homepage = {
       { label: "Заявка", targetId: "action" },
     ],
     servicesMenuLabel: "Услуги",
-    primaryCtaLabel: "Записаться на замер",
+    primaryCtaLabel: "Записаться на бесплатный замер",
     mobileMenuLabel: "Открыть меню",
     phoneLabelPrefix: "Позвонить",
   },
@@ -30,7 +30,7 @@ export const homepage = {
     h1: "Современные натяжные потолки в Москве и МО",
     subtitle:
       "Теневой профиль, парящие потолки, световые линии, трековое освещение и скрытые карнизы. Бесплатно приеду на замер, предложу решение и заранее зафиксирую смету.",
-    primaryCtaLabel: "Записаться на замер",
+    primaryCtaLabel: "Записаться на бесплатный замер",
     trustChips: [
       { label: "Бесплатный замер" },
       { label: "Монтаж за 1 день" },
@@ -155,7 +155,7 @@ export const homepage = {
       "Это ориентировочный расчёт для понимания бюджета. Итоговая смета фиксируется после осмотра помещения и согласования решения.",
     fixedPriceNote: " ",
     noExtraChargeNote: " ",
-    primaryCtaLabel: "Записаться на замер",
+    primaryCtaLabel: "Записаться на бесплатный замер",
     calculator: {
       areaMin: 10,
       areaMax: 100,
@@ -366,7 +366,7 @@ export const homepage = {
 
     successTitle: "Заявка отправлена",
     errorMessage: "Не удалось отправить заявку. Проверьте данные и попробуйте ещё раз.",
-    submitButtonLabel: "Записаться на замер",
+    submitButtonLabel: "Записаться на бесплатный замер",
     helperText:
       "Обычно отвечаю быстро. Можно указать район — так проще сориентироваться по выезду.",
     addressFieldHint: "Необязательно. Это поможет быстрее сориентироваться по выезду.",
