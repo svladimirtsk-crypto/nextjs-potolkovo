@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { homepage } from "@/content/homepage";
 import type { ServiceCalculatorPreset } from "@/content/services";
 import { PriceCalculatorClient } from "@/components/home/price-calculator-client";
 
@@ -21,6 +22,12 @@ function isPanelProduct(product: FeedCatalogProduct): boolean {
 }
 
 type PreferredTrackType = "built-in" | "surface" | null;
+
+type ProofContextItem = {
+  slug: string;
+  title: string;
+  actionPreset?: ServiceCalculatorPreset;
+};
 
 type WizardStep0CalculatorProps = {
   preset?: ServiceCalculatorPreset;
@@ -43,6 +50,14 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
   };
 
   const [prefillTrigger, setPrefillTrigger] = useState(0);
+
+  const proofSourceSlug = options?.source?.startsWith("proof-")
+    ? options.source.replace(/^proof-/, "")
+    : null;
+  const proofContext: ProofContextItem | null = proofSourceSlug
+    ? ((homepage.proof.items.find((proofItem) => proofItem.slug === proofSourceSlug) as ProofContextItem | undefined) ?? null)
+    : null;
+  const isTrackSaleFlow = String(options?.source ?? "").startsWith("track-sale");
 
   const optionsKeyRef = useRef<string | null>(null);
   const autoPrefilledRef = useRef(false);
@@ -143,6 +158,43 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
       onKeyDownCapture={markStep0SessionInteracted}
       onChangeCapture={markStep0SessionInteracted}
     >
+      {proofContext ? (
+        <div className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+          <p className="font-semibold">Похожее решение загружено</p>
+          <p className="mt-1 text-blue-900/80">
+            {proofContext.actionPreset?.introNote ?? (
+              <>
+                Мы подставили стартовые параметры по кейсу <span className="font-semibold">«{proofContext.title}»</span>.
+                Проверьте площадь и скорректируйте только те участки, где реально нужен профиль, трек, карниз или линии.
+              </>
+            )}
+          </p>
+          <div className="mt-3 grid gap-2 text-xs text-blue-900/80 sm:grid-cols-3">
+            <div className="rounded-xl bg-white px-3 py-2 ring-1 ring-blue-100">1. Проверьте площадь</div>
+            <div className="rounded-xl bg-white px-3 py-2 ring-1 ring-blue-100">2. Уточните метры профилей и узлов</div>
+            <div className="rounded-xl bg-white px-3 py-2 ring-1 ring-blue-100">3. Дальше можно уточнить свет и итог</div>
+          </div>
+        </div>
+      ) : null}
+
+      {isTrackSaleFlow ? (
+        <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
+          <p className="font-semibold">Освещение уже выбрано</p>
+          <p className="mt-1 text-emerald-900/80">
+            Теперь добавьте параметры потолка, чтобы увидеть общий бюджет. Площадь считается отдельно, а трек, карнизы и профили — только по фактическим метрам.
+          </p>
+        </div>
+      ) : null}
+
+      <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+        <p className="font-semibold text-slate-950">Как считать правильно</p>
+        <ul className="mt-2 space-y-1.5 text-slate-600">
+          <li>• Площадь — это всё помещение или весь объект.</li>
+          <li>• Теневой и парящий профиль указывайте только на нужных участках в метрах.</li>
+          <li>• Обычный, теневой и парящий можно сочетать в одном объекте.</li>
+        </ul>
+      </div>
+
       {prefillMetrics.hasAny ? (
         <div className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
           <p className="font-semibold">Синхронизация со светом</p>
