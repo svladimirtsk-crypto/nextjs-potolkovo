@@ -139,6 +139,8 @@ export function WizardStep2Summary() {
 
   const { snapshot, setSnapshot } = usePriceCalculatorBridge();
   const lighting = snapshot?.lighting ?? lightingDraft ?? null;
+  const roomBreakdown = snapshot?.roomBreakdown ?? [];
+  const hasRoomBreakdown = roomBreakdown.length > 0;
 
   const ceilingSummaryLines = useMemo(() => getCalculatorSummaryLines(snapshot), [snapshot]);
 
@@ -302,6 +304,47 @@ export function WizardStep2Summary() {
           <span className="text-lg font-bold text-slate-950">~{fmt(resolvedGrandTotal)} ₽</span>
         </div>
       </div>
+
+      {hasRoomBreakdown ? (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-slate-950">Помещения в расчёте</p>
+              <p className="mt-1 text-sm text-slate-600">
+                Сейчас итог собран из {roomBreakdown.length} {roomBreakdown.length === 1 ? "помещения" : roomBreakdown.length < 5 ? "помещений" : "помещений"}.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleGoToCeiling}
+              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+            >
+              Изменить комнаты
+            </button>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {roomBreakdown.map((room) => (
+              <div key={room.id} className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-slate-950">{room.label}</p>
+                  <span className="text-sm font-semibold text-slate-950">{fmt(room.totalRub)} ₽</span>
+                </div>
+                <p className="mt-2 text-xs text-slate-500">{room.area} м² · {room.ceilingTypeLabel}</p>
+                <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-600">
+                  {room.shadowLength ? <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">Теневой {room.shadowLength} м.п.</span> : null}
+                  {room.floatingLength ? <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">Парящий {room.floatingLength} м.п.</span> : null}
+                  {room.lightLinesLength ? <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">Линии {room.lightLinesLength} м.п.</span> : null}
+                  {room.corniceLength && room.corniceLabel ? <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">{room.corniceLabel} {room.corniceLength} м.п.</span> : null}
+                  {room.corniceLightingLength ? <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">Подсветка {room.corniceLightingLength} м.п.</span> : null}
+                  {room.trackLength && room.trackLabel ? <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">{room.trackLabel} {room.trackLength} м.п.</span> : null}
+                  {room.lightsCount ? <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">Точки {room.lightsCount} шт.</span> : null}
+                  {room.chandeliersCount ? <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">Люстры {room.chandeliersCount} шт.</span> : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {/* Edit buttons row */}
       <div className="flex flex-wrap gap-2">
