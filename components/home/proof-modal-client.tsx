@@ -7,26 +7,34 @@ import { homeAssets } from "@/content/home-assets";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 import type { ServiceCalculatorPreset } from "@/content/services";
 
-type ActionPreset = {
-  ceilingType?: string;
-  trackType?: string;
-  corniceType?: string;
-};
-
 type ProofItem = {
   slug: string;
   title: string;
   serviceType: string;
   roomType: string;
   summary: string;
-  areaLabel: string;
-  timelineLabel: string;
-  priceLabel: string;
+  areaLabel?: string;
+  timelineLabel?: string;
+  priceLabel?: string;
   imageAssetKey: string;
   alt: string;
   ctaLabel: string;
   actionTargetId: string;
-  actionPreset?: ActionPreset;
+  addressLabel?: string;
+  challenge?: string;
+  workDone?: string;
+  configurationLines?: readonly string[];
+  scopeLabel?: string;
+  budgetNote?: string;
+  budgetBreakdown?: {
+    ceilingWorksRub: number;
+    lightingRawRub: number;
+    lightingDiscountPercent: number;
+    lightingDiscountedRub: number;
+    customCharges: readonly { label: string; amountRub: number }[];
+    totalRub: number;
+  };
+  actionPreset?: ServiceCalculatorPreset;
 };
 
 type ProofModalClientProps = {
@@ -36,6 +44,10 @@ type ProofModalClientProps = {
   onPrev: () => void;
   onNext: () => void;
 };
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("ru-RU").format(Math.round(value));
+}
 
 function splitPriceLabel(priceLabel?: string) {
   if (!priceLabel) {
@@ -122,17 +134,14 @@ export function ProofModalClient({
 
   const handleWantSame = () => {
     onClose();
-    // Convert actionPreset to ServiceCalculatorPreset-compatible object
-    const preset = item.actionPreset
-      ? {
-          ceilingType: (item.actionPreset.ceilingType as ServiceCalculatorPreset["ceilingType"]) ?? "standard",
-          trackType: item.actionPreset.trackType as ServiceCalculatorPreset["trackType"],
-          corniceType: item.actionPreset.corniceType as ServiceCalculatorPreset["corniceType"],
-        }
-      : { ceilingType: "standard" as const };
+
+    const preset = (item.actionPreset ?? {
+      ceilingType: "standard",
+    }) as ServiceCalculatorPreset;
 
     openCalculator({
-      preset: preset as ServiceCalculatorPreset,
+      preset,
+      forcePreset: true,
       source: "proof-" + item.slug,
     });
   };
@@ -242,6 +251,12 @@ export function ProofModalClient({
                       {item.roomType}
                     </span>
 
+                    {item.addressLabel ? (
+                      <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
+                        {item.addressLabel}
+                      </span>
+                    ) : null}
+
                     {item.areaLabel ? (
                       <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
                         {item.areaLabel}
@@ -253,10 +268,41 @@ export function ProofModalClient({
                         {item.timelineLabel}
                       </span>
                     ) : null}
+
+                    {item.scopeLabel ? (
+                      <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
+                        {item.scopeLabel}
+                      </span>
+                    ) : null}
                   </div>
 
                   {item.summary ? (
                     <p className="mt-6 text-base leading-7 text-slate-600">{item.summary}</p>
+                  ) : null}
+
+                  {item.challenge ? (
+                    <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Задача</p>
+                      <p className="mt-2 text-sm leading-6 text-slate-700">{item.challenge}</p>
+                    </div>
+                  ) : null}
+
+                  {item.workDone ? (
+                    <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Что сделано</p>
+                      <p className="mt-2 text-sm leading-6 text-slate-700">{item.workDone}</p>
+                    </div>
+                  ) : null}
+
+                  {item.configurationLines?.length ? (
+                    <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Конфигурация</p>
+                      <ul className="mt-2 space-y-1.5 text-sm text-slate-700">
+                        {item.configurationLines.map((line) => (
+                          <li key={line}>• {line}</li>
+                        ))}
+                      </ul>
+                    </div>
                   ) : null}
 
                   {item.priceLabel ? (
@@ -276,11 +322,51 @@ export function ProofModalClient({
                           </span>
                         ) : null}
                       </div>
+
+                      {item.budgetNote ? (
+                        <p className="mt-2 text-sm leading-6 text-slate-600">{item.budgetNote}</p>
+                      ) : null}
+
+                      {item.budgetBreakdown ? (
+                        <div className="mt-4 space-y-2 border-t border-slate-200 pt-4 text-sm text-slate-700">
+                          <div className="flex items-center justify-between gap-3">
+                            <span>Потолок и монтаж</span>
+                            <span className="font-medium">{formatCurrency(item.budgetBreakdown.ceilingWorksRub)} ₽</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-3">
+                            <span>Освещение без скидки</span>
+                            <span className="line-through text-slate-400">{formatCurrency(item.budgetBreakdown.lightingRawRub)} ₽</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-3 text-emerald-700">
+                            <span>Освещение со скидкой −{item.budgetBreakdown.lightingDiscountPercent}%</span>
+                            <span className="font-medium">{formatCurrency(item.budgetBreakdown.lightingDiscountedRub)} ₽</span>
+                          </div>
+                          {item.budgetBreakdown.customCharges?.map((charge) => (
+                            <div key={charge.label} className="flex items-center justify-between gap-3">
+                              <span>{charge.label}</span>
+                              <span className="font-medium">{formatCurrency(charge.amountRub)} ₽</span>
+                            </div>
+                          ))}
+                          <div className="flex items-center justify-between gap-3 border-t border-slate-200 pt-3 font-semibold text-slate-950">
+                            <span>Итого по кейсу</span>
+                            <span>{formatCurrency(item.budgetBreakdown.totalRub)} ₽</span>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   ) : null}
                 </div>
 
                 <div className="mt-8 space-y-3 lg:mt-auto">
+                  <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+                    <p className="font-semibold">Что будет дальше</p>
+                    <ul className="mt-2 space-y-1.5 text-blue-900/80">
+                      <li>1. Загружу стартовые параметры по этому кейсу.</li>
+                      <li>2. Вы проверите площадь и метры нужных участков.</li>
+                      <li>3. Затем можно уточнить свет и получить общий ориентир.</li>
+                    </ul>
+                  </div>
+
                   <button
                     type="button"
                     onClick={handleWantSame}
