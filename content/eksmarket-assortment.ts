@@ -43,7 +43,7 @@ export interface Catalog {
 export const catalog: Catalog = {
   supplierName: "eksmarket.ru",
   supplierHomepageUrl: "https://eksmarket.ru",
-  discountPercentForCeilingOrder: 15,
+  discountPercentForCeilingOrder: 25,
   disclaimer:
     "Цены и наличие могут меняться. Подтвердим актуальную цену при оформлении заявки. Скидка 10% действует на освещение отдельно, 25% — при заказе натяжных потолков.",
   updatedAt: "2025-07-18",
