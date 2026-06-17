@@ -1397,6 +1397,22 @@ export function PriceCalculatorClient({
     chandeliers: !compactSections,
     lights: !compactSections,
   });
+  const [roomConfirmedMap, setRoomConfirmedMap] = useState<Record<string, Record<CompactStepId, boolean>>>({});
+
+  const currentRoomConfirmedState = activeRoomId ? roomConfirmedMap[activeRoomId] : null;
+  const isCurrentRoomComplete = Boolean(
+    currentRoomConfirmedState && compactSteps.every((step) => currentRoomConfirmedState[step])
+  );
+  const completedRoomsCount = effectiveRooms.filter((room) => {
+    const state = roomConfirmedMap[room.id];
+    return state ? compactSteps.every((step) => state[step]) : false;
+  }).length;
+  const nextIncompleteRoom =
+    effectiveRooms.find((room) => {
+      if (room.id === activeRoomId) return false;
+      const state = roomConfirmedMap[room.id];
+      return !(state && compactSteps.every((step) => state[step]));
+    }) ?? null;
 
   const getConfirmedStateForBlankRoom = (): Record<CompactStepId, boolean> => ({
     area: false,
@@ -1421,6 +1437,14 @@ export function PriceCalculatorClient({
     chandeliers: true,
     lights: true,
   });
+
+  useEffect(() => {
+    if (!compactSections || calculationScope !== "room") return;
+    setRoomConfirmedMap((prev) => {
+      if (prev["room-1"]) return prev;
+      return { ...prev, "room-1": getConfirmedStateForBlankRoom() };
+    });
+  }, [calculationScope, compactSections]);
 
   const areaRef = useRef<HTMLDivElement | null>(null);
   const ceilingRef = useRef<HTMLDivElement | null>(null);
@@ -1454,6 +1478,14 @@ export function PriceCalculatorClient({
         return lightsRef;
     }
   };
+
+  useEffect(() => {
+    if (!compactSections || calculationScope !== "room" || !activeRoomId) return;
+    setRoomConfirmedMap((prev) => ({
+      ...prev,
+      [activeRoomId]: confirmed,
+    }));
+  }, [activeRoomId, calculationScope, compactSections, confirmed]);
 
   const stepIndex = (id: CompactStepId) => compactSteps.indexOf(id);
 
@@ -1496,8 +1528,9 @@ export function PriceCalculatorClient({
     if (!room) return;
 
     setActiveRoomId(roomId);
-    setConfirmed(getConfirmedStateForFilledRoom());
+    setConfirmed(roomConfirmedMap[roomId] ?? getConfirmedStateForFilledRoom());
     setActiveStep("area");
+    setResumeStep(null);
     applyRoomConfig(room);
   };
 
@@ -1531,6 +1564,10 @@ export function PriceCalculatorClient({
 
     roomSequenceRef.current += 1;
     setRooms((prev) => [...prev, nextRoom]);
+    setRoomConfirmedMap((prev) => ({
+      ...prev,
+      [nextRoom.id]: getConfirmedStateForBlankRoom(),
+    }));
     setActiveRoomId(nextRoom.id);
     setConfirmed(getConfirmedStateForBlankRoom());
     setResumeStep(null);
@@ -1541,13 +1578,20 @@ export function PriceCalculatorClient({
   const removeRoom = (roomId: string) => {
     if (rooms.length <= 1) return;
 
+    const currentIndex = rooms.findIndex((room) => room.id === roomId);
     const filtered = rooms.filter((room) => room.id !== roomId);
     setRooms(filtered);
+    setRoomConfirmedMap((prev) => {
+      const next = { ...prev };
+      delete next[roomId];
+      return next;
+    });
 
-    const nextRoom = filtered[0] ?? null;
+    const nextRoom = filtered[Math.max(0, currentIndex - 1)] ?? filtered[0] ?? null;
     if (nextRoom) {
       setActiveRoomId(nextRoom.id);
-      setConfirmed(getConfirmedStateForFilledRoom());
+      setConfirmed(roomConfirmedMap[nextRoom.id] ?? getConfirmedStateForFilledRoom());
+      setResumeStep(null);
       applyRoomConfig(nextRoom);
     }
   };
@@ -1642,7 +1686,7 @@ export function PriceCalculatorClient({
               title="Помещения в расчёте"
               description="Считайте комнаты по очереди: у каждой помещения своя конфигурация, а справа и внизу сразу виден общий итог по объекту."
             >
-              <div className="grid gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-200 sm:grid-cols-3">
+              <div className="grid gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-200 sm:grid-cols-4">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Сейчас редактируете</p>
                   <p className="mt-2 text-lg font-semibold text-slate-950">{roomLabel}</p>
@@ -1650,6 +1694,10 @@ export function PriceCalculatorClient({
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Помещений</p>
                   <p className="mt-2 text-lg font-semibold text-slate-950">{effectiveRooms.length}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Готово</p>
+                  <p className="mt-2 text-lg font-semibold text-slate-950">{completedRoomsCount}</p>
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Общий ориентир</p>
@@ -1673,7 +1721,18 @@ export function PriceCalculatorClient({
                           : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
                       ].join(" ")}
                     >
-                      <p className="text-sm font-semibold">{room.label}</p>
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-semibold">{room.label}</p>
+                        {roomConfirmedMap[room.id] && compactSteps.every((step) => roomConfirmedMap[room.id][step]) ? (
+                          <span className={isActive ? "rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white" : "rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700"}>
+                            Готово
+                          </span>
+                        ) : (
+                          <span className={isActive ? "rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white/80" : "rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700"}>
+                            В работе
+                          </span>
+                        )}
+                      </div>
                       <p className={isActive ? "mt-1 text-xs text-white/70" : "mt-1 text-xs text-slate-500"}>
                         {room.area} м² · {formatCurrency(roomSnapshot.total)} ₽
                       </p>
@@ -1713,6 +1772,34 @@ export function PriceCalculatorClient({
                   Удалить текущее помещение
                 </button>
               ) : null}
+
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm font-semibold text-slate-950">
+                  {isCurrentRoomComplete ? "Помещение заполнено" : "Продолжайте заполнять текущее помещение"}
+                </p>
+                <p className="mt-1 text-sm text-slate-600">
+                  {isCurrentRoomComplete
+                    ? nextIncompleteRoom
+                      ? `Комната «${roomLabel}» готова. Можно перейти к следующему помещению или сразу посмотреть общий итог.`
+                      : "Все текущие помещения заполнены. Можно добавить ещё одну комнату или перейти к общему итогу."
+                    : "Сначала подтвердите текущие шаги для этой комнаты: площадь, конфигурацию и дополнительные узлы."}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {isCurrentRoomComplete && nextIncompleteRoom ? (
+                    <Button type="button" variant="secondary" onClick={() => switchToRoom(nextIncompleteRoom.id)}>
+                      К следующей комнате →
+                    </Button>
+                  ) : null}
+                  {isCurrentRoomComplete ? (
+                    <Button type="button" onClick={onPrimaryCtaClick ?? (() => scrollToAction())}>
+                      К общему итогу →
+                    </Button>
+                  ) : null}
+                  <Button type="button" variant="secondary" onClick={() => addRoom()}>
+                    Добавить ещё помещение
+                  </Button>
+                </div>
+              </div>
             </SectionCard>
           ) : null}
 
