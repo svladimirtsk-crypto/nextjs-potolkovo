@@ -6,71 +6,14 @@ import type { ServiceCalculatorPreset } from "@/content/services";
 import { PriceCalculatorClient } from "@/components/home/price-calculator-client";
 
 import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
-import type { FeedCatalogParam, FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
+import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 
 import snapshotData from "@/data/eks-feed2-snapshot.json";
+import { normalizeFeedCatalogProducts, toNumber, toText } from "@/lib/feed2-snapshot-normalize";
 import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
 import { calcTrackProfileMeters } from "@/lib/product-length-meters";
 
 import { useCalculatorModal } from "./calculator-modal-context";
-
-function toText(value: unknown): string {
-  return String(value ?? "").trim();
-}
-function toNumber(value: unknown): number {
-  const n = Number(value ?? 0);
-  return Number.isFinite(n) ? n : 0;
-}
-function toNumberOrNull(value: unknown): number | null {
-  const n = Number(value ?? NaN);
-  return Number.isFinite(n) ? n : null;
-}
-function toParams(input: unknown): FeedCatalogParam[] {
-  if (!Array.isArray(input)) return [];
-  return input
-    .map((item) => {
-      const x = item as { label?: unknown; value?: unknown };
-      return { label: toText(x?.label), value: toText(x?.value) };
-    })
-    .filter((item) => item.label.length > 0 && item.value.length > 0);
-}
-
-function normalizeProduct(raw: unknown): FeedCatalogProduct | null {
-  const p = raw as Record<string, unknown>;
-
-  const vendorCode = toText((p as any).vendorCode);
-  const offerId = toText((p as any).offerId);
-  const name = toText((p as any).name);
-  if (!name || (!vendorCode && !offerId)) return null;
-
-  const productIdRaw = toText((p as any).productId);
-  const productId = productIdRaw || `feed2-${vendorCode || offerId || name}`;
-
-  const images = Array.isArray((p as any).images)
-    ? ((p as any).images as unknown[]).map((item) => toText(item)).filter(Boolean)
-    : [];
-
-  return {
-    productId: toText(productId),
-    vendorCode,
-    offerId,
-    name,
-    url: toText((p as any).url),
-    categoryId: toText((p as any).categoryId),
-    categoryPath: toText((p as any).categoryPath),
-    images,
-    coverImage: toText((p as any).coverImage) || images[0] || "",
-    priceRub: toNumber((p as any).priceRub),
-    available: Boolean((p as any).available ?? true),
-    params: toParams((p as any).params),
-    keyAttributes: toParams((p as any).keyAttributes),
-    system: (toText((p as any).system) || "UNKNOWN") as FeedCatalogProduct["system"],
-    kind: (toText((p as any).kind) || "OTHER") as FeedCatalogProduct["kind"],
-    unit: (toText((p as any).unit) === "m" ? "m" : "pcs") as FeedCatalogProduct["unit"],
-    lengthMeters: toNumberOrNull((p as any).lengthMeters),
-    pieceLengthMeters: toNumberOrNull((p as any).pieceLengthMeters),
-  };
-}
 
 function isPanelProduct(product: FeedCatalogProduct): boolean {
   const text = `${toText(product.name)} ${toText(product.categoryPath)}`.toLowerCase();
@@ -119,10 +62,7 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
 
   const feedProducts = useMemo(() => {
     const rawProducts = (snapshotData as { products?: unknown[] })?.products ?? [];
-    return rawProducts
-      .map((x) => normalizeProduct(x))
-      .filter((x): x is FeedCatalogProduct => Boolean(x))
-      .map((p) => applyVendorOverrides(p));
+    return normalizeFeedCatalogProducts(rawProducts).map((product) => applyVendorOverrides(product));
   }, []);
 
   const byProductId = useMemo(() => {
@@ -140,9 +80,9 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
     return map;
   }, [feedProducts]);
 
-  const lightingItems = lightingDraft?.mode === "catalog" ? (lightingDraft.items ?? []) : [];
-
   const prefillMetrics = useMemo(() => {
+    const lightingItems = lightingDraft?.mode === "catalog" ? (lightingDraft.items ?? []) : [];
+
     let trackProfileMeters = 0;
     let pointSpotsQty = 0;
 
@@ -185,7 +125,7 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
       preferredTrackType,
       hasAny,
     };
-  }, [byProductId, byVendorCode, lightingItems]);
+  }, [byProductId, byVendorCode, lightingDraft]);
 
   useEffect(() => {
     if (autoPrefilledRef.current) return;
@@ -193,7 +133,8 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
     if (!prefillMetrics.hasAny) return;
 
     autoPrefilledRef.current = true;
-    setPrefillTrigger((x) => x + 1);
+    const frame = requestAnimationFrame(() => setPrefillTrigger((x) => x + 1));
+    return () => cancelAnimationFrame(frame);
   }, [prefillMetrics.hasAny, step0SessionInteracted]);
 
   return (
