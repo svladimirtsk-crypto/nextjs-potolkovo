@@ -251,7 +251,10 @@ function RangeField({
   quickValues?: number[];
 }) {
   const [manual, setManual] = useState<string>(String(value));
-  useEffect(() => setManual(String(value)), [value]);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setManual(String(value)));
+    return () => cancelAnimationFrame(frame);
+  }, [value]);
 
   const normalize = (num: number) => clamp(roundToStep(num, step), min, max);
 
@@ -536,43 +539,47 @@ export function PriceCalculatorClient({
     if (!prefillFromLighting) return;
     if (!prefillFromLightingTrigger) return;
 
-    // ВАЖНО: prefill — это не “взаимодействие пользователя”
-    // setHasInteracted(true) здесь не ставим.
+    const frame = requestAnimationFrame(() => {
+      // ВАЖНО: prefill — это не “взаимодействие пользователя”
+      // setHasInteracted(true) здесь не ставим.
 
-    const points = Math.max(
-      0,
-      Math.round(Number(prefillFromLighting.pointSpotsQty ?? 0))
-    );
-
-    // синк “в обе стороны”:
-    // - если есть точки → подставим и включим
-    // - если точек нет → выключим (если пользователь сам не трогал это поле)
-    if (!lightsTouched) {
-      if (points > 0) {
-        setLightsEnabled(true);
-        setLightsCount(points);
-      } else {
-        setLightsEnabled(false);
-      }
-    }
-
-    const metersRaw = Number(prefillFromLighting.trackProfileMeters ?? 0);
-    if (Number.isFinite(metersRaw) && metersRaw > 0 && !trackLengthTouched) {
-      const normalized = clamp(
-        roundToStep(metersRaw, calculator.trackMeters.step),
-        calculator.trackMeters.min,
-        calculator.trackMeters.max
+      const points = Math.max(
+        0,
+        Math.round(Number(prefillFromLighting.pointSpotsQty ?? 0))
       );
 
-      setTrackLength(normalized);
-    }
+      // синк “в обе стороны”:
+      // - если есть точки → подставим и включим
+      // - если точек нет → выключим (если пользователь сам не трогал это поле)
+      if (!lightsTouched) {
+        if (points > 0) {
+          setLightsEnabled(true);
+          setLightsCount(points);
+        } else {
+          setLightsEnabled(false);
+        }
+      }
 
-    const preferred = (prefillFromLighting.preferredTrackType ?? null) as TrackType | null;
-    if (preferred && !trackTypeTouched) {
-      setTrackType(preferred);
-    } else if (!trackTypeTouched && metersRaw > 0) {
-      setTrackType((prev) => (prev === "none" ? ("built-in" as TrackType) : prev));
-    }
+      const metersRaw = Number(prefillFromLighting.trackProfileMeters ?? 0);
+      if (Number.isFinite(metersRaw) && metersRaw > 0 && !trackLengthTouched) {
+        const normalized = clamp(
+          roundToStep(metersRaw, calculator.trackMeters.step),
+          calculator.trackMeters.min,
+          calculator.trackMeters.max
+        );
+
+        setTrackLength(normalized);
+      }
+
+      const preferred = (prefillFromLighting.preferredTrackType ?? null) as TrackType | null;
+      if (preferred && !trackTypeTouched) {
+        setTrackType(preferred);
+      } else if (!trackTypeTouched && metersRaw > 0) {
+        setTrackType((prev) => (prev === "none" ? ("built-in" as TrackType) : prev));
+      }
+    });
+
+    return () => cancelAnimationFrame(frame);
   }, [
     compactSections,
     prefillFromLighting,
@@ -1015,18 +1022,22 @@ export function PriceCalculatorClient({
   useEffect(() => {
     if (!compactSections) return;
 
-    setConfirmed((prev) => {
-      const next = { ...prev };
-      next.shadowProfile = shadowEnabled ? false : true;
-      next.floatingProfile = floatingEnabled ? false : true;
-      return next;
+    const frame = requestAnimationFrame(() => {
+      setConfirmed((prev) => {
+        const next = { ...prev };
+        next.shadowProfile = shadowEnabled ? false : true;
+        next.floatingProfile = floatingEnabled ? false : true;
+        return next;
+      });
+
+      setActiveStep((prev) => {
+        if (prev === "shadowProfile" && !shadowEnabled) return "lightLines";
+        if (prev === "floatingProfile" && !floatingEnabled) return "lightLines";
+        return prev;
+      });
     });
 
-    setActiveStep((prev) => {
-      if (prev === "shadowProfile" && !shadowEnabled) return "lightLines";
-      if (prev === "floatingProfile" && !floatingEnabled) return "lightLines";
-      return prev;
-    });
+    return () => cancelAnimationFrame(frame);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shadowEnabled, floatingEnabled, compactSections]);
 
