@@ -1495,7 +1495,7 @@ export function PriceCalculatorClient({
       const state = roomConfirmedMap[room.id];
       return !(state && compactSteps.every((step) => state[step]));
     }) ?? null;
-  const showRoomManager = isRoomScopeMulti && effectiveRooms.length > 0 && (completedRoomsCount > 0 || effectiveRooms.length > 1);
+  const showRoomManager = isRoomScopeMulti && effectiveRooms.length > 0;
   const roomProgressMap = effectiveRooms.reduce<Record<string, { done: number; total: number }>>(
     (acc, room) => {
       const state = roomConfirmedMap[room.id];
@@ -1540,6 +1540,7 @@ export function PriceCalculatorClient({
     });
   }, [calculationScope, compactSections]);
 
+  const roomManagerRef = useRef<HTMLDivElement | null>(null);
   const areaRef = useRef<HTMLDivElement | null>(null);
   const ceilingRef = useRef<HTMLDivElement | null>(null);
   const shadowProfileRef = useRef<HTMLDivElement | null>(null);
@@ -1682,7 +1683,12 @@ export function PriceCalculatorClient({
     setResumeStep(null);
     setActiveStep("area");
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => scrollToStep("area", "smooth"));
+      requestAnimationFrame(() => {
+        const target = roomManagerRef.current ?? areaRef.current;
+        if (target) {
+          scrollIntoViewWithOffset(target, 92, "smooth");
+        }
+      });
     });
   };
 
@@ -1793,6 +1799,7 @@ export function PriceCalculatorClient({
         {/* LEFT */}
         <div className="min-w-0 space-y-5 max-sm:space-y-3">
           {showRoomManager ? (
+            <div ref={roomManagerRef}>
             <SectionCard
               title="Помещения в расчёте"
               description="Считайте комнаты по очереди: у каждой помещения своя конфигурация, а справа и внизу сразу виден общий итог по объекту."
@@ -1934,6 +1941,7 @@ export function PriceCalculatorClient({
                 </div>
               </div>
             </SectionCard>
+            </div>
           ) : null}
 
           {/* AREA */}
