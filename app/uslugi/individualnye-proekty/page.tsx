@@ -14,7 +14,7 @@ import { ServiceRelatedServices } from "../_components/ServiceRelatedServices";
 const service = getRequiredServicePageBySlug("individualnye-proekty");
 
 export const metadata: Metadata = {
-  title: service.metadata.title,
+  title: { absolute: service.metadata.title },
   description: service.metadata.description,
   keywords: service.metadata.keywords,
   alternates: { canonical: service.metadata.canonicalPath },
