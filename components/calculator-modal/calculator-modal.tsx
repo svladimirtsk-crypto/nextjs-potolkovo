@@ -167,6 +167,10 @@ export function CalculatorModal() {
       if (classes.contains("step0-confirm-track")) return "Подтвердить трек →";
       if (classes.contains("step0-confirm-chandeliers")) return "Подтвердить люстры →";
       if (classes.contains("step0-confirm-lights")) return "Подтвердить точки →";
+      if (classes.contains("step0-confirm-room-continue")) return "Продолжить помещение →";
+      if (classes.contains("step0-confirm-room-next")) return "К следующей комнате →";
+      if (classes.contains("step0-confirm-room-light")) return "К свету →";
+      if (classes.contains("step0-confirm-room-summary")) return "Свет не нужен — к итогу →";
       return "Подтвердить →";
     };
 
