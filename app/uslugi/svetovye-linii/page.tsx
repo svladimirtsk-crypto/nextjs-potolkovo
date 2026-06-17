@@ -12,7 +12,7 @@ import { ServiceTrustSection } from "../_components/ServiceTrustSection";
 const service = getRequiredServicePageBySlug("svetovye-linii");
 
 export const metadata: Metadata = {
-  title: service.metadata.title,
+  title: { absolute: service.metadata.title },
   description: service.metadata.description,
   keywords: service.metadata.keywords,
   alternates: {
