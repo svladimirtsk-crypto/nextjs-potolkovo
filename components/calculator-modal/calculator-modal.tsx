@@ -389,12 +389,11 @@ export function CalculatorModal() {
           </div>
 
           {/* P2.14: Sticky PriceStrip */}
-          <div className={[
-            "sticky top-0 z-10 border-b border-slate-200 bg-white px-5 py-3 max-sm:px-4 max-sm:py-2",
-            currentStep === 2 ? "max-sm:hidden" : "",
-          ].join(" ")}>
-            <PriceStrip />
-          </div>
+          {currentStep !== 2 ? (
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-5 py-3 max-sm:px-4 max-sm:py-2">
+              <PriceStrip />
+            </div>
+          ) : null}
 
           {/* Content */}
           <div ref={contentRef} className="flex-1 overflow-y-auto px-5 py-5 max-sm:px-4 max-sm:py-4 max-sm:pb-36">
