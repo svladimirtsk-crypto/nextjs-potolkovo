@@ -228,8 +228,8 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
             : null
         }
         prefillFromLightingTrigger={prefillTrigger}
-        // P0.1: Dark card CTA button navigates to Step 3 (form)
-        onPrimaryCtaClick={() => goToStep(2)}
+        onPrimaryCtaClick={() => goToStep(1)}
+        onSkipToSummaryClick={() => goToStep(2)}
       />
     </div>
   );
