@@ -1673,6 +1673,7 @@ export function PriceCalculatorClient({
     setRooms((prev) => [...prev, nextRoom]);
     setRoomConfirmedMap((prev) => ({
       ...prev,
+      ...(activeRoomId ? { [activeRoomId]: getConfirmedStateForFilledRoom() } : {}),
       [nextRoom.id]: getConfirmedStateForBlankRoom(),
     }));
     setActiveRoomId(nextRoom.id);
@@ -1687,6 +1688,12 @@ export function PriceCalculatorClient({
   };
 
   const promptAddRoom = () => {
+    if (activeRoomId) {
+      setRoomConfirmedMap((prev) => ({
+        ...prev,
+        [activeRoomId]: getConfirmedStateForFilledRoom(),
+      }));
+    }
     setIsChoosingRoom(true);
     setResumeStep(null);
     setActiveStep("area");
