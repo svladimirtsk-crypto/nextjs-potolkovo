@@ -110,8 +110,10 @@ export function TrackSaleActionForm({ source }: TrackSaleActionFormProps) {
       snapshot?.lighting?.discountedTotalRub ?? fallbackLightingDiscountedRub
     );
 
-    const discountApplied = Boolean((snapshot as any)?.lightingDiscountApplied);
-    const discountPercentApplied = Number((snapshot as any)?.lightingDiscountPercentApplied ?? snapshot?.lighting?.discountPercentApplied ?? 0);
+    const discountApplied = Boolean(snapshot?.lightingDiscountApplied);
+    const discountPercentApplied = Number(
+      snapshot?.lightingDiscountPercentApplied ?? snapshot?.lighting?.discountPercentApplied ?? 0
+    );
     const lightingDiscountAmountRub = Math.max(0, lightingTotalRub - lightingDiscountedRub);
     const orderIntent =
       discountMode === "with-ceiling"
