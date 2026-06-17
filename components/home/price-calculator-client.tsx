@@ -1901,52 +1901,45 @@ export function PriceCalculatorClient({
                 </button>
               ) : null}
 
-              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-semibold text-slate-950">
-                  {isCurrentRoomComplete ? "Помещение заполнено" : "Продолжайте заполнять текущее помещение"}
-                </p>
-                <p className="mt-1 text-sm text-slate-600">
-                  {isCurrentRoomComplete
-                    ? nextIncompleteRoom
-                      ? `Комната «${roomLabel}» готова. Можно перейти к следующему помещению или сразу посмотреть общий итог.`
-                      : "Все текущие помещения заполнены. Можно добавить ещё одну комнату или перейти к общему итогу."
-                    : currentRoomPendingStep
-                      ? `Следующий шаг для комнаты «${roomLabel}»: ${currentRoomPendingStep === "area" ? "площадь" : currentRoomPendingStep === "ceiling" ? "конфигурация потолка" : currentRoomPendingStep === "shadowProfile" ? "теневой профиль" : currentRoomPendingStep === "floatingProfile" ? "парящий профиль" : currentRoomPendingStep === "lightLines" ? "световые линии" : currentRoomPendingStep === "cornice" ? "карниз" : currentRoomPendingStep === "track" ? "трек" : currentRoomPendingStep === "chandeliers" ? "люстры" : "точечные светильники"}.`
-                      : "Сначала подтвердите текущие шаги для этой комнаты: площадь, конфигурацию и дополнительные узлы."}
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {!isCurrentRoomComplete && currentRoomPendingStep ? (
-                    <Button
-                      type="button"
-                      className="step0-confirm-button step0-confirm-room-continue"
-                      onClick={() => openStep(currentRoomPendingStep)}
-                    >
-                      Продолжить помещение →
-                    </Button>
-                  ) : null}
-                  {isCurrentRoomComplete && nextIncompleteRoom ? (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="step0-confirm-button step0-confirm-room-next"
-                      onClick={() => switchToRoom(nextIncompleteRoom.id)}
-                    >
-                      К следующей комнате →
-                    </Button>
-                  ) : null}
-                  {isCurrentRoomComplete ? (
-                    <Button
-                      type="button"
-                      className="step0-confirm-button step0-confirm-room-light"
-                      onClick={onPrimaryCtaClick ?? (() => scrollToAction())}
-                    >
-                      Перейти к подбору освещения →
-                    </Button>
-                  ) : null}
-                  <Button type="button" variant="secondary" onClick={promptAddRoom}>
-                    Добавить ещё помещение
+              <div className="sr-only" aria-hidden="true">
+                {!isCurrentRoomComplete && currentRoomPendingStep ? (
+                  <Button
+                    type="button"
+                    className="step0-confirm-button step0-confirm-room-continue"
+                    onClick={() => openStep(currentRoomPendingStep)}
+                  >
+                    Продолжить помещение →
                   </Button>
-                </div>
+                ) : null}
+                {isCurrentRoomComplete && nextIncompleteRoom ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="step0-confirm-button step0-confirm-room-next"
+                    onClick={() => switchToRoom(nextIncompleteRoom.id)}
+                  >
+                    К следующей комнате →
+                  </Button>
+                ) : null}
+                {isCurrentRoomComplete ? (
+                  <Button
+                    type="button"
+                    className="step0-confirm-button step0-confirm-room-light"
+                    onClick={onPrimaryCtaClick ?? (() => scrollToAction())}
+                  >
+                    Перейти к подбору освещения →
+                  </Button>
+                ) : null}
+                {step0Phase === "choose-next-room" ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="step0-confirm-button step0-confirm-room-picker"
+                    onClick={promptAddRoom}
+                  >
+                    Выбрать помещение
+                  </Button>
+                ) : null}
               </div>
             </SectionCard>
             </div>
@@ -2024,7 +2017,7 @@ export function PriceCalculatorClient({
                       }}
                     />
                   </div>
-                ) : step0Phase === "choose-first-room" || step0Phase === "choose-next-room" ? (
+                ) : step0Phase === "choose-first-room" ? (
                   <div className="rounded-2xl bg-white p-4 ring-1 ring-slate-200">
                     <div className="flex flex-wrap gap-2">
                       {ROOM_TYPE_OPTIONS.map((label) => (
@@ -2042,12 +2035,20 @@ export function PriceCalculatorClient({
                       ))}
                     </div>
                     <p className="mt-3 text-xs text-slate-500">
-                      {step0Phase === "choose-first-room"
-                        ? "Сначала выберите первое помещение, а затем задайте его площадь и параметры потолка."
-                        : "Выберите следующее помещение выше, и затем задайте его площадь и параметры потолка."}
+                      Сначала выберите первое помещение, а затем задайте его площадь и параметры потолка.
                     </p>
                     <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
                       <p className="text-xs text-slate-500">Выберите нужное помещение выше.</p>
+                      <Button type="button" variant="secondary" className="step0-confirm-button step0-confirm-room-picker max-sm:hidden" onClick={promptAddRoom}>
+                        Выбрать помещение
+                      </Button>
+                    </div>
+                  </div>
+                ) : step0Phase === "choose-next-room" ? (
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-sm text-slate-600">
+                    Выберите следующее помещение в блоке «Помещения в расчёте» выше.
+                    <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
+                      <p className="text-xs text-slate-500">Наверху выберите следующую комнату: кухня, гостиная, спальня и т.д.</p>
                       <Button type="button" variant="secondary" className="step0-confirm-button step0-confirm-room-picker max-sm:hidden" onClick={promptAddRoom}>
                         Выбрать помещение
                       </Button>
@@ -2065,7 +2066,7 @@ export function PriceCalculatorClient({
                       unit="м²"
                       onChange={handleAreaChange}
                       showSlider={showSlider}
-                      quickValues={[10, 15, 20, 25, 30, 40, 50, 60, 80]}
+                      quickValues={[1, 5, 10, 15, 20, 25, 30, 40, 50, 60, 80]}
                     />
                     <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
                       <p className="text-xs text-slate-500">Пресет или введите вручную. Для больших площадей — просто наберите число.</p>
@@ -2103,7 +2104,7 @@ export function PriceCalculatorClient({
                       unit="м²"
                       onChange={handleAreaChange}
                       showSlider={showSlider}
-                      quickValues={[10, 15, 20, 25, 30, 40, 50, 60, 80]}
+                      quickValues={[1, 5, 10, 15, 20, 25, 30, 40, 50, 60, 80]}
                     />
                     <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
                       <p className="text-xs text-slate-500">Пресет или введите вручную. Для больших площадей — просто наберите число.</p>
@@ -2839,36 +2840,17 @@ export function PriceCalculatorClient({
               </div>
             ) : null}
 
+            {!isRoomScopeMulti ? (
             <div className="mt-6 space-y-2">
               <Button
                 type="button"
                 className="w-full"
-                onClick={
-                  isRoomScopeMulti
-                    ? isCurrentRoomComplete
-                      ? (nextIncompleteRoom
-                          ? () => switchToRoom(nextIncompleteRoom.id)
-                          : onPrimaryCtaClick ?? (() => scrollToAction()))
-                      : currentRoomPendingStep
-                        ? () => openStep(currentRoomPendingStep)
-                        : undefined
-                    : onPrimaryCtaClick ?? (() => scrollToAction())
-                }
+                onClick={onPrimaryCtaClick ?? (() => scrollToAction())}
               >
-                {isRoomScopeMulti
-                  ? isCurrentRoomComplete
-                    ? nextIncompleteRoom
-                      ? "К следующей комнате →"
-                      : "Перейти к подбору освещения →"
-                    : "Продолжить помещение →"
-                  : homepage.price.primaryCtaLabel}
+                {homepage.price.primaryCtaLabel}
               </Button>
-              {isRoomScopeMulti ? (
-                <Button type="button" variant="secondary" className="w-full" onClick={promptAddRoom}>
-                  Добавить ещё помещение
-                </Button>
-              ) : null}
             </div>
+            ) : null}
           </div>
         </div>
 
@@ -2884,29 +2866,15 @@ export function PriceCalculatorClient({
                 {formatCurrency(displayTotal)} ₽
               </p>
             </div>
+            {!isRoomScopeMulti ? (
             <Button
               type="button"
               className="whitespace-nowrap shrink-0"
-              onClick={
-                isRoomScopeMulti
-                  ? isCurrentRoomComplete
-                    ? (nextIncompleteRoom
-                        ? () => switchToRoom(nextIncompleteRoom.id)
-                        : onPrimaryCtaClick ?? (() => scrollToAction()))
-                    : currentRoomPendingStep
-                      ? () => openStep(currentRoomPendingStep)
-                      : undefined
-                  : onPrimaryCtaClick ?? (() => scrollToAction())
-              }
+              onClick={onPrimaryCtaClick ?? (() => scrollToAction())}
             >
-              {isRoomScopeMulti
-                ? isCurrentRoomComplete
-                  ? nextIncompleteRoom
-                    ? "Следующая комната →"
-                    : "К подбору освещения →"
-                  : "Продолжить →"
-                : homepage.price.primaryCtaLabel}
+              {homepage.price.primaryCtaLabel}
             </Button>
+            ) : null}
           </div>
         </div>
         ) : null}
@@ -2958,7 +2926,7 @@ export function PriceCalculatorClient({
             unit="м²"
             onChange={handleAreaChange}
             showSlider
-            quickValues={[10, 15, 20, 25, 30, 40, 50, 60, 80]}
+            quickValues={[1, 5, 10, 15, 20, 25, 30, 40, 50, 60, 80]}
           />
         </SectionCard>
 
