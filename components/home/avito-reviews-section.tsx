@@ -55,7 +55,7 @@ function ReviewCard({
       </div>
 
       <p className="mt-3 text-sm leading-6 text-slate-700">
-        "{review.text}"
+        &ldquo;{review.text}&rdquo;
       </p>
 
       {review.serviceType ? (
