@@ -1812,7 +1812,7 @@ export function PriceCalculatorClient({
             ) : (
               <CollapsedStep
                 title={`Площадь`}
-                subtitle="Выберите площадь помещения"
+                subtitle={calculationScope === "object" ? "Выберите формат и общую площадь" : "Выберите формат, помещение и площадь"}
                 enabled
                 onOpen={() => openStep("area")}
               />
@@ -2532,10 +2532,15 @@ export function PriceCalculatorClient({
               </div>
             ) : null}
 
-            <div className="mt-6">
+            <div className="mt-6 space-y-2">
               <Button type="button" className="w-full" onClick={onPrimaryCtaClick ?? (() => scrollToAction())}>
                 {isRoomScopeMulti ? "К общему итогу →" : homepage.price.primaryCtaLabel}
               </Button>
+              {isRoomScopeMulti ? (
+                <Button type="button" variant="secondary" className="w-full" onClick={() => addRoom()}>
+                  Добавить ещё помещение
+                </Button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -2553,7 +2558,7 @@ export function PriceCalculatorClient({
               </p>
             </div>
             <Button type="button" className="whitespace-nowrap shrink-0" onClick={onPrimaryCtaClick ?? (() => scrollToAction())}>
-              {isRoomScopeMulti ? `Общий итог · ${formatCurrency(displayTotal)} ₽` : homepage.price.primaryCtaLabel}
+              {isRoomScopeMulti ? "Итог по объекту →" : homepage.price.primaryCtaLabel}
             </Button>
           </div>
         </div>
