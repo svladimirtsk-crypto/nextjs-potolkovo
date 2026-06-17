@@ -27,6 +27,64 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll<HTMLElement>(selector));
 }
 
+type ProgressBarProps = {
+  currentStep: WizardStep;
+  hasLightingSelected: boolean;
+  goToStep: (step: WizardStep) => void;
+};
+
+function ProgressBar({ currentStep, hasLightingSelected, goToStep }: ProgressBarProps) {
+  return (
+    <div
+      className="flex items-center gap-3 max-sm:gap-2"
+      role="progressbar"
+      aria-valuenow={currentStep + 1}
+      aria-valuemin={1}
+      aria-valuemax={3}
+    >
+      {[0, 1, 2].map((i) => {
+        const isCurrent = i === currentStep;
+        const isPast = i < currentStep;
+        const canVisit = i < currentStep;
+        const stepLabels = ["Потолок", "Свет", "Итог"];
+        const isSkippedLighting = i === 1 && isPast && !hasLightingSelected;
+        const visualDone = isPast && !isSkippedLighting;
+
+        return (
+          <button
+            key={i}
+            onClick={() => canVisit && goToStep(i as WizardStep)}
+            disabled={!canVisit && !isCurrent}
+            aria-label={`Шаг ${i + 1}: ${isSkippedLighting ? "Свет пропущен" : stepLabels[i]}`}
+            className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-all max-sm:px-2.5 max-sm:py-1 max-sm:text-[11px] ${
+              isCurrent
+                ? "bg-slate-950 text-white"
+                : isSkippedLighting
+                  ? "bg-slate-100 text-slate-500 cursor-pointer hover:bg-slate-200"
+                  : isPast
+                    ? "bg-slate-200 text-slate-700 cursor-pointer hover:bg-slate-300"
+                    : "bg-slate-100 text-slate-400 cursor-not-allowed"
+            }`}
+          >
+            <span
+              className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold max-sm:h-4 max-sm:w-4 max-sm:text-[9px] ${
+                visualDone
+                  ? "bg-slate-950 text-white"
+                  : isSkippedLighting
+                    ? "bg-slate-200 text-slate-500"
+                    : ""
+              }`}
+            >
+              {visualDone ? "✓" : isSkippedLighting ? "—" : i + 1}
+            </span>
+            <span className="hidden sm:inline">{isSkippedLighting ? "Свет —" : stepLabels[i]}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function CalculatorModal() {
   const {
     isOpen,
@@ -35,7 +93,6 @@ export function CalculatorModal() {
     goToStep,
     options,
     lightingDraft,
-    lightingDraft: hasLightingData,
     step1FooterAction,
   } = useCalculatorModal();
   const { snapshot } = usePriceCalculatorBridge();
@@ -46,28 +103,14 @@ export function CalculatorModal() {
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
   const [mounted, setMounted] = useState(false);
-  const [visible, setVisible] = useState(false);
-  const [renderedSteps, setRenderedSteps] = useState<Set<WizardStep>>(() => new Set());
   const [isActionFormVisible, setIsActionFormVisible] = useState(false);
-  const [step0HasConfirmButton, setStep0HasConfirmButton] = useState(false);
-  const [step0FooterLabel, setStep0FooterLabel] = useState("Подтвердить →");
+  const [step0HasConfirmButtonState, setStep0HasConfirmButtonState] = useState(false);
+  const [step0FooterLabelState, setStep0FooterLabelState] = useState("Подтвердить →");
 
-  useEffect(() => setMounted(true), []);
-
-  // Keep visited steps mounted so confirmed user choices do not reset on back navigation.
   useEffect(() => {
-    if (!isOpen) {
-      setRenderedSteps(new Set());
-      return;
-    }
-
-    setRenderedSteps((prev) => {
-      if (prev.has(currentStep)) return prev;
-      const next = new Set(prev);
-      next.add(currentStep);
-      return next;
-    });
-  }, [currentStep, isOpen]);
+    const frame = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   // Scroll content to top when step changes
   useEffect(() => {
@@ -77,7 +120,6 @@ export function CalculatorModal() {
   }, [currentStep]);
 
   useEffect(() => {
-    setIsActionFormVisible(false);
     if (currentStep !== 2) return;
 
     const root = contentRef.current;
@@ -109,10 +151,7 @@ export function CalculatorModal() {
   }, [currentStep]);
 
   useEffect(() => {
-    if (currentStep !== 0) {
-      setStep0HasConfirmButton(false);
-      return;
-    }
+    if (currentStep !== 0) return;
 
     const isMobile = () => typeof window !== "undefined" && window.matchMedia("(max-width: 639px)").matches;
 
@@ -133,19 +172,19 @@ export function CalculatorModal() {
 
     const update = () => {
       if (!isMobile()) {
-        setStep0HasConfirmButton(false);
-        setStep0FooterLabel("Подтвердить →");
+        setStep0HasConfirmButtonState(false);
+        setStep0FooterLabelState("Подтвердить →");
         return;
       }
 
       const button = contentRef.current?.querySelector<HTMLButtonElement>(
         ".step0-confirm-button:not(:disabled)"
       ) ?? null;
-      setStep0HasConfirmButton(Boolean(button));
-      setStep0FooterLabel(getConfirmLabel(button));
+      setStep0HasConfirmButtonState(Boolean(button));
+      setStep0FooterLabelState(getConfirmLabel(button));
     };
 
-    update();
+    const frame = requestAnimationFrame(update);
 
     const root = contentRef.current;
     if (!root) return;
@@ -161,12 +200,16 @@ export function CalculatorModal() {
     window.addEventListener("resize", update);
 
     return () => {
+      cancelAnimationFrame(frame);
       observer.disconnect();
       window.removeEventListener("resize", update);
     };
-  }, [currentStep, renderedSteps]);
+  }, [currentStep]);
 
   const snapshotValid = isSnapshotValid(snapshot);
+  const step0HasConfirmButton = currentStep === 0 ? step0HasConfirmButtonState : false;
+  const step0FooterLabel = currentStep === 0 ? step0FooterLabelState : "Подтвердить →";
+  const actionFormVisible = currentStep === 2 ? isActionFormVisible : false;
 
   const isNextDisabled = useMemo(() => {
     if (currentStep === 0) return !snapshotValid;
@@ -201,7 +244,6 @@ export function CalculatorModal() {
       const confirmed = window.confirm("Закрыть калькулятор? Ваш расчёт не сохранится.");
       if (!confirmed) return;
     }
-    setVisible(false);
     closeCalculator();
   }, [closeCalculator, hasAnyData]);
 
@@ -212,10 +254,6 @@ export function CalculatorModal() {
 
     // P2.8: add modal-open class
     document.body.classList.add("modal-open");
-
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reducedMotion) setVisible(true);
-    else requestAnimationFrame(() => setVisible(true));
 
     requestAnimationFrame(() => {
       if (!panelRef.current) return;
@@ -231,9 +269,10 @@ export function CalculatorModal() {
 
   useEffect(() => {
     if (isOpen) return;
-    setVisible(false);
-    if (!previousFocusRef.current) return;
-    previousFocusRef.current.focus();
+    const previousFocus = previousFocusRef.current;
+    if (!previousFocus) return;
+
+    requestAnimationFrame(() => previousFocus.focus());
     previousFocusRef.current = null;
   }, [isOpen]);
 
@@ -294,48 +333,10 @@ export function CalculatorModal() {
   const reducedMotion =
     typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const transitionClass = reducedMotion ? "" : "transition-all duration-200";
-  const modalActive = isOpen && visible;
+  const modalActive = isOpen;
 
   const hasLightingSelected = Boolean(
     lightingDraft && lightingDraft.mode !== "none" && (lightingDraft.items?.length ?? 0) > 0
-  );
-
-  // P0.6: Progress bar
-  const ProgressBar = () => (
-    <div className="flex items-center gap-3 max-sm:gap-2" role="progressbar" aria-valuenow={currentStep + 1} aria-valuemin={1} aria-valuemax={3}>
-      {[0, 1, 2].map((i) => {
-        const isCurrent = i === currentStep;
-        const isPast = i < currentStep;
-        const canVisit = i < currentStep;
-        const stepLabels = ["Потолок", "Свет", "Итог"];
-        const isSkippedLighting = i === 1 && isPast && !hasLightingSelected;
-        const visualDone = isPast && !isSkippedLighting;
-        return (
-          <button
-            key={i}
-            onClick={() => canVisit && goToStep(i as WizardStep)}
-            disabled={!canVisit && !isCurrent}
-            aria-label={`Шаг ${i + 1}: ${isSkippedLighting ? "Свет пропущен" : stepLabels[i]}`}
-            className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-all max-sm:px-2.5 max-sm:py-1 max-sm:text-[11px] ${
-              isCurrent
-                ? "bg-slate-950 text-white"
-                : isSkippedLighting
-                  ? "bg-slate-100 text-slate-500 cursor-pointer hover:bg-slate-200"
-                  : isPast
-                    ? "bg-slate-200 text-slate-700 cursor-pointer hover:bg-slate-300"
-                    : "bg-slate-100 text-slate-400 cursor-not-allowed"
-            }`}
-          >
-            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold max-sm:h-4 max-sm:w-4 max-sm:text-[9px] ${
-              visualDone ? "bg-slate-950 text-white" : isSkippedLighting ? "bg-slate-200 text-slate-500" : ""
-            }`}>
-              {visualDone ? "✓" : isSkippedLighting ? "—" : i + 1}
-            </span>
-            <span className="hidden sm:inline">{isSkippedLighting ? "Свет —" : stepLabels[i]}</span>
-          </button>
-        );
-      })}
-    </div>
   );
 
   return createPortal(
@@ -374,7 +375,11 @@ export function CalculatorModal() {
               </h2>
               {/* P0.6: progress bar instead of text */}
               <div className="mt-2 max-sm:mt-1.5">
-                <ProgressBar />
+                <ProgressBar
+                  currentStep={currentStep}
+                  hasLightingSelected={hasLightingSelected}
+                  goToStep={goToStep}
+                />
               </div>
             </div>
             <button
@@ -397,33 +402,27 @@ export function CalculatorModal() {
 
           {/* Content */}
           <div ref={contentRef} className="flex-1 overflow-y-auto px-5 py-5 max-sm:px-4 max-sm:py-4 max-sm:pb-36">
-            {(renderedSteps.has(0) || (isOpen && currentStep === 0)) ? (
-              <div
-                key="step0"
-                aria-hidden={currentStep !== 0}
-                className={currentStep === 0 ? "animate-fade-slide-in" : "hidden"}
-              >
-                <WizardStep0Calculator preset={options?.preset} />
-              </div>
-            ) : null}
-            {(renderedSteps.has(1) || (isOpen && currentStep === 1)) ? (
-              <div
-                key="step1"
-                aria-hidden={currentStep !== 1}
-                className={currentStep === 1 ? "animate-fade-slide-in" : "hidden"}
-              >
-                <WizardStep1Lighting />
-              </div>
-            ) : null}
-            {(renderedSteps.has(2) || (isOpen && currentStep === 2)) ? (
-              <div
-                key="step2"
-                aria-hidden={currentStep !== 2}
-                className={currentStep === 2 ? "animate-fade-slide-in" : "hidden"}
-              >
-                <WizardStep2Summary />
-              </div>
-            ) : null}
+            <div
+              key="step0"
+              aria-hidden={currentStep !== 0}
+              className={currentStep === 0 ? "animate-fade-slide-in" : "hidden"}
+            >
+              <WizardStep0Calculator preset={options?.preset} />
+            </div>
+            <div
+              key="step1"
+              aria-hidden={currentStep !== 1}
+              className={currentStep === 1 ? "animate-fade-slide-in" : "hidden"}
+            >
+              <WizardStep1Lighting />
+            </div>
+            <div
+              key="step2"
+              aria-hidden={currentStep !== 2}
+              className={currentStep === 2 ? "animate-fade-slide-in" : "hidden"}
+            >
+              <WizardStep2Summary />
+            </div>
           </div>
 
           {/* Footer */}
@@ -481,7 +480,7 @@ export function CalculatorModal() {
                           : "Далее →"}
                   </button>
                 </div>
-              ) : isActionFormVisible ? (
+              ) : actionFormVisible ? (
                 <div />
               ) : (
                 <button
