@@ -47,6 +47,13 @@ const CLARUS_PROFILE_VENDORS = new Set<string>(["0У-00006633", "0У-00006634"])
 
 const COLIBRI_ACCESSORY_PANELS = new Set(["0У-00002099", "0У-00002100"]);
 
+
+const VENDOR_IMAGE_OVERRIDES: Record<string, string> = {
+  // У этих позиций у поставщика иногда не отдается превью; ставим стабильное фото линейки ЛОНДОН.
+  "0У-00001339": "https://eksmarket.ru/upload/iblock/b0e/xm2uhfdpg0k29u4u32yc1qgsvu3cb169.png",
+  "0У-00002000": "https://eksmarket.ru/upload/iblock/e95/uw7n03hyf46ssnlh0pg9jo0o3yalylbu.png",
+};
+
 const TRACK_PROFILE_PIECE_LENGTH_METERS: Record<string, number> = {
   // COLIBRI profiles
   "0У-00006089": 1,
@@ -140,6 +147,15 @@ export function applyVendorOverrides(product: FeedCatalogProduct): FeedCatalogPr
         pieceLengthMeters: pieceMeters,
       };
     }
+  }
+
+  const imageOverride = VENDOR_IMAGE_OVERRIDES[vendorCode];
+  if (imageOverride) {
+    next = {
+      ...next,
+      coverImage: imageOverride,
+      images: [imageOverride, ...(next.images ?? []).filter((src) => toText(src) && toText(src) !== imageOverride)],
+    };
   }
 
   return next;
