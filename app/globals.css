@@ -167,6 +167,49 @@ body.modal-open .mobile-sticky-cta {
   animation: fadeIn 0.2s ease-out both;
 }
 
+
+/* Track-sale discount stamps */
+@keyframes discountStampFloat {
+  0%, 100% { transform: translateY(0) rotate(-0.2deg); }
+  50% { transform: translateY(-3px) rotate(0.2deg); }
+}
+
+@keyframes discountStampShine {
+  0% { transform: translateX(-140%) rotate(18deg); opacity: 0; }
+  22% { opacity: 0.45; }
+  48% { transform: translateX(140%) rotate(18deg); opacity: 0; }
+  100% { transform: translateX(140%) rotate(18deg); opacity: 0; }
+}
+
+.discount-stamp {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  padding: 1rem;
+  box-shadow: 0 16px 38px rgba(15, 23, 42, 0.08);
+  animation: discountStampFloat 5.5s ease-in-out infinite;
+}
+
+.discount-stamp-emerald {
+  border: 1px solid rgb(167 243 208);
+  background: linear-gradient(135deg, rgb(236 253 245), #fff);
+}
+
+.discount-stamp-blue {
+  border: 1px solid rgb(191 219 254);
+  background: linear-gradient(135deg, rgb(239 246 255), #fff);
+  animation-delay: 0.6s;
+}
+
+.discount-stamp-shine {
+  position: absolute;
+  inset: -40% auto -40% 0;
+  width: 38%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.9), transparent);
+  animation: discountStampShine 4.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
 /* Price calculator range: force black slider on mobile (esp. iOS Safari) */
 input.pc-range[type="range"] {
   accent-color: var(--color-dark);
