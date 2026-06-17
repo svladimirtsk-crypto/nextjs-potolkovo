@@ -38,7 +38,9 @@ function toNumber(value: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function isCeilingSnapshotReady(snapshot: any): boolean {
+function isCeilingSnapshotReady(
+  snapshot: CalculatorLeadSnapshot | null | undefined
+): boolean {
   if (!snapshot) return false;
   const area = Number(snapshot.area);
   const total = Number(snapshot.total);
@@ -246,7 +248,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
    [currentStep, options, setHasInteracted, setSnapshot, snapshot]
   );
 
-  const ceilingTotal = toNumber((snapshot as any)?.total);
+  const ceilingTotal = toNumber(snapshot?.total);
 
   const lightingRegularTotal = useMemo(
     () => calcLightingRegularTotal(lightingDraft),
@@ -298,12 +300,12 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   const ceilingEffectiveTotal = useMemo(() => {
     if (!showCeilingInUi) return 0;
 
-    const total = toNumber((snapshot as any)?.total);
+    const total = toNumber(snapshot?.total);
 
     // строго: grandTotal (с досчётом монтажа) учитываем только если Step0 подтверждён
     if (!step0AreaConfirmed) return total;
 
-    const grand = toNumber((snapshot as any)?.grandTotal);
+    const grand = toNumber(snapshot?.grandTotal);
     if (Number.isFinite(grand) && grand >= total) return grand;
 
     return total;
