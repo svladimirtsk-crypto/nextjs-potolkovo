@@ -25,8 +25,18 @@ export type CalculatorTrackType = "none" | "built-in" | "surface";
 export type ServiceCalculatorPreset = {
   ceilingType: CalculatorCeilingType;
   areaDefault?: number;
+  calculationScopeDefault?: "room" | "object";
   corniceType?: CalculatorCorniceType;
+  corniceLengthDefault?: number;
+  corniceLightingEnabled?: boolean;
+  corniceLightingLengthDefault?: number;
+  corniceLightingPowerSuppliesDefault?: number;
   trackType?: CalculatorTrackType;
+  trackLengthDefault?: number;
+  shadowLengthDefault?: number;
+  floatingLengthDefault?: number;
+  lightLinesEnabled?: boolean;
+  lightLinesLengthDefault?: number;
   lightsEnabled?: boolean;
   lightsCount?: number;
   introNote?: string;
