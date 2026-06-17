@@ -1474,17 +1474,9 @@ export function WizardStep1Lighting() {
                 </div>
               )}
 
-              <div className="flex gap-3 max-sm:hidden">
+              <div className="flex gap-3">
                 <button type="button" onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}
-                  className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Каталог</button>
-                <button
-                  type="button"
-                  onClick={() => goToStep(2)}
-                  disabled={!requiredSelectionComplete}
-                  className="flex-1 rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-emerald-700"
-                >
-                  К итогу →
-                </button>
+                  className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Вернуться в каталог</button>
               </div>
             </div>
           )}
@@ -1662,7 +1654,7 @@ export function WizardStep1Lighting() {
       )}
 
       {/* ─── Cart summary pill ─── */}
-      {lightingDraft?.mode === "catalog" && (lightingDraft.items?.length ?? 0) > 0 && (
+      {lightingDraft?.mode === "catalog" && (lightingDraft.items?.length ?? 0) > 0 && !(activeTab === "recommendations" && wStep === "done") && (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 flex items-center justify-between gap-3 max-sm:hidden">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">
