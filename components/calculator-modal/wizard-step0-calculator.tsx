@@ -229,7 +229,6 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
         }
         prefillFromLightingTrigger={prefillTrigger}
         onPrimaryCtaClick={() => goToStep(1)}
-        onSkipToSummaryClick={() => goToStep(2)}
       />
     </div>
   );
