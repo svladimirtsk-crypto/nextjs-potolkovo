@@ -36,8 +36,51 @@ type CompactStepId =
   | "chandeliers"
   | "lights";
 
+type RoomConfig = {
+  id: string;
+  label: string;
+  area: number;
+  ceilingType: CeilingType;
+  shadowEnabled: boolean;
+  shadowLength: number;
+  shadowLengthAuto: boolean;
+  floatingEnabled: boolean;
+  floatingLength: number;
+  floatingLengthAuto: boolean;
+  lightLinesEnabled: boolean;
+  lightLinesLength: number;
+  corniceType: CorniceType;
+  corniceLength: number;
+  corniceLightingEnabled: boolean;
+  corniceLightingLength: number;
+  corniceLightingPowerSupplies: number;
+  trackType: TrackType;
+  trackLength: number;
+  chandeliersEnabled: boolean;
+  chandeliersCount: number;
+  lightsEnabled: boolean;
+  lightsCount: number;
+};
+
+const ROOM_TYPE_OPTIONS = [
+  "Кухня",
+  "Гостиная",
+  "Спальня",
+  "Детская",
+  "Кабинет",
+  "Санузел",
+  "Коридор",
+  "Прихожая",
+  "Другое",
+] as const;
+
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("ru-RU").format(Math.round(value));
+}
+
+function toNumber(value: unknown): number {
+  const num = Number(value ?? 0);
+  return Number.isFinite(num) ? num : 0;
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -47,6 +90,116 @@ function clamp(value: number, min: number, max: number) {
 function roundToStep(value: number, step: number) {
   if (step <= 0) return Math.round(value);
   return Math.round(value / step) * step;
+}
+
+function buildCeilingTypeLabel(room: Pick<RoomConfig, "shadowEnabled" | "floatingEnabled">) {
+  if (!room.shadowEnabled && !room.floatingEnabled) return "Простой потолок";
+  return `${room.shadowEnabled ? "Теневой" : ""}${room.shadowEnabled && room.floatingEnabled ? " + " : ""}${room.floatingEnabled ? "Парящий" : ""}`;
+}
+
+function calcRoomSnapshot(room: RoomConfig): CalculatorLeadSnapshot {
+  const shadowCeiling = calculator.ceilingTypes.find((item) => item.slug === "shadow") ?? calculator.ceilingTypes[0];
+  const floatingCeiling = calculator.ceilingTypes.find((item) => item.slug === "floating") ?? calculator.ceilingTypes[0];
+  const selectedCeiling =
+    calculator.ceilingTypes.find((item) => item.slug === room.ceilingType) ?? calculator.ceilingTypes[0];
+  const selectedCornice =
+    calculator.cornices.find((item) => item.slug === room.corniceType) ?? calculator.cornices[0];
+  const selectedTrack = calculator.tracks.find((item) => item.slug === room.trackType) ?? calculator.tracks[0];
+
+  const hasSpecialCeiling = room.shadowEnabled || room.floatingEnabled;
+  const ceilingBaseRate = hasSpecialCeiling ? shadowCeiling.baseRatePerSqm : selectedCeiling.baseRatePerSqm;
+  const ceilingBaseTotal = room.area * ceilingBaseRate;
+  const shadowExtraTotal = room.shadowEnabled ? room.shadowLength * shadowCeiling.extraRatePerMeter : 0;
+  const floatingExtraTotal = room.floatingEnabled ? room.floatingLength * floatingCeiling.extraRatePerMeter : 0;
+  const ceilingExtraTotal = shadowExtraTotal + floatingExtraTotal;
+  const lightLinesTotal = room.lightLinesEnabled ? room.lightLinesLength * calculator.lightLines.ratePerMeter : 0;
+  const corniceTotal = selectedCornice.ratePerMeter > 0 ? room.corniceLength * selectedCornice.ratePerMeter : 0;
+  const corniceLightingMetersTotal = room.corniceLightingEnabled
+    ? room.corniceLightingLength * calculator.corniceLighting.ratePerMeter
+    : 0;
+  const corniceLightingPowerSupplyTotal = room.corniceLightingEnabled
+    ? room.corniceLightingPowerSupplies * calculator.corniceLighting.powerSupplyRate
+    : 0;
+  const corniceLightingTotal = corniceLightingMetersTotal + corniceLightingPowerSupplyTotal;
+  const trackTotal = selectedTrack.ratePerMeter > 0 ? room.trackLength * selectedTrack.ratePerMeter : 0;
+  const chandeliersTotal = room.chandeliersEnabled ? room.chandeliersCount * CHANDELIERS_INSTALL_RATE_PER_UNIT : 0;
+  const lightsTotal = room.lightsEnabled ? room.lightsCount * calculator.lights.ratePerUnit : 0;
+  const total =
+    ceilingBaseTotal +
+    ceilingExtraTotal +
+    lightLinesTotal +
+    corniceTotal +
+    corniceLightingTotal +
+    trackTotal +
+    chandeliersTotal +
+    lightsTotal;
+
+  const derivedTrackMountType: DerivedInputs["trackMountType"] =
+    room.trackType === "built-in"
+      ? "built-in"
+      : room.trackType === "surface"
+        ? "surface"
+        : "none";
+  const derivedTrackLength = room.trackType !== "none" ? room.trackLength : 0;
+
+  return {
+    area: room.area,
+    calculationScope: "room",
+    ceilingTypeLabel: buildCeilingTypeLabel(room),
+    ceilingBaseRate,
+    ceilingBaseTotal,
+    ceilingExtraLabel: hasSpecialCeiling
+      ? room.shadowEnabled && room.floatingEnabled
+        ? "Теневой + парящий профиль"
+        : room.shadowEnabled
+          ? shadowCeiling.extraLabel ?? null
+          : floatingCeiling.extraLabel ?? null
+      : null,
+    ceilingLength: hasSpecialCeiling ? null : null,
+    ceilingExtraRatePerMeter: null,
+    ceilingExtraTotal,
+    shadowEnabled: room.shadowEnabled,
+    shadowLength: room.shadowEnabled ? room.shadowLength : null,
+    shadowExtraTotal,
+    floatingEnabled: room.floatingEnabled,
+    floatingLength: room.floatingEnabled ? room.floatingLength : null,
+    floatingExtraTotal,
+    lightLinesEnabled: room.lightLinesEnabled,
+    lightLinesLabel: room.lightLinesEnabled ? calculator.lightLines.label : null,
+    lightLinesLength: room.lightLinesEnabled ? room.lightLinesLength : null,
+    lightLinesRatePerMeter: room.lightLinesEnabled ? calculator.lightLines.ratePerMeter : null,
+    lightLinesTotal,
+    corniceLabel: selectedCornice.ratePerMeter > 0 ? selectedCornice.label : null,
+    corniceLength: selectedCornice.ratePerMeter > 0 ? room.corniceLength : null,
+    corniceRatePerMeter: selectedCornice.ratePerMeter > 0 ? selectedCornice.ratePerMeter : null,
+    corniceTotal,
+    corniceLightingEnabled: room.corniceLightingEnabled,
+    corniceLightingLabel: room.corniceLightingEnabled ? calculator.corniceLighting.label : null,
+    corniceLightingLength: room.corniceLightingEnabled ? room.corniceLightingLength : null,
+    corniceLightingRatePerMeter: room.corniceLightingEnabled ? calculator.corniceLighting.ratePerMeter : null,
+    corniceLightingPowerSupplies: room.corniceLightingEnabled ? room.corniceLightingPowerSupplies : null,
+    corniceLightingPowerSupplyRate: room.corniceLightingEnabled ? calculator.corniceLighting.powerSupplyRate : null,
+    corniceLightingTotal,
+    trackLabel: selectedTrack.ratePerMeter > 0 ? selectedTrack.label : null,
+    trackLength: selectedTrack.ratePerMeter > 0 ? room.trackLength : null,
+    trackRatePerMeter: selectedTrack.ratePerMeter > 0 ? selectedTrack.ratePerMeter : null,
+    trackTotal,
+    chandeliersEnabled: room.chandeliersEnabled,
+    chandeliersCount: room.chandeliersEnabled ? room.chandeliersCount : null,
+    chandeliersRatePerUnit: CHANDELIERS_INSTALL_RATE_PER_UNIT,
+    chandeliersTotal,
+    lightsEnabled: room.lightsEnabled,
+    lightsCount: room.lightsEnabled ? room.lightsCount : null,
+    lightsRatePerUnit: calculator.lights.ratePerUnit,
+    lightsTotal,
+    total,
+    derivedInputs: {
+      pointSpotsQty: room.lightsEnabled ? room.lightsCount : 0,
+      trackMountType: derivedTrackMountType,
+      trackLengthMeters: derivedTrackLength,
+      recommendedTrackSpotsQty: calcRecommendedTrackSpots(derivedTrackLength),
+    },
+  };
 }
 
 /** ТЗ: периметр теневого/парящего = 1:1 к площади */
@@ -537,6 +690,47 @@ export function PriceCalculatorClient({
   const [lightsEnabled, setLightsEnabled] =
     useState<boolean>(resolvedLightsEnabled);
   const [lightsCount, setLightsCount] = useState<number>(resolvedLightsCount);
+  const [roomLabel, setRoomLabel] = useState<string>(preset?.roomLabelDefault ?? "Помещение 1");
+  const roomSequenceRef = useRef(2);
+  const roomApplyLockRef = useRef(false);
+  const [rooms, setRooms] = useState<RoomConfig[]>(() =>
+    resolvedCalculationScope === "room" && compactSections
+      ? [
+          {
+            id: "room-1",
+            label: preset?.roomLabelDefault ?? "Помещение 1",
+            area: resolvedAreaDefault,
+            ceilingType: resolvedCeilingType,
+            shadowEnabled: resolvedCeilingType === "shadow" || resolvedCeilingType === "shadow-floating",
+            shadowLength: preset?.shadowLengthDefault ?? getPerimeterSuggestion(resolvedAreaDefault).recommended,
+            shadowLengthAuto: preset?.shadowLengthDefault == null,
+            floatingEnabled: resolvedCeilingType === "floating" || resolvedCeilingType === "shadow-floating",
+            floatingLength: preset?.floatingLengthDefault ?? getPerimeterSuggestion(resolvedAreaDefault).recommended,
+            floatingLengthAuto: preset?.floatingLengthDefault == null,
+            lightLinesEnabled: preset?.lightLinesEnabled ?? false,
+            lightLinesLength: preset?.lightLinesLengthDefault ?? calculator.lightLineMeters.default,
+            corniceType: resolvedCorniceType,
+            corniceLength: preset?.corniceLengthDefault ?? calculator.corniceMeters.default,
+            corniceLightingEnabled: preset?.corniceLightingEnabled ?? false,
+            corniceLightingLength:
+              preset?.corniceLightingLengthDefault ??
+              preset?.corniceLengthDefault ??
+              calculator.corniceMeters.default,
+            corniceLightingPowerSupplies:
+              preset?.corniceLightingPowerSuppliesDefault ?? calculator.corniceLighting.powerSupplyDefault,
+            trackType: resolvedTrackType,
+            trackLength: preset?.trackLengthDefault ?? calculator.trackMeters.default,
+            chandeliersEnabled: false,
+            chandeliersCount: 1,
+            lightsEnabled: resolvedLightsEnabled,
+            lightsCount: resolvedLightsCount,
+          },
+        ]
+      : []
+  );
+  const [activeRoomId, setActiveRoomId] = useState<string | null>(
+    resolvedCalculationScope === "room" && compactSections ? "room-1" : null
+  );
 
   // чтобы prefill не перетирал ручные правки
   const [trackTypeTouched, setTrackTypeTouched] = useState(false);
@@ -794,7 +988,129 @@ export function PriceCalculatorClient({
     [lightsEnabled, lightsCount, derivedTrackMountType, derivedTrackLength]
   );
 
-  const snapshot = useMemo<CalculatorLeadSnapshot>(
+  const currentRoomConfig = useMemo<RoomConfig>(
+    () => ({
+      id: activeRoomId ?? "room-current",
+      label: roomLabel,
+      area,
+      ceilingType,
+      shadowEnabled,
+      shadowLength,
+      shadowLengthAuto,
+      floatingEnabled,
+      floatingLength,
+      floatingLengthAuto,
+      lightLinesEnabled,
+      lightLinesLength,
+      corniceType,
+      corniceLength,
+      corniceLightingEnabled,
+      corniceLightingLength,
+      corniceLightingPowerSupplies,
+      trackType,
+      trackLength,
+      chandeliersEnabled,
+      chandeliersCount,
+      lightsEnabled,
+      lightsCount,
+    }),
+    [
+      activeRoomId,
+      roomLabel,
+      area,
+      ceilingType,
+      shadowEnabled,
+      shadowLength,
+      shadowLengthAuto,
+      floatingEnabled,
+      floatingLength,
+      floatingLengthAuto,
+      lightLinesEnabled,
+      lightLinesLength,
+      corniceType,
+      corniceLength,
+      corniceLightingEnabled,
+      corniceLightingLength,
+      corniceLightingPowerSupplies,
+      trackType,
+      trackLength,
+      chandeliersEnabled,
+      chandeliersCount,
+      lightsEnabled,
+      lightsCount,
+    ]
+  );
+
+  useEffect(() => {
+    if (!compactSections || calculationScope !== "room" || !activeRoomId) return;
+    if (roomApplyLockRef.current) return;
+
+    setRooms((prev) => {
+      const hasRoom = prev.some((room) => room.id === activeRoomId);
+      if (!hasRoom) return prev;
+      return prev.map((room) => (room.id === activeRoomId ? { ...currentRoomConfig } : room));
+    });
+  }, [activeRoomId, calculationScope, compactSections, currentRoomConfig]);
+
+  useEffect(() => {
+    if (!compactSections) return;
+
+    setRooms((prev) => {
+      if (calculationScope === "room") {
+        if (prev.length > 0) return prev;
+        return [{ ...currentRoomConfig, id: "room-1", label: roomLabel || "Помещение 1" }];
+      }
+      return prev;
+    });
+
+    if (calculationScope === "room" && !activeRoomId) {
+      setActiveRoomId("room-1");
+    }
+  }, [activeRoomId, calculationScope, compactSections, currentRoomConfig, roomLabel]);
+
+  const applyRoomConfig = (room: RoomConfig) => {
+    roomApplyLockRef.current = true;
+    setRoomLabel(room.label);
+    setArea(room.area);
+    setCeilingType(room.ceilingType);
+    setShadowEnabled(room.shadowEnabled);
+    setShadowLength(room.shadowLength);
+    setShadowLengthAuto(room.shadowLengthAuto);
+    setFloatingEnabled(room.floatingEnabled);
+    setFloatingLength(room.floatingLength);
+    setFloatingLengthAuto(room.floatingLengthAuto);
+    setLightLinesEnabled(room.lightLinesEnabled);
+    setLightLinesLength(room.lightLinesLength);
+    setCorniceType(room.corniceType);
+    setCorniceLength(room.corniceLength);
+    setCorniceLightingEnabled(room.corniceLightingEnabled);
+    setCorniceLightingLength(room.corniceLightingLength);
+    setCorniceLightingPowerSupplies(room.corniceLightingPowerSupplies);
+    setTrackType(room.trackType);
+    setTrackLength(room.trackLength);
+    setChandeliersEnabled(room.chandeliersEnabled);
+    setChandeliersCount(room.chandeliersCount);
+    setLightsEnabled(room.lightsEnabled);
+    setLightsCount(room.lightsCount);
+
+    requestAnimationFrame(() => {
+      roomApplyLockRef.current = false;
+    });
+  };
+
+  useEffect(() => {
+    if (!compactSections || calculationScope !== "room" || !activeRoomId) return;
+    const room = rooms.find((item) => item.id === activeRoomId);
+    if (!room) return;
+    if (roomApplyLockRef.current) return;
+
+    const isSame = JSON.stringify(room) === JSON.stringify(currentRoomConfig);
+    if (isSame) return;
+
+    applyRoomConfig(room);
+  }, [activeRoomId, calculationScope, compactSections, rooms]);
+
+  const currentSnapshot = useMemo<CalculatorLeadSnapshot>(
     () => ({
       area,
       calculationScope,
@@ -916,21 +1232,145 @@ export function PriceCalculatorClient({
     ]
   );
 
+  const effectiveRooms = useMemo(() => {
+    if (!compactSections || calculationScope !== "room") return [] as RoomConfig[];
+    if (!activeRoomId) return rooms;
+
+    return rooms.map((room) => (room.id === activeRoomId ? currentRoomConfig : room));
+  }, [activeRoomId, calculationScope, compactSections, currentRoomConfig, rooms]);
+
+  const effectiveSnapshot = useMemo<CalculatorLeadSnapshot>(() => {
+    if (!compactSections || calculationScope !== "room" || effectiveRooms.length === 0) {
+      return currentSnapshot;
+    }
+
+    const roomSnapshots = effectiveRooms.map((room) => ({
+      room,
+      snapshot: calcRoomSnapshot(room),
+    }));
+
+    const totalArea = roomSnapshots.reduce((sum, item) => sum + item.snapshot.area, 0);
+    const totalCeilingBase = roomSnapshots.reduce((sum, item) => sum + item.snapshot.ceilingBaseTotal, 0);
+    const totalCeilingExtra = roomSnapshots.reduce((sum, item) => sum + item.snapshot.ceilingExtraTotal, 0);
+    const totalLightLines = roomSnapshots.reduce((sum, item) => sum + item.snapshot.lightLinesTotal, 0);
+    const totalCornice = roomSnapshots.reduce((sum, item) => sum + item.snapshot.corniceTotal, 0);
+    const totalCorniceLighting = roomSnapshots.reduce(
+      (sum, item) => sum + toNumber(item.snapshot.corniceLightingTotal),
+      0
+    );
+    const totalTrack = roomSnapshots.reduce((sum, item) => sum + item.snapshot.trackTotal, 0);
+    const totalChandeliers = roomSnapshots.reduce(
+      (sum, item) => sum + toNumber(item.snapshot.chandeliersTotal),
+      0
+    );
+    const totalLights = roomSnapshots.reduce((sum, item) => sum + item.snapshot.lightsTotal, 0);
+    const overallTotal = roomSnapshots.reduce((sum, item) => sum + item.snapshot.total, 0);
+    const totalShadow = roomSnapshots.reduce((sum, item) => sum + toNumber(item.snapshot.shadowLength), 0);
+    const totalFloating = roomSnapshots.reduce((sum, item) => sum + toNumber(item.snapshot.floatingLength), 0);
+    const totalTrackMeters = roomSnapshots.reduce((sum, item) => sum + toNumber(item.snapshot.trackLength), 0);
+    const totalPointQty = roomSnapshots.reduce((sum, item) => sum + toNumber(item.snapshot.lightsCount), 0);
+
+    const hasBuiltInTrack = roomSnapshots.some((item) => item.snapshot.derivedInputs.trackMountType === "built-in");
+    const hasSurfaceTrack = roomSnapshots.some((item) => item.snapshot.derivedInputs.trackMountType === "surface");
+    const aggregateTrackMountType: DerivedInputs["trackMountType"] = hasBuiltInTrack && !hasSurfaceTrack
+      ? "built-in"
+      : !hasBuiltInTrack && hasSurfaceTrack
+        ? "surface"
+        : "none";
+
+    return {
+      ...currentSnapshot,
+      area: totalArea,
+      calculationScope: "room",
+      roomBreakdown: roomSnapshots.map(({ room, snapshot }) => ({
+        id: room.id,
+        label: room.label,
+        area: snapshot.area,
+        totalRub: snapshot.total,
+        ceilingTypeLabel: snapshot.ceilingTypeLabel,
+        shadowLength: snapshot.shadowLength,
+        floatingLength: snapshot.floatingLength,
+        lightLinesLength: snapshot.lightLinesLength,
+        corniceLabel: snapshot.corniceLabel,
+        corniceLength: snapshot.corniceLength,
+        corniceLightingLength: snapshot.corniceLightingLength,
+        trackLabel: snapshot.trackLabel,
+        trackLength: snapshot.trackLength,
+        lightsCount: snapshot.lightsCount,
+        chandeliersCount: snapshot.chandeliersCount,
+      })),
+      ceilingTypeLabel: `Конфигурация по помещениям (${roomSnapshots.length})`,
+      ceilingBaseTotal: totalCeilingBase,
+      ceilingExtraLabel: totalShadow > 0 && totalFloating > 0
+        ? "Теневой + парящий профиль"
+        : totalShadow > 0
+          ? shadowCeiling.extraLabel ?? null
+          : totalFloating > 0
+            ? floatingCeiling.extraLabel ?? null
+            : null,
+      ceilingExtraTotal: totalCeilingExtra,
+      shadowEnabled: totalShadow > 0,
+      shadowLength: totalShadow > 0 ? totalShadow : null,
+      shadowExtraTotal: roomSnapshots.reduce((sum, item) => sum + toNumber(item.snapshot.shadowExtraTotal), 0),
+      floatingEnabled: totalFloating > 0,
+      floatingLength: totalFloating > 0 ? totalFloating : null,
+      floatingExtraTotal: roomSnapshots.reduce((sum, item) => sum + toNumber(item.snapshot.floatingExtraTotal), 0),
+      lightLinesEnabled: totalLightLines > 0,
+      lightLinesLength: totalLightLines > 0 ? roomSnapshots.reduce((sum, item) => sum + toNumber(item.snapshot.lightLinesLength), 0) : null,
+      lightLinesTotal: totalLightLines,
+      corniceTotal: totalCornice,
+      corniceLightingEnabled: totalCorniceLighting > 0,
+      corniceLightingLength: totalCorniceLighting > 0
+        ? roomSnapshots.reduce((sum, item) => sum + toNumber(item.snapshot.corniceLightingLength), 0)
+        : null,
+      corniceLightingPowerSupplies: totalCorniceLighting > 0
+        ? roomSnapshots.reduce((sum, item) => sum + toNumber(item.snapshot.corniceLightingPowerSupplies), 0)
+        : null,
+      corniceLightingTotal: totalCorniceLighting,
+      trackTotal: totalTrack,
+      trackLength: totalTrack > 0 ? totalTrackMeters : null,
+      chandeliersEnabled: totalChandeliers > 0,
+      chandeliersCount: totalChandeliers > 0
+        ? roomSnapshots.reduce((sum, item) => sum + toNumber(item.snapshot.chandeliersCount), 0)
+        : null,
+      chandeliersTotal: totalChandeliers,
+      lightsEnabled: totalLights > 0,
+      lightsCount: totalLights > 0 ? totalPointQty : null,
+      lightsTotal: totalLights,
+      total: overallTotal,
+      derivedInputs: {
+        pointSpotsQty: totalPointQty,
+        trackMountType: aggregateTrackMountType,
+        trackLengthMeters: totalTrackMeters,
+        recommendedTrackSpotsQty: calcRecommendedTrackSpots(totalTrackMeters),
+      },
+    };
+  }, [
+    calculationScope,
+    compactSections,
+    currentSnapshot,
+    currentRoomConfig,
+    effectiveRooms,
+    floatingCeiling.extraLabel,
+    shadowCeiling.extraLabel,
+  ]);
+
   useEffect(() => {
     setSnapshot((prev) => {
-      if (prev == null) return snapshot;
+      if (prev == null) return effectiveSnapshot;
 
-      // сохраняем leadSource/lighting/grandTotal/_reconciled
       return {
-        ...snapshot,
-        leadSource: prev.leadSource ?? snapshot.leadSource,
+        ...effectiveSnapshot,
+        leadSource: prev.leadSource ?? effectiveSnapshot.leadSource,
         lighting: prev.lighting,
         grandTotal: prev.grandTotal,
         _reconciled: prev._reconciled,
       };
     });
-  }, [setSnapshot, snapshot]);
+  }, [effectiveSnapshot, setSnapshot]);
 
+  const isRoomScopeMulti = compactSections && calculationScope === "room";
+  const displayTotal = isRoomScopeMulti ? effectiveSnapshot.total : total;
   const showSlider = !compactSections;
 
   // ===== compact guided flow: один шаг открыт, остальные закрыты =====
@@ -955,6 +1395,30 @@ export function PriceCalculatorClient({
     track: !compactSections,
     chandeliers: !compactSections,
     lights: !compactSections,
+  });
+
+  const getConfirmedStateForBlankRoom = (): Record<CompactStepId, boolean> => ({
+    area: false,
+    ceiling: false,
+    shadowProfile: false,
+    floatingProfile: false,
+    lightLines: false,
+    cornice: false,
+    track: false,
+    chandeliers: false,
+    lights: false,
+  });
+
+  const getConfirmedStateForFilledRoom = (): Record<CompactStepId, boolean> => ({
+    area: true,
+    ceiling: true,
+    shadowProfile: true,
+    floatingProfile: true,
+    lightLines: true,
+    cornice: true,
+    track: true,
+    chandeliers: true,
+    lights: true,
   });
 
   const areaRef = useRef<HTMLDivElement | null>(null);
@@ -1024,6 +1488,67 @@ export function PriceCalculatorClient({
     requestAnimationFrame(() => {
       requestAnimationFrame(() => scrollToStep(id, "smooth"));
     });
+  };
+
+  const switchToRoom = (roomId: string) => {
+    const room = rooms.find((item) => item.id === roomId);
+    if (!room) return;
+
+    setActiveRoomId(roomId);
+    setConfirmed(getConfirmedStateForFilledRoom());
+    setActiveStep("area");
+    applyRoomConfig(room);
+  };
+
+  const addRoom = (label?: string) => {
+    const nextLabel = label && label !== "Другое" ? label : `Помещение ${roomSequenceRef.current}`;
+    const nextRoom: RoomConfig = {
+      id: `room-${roomSequenceRef.current}`,
+      label: nextLabel,
+      area: calculator.areaDefault,
+      ceilingType: "standard",
+      shadowEnabled: false,
+      shadowLength: getPerimeterSuggestion(calculator.areaDefault).recommended,
+      shadowLengthAuto: true,
+      floatingEnabled: false,
+      floatingLength: getPerimeterSuggestion(calculator.areaDefault).recommended,
+      floatingLengthAuto: true,
+      lightLinesEnabled: false,
+      lightLinesLength: calculator.lightLineMeters.default,
+      corniceType: "none",
+      corniceLength: calculator.corniceMeters.default,
+      corniceLightingEnabled: false,
+      corniceLightingLength: calculator.corniceMeters.default,
+      corniceLightingPowerSupplies: calculator.corniceLighting.powerSupplyDefault,
+      trackType: "none",
+      trackLength: calculator.trackMeters.default,
+      chandeliersEnabled: false,
+      chandeliersCount: 1,
+      lightsEnabled: false,
+      lightsCount: calculator.lights.countDefault,
+    };
+
+    roomSequenceRef.current += 1;
+    setRooms((prev) => [...prev, nextRoom]);
+    setActiveRoomId(nextRoom.id);
+    setConfirmed(getConfirmedStateForBlankRoom());
+    setResumeStep(null);
+    setActiveStep("area");
+    applyRoomConfig(nextRoom);
+  };
+
+  const removeRoom = (roomId: string) => {
+    if (rooms.length <= 1) return;
+
+    const filtered = rooms.filter((room) => room.id !== roomId);
+    setRooms(filtered);
+
+    const nextRoom = filtered[0] ?? null;
+    if (nextRoom) {
+      setActiveRoomId(nextRoom.id);
+      setConfirmed(getConfirmedStateForFilledRoom());
+      applyRoomConfig(nextRoom);
+    }
   };
 
   const beginEdit = (id: CompactStepId) => {
@@ -1111,7 +1636,60 @@ export function PriceCalculatorClient({
       <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:p-8 max-sm:gap-3 max-sm:border-0 max-sm:bg-transparent max-sm:p-0 max-sm:shadow-none">
         {/* LEFT */}
         <div className="min-w-0 space-y-5 max-sm:space-y-3">
-          {/* intro removed — visual noise */}
+          {isRoomScopeMulti ? (
+            <SectionCard
+              title="Помещения в расчёте"
+              description="Вы можете считать комнаты по очереди и видеть общий итог по объекту. В каждом помещении своя конфигурация профилей, карнизов и света."
+            >
+              <div className="flex flex-wrap gap-2">
+                {effectiveRooms.map((room) => {
+                  const isActive = room.id === activeRoomId;
+                  const roomSnapshot = calcRoomSnapshot(room);
+                  return (
+                    <button
+                      key={room.id}
+                      type="button"
+                      onClick={() => switchToRoom(room.id)}
+                      className={[
+                        "rounded-2xl border px-3 py-2 text-left transition-colors",
+                        isActive
+                          ? "border-slate-950 bg-slate-950 text-white"
+                          : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                      ].join(" ")}
+                    >
+                      <p className="text-sm font-semibold">{room.label}</p>
+                      <p className={isActive ? "mt-1 text-xs text-white/70" : "mt-1 text-xs text-slate-500"}>
+                        {room.area} м² · {formatCurrency(roomSnapshot.total)} ₽
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                {ROOM_TYPE_OPTIONS.map((label) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => addRoom(label)}
+                    className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                  >
+                    + {label}
+                  </button>
+                ))}
+              </div>
+
+              {rooms.length > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => activeRoomId && removeRoom(activeRoomId)}
+                  className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100"
+                >
+                  Удалить текущее помещение
+                </button>
+              ) : null}
+            </SectionCard>
+          ) : null}
 
           {/* AREA */}
           <div ref={areaRef}>
@@ -1119,7 +1697,7 @@ export function PriceCalculatorClient({
               <SectionCard title={`Площадь`}>
                 <SummaryRow
                   label="Расчёт"
-                  value={`${calculationScope === "object" ? "Весь объект" : "Отдельное помещение"} · ${area} м²`}
+                  value={`${calculationScope === "object" ? "Весь объект" : roomLabel} · ${area} м²`}
                   onEdit={() => beginEdit("area")}
                 />
               </SectionCard>
@@ -1148,6 +1726,31 @@ export function PriceCalculatorClient({
                     }}
                   />
                 </div>
+                {calculationScope === "room" ? (
+                  <div className="mb-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+                    <p className="text-sm font-medium text-slate-700">Тип помещения</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {ROOM_TYPE_OPTIONS.map((label) => (
+                        <button
+                          key={label}
+                          type="button"
+                          onClick={() => {
+                            markInteracted();
+                            setRoomLabel(label === "Другое" ? roomLabel : label);
+                          }}
+                          className={[
+                            "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+                            roomLabel === label
+                              ? "bg-slate-950 text-white"
+                              : "bg-slate-100 text-slate-700 hover:bg-slate-200",
+                          ].join(" ")}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 <RangeField
                   id="area-field"
                   label={calculationScope === "object" ? "Укажите общую площадь объекта" : "Выберите площадь помещения"}
@@ -1866,16 +2469,29 @@ export function PriceCalculatorClient({
         {/* RIGHT summary — desktop sidebar */}
         <div className="hidden lg:block lg:sticky lg:top-24 lg:self-start">
           <div className="rounded-[1.75rem] bg-slate-950 p-6 text-white shadow-2xl shadow-slate-950/10">
-            <p className="text-sm text-white/70">Ориентировочная стоимость от</p>
+            <p className="text-sm text-white/70">
+              {isRoomScopeMulti ? "Общий ориентир по всем помещениям" : "Ориентировочная стоимость от"}
+            </p>
             <p className="mt-2 text-3xl font-semibold tracking-tight">
-              {formatCurrency(total)} ₽
+              {formatCurrency(displayTotal)} ₽
             </p>
 
             <p className="mt-2 text-xs text-white/70">
-              {calculationScope === "object" ? "Весь объект" : "Отдельное помещение"} · {!shadowEnabled && !floatingEnabled ? "Простой потолок" : `${shadowEnabled ? "Теневой" : ""}${shadowEnabled && floatingEnabled ? " + " : ""}${floatingEnabled ? "Парящий" : ""}`} · {area} м²
-              {shadowEnabled ? ` · теневой ${shadowLength} м.п.` : ""}
-              {floatingEnabled ? ` · парящий ${floatingLength} м.п.` : ""}
+              {isRoomScopeMulti
+                ? `${effectiveRooms.length} ${effectiveRooms.length === 1 ? "помещение" : effectiveRooms.length < 5 ? "помещения" : "помещений"} · сейчас редактируете: ${roomLabel}`
+                : `${calculationScope === "object" ? "Весь объект" : "Отдельное помещение"} · ${!shadowEnabled && !floatingEnabled ? "Простой потолок" : `${shadowEnabled ? "Теневой" : ""}${shadowEnabled && floatingEnabled ? " + " : ""}${floatingEnabled ? "Парящий" : ""}`} · ${area} м²${shadowEnabled ? ` · теневой ${shadowLength} м.п.` : ""}${floatingEnabled ? ` · парящий ${floatingLength} м.п.` : ""}`}
             </p>
+
+            {isRoomScopeMulti ? (
+              <div className="mt-4 space-y-2 rounded-2xl bg-white/5 p-4">
+                {effectiveSnapshot.roomBreakdown?.map((room) => (
+                  <div key={room.id} className="flex items-center justify-between gap-3 text-xs text-white/75">
+                    <span className="truncate">{room.label} · {room.area} м²</span>
+                    <span className="font-semibold text-white">{formatCurrency(room.totalRub)} ₽</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
 
             <div className="mt-6">
               <Button type="button" className="w-full" onClick={onPrimaryCtaClick ?? (() => scrollToAction())}>
@@ -1894,11 +2510,11 @@ export function PriceCalculatorClient({
             <div className="min-w-0">
               <p className="text-xs text-slate-500">Итого от</p>
               <p className="text-lg font-bold tracking-tight text-slate-950">
-                {formatCurrency(total)} ₽
+                {formatCurrency(displayTotal)} ₽
               </p>
             </div>
             <Button type="button" className="whitespace-nowrap shrink-0" onClick={onPrimaryCtaClick ?? (() => scrollToAction())}>
-              {homepage.price.primaryCtaLabel}
+              {isRoomScopeMulti ? `Общий итог · ${formatCurrency(displayTotal)} ₽` : homepage.price.primaryCtaLabel}
             </Button>
           </div>
         </div>
