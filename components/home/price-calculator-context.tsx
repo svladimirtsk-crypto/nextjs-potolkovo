@@ -17,9 +17,28 @@ import {
   type LightingSnapshot,
 } from "@/lib/calculator-modal-types";
 
+export type CalculatorRoomBreakdown = {
+  id: string;
+  label: string;
+  area: number;
+  totalRub: number;
+  ceilingTypeLabel: string;
+  shadowLength?: number | null;
+  floatingLength?: number | null;
+  lightLinesLength?: number | null;
+  corniceLabel?: string | null;
+  corniceLength?: number | null;
+  corniceLightingLength?: number | null;
+  trackLabel?: string | null;
+  trackLength?: number | null;
+  lightsCount?: number | null;
+  chandeliersCount?: number | null;
+};
+
 export type CalculatorLeadSnapshot = {
   area: number;
   calculationScope?: "room" | "object";
+  roomBreakdown?: CalculatorRoomBreakdown[];
 
   ceilingTypeLabel: string;
   ceilingBaseRate: number;
@@ -150,6 +169,25 @@ export function getCalculatorSummaryLines(
     `Тип потолка: ${snapshot.ceilingTypeLabel}`,
     `Полотно: ${snapshot.area} м² × ${formatCurrency(snapshot.ceilingBaseRate)} ₽ = ${formatCurrency(snapshot.ceilingBaseTotal)} ₽`,
   ];
+
+  if (snapshot.roomBreakdown?.length) {
+    lines.push("", "Помещения в расчёте:");
+    snapshot.roomBreakdown.forEach((room) => {
+      const details: string[] = [];
+      if (room.shadowLength) details.push(`теневой ${room.shadowLength} м.п.`);
+      if (room.floatingLength) details.push(`парящий ${room.floatingLength} м.п.`);
+      if (room.lightLinesLength) details.push(`линии ${room.lightLinesLength} м.п.`);
+      if (room.corniceLength && room.corniceLabel) details.push(`${room.corniceLabel.toLowerCase()} ${room.corniceLength} м.п.`);
+      if (room.corniceLightingLength) details.push(`подсветка карниза ${room.corniceLightingLength} м.п.`);
+      if (room.trackLength && room.trackLabel) details.push(`${room.trackLabel.toLowerCase()} ${room.trackLength} м.п.`);
+      if (room.lightsCount) details.push(`точки ${room.lightsCount} шт.`);
+      if (room.chandeliersCount) details.push(`люстры ${room.chandeliersCount} шт.`);
+
+      lines.push(
+        `${room.label}: ${room.area} м² · ${room.ceilingTypeLabel} · ${details.join(" · ") || "без доп. узлов"} · ${formatCurrency(room.totalRub)} ₽`
+      );
+    });
+  }
 
   // Старое единое поле оставляем как fallback для одиночного спецпрофиля.
   if (
