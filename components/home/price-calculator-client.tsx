@@ -620,6 +620,7 @@ type PriceCalculatorClientProps = {
 
   // P0.1: callback for the dark card CTA button
   onPrimaryCtaClick?: () => void;
+  onSkipToSummaryClick?: () => void;
 
   // V-3: Mobile sticky bottom bar — disabled in modal context
   showMobileStickyBar?: boolean;
@@ -631,6 +632,7 @@ export function PriceCalculatorClient({
   prefillFromLighting = null,
   prefillFromLightingTrigger = 0,
   onPrimaryCtaClick,
+  onSkipToSummaryClick,
   showMobileStickyBar = true,
 }: PriceCalculatorClientProps) {
   const { setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
@@ -1067,19 +1069,10 @@ export function PriceCalculatorClient({
 
   useEffect(() => {
     if (!compactSections) return;
-
-    setRooms((prev) => {
-      if (calculationScope === "room") {
-        if (prev.length > 0) return prev;
-        return [{ ...currentRoomConfig, id: "room-1", label: roomLabel || "Помещение 1" }];
-      }
-      return prev;
-    });
-
-    if (calculationScope === "room" && !activeRoomId) {
-      setActiveRoomId("room-1");
+    if (calculationScope !== "room") {
+      setActiveRoomId(null);
     }
-  }, [activeRoomId, calculationScope, compactSections, currentRoomConfig, roomLabel]);
+  }, [calculationScope, compactSections]);
 
   const applyRoomConfig = (room: RoomConfig) => {
     roomApplyLockRef.current = true;
@@ -1561,7 +1554,7 @@ export function PriceCalculatorClient({
   };
 
   const buildBlankRoom = (label?: string): RoomConfig => {
-    const nextLabel = label && label !== "Другое" ? label : `Помещение ${roomSequenceRef.current}`;
+    const nextLabel = label && label !== "Другое" ? label : "Новая комната";
     return {
       id: `room-${roomSequenceRef.current}`,
       label: nextLabel,
@@ -1602,6 +1595,9 @@ export function PriceCalculatorClient({
     setResumeStep(null);
     setActiveStep("area");
     applyRoomConfig(nextRoom);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => scrollToStep("area", "smooth"));
+    });
   };
 
   const removeRoom = (roomId: string) => {
@@ -1710,7 +1706,7 @@ export function PriceCalculatorClient({
       <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:p-8 max-sm:gap-3 max-sm:border-0 max-sm:bg-transparent max-sm:p-0 max-sm:shadow-none">
         {/* LEFT */}
         <div className="min-w-0 space-y-5 max-sm:space-y-3">
-          {isRoomScopeMulti ? (
+          {isRoomScopeMulti && effectiveRooms.length > 0 ? (
             <SectionCard
               title="Помещения в расчёте"
               description="Считайте комнаты по очереди: у каждой помещения своя конфигурация, а справа и внизу сразу виден общий итог по объекту."
@@ -1726,7 +1722,7 @@ export function PriceCalculatorClient({
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Готово</p>
-                  <p className="mt-2 text-lg font-semibold text-slate-950">{completedRoomsCount}</p>
+                  <p className="mt-2 text-lg font-semibold text-slate-950">{completedRoomsCount}/{effectiveRooms.length}</p>
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Общий ориентир</p>
@@ -1859,8 +1855,8 @@ export function PriceCalculatorClient({
                 <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <OptionCard
                     active={calculationScope === "room"}
-                    title="Отдельное помещение"
-                    meta="Кухня, спальня, гостиная, санузел и другие помещения поэтапно"
+                    title="Одна комната"
+                    meta="Быстрый расчёт для кухни, спальни, гостиной, санузла или другой комнаты"
                     onClick={() => {
                       markInteracted();
                       setCalculationScope("room");
@@ -1868,8 +1864,8 @@ export function PriceCalculatorClient({
                   />
                   <OptionCard
                     active={calculationScope === "object"}
-                    title="Весь объект"
-                    meta="Квартира или дом целиком, если уже понятен общий объём"
+                    title="Вся квартира или дом"
+                    meta="Если хотите прикинуть бюджет по объекту целиком одной суммой"
                     onClick={() => {
                       markInteracted();
                       setCalculationScope("object");
