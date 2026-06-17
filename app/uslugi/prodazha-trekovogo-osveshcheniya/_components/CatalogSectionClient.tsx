@@ -594,7 +594,7 @@ export function CatalogSectionClient({ data }: Props) {
   }, [lampSocket, pointSubtype, products, query, section, trackGroup, trackSystem]);
 
   return (
-    <Section className={selectedEntries.length > 0 ? "py-10 max-sm:pb-44" : "py-10"}>
+    <Section id="price" className={selectedEntries.length > 0 ? "scroll-mt-24 py-10 max-sm:pb-44" : "scroll-mt-24 py-10"}>
       <Container>
         <div className="flex items-start justify-between gap-6">
           <Heading title="Каталог освещения" />
@@ -803,7 +803,7 @@ export function CatalogSectionClient({ data }: Props) {
 
         {/* Selected mini-bar */}
         {selectedEntries.length > 0 ? (
-          <div className="sticky top-[calc(var(--header-height)+0.75rem)] z-30 mt-6 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-lg shadow-slate-950/5 backdrop-blur max-sm:hidden">
+          <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.04)] max-sm:hidden">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm font-semibold text-slate-950">Выбрано: {selectedEntries.length} поз.</p>
 
