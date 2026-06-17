@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 
 import snapshotData from "@/data/eks-feed2-snapshot.json";
-import type { FeedCatalogParam, FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
+import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import { homepage } from "@/content/homepage";
 
+import { normalizeFeedCatalogProducts, toNumber, toText } from "@/lib/feed2-snapshot-normalize";
 import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
 import { calcTrackProfileMeters } from "@/lib/product-length-meters";
 
@@ -27,69 +28,8 @@ type CatalogLightingItem = {
   priceRub: number;
 };
 
-function toText(value: unknown): string {
-  return String(value ?? "").trim();
-}
-
-function toNumber(value: unknown): number {
-  const n = Number(value ?? 0);
-  return Number.isFinite(n) ? n : 0;
-}
-
 function fmt(value: number): string {
   return new Intl.NumberFormat("ru-RU").format(Math.round(value));
-}
-
-function toNumberOrNull(value: unknown): number | null {
-  const n = Number(value ?? NaN);
-  return Number.isFinite(n) ? n : null;
-}
-
-function toParams(input: unknown): FeedCatalogParam[] {
-  if (!Array.isArray(input)) return [];
-  return input
-    .map((item) => {
-      const x = item as { label?: unknown; value?: unknown };
-      return { label: toText(x?.label), value: toText(x?.value) };
-    })
-    .filter((item) => item.label.length > 0 && item.value.length > 0);
-}
-
-function normalizeProduct(raw: unknown): FeedCatalogProduct | null {
-  const p = raw as Record<string, unknown>;
-
-  const vendorCode = toText((p as any).vendorCode);
-  const offerId = toText((p as any).offerId);
-  const name = toText((p as any).name);
-  if (!name || (!vendorCode && !offerId)) return null;
-
-  const productIdRaw = toText((p as any).productId);
-  const productId = productIdRaw || `feed2-${vendorCode || offerId || name}`;
-
-  const images = Array.isArray((p as any).images)
-    ? ((p as any).images as unknown[]).map((item) => toText(item)).filter(Boolean)
-    : [];
-
-  return {
-    productId: toText(productId),
-    vendorCode,
-    offerId,
-    name,
-    url: toText((p as any).url),
-    categoryId: toText((p as any).categoryId),
-    categoryPath: toText((p as any).categoryPath),
-    images,
-    coverImage: toText((p as any).coverImage) || images[0] || "",
-    priceRub: toNumber((p as any).priceRub),
-    available: Boolean((p as any).available ?? true),
-    params: toParams((p as any).params),
-    keyAttributes: toParams((p as any).keyAttributes),
-    system: (toText((p as any).system) || "UNKNOWN") as FeedCatalogProduct["system"],
-    kind: (toText((p as any).kind) || "OTHER") as FeedCatalogProduct["kind"],
-    unit: (toText((p as any).unit) === "m" ? "m" : "pcs") as FeedCatalogProduct["unit"],
-    lengthMeters: toNumberOrNull((p as any).lengthMeters),
-    pieceLengthMeters: toNumberOrNull((p as any).pieceLengthMeters),
-  };
 }
 
 function isPanelProduct(product: FeedCatalogProduct): boolean {
@@ -154,48 +94,47 @@ function sumPointQtyFromLightingItems(
 }
 
 export function WizardStep2Summary() {
-  const modal = useCalculatorModal() as any;
+  const {
+    goToStep,
+    setStep1CatalogView,
+    closeCalculator,
+    step0AreaConfirmed,
+    step0SessionInteracted,
+    options,
+    lightingDraft,
+    showCeilingInUi,
+    lightingEffectiveTotal,
+    lightingDiscountedTotal,
+    lightingDiscountMode,
+    lightingDiscountEligible,
+    lightingRegularTotal,
+    lightingWithCeilingTotal,
+    ceilingTotal,
+    grandTotal,
+  } = useCalculatorModal();
 
-  const goToStep: (n: 0 | 1 | 2) => void = modal.goToStep;
-  const setStep1CatalogView: (view: "selected" | "browse" | null) => void =
-    modal.setStep1CatalogView;
-  const closeCalculator: () => void = modal.closeCalculator;
+  const resolvedShowCeilingInUi =
+    options?.entryMode !== "lighting-first" || step0SessionInteracted || showCeilingInUi;
+  const resolvedLightingEffectiveTotal = toNumber(lightingEffectiveTotal || lightingDiscountedTotal);
+  const resolvedLightingRegularTotal = toNumber(lightingRegularTotal || resolvedLightingEffectiveTotal);
+  const resolvedLightingWithCeilingTotal = toNumber(
+    lightingWithCeilingTotal || lightingDiscountedTotal
+  );
+  const resolvedCeilingTotal = toNumber(ceilingTotal);
+  const resolvedGrandTotal =
+    toNumber(grandTotal) ||
+    (resolvedShowCeilingInUi ? resolvedCeilingTotal : 0) + resolvedLightingEffectiveTotal;
 
-  const step0AreaConfirmed: boolean = Boolean(modal.step0AreaConfirmed);
-  const step0SessionInteracted: boolean = Boolean(modal.step0SessionInteracted);
-
-  const options: { entryMode?: string } | null = modal.options ?? null;
-  const lightingDraft = modal.lightingDraft ?? null;
-
-  const showCeilingInUi: boolean =
-    typeof modal.showCeilingInUi === "boolean"
-      ? modal.showCeilingInUi
-      : options?.entryMode !== "lighting-first" || step0SessionInteracted;
-
-  const lightingEffectiveTotal: number =
-    typeof modal.lightingEffectiveTotal === "number"
-      ? modal.lightingEffectiveTotal
-      : toNumber(modal.lightingDiscountedTotal);
-
-  const lightingDiscountMode = String(modal.lightingDiscountMode ?? "none");
-  const lightingDiscountEligible: boolean = lightingDiscountMode === "with-ceiling" || Boolean(modal.lightingDiscountEligible);
-  const lightingRegularTotal: number =
-    typeof modal.lightingRegularTotal === "number" ? modal.lightingRegularTotal : lightingEffectiveTotal;
-  const lightingStandaloneTotal: number =
-    typeof modal.lightingStandaloneTotal === "number" ? modal.lightingStandaloneTotal : lightingEffectiveTotal;
-  const lightingWithCeilingTotal: number =
-    typeof modal.lightingWithCeilingTotal === "number" ? modal.lightingWithCeilingTotal : toNumber(modal.lightingDiscountedTotal);
-  const lightingAppliedPercent = lightingDiscountMode === "with-ceiling" ? 25 : lightingDiscountMode === "lighting-only" ? 10 : 0;
-  const lightingAppliedBenefit = Math.max(0, lightingRegularTotal - lightingEffectiveTotal);
-  const lightingPotentialBenefit = Math.max(0, lightingRegularTotal - lightingWithCeilingTotal);
-
-  const ceilingTotal: number = typeof modal.ceilingTotal === "number" ? modal.ceilingTotal : 0;
-
-  const grandTotal: number =
-    typeof modal.grandTotal === "number"
-      ? modal.grandTotal
-      : (showCeilingInUi ? ceilingTotal : 0) + lightingEffectiveTotal;
-
+  const lightingAppliedPercent =
+    lightingDiscountMode === "with-ceiling" ? 25 : lightingDiscountMode === "lighting-only" ? 10 : 0;
+  const lightingAppliedBenefit = Math.max(
+    0,
+    resolvedLightingRegularTotal - resolvedLightingEffectiveTotal
+  );
+  const lightingPotentialBenefit = Math.max(
+    0,
+    resolvedLightingRegularTotal - resolvedLightingWithCeilingTotal
+  );
   const [showResult, setShowResult] = useState(false);
 
   const { snapshot, setSnapshot } = usePriceCalculatorBridge();
@@ -207,20 +146,17 @@ export function WizardStep2Summary() {
 
   const lightingItems: CatalogLightingItem[] = useMemo(() => {
     const items = lighting?.mode === "catalog" ? (lighting.items ?? []) : [];
-    return (items as any[]).map((x) => ({
-      sku: toText((x as any)?.sku),
-      name: toText((x as any)?.name),
-      qty: toNumber((x as any)?.qty),
-      priceRub: toNumber((x as any)?.priceRub),
+    return items.map((item) => ({
+      sku: toText(item.sku),
+      name: toText(item.name),
+      qty: toNumber(item.qty),
+      priceRub: toNumber(item.priceRub),
     }));
   }, [lighting]);
 
   const catalogProducts = useMemo(() => {
     const rawProducts = (snapshotData as { products?: unknown[] })?.products ?? [];
-    return rawProducts
-      .map((x) => normalizeProduct(x))
-      .filter((x): x is FeedCatalogProduct => Boolean(x))
-      .map((p) => applyVendorOverrides(p));
+    return normalizeFeedCatalogProducts(rawProducts).map((product) => applyVendorOverrides(product));
   }, []);
 
   const byId = useMemo(() => {
@@ -255,8 +191,6 @@ export function WizardStep2Summary() {
     );
   }, [byId, byVendor, lightingItems]);
 
-  const derivedPointFromStep0 = toNumber(snapshot?.derivedInputs?.pointSpotsQty);
-  const derivedTrackFromStep0 = toNumber(snapshot?.derivedInputs?.trackLengthMeters);
   const trackMountType = (snapshot?.derivedInputs?.trackMountType ?? "none") as
     | "built-in"
     | "surface"
@@ -312,40 +246,34 @@ export function WizardStep2Summary() {
 
   const handleGoToCeiling = () => goToStep(0);
 
-  const scrollToInlineForm = () => {
-    const el = document.getElementById("modal-action-form");
-    if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
   return (
     <div key="step2" className="animate-fade-slide-in space-y-4">
       {/* Grand total — hero number */}
       <div className="rounded-2xl bg-slate-950 p-6 text-center text-white shadow-xl">
         <p className="text-sm text-white/70">Ориентировочный итог</p>
-        <p className="mt-2 text-4xl font-bold tracking-tight">~{fmt(grandTotal)} ₽</p>
+        <p className="mt-2 text-4xl font-bold tracking-tight">~{fmt(resolvedGrandTotal)} ₽</p>
         <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-xs text-white/60">
-          {showCeilingInUi ? <span>Потолок {fmt(ceilingTotal)} ₽</span> : null}
-          {showCeilingInUi && lightingEffectiveTotal > 0 ? <span>+</span> : null}
-          {lightingEffectiveTotal > 0 ? (
+          {resolvedShowCeilingInUi ? <span>Потолок {fmt(resolvedCeilingTotal)} ₽</span> : null}
+          {resolvedShowCeilingInUi && resolvedLightingEffectiveTotal > 0 ? <span>+</span> : null}
+          {resolvedLightingEffectiveTotal > 0 ? (
             <span>
               Свет{" "}
               {lightingDiscountEligible && lightingAppliedBenefit > 0 ? (
                 <>
-                  <span className="line-through text-white/35">{fmt(lightingRegularTotal)} ₽</span>{" "}
-                  <span>{fmt(lightingEffectiveTotal)} ₽</span>{" "}
+                  <span className="line-through text-white/35">{fmt(resolvedLightingRegularTotal)} ₽</span>{" "}
+                  <span>{fmt(resolvedLightingEffectiveTotal)} ₽</span>{" "}
                   <span className="text-emerald-400">−{lightingAppliedPercent}% (−{fmt(lightingAppliedBenefit)} ₽)</span>
                 </>
               ) : (
-                <>{fmt(lightingEffectiveTotal)} ₽</>
+                <>{fmt(resolvedLightingEffectiveTotal)} ₽</>
               )}
             </span>
           ) : null}
         </div>
-        {lightingDiscountMode !== "with-ceiling" && lightingEffectiveTotal > 0 && lightingWithCeilingTotal > 0 ? (
+        {lightingDiscountMode !== "with-ceiling" && resolvedLightingEffectiveTotal > 0 && resolvedLightingWithCeilingTotal > 0 ? (
           <p className="mt-2 text-xs text-white/50">
-            С потолком: <span className="line-through text-white/35">{fmt(lightingRegularTotal)} ₽</span>{" "}
-            {fmt(lightingWithCeilingTotal)} ₽ −25% (−{fmt(lightingPotentialBenefit)} ₽)
+            С потолком: <span className="line-through text-white/35">{fmt(resolvedLightingRegularTotal)} ₽</span>{" "}
+            {fmt(resolvedLightingWithCeilingTotal)} ₽ −25% (−{fmt(lightingPotentialBenefit)} ₽)
           </p>
         ) : null}
       </div>
@@ -353,13 +281,13 @@ export function WizardStep2Summary() {
       <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm sm:hidden">
         <div className="flex items-center justify-between gap-3">
           <span className="text-slate-500">Потолок</span>
-          <span className="font-semibold text-slate-950">{showCeilingInUi ? `${fmt(ceilingTotal)} ₽` : "—"}</span>
+          <span className="font-semibold text-slate-950">{resolvedShowCeilingInUi ? `${fmt(resolvedCeilingTotal)} ₽` : "—"}</span>
         </div>
-        {lightingEffectiveTotal > 0 ? (
+        {resolvedLightingEffectiveTotal > 0 ? (
           <>
             <div className="mt-2 flex items-center justify-between gap-3">
               <span className="text-slate-500">Свет</span>
-              <span className="font-semibold text-slate-950">{fmt(lightingEffectiveTotal)} ₽</span>
+              <span className="font-semibold text-slate-950">{fmt(resolvedLightingEffectiveTotal)} ₽</span>
             </div>
             {lightingAppliedBenefit > 0 ? (
               <div className="mt-2 flex items-center justify-between gap-3 text-emerald-700">
@@ -371,7 +299,7 @@ export function WizardStep2Summary() {
         ) : null}
         <div className="mt-3 border-t border-slate-200 pt-3 flex items-center justify-between gap-3">
           <span className="font-semibold text-slate-950">Итого</span>
-          <span className="text-lg font-bold text-slate-950">~{fmt(grandTotal)} ₽</span>
+          <span className="text-lg font-bold text-slate-950">~{fmt(resolvedGrandTotal)} ₽</span>
         </div>
       </div>
 
@@ -399,7 +327,7 @@ export function WizardStep2Summary() {
           Состав расчёта
         </summary>
         <div className="border-t border-slate-200 px-4 py-3 text-sm text-slate-700 space-y-2">
-          {showCeilingInUi ? (
+          {resolvedShowCeilingInUi ? (
             <div className="rounded-xl bg-slate-50 p-3">
               <p className="mb-2 font-semibold text-slate-950">Расчёт потолка</p>
               <ul className="space-y-1 text-slate-700">
@@ -415,7 +343,7 @@ export function WizardStep2Summary() {
             </div>
           )}
 
-          {lightingItems.length > 0 && lightingEffectiveTotal > 0 ? (
+          {lightingItems.length > 0 && resolvedLightingEffectiveTotal > 0 ? (
             <div className="pt-2">
               <p className="font-semibold text-slate-950">
                 Освещение{kitDisplayName ? ` — ${kitDisplayName}` : ""}
@@ -430,12 +358,12 @@ export function WizardStep2Summary() {
               </ul>
               {lightingAppliedPercent > 0 ? (
                 <p className="mt-1 text-xs text-emerald-700 font-medium">
-                  Скидка на свет учтена: {fmt(lightingRegularTotal)} ₽ −{lightingAppliedPercent}% (−{fmt(lightingAppliedBenefit)} ₽)
+                  Скидка на свет учтена: {fmt(resolvedLightingRegularTotal)} ₽ −{lightingAppliedPercent}% (−{fmt(lightingAppliedBenefit)} ₽)
                 </p>
               ) : null}
-              {lightingDiscountMode !== "with-ceiling" && lightingWithCeilingTotal > 0 ? (
+              {lightingDiscountMode !== "with-ceiling" && resolvedLightingWithCeilingTotal > 0 ? (
                 <p className="mt-1 text-xs text-slate-500">
-                  С потолком: {fmt(lightingRegularTotal)} ₽ −25% (−{fmt(lightingPotentialBenefit)} ₽) = {fmt(lightingWithCeilingTotal)} ₽
+                  С потолком: {fmt(resolvedLightingRegularTotal)} ₽ −25% (−{fmt(lightingPotentialBenefit)} ₽) = {fmt(resolvedLightingWithCeilingTotal)} ₽
                 </p>
               ) : null}
             </div>
@@ -444,18 +372,18 @@ export function WizardStep2Summary() {
           <div className="border-t border-slate-200 pt-2">
             <div className="flex justify-between font-semibold text-slate-950">
               <span>Итого</span>
-              <span>~{fmt(grandTotal)} ₽</span>
+              <span>~{fmt(resolvedGrandTotal)} ₽</span>
             </div>
           </div>
         </div>
       </details>
 
       {/* Discount hint */}
-      {lightingDiscountMode !== "with-ceiling" && lightingEffectiveTotal > 0 ? (
+      {lightingDiscountMode !== "with-ceiling" && resolvedLightingEffectiveTotal > 0 ? (
         <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
           <p className="font-semibold">Свет дешевле с натяжным потолком</p>
           <p className="mt-1 text-blue-900/80">
-            При заказе потолка скидка на свет будет −25%: {fmt(lightingWithCeilingTotal)} ₽ вместо {fmt(lightingRegularTotal)} ₽.
+            При заказе потолка скидка на свет будет −25%: {fmt(resolvedLightingWithCeilingTotal)} ₽ вместо {fmt(resolvedLightingRegularTotal)} ₽.
           </p>
           <button
             type="button"
