@@ -2,7 +2,7 @@ import { Container } from "@/components/ui/container";
 import { Heading } from "@/components/ui/heading";
 import { Section } from "@/components/ui/section";
 
-const faqItems = [
+export const trackSaleFaqItems = [
   {
     q: "Как действует скидка 10% и 25%?",
     a: "На освещение отдельно действует скидка 10%. Если заказываете освещение вместе с натяжным потолком — скидка на свет становится 25%.",
@@ -32,7 +32,7 @@ export function TrackSaleFaqSection() {
         />
 
         <div className="mt-10 space-y-4 max-w-3xl mx-auto">
-          {faqItems.map((item, idx) => (
+          {trackSaleFaqItems.map((item, idx) => (
             <div
               key={idx}
               className="rounded-[1.5rem] border border-slate-200 bg-white p-6"
