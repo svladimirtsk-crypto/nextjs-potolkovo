@@ -706,7 +706,7 @@ export function PriceCalculatorClient({
   const [ceilingLength, setCeilingLength] = useState<number>(
     () => getPerimeterSuggestion(resolvedAreaDefault).recommended
   );
-  const [ceilingLengthAuto, setCeilingLengthAuto] = useState<boolean>(true);
+  const [ceilingLengthAuto] = useState<boolean>(true);
 
   const [shadowLength, setShadowLength] = useState<number>(
     () => preset?.shadowLengthDefault ?? getPerimeterSuggestion(resolvedAreaDefault).recommended
@@ -808,7 +808,7 @@ export function PriceCalculatorClient({
   // чтобы prefill не перетирал ручные правки
   const [trackTypeTouched, setTrackTypeTouched] = useState(false);
   const [trackLengthTouched, setTrackLengthTouched] = useState(false);
-  const [chandeliersTouched, setChandeliersTouched] = useState(false);
+  const [, setChandeliersTouched] = useState(false);
   const [lightsTouched, setLightsTouched] = useState(false);
 
   useEffect(() => {
@@ -866,13 +866,6 @@ export function PriceCalculatorClient({
     trackTypeTouched,
   ]);
 
-  const effectiveCeilingType = useMemo<CeilingType>(() => {
-    if (shadowEnabled && floatingEnabled) return "shadow-floating";
-    if (shadowEnabled) return "shadow";
-    if (floatingEnabled) return "floating";
-    return "standard";
-  }, [shadowEnabled, floatingEnabled]);
-
   const selectedCeiling = useMemo(
     () =>
       calculator.ceilingTypes.find((c) => c.slug === ceilingType) ??
@@ -927,16 +920,6 @@ export function PriceCalculatorClient({
     }
   };
 
-  const handleCeilingTypeChange = (slug: CeilingType) => {
-    markInteracted();
-    setCeilingType(slug);
-
-    if (slug !== "standard") {
-      setCeilingLengthAuto(true);
-      setCeilingLength(getPerimeterSuggestion(area).recommended);
-    }
-  };
-
   const toggleShadow = () => {
     markInteracted();
     setShadowEnabled((prev) => {
@@ -971,18 +954,6 @@ export function PriceCalculatorClient({
     markInteracted();
     setFloatingLengthAuto(false);
     setFloatingLength(v);
-  };
-
-  const handleCeilingLengthChange = (v: number) => {
-    markInteracted();
-    setCeilingLengthAuto(false);
-    setCeilingLength(v);
-  };
-
-  const applyPerimeterSuggestion = () => {
-    markInteracted();
-    setCeilingLengthAuto(true);
-    setCeilingLength(perimeterSuggestion.recommended);
   };
 
   // ---- totals ----
@@ -1194,7 +1165,7 @@ export function PriceCalculatorClient({
     if (isSame) return;
 
     applyRoomConfig(room);
-  }, [activeRoomId, calculationScope, compactSections, rooms]);
+  }, [activeRoomId, calculationScope, compactSections, currentRoomConfig, rooms]);
 
   const isSelectionPending =
     compactSections &&
@@ -1291,8 +1262,8 @@ export function PriceCalculatorClient({
     [
       area,
       calculationScope,
+      isSelectionPending,
       solutionScenario,
-      selectedCeiling,
       ceilingBaseRate,
       ceilingBaseTotal,
       hasSpecialCeiling,
@@ -1447,7 +1418,6 @@ export function PriceCalculatorClient({
     calculationScope,
     compactSections,
     currentSnapshot,
-    currentRoomConfig,
     effectiveRooms,
     floatingCeiling.extraLabel,
     shadowCeiling.extraLabel,
@@ -1870,10 +1840,8 @@ export function PriceCalculatorClient({
       });
     };
 
-    const ceilingMeta =
-      ceilingType === "standard"
-        ? `от ${formatCurrency(selectedCeiling.baseRatePerSqm)} ₽ / м²`
-        : `${formatCurrency(selectedCeiling.baseRatePerSqm)} ₽ / м² + ${formatCurrency(selectedCeiling.extraRatePerMeter)} ₽ / м.п.`;
+    const isModalCalculator = !showMobileStickyBar;
+    const sidebarShouldShowPrice = !isRoomScopeMulti || confirmed.area || completedRoomsCount > 0;
 
     const corniceValue =
       selectedCornice.ratePerMeter > 0
@@ -2974,15 +2942,17 @@ export function PriceCalculatorClient({
               {isRoomScopeMulti ? "Общий ориентир по всем помещениям" : "Ориентировочная стоимость от"}
             </p>
             <p className="mt-2 text-3xl font-semibold tracking-tight">
-              {formatCurrency(displayTotal)} ₽
+              {sidebarShouldShowPrice ? `${formatCurrency(displayTotal)} ₽` : "—"}
             </p>
 
             <p className="mt-2 text-xs text-white/70">
-              {isRoomScopeMulti
-                ? `${effectiveRooms.length} ${effectiveRooms.length === 1 ? "помещение" : effectiveRooms.length < 5 ? "помещения" : "помещений"} · сейчас редактируете: ${roomLabel || "комнату"}`
-                : calculationScope
-                  ? `${calculationScope === "object" ? "Весь объект" : "Одна комната"} · ${!shadowEnabled && !floatingEnabled ? "Простой потолок" : `${shadowEnabled ? "Теневой" : ""}${shadowEnabled && floatingEnabled ? " + " : ""}${floatingEnabled ? "Парящий" : ""}`} · ${area} м²${shadowEnabled ? ` · теневой ${shadowLength} м.п.` : ""}${floatingEnabled ? ` · парящий ${floatingLength} м.п.` : ""}`
-                  : "Сначала выберите, что хотите посчитать: одну комнату или весь объект."}
+              {!sidebarShouldShowPrice
+                ? "Ориентир появится после подтверждения площади."
+                : isRoomScopeMulti
+                  ? `${effectiveRooms.length} ${effectiveRooms.length === 1 ? "помещение" : effectiveRooms.length < 5 ? "помещения" : "помещений"} · сейчас редактируете: ${roomLabel || "комнату"}`
+                  : calculationScope
+                    ? `${calculationScope === "object" ? "Весь объект" : "Одна комната"} · ${!shadowEnabled && !floatingEnabled ? "Простой потолок" : `${shadowEnabled ? "Теневой" : ""}${shadowEnabled && floatingEnabled ? " + " : ""}${floatingEnabled ? "Парящий" : ""}`} · ${area} м²${shadowEnabled ? ` · теневой ${shadowLength} м.п.` : ""}${floatingEnabled ? ` · парящий ${floatingLength} м.п.` : ""}`
+                    : "Сначала выберите, что хотите посчитать: одну комнату или весь объект."}
             </p>
 
             {isRoomScopeMulti ? (
@@ -3011,9 +2981,11 @@ export function PriceCalculatorClient({
                   <Button type="button" variant="secondary" className="w-full" onClick={promptAddRoom}>
                     Добавить ещё помещение
                   </Button>
-                  <Button type="button" variant="ghost" className="w-full border border-white/10 !text-white/80 hover:border-white/25 hover:bg-white/10 hover:!text-white" onClick={() => scrollToAction()}>
-                    Записаться на бесплатный замер
-                  </Button>
+                  {!isModalCalculator ? (
+                    <Button type="button" variant="ghost" className="w-full border border-white/10 !text-white/80 hover:border-white/25 hover:bg-white/10 hover:!text-white" onClick={() => scrollToAction()}>
+                      Записаться на бесплатный замер
+                    </Button>
+                  ) : null}
                 </div>
               ) : null
             ) : (
