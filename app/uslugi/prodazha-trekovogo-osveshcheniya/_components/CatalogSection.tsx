@@ -1,9 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState } from "react";
 
-import type { FeedCatalogResult } from "@/lib/eks-feed2-catalog";
+import snapshotData from "@/data/eks-feed2-snapshot.json";
+import type { FeedCatalogProduct, FeedCatalogResult } from "@/lib/eks-feed2-catalog";
 
 import { Container } from "@/components/ui/container";
 import { Heading } from "@/components/ui/heading";
@@ -16,6 +16,15 @@ const CatalogSectionClient = dynamic(
     loading: () => <CatalogLoadingState mode="component" />,
   }
 );
+
+const snapshotCatalogData: FeedCatalogResult = {
+  ok: true,
+  updatedAt: String((snapshotData as { updatedAt?: unknown }).updatedAt ?? new Date().toISOString()),
+  source: "snapshot",
+  discountPercentForCeilingOrder: 25,
+  categories: [],
+  products: ((snapshotData as { products?: unknown[] }).products ?? []) as FeedCatalogProduct[],
+};
 
 function CatalogLoadingState({ mode = "initial" }: { mode?: "initial" | "component" }) {
   return (
@@ -72,118 +81,6 @@ function CatalogLoadingState({ mode = "initial" }: { mode?: "initial" | "compone
   );
 }
 
-function CatalogErrorState({ onRetry }: { onRetry: () => void }) {
-  return (
-    <Section id="price" className="scroll-mt-24 py-10">
-      <Container>
-        <Heading
-          title="Каталог освещения"
-          description="Каталог временно не загрузился. Можно попробовать ещё раз или оставить заявку — подберу комплект вручную."
-        />
-
-        <div className="mt-8 rounded-[2rem] border border-rose-200 bg-rose-50 p-5 sm:p-6">
-          <p className="text-sm leading-6 text-rose-900">
-            Каталог временно не загрузился. Попробуйте повторить загрузку или напишите мне — подберу свет вручную.
-          </p>
-
-          <button
-            type="button"
-            onClick={onRetry}
-            className="mt-4 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
-          >
-            Повторить загрузку
-          </button>
-        </div>
-      </Container>
-    </Section>
-  );
-}
-
 export function CatalogSection() {
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const [shouldFetch, setShouldFetch] = useState(false);
-  const [data, setData] = useState<FeedCatalogResult | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasError, setHasError] = useState(false);
-
-  useEffect(() => {
-    const node = rootRef.current;
-    if (!node || shouldFetch) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry?.isIntersecting) return;
-        setShouldFetch(true);
-        observer.disconnect();
-      },
-      {
-        rootMargin: "600px 0px",
-        threshold: 0.01,
-      }
-    );
-
-    observer.observe(node);
-
-    return () => observer.disconnect();
-  }, [shouldFetch]);
-
-  useEffect(() => {
-    if (!shouldFetch || data || isLoading) return;
-
-    let cancelled = false;
-
-    const load = async () => {
-      setIsLoading(true);
-      setHasError(false);
-
-      try {
-        const response = await fetch("/api/catalog", {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-
-        const nextData = (await response.json()) as FeedCatalogResult;
-        if (cancelled) return;
-        setData(nextData);
-      } catch {
-        if (cancelled) return;
-        setHasError(true);
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    };
-
-    void load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [data, isLoading, shouldFetch]);
-
-  if (hasError && !data) {
-    return (
-      <div ref={rootRef}>
-        <CatalogErrorState
-          onRetry={() => {
-            setHasError(false);
-            setShouldFetch(true);
-            setData(null);
-          }}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div ref={rootRef}>
-      {!shouldFetch || (isLoading && !data) ? <CatalogLoadingState /> : null}
-      {data ? <CatalogSectionClient data={data} /> : null}
-    </div>
-  );
+  return <CatalogSectionClient data={snapshotCatalogData} />;
 }
