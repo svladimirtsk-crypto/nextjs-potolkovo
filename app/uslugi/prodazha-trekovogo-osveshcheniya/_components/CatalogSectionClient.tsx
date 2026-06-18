@@ -1,8 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
+import {
+  type CalculatorLeadSnapshot,
+  usePriceCalculatorBridge,
+} from "@/components/home/price-calculator-context";
 import { ProductImageLightbox } from "@/components/feed2/ProductImageLightbox";
 import { Container } from "@/components/ui/container";
 import { Heading } from "@/components/ui/heading";
@@ -10,6 +14,8 @@ import { Section } from "@/components/ui/section";
 
 import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
 import type { FeedCatalogProduct, FeedCatalogResult } from "@/lib/eks-feed2-catalog";
+
+import { trackLightingCartCheckout, trackSmartInterestSelected } from "@/lib/analytics";
 
 import {
   LIGHTING_ONLY_DISCOUNT_PERCENT,
@@ -54,6 +60,11 @@ function isMountsOrGrilles(product: FeedCatalogProduct): boolean {
   const text = `${toText(product.name)} ${toText(product.vendorCode)} ${toText(product.categoryPath)}`.toLowerCase();
   if (product.kind === "CEILING_COMPONENT") return true;
   return text.includes("заклад") || text.includes("решетк") || text.includes("решётк");
+}
+
+function isSmartProduct(product: FeedCatalogProduct): boolean {
+  const text = `${toText(product.name)} ${toText(product.categoryPath)} ${toText(product.vendorCode)}`.toLowerCase();
+  return text.includes("смарт") || text.includes("smart") || text.includes("умный дом");
 }
 
 function isPanelProduct(product: FeedCatalogProduct): boolean {
@@ -102,6 +113,64 @@ function productToLightingItem(product: FeedCatalogProduct, qty: number): Lighti
     name: toText(product.name),
     qty,
     priceRub: toNumber(product.priceRub),
+  };
+}
+
+function createLightingOnlySnapshot(): CalculatorLeadSnapshot {
+  return {
+    area: 0,
+    ceilingTypeLabel: "Потолок пока не рассчитан",
+    ceilingBaseRate: 0,
+    ceilingBaseTotal: 0,
+    ceilingExtraLabel: null,
+    ceilingLength: null,
+    ceilingExtraRatePerMeter: null,
+    ceilingExtraTotal: 0,
+    lightLinesEnabled: false,
+    lightLinesLabel: null,
+    lightLinesLength: null,
+    lightLinesRatePerMeter: null,
+    lightLinesTotal: 0,
+    corniceLabel: null,
+    corniceLength: null,
+    corniceRatePerMeter: null,
+    corniceTotal: 0,
+    trackLabel: null,
+    trackLength: null,
+    trackRatePerMeter: null,
+    trackTotal: 0,
+    lightsEnabled: false,
+    lightsCount: null,
+    lightsRatePerUnit: 0,
+    lightsTotal: 0,
+    total: 0,
+    derivedInputs: {
+      pointSpotsQty: 0,
+      trackMountType: "none",
+      trackLengthMeters: 0,
+      recommendedTrackSpotsQty: 0,
+    },
+  };
+}
+
+function buildLightingSnapshotFromItems(items: LightingItem[]): LightingSnapshot | null {
+  if (items.length === 0) return null;
+
+  const totalRub = items.reduce((sum, item) => sum + item.qty * item.priceRub, 0);
+  const discountedTotalRub = applyLightingOnlyDiscount(totalRub);
+  const withCeilingDiscountedTotalRub = applyLightingWithCeilingDiscount(totalRub);
+
+  return {
+    mode: "catalog",
+    items,
+    totalRub,
+    discountedTotalRub,
+    standaloneDiscountedTotalRub: discountedTotalRub,
+    withCeilingDiscountedTotalRub,
+    discountMode: "lighting-only",
+    discountPercentApplied: LIGHTING_ONLY_DISCOUNT_PERCENT,
+    discountAmountRub: calcLightingDiscountAmount(totalRub, discountedTotalRub),
+    userCustomizedLighting: true,
   };
 }
 
@@ -164,8 +233,11 @@ function ProductCard({
         </div>
 
         <div className="min-w-0">
-          {(systemBadge || kindBadge) ? (
+          {(systemBadge || kindBadge || isSmartProduct(product)) ? (
             <div className="mb-2 flex flex-wrap gap-1.5">
+              {isSmartProduct(product) ? (
+                <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">SMART</span>
+              ) : null}
               {systemBadge ? (
                 <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">{systemBadge}</span>
               ) : null}
@@ -252,6 +324,7 @@ type Props = { data: FeedCatalogResult };
 
 export function CatalogSectionClient({ data }: Props) {
   const { openCalculator } = useCalculatorModal();
+  const { setSnapshot } = usePriceCalculatorBridge();
 
   const products = useMemo(() => {
     return (data.products ?? [])
@@ -280,6 +353,7 @@ export function CatalogSectionClient({ data }: Props) {
   const [trackGroup, setTrackGroup] = useState<TrackGroupId>("TRACK_FIXTURE");
   const [pointSubtype, setPointSubtype] = useState<PointSubtypeId>("GX53");
   const [lampSocket, setLampSocket] = useState<LampSocket>("GX53");
+  const [smartOnly, setSmartOnly] = useState(false);
 
   const [query, setQuery] = useState("");
   const [cartItems, setCartItems] = useState<CartItems>({});
@@ -295,6 +369,10 @@ export function CatalogSectionClient({ data }: Props) {
       .filter((x): x is { productId: string; product: FeedCatalogProduct; qty: number } => Boolean(x));
   }, [byProductId, cartItems]);
 
+  const selectedLightingItems = useMemo(() => {
+    return selectedEntries.map((entry) => productToLightingItem(entry.product, entry.qty));
+  }, [selectedEntries]);
+
   const selectedTotal = useMemo(() => {
     return selectedEntries.reduce((sum, entry) => sum + entry.qty * toNumber(entry.product.priceRub), 0);
   }, [selectedEntries]);
@@ -303,6 +381,36 @@ export function CatalogSectionClient({ data }: Props) {
   const withCeilingSelectedTotal = useMemo(() => applyLightingWithCeilingDiscount(selectedTotal), [selectedTotal]);
   const lightingOnlyBenefit = Math.max(0, selectedTotal - lightingOnlySelectedTotal);
   const withCeilingBenefit = Math.max(0, selectedTotal - withCeilingSelectedTotal);
+  const additionalCeilingBenefit = Math.max(0, lightingOnlySelectedTotal - withCeilingSelectedTotal);
+
+  useEffect(() => {
+    const lighting = buildLightingSnapshotFromItems(selectedLightingItems);
+
+    setSnapshot((prev) => {
+      if (!lighting) {
+        if (!prev?.lighting) return prev;
+        return {
+          ...prev,
+          lighting: undefined,
+          lightingDiscountApplied: false,
+          lightingDiscountPercentApplied: 0,
+          lightingDiscountMode: "none",
+          lightingDiscountAmountRub: 0,
+        };
+      }
+
+      const base = prev ?? createLightingOnlySnapshot();
+      return {
+        ...base,
+        leadSource: base.leadSource ?? "track-sale-page-catalog",
+        lighting,
+        lightingDiscountApplied: true,
+        lightingDiscountPercentApplied: LIGHTING_ONLY_DISCOUNT_PERCENT,
+        lightingDiscountMode: "lighting-only",
+        lightingDiscountAmountRub: lighting.discountAmountRub ?? Math.max(0, selectedTotal - lightingOnlySelectedTotal),
+      };
+    });
+  }, [lightingOnlySelectedTotal, selectedLightingItems, selectedTotal, setSnapshot]);
 
   // ===== Dependencies (mounts / lamps / PSU) =====
   const mountRequiredByVendor = useMemo(() => {
@@ -462,7 +570,13 @@ export function CatalogSectionClient({ data }: Props) {
     const items: LightingItem[] = selectedEntries.map((entry) => productToLightingItem(entry.product, entry.qty));
 
     if (items.length === 0) {
-      openCalculator({ initialStep: 0, source: "track-sale-empty" });
+      openCalculator({
+        entryMode: "lighting-first",
+        initialStep: 1,
+        initialLightingTab: "catalog",
+        initialLightingView: "browse",
+        source: "track-sale-empty",
+      });
       return;
     }
 
@@ -482,6 +596,14 @@ export function CatalogSectionClient({ data }: Props) {
       discountAmountRub: calcLightingDiscountAmount(totalRub, discountedTotalRub),
       userCustomizedLighting: true,
     };
+
+    trackLightingCartCheckout({
+      mode: "open-calculator",
+      itemsCount: items.length,
+      lightingTotalRub: totalRub,
+      lightingDiscountedRub: discountedTotalRub,
+      source: "track-sale-page",
+    });
 
     openCalculator({
       entryMode: "lighting-first",
@@ -514,6 +636,14 @@ export function CatalogSectionClient({ data }: Props) {
       discountAmountRub: calcLightingDiscountAmount(totalRub, discountedTotalRub),
       userCustomizedLighting: true,
     };
+
+    trackLightingCartCheckout({
+      mode: "lighting-only",
+      itemsCount: items.length,
+      lightingTotalRub: totalRub,
+      lightingDiscountedRub: discountedTotalRub,
+      source: "track-sale-page-lighting-only",
+    });
 
     openCalculator({
       entryMode: "lighting-first",
@@ -549,6 +679,14 @@ export function CatalogSectionClient({ data }: Props) {
       discountAmountRub: calcLightingDiscountAmount(totalRub, discountedTotalRub),
       userCustomizedLighting: true,
     };
+
+    trackLightingCartCheckout({
+      mode: "with-ceiling",
+      itemsCount: items.length,
+      lightingTotalRub: totalRub,
+      lightingDiscountedRub: withCeilingDiscountedTotalRub,
+      source: "track-sale-page-add-ceiling",
+    });
 
     openCalculator({
       entryMode: "lighting-first",
@@ -587,6 +725,8 @@ export function CatalogSectionClient({ data }: Props) {
       scoped = products.filter((product) => isMountsOrGrilles(product));
     }
 
+    if (smartOnly) scoped = scoped.filter(isSmartProduct);
+
     const q = toText(query).toLowerCase();
     if (!q) return scoped;
 
@@ -594,7 +734,7 @@ export function CatalogSectionClient({ data }: Props) {
       const haystack = `${toText(product.name)} ${toText(product.vendorCode)} ${toText(product.categoryPath)}`.toLowerCase();
       return haystack.includes(q);
     });
-  }, [lampSocket, pointSubtype, products, query, section, trackGroup, trackSystem]);
+  }, [lampSocket, pointSubtype, products, query, section, smartOnly, trackGroup, trackSystem]);
 
   return (
     <Section id="price" className={selectedEntries.length > 0 ? "scroll-mt-24 py-10 max-sm:pb-44" : "scroll-mt-24 py-10"}>
@@ -708,7 +848,30 @@ export function CatalogSectionClient({ data }: Props) {
               {item.label}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => {
+              setSmartOnly((prev) => {
+                const next = !prev;
+                trackSmartInterestSelected({ placement: "catalog", enabled: next, source: "track-sale-page" });
+                return next;
+              });
+              setVisibleCount(24);
+            }}
+            className={[
+              "whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium border",
+              smartOnly ? "border-violet-600 bg-violet-600 text-white" : "border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100",
+            ].join(" ")}
+          >
+            SMART
+          </button>
         </div>
+
+        {smartOnly ? (
+          <div className="mt-4 rounded-2xl border border-violet-200 bg-violet-50 p-4 text-sm leading-6 text-violet-950">
+            SMART-свет и управление лучше подбирать под сценарии помещения. Зафиксирую интерес и предложу вариант по телефону или на замере.
+          </div>
+        ) : null}
 
         {section === "track-systems" ? (
           <div className="mt-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar sm:flex-wrap">
@@ -804,30 +967,55 @@ export function CatalogSectionClient({ data }: Props) {
         />
         </div>
 
-        {/* Selected mini-bar */}
+        {/* Selected cart */}
         {selectedEntries.length > 0 ? (
-          <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.04)] max-sm:hidden">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-slate-950">Выбрано: {selectedEntries.length} поз.</p>
+          <div className="mt-6 rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_10px_28px_rgba(15,23,42,0.04)] max-sm:hidden">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-base font-semibold text-slate-950">Корзина света: {selectedEntries.length} поз.</p>
+                <p className="mt-1 text-sm text-slate-500">Вы можете оформить только освещение или добавить потолок и получить максимальную скидку на свет.</p>
+              </div>
 
               <button
                 type="button"
                 onClick={openInCalculator}
-                className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
               >
                 Открыть в калькуляторе →
               </button>
             </div>
 
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-4 grid gap-3 lg:grid-cols-4">
+              <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Без скидки</p>
+                <p className="mt-2 text-lg font-semibold text-slate-400 line-through">{fmt(selectedTotal)} ₽</p>
+              </div>
+              <div className="rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-200">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">Только свет −10%</p>
+                <p className="mt-2 text-lg font-semibold text-emerald-700">{fmt(lightingOnlySelectedTotal)} ₽</p>
+                <p className="mt-1 text-xs text-emerald-700/80">Выгода {fmt(lightingOnlyBenefit)} ₽</p>
+              </div>
+              <div className="rounded-2xl bg-blue-50 p-4 ring-1 ring-blue-200">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">С потолком −25%</p>
+                <p className="mt-2 text-lg font-semibold text-blue-700">{fmt(withCeilingSelectedTotal)} ₽</p>
+                <p className="mt-1 text-xs text-blue-700/80">Выгода {fmt(withCeilingBenefit)} ₽</p>
+              </div>
+              <div className="rounded-2xl bg-slate-950 p-4 text-white">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/55">Доп. выгода с потолком</p>
+                <p className="mt-2 text-lg font-semibold">{fmt(additionalCeilingBenefit)} ₽</p>
+                <p className="mt-1 text-xs text-white/60">По сравнению с покупкой только света</p>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
               {selectedEntries.map((entry) => {
                 const productId = toText(entry.product.productId);
                 return (
                   <div
                     key={productId}
-                    className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700"
+                    className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-700"
                   >
-                    <span className="max-w-[16rem] truncate">
+                    <span className="max-w-[18rem] truncate">
                       {toText(entry.product.name)} × {entry.qty}
                     </span>
                     <button
@@ -843,26 +1031,20 @@ export function CatalogSectionClient({ data }: Props) {
               })}
             </div>
 
-            <div className="mt-3 text-sm text-slate-800">
-              <p>Без скидки: <span className="line-through text-slate-400">{fmt(selectedTotal)} ₽</span></p>
-              <p className="text-emerald-700">Только свет: {fmt(lightingOnlySelectedTotal)} ₽ · −10% (−{fmt(lightingOnlyBenefit)} ₽)</p>
-              <p className="text-blue-700">С потолком: {fmt(withCeilingSelectedTotal)} ₽ · −25% (−{fmt(withCeilingBenefit)} ₽)</p>
-            </div>
-
-            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <div className="mt-5 grid gap-2 sm:grid-cols-2">
               <button
                 type="button"
                 onClick={openLightingOrder}
-                className="rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-semibold text-white hover:bg-slate-800"
+                className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
               >
-                Купить освещение −10%
+                Оформить только свет −10%
               </button>
               <button
                 type="button"
                 onClick={openWithCeiling}
-                className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-100"
               >
-                Добавить потолок −25%
+                Добавить потолок и получить −25% на свет
               </button>
             </div>
           </div>
@@ -872,11 +1054,11 @@ export function CatalogSectionClient({ data }: Props) {
           <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 shadow-[0_-8px_28px_rgba(15,23,42,0.12)] backdrop-blur sm:hidden" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}>
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-slate-950">Выбрано: {selectedEntries.length} поз.</p>
+                <p className="text-xs font-semibold text-slate-950">Корзина: {selectedEntries.length} поз.</p>
                 <p className="mt-0.5 text-xs text-slate-600">
                   Свет −10%: <span className="font-semibold text-emerald-700">{fmt(lightingOnlySelectedTotal)} ₽</span>
                 </p>
-                <p className="text-[11px] text-blue-700">С потолком −25%: {fmt(withCeilingSelectedTotal)} ₽</p>
+                <p className="text-[11px] text-blue-700">С потолком −25%: {fmt(withCeilingSelectedTotal)} ₽ · выгода ещё {fmt(additionalCeilingBenefit)} ₽</p>
               </div>
               <div className="grid shrink-0 gap-1.5">
                 <button
@@ -884,14 +1066,14 @@ export function CatalogSectionClient({ data }: Props) {
                   onClick={openLightingOrder}
                   className="rounded-xl bg-slate-950 px-3 py-2 text-[11px] font-semibold text-white"
                 >
-                  Купить −10%
+                  Свет −10%
                 </button>
                 <button
                   type="button"
                   onClick={openWithCeiling}
                   className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-[11px] font-semibold text-blue-700"
                 >
-                  С потолком −25%
+                  Потолок −25%
                 </button>
               </div>
             </div>
@@ -950,9 +1132,9 @@ export function CatalogSectionClient({ data }: Props) {
           </div>
         ) : null}
 
-        {!data.ok && data.errorMessage ? (
+        {!data.ok ? (
           <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-950">
-            Каталог: ошибка загрузки ({data.source}). {data.errorMessage}
+            Каталог временно не загрузился. Напишите мне — подберу комплект вручную.
           </div>
         ) : null}
       </Container>
