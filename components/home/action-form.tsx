@@ -70,6 +70,15 @@ function toNumber(value: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+function pluralRu(count: number, one: string, few: string, many: string): string {
+  const abs = Math.abs(Math.trunc(count));
+  const mod10 = abs % 10;
+  const mod100 = abs % 100;
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+  return many;
+}
+
 function buildLeadMessage(
   ceilingLines: string[],
   lightingLines: string[],
@@ -94,11 +103,13 @@ function buildLeadMessage(
 
 type ActionFormProps = {
   source?: string;
+  /** В модальном итоге подробный состав уже показан выше — в форме оставляем только компактное подтверждение. */
+  compactCalculationSummary?: boolean;
   /** P0.8: callback after successful submit */
   onSuccess?: () => void;
 };
 
-export function ActionForm({ source, onSuccess }: ActionFormProps) {
+export function ActionForm({ source, compactCalculationSummary = false, onSuccess }: ActionFormProps) {
   const { snapshot, hasInteracted } = usePriceCalculatorBridge();
 
   const effectiveSource: string = String(snapshot?.leadSource ?? source ?? "");
@@ -109,6 +120,8 @@ export function ActionForm({ source, onSuccess }: ActionFormProps) {
   );
 
   const lightingLines = useMemo(() => getLightingSummaryLines(snapshot), [snapshot]);
+  const calculationLinesCount = ceilingLines.length + lightingLines.length;
+  const calculationLinesLabel = pluralRu(calculationLinesCount, "пункт", "пункта", "пунктов");
 
   // ===== refs for metrika placement (NO querySelector) =====
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -416,31 +429,37 @@ export function ActionForm({ source, onSuccess }: ActionFormProps) {
       ) : null}
 
       {(ceilingLines.length > 0 || lightingLines.length > 0) ? (
-        <details className="rounded-2xl border border-slate-200 bg-slate-50">
-          <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-950">
-            Расчёт включён в заявку ({ceilingLines.length + lightingLines.length} пунктов) · нажмите, чтобы раскрыть
-          </summary>
-          <div className="border-t border-slate-200 px-4 py-3 text-sm text-slate-700">
-            {ceilingLines.length > 0 ? (
-              <ul className="list-disc space-y-1 pl-5">
-                {ceilingLines.map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
-            ) : null}
-            {lightingLines.length > 0 ? (
-              <div className={ceilingLines.length > 0 ? "mt-3" : ""}>
+        compactCalculationSummary ? (
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-950">
+            Расчёт будет приложен к заявке: {calculationLinesCount} {calculationLinesLabel}
+          </div>
+        ) : (
+          <details className="rounded-2xl border border-slate-200 bg-slate-50">
+            <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-950">
+              Расчёт будет приложен к заявке: {calculationLinesCount} {calculationLinesLabel}
+            </summary>
+            <div className="border-t border-slate-200 px-4 py-3 text-sm text-slate-700">
+              {ceilingLines.length > 0 ? (
                 <ul className="list-disc space-y-1 pl-5">
-                  {lightingLines.map((line) => (
-                    <li key={line} className="whitespace-pre-line">
-                      {line}
-                    </li>
+                  {ceilingLines.map((line) => (
+                    <li key={line}>{line}</li>
                   ))}
                 </ul>
-              </div>
-            ) : null}
-          </div>
-        </details>
+              ) : null}
+              {lightingLines.length > 0 ? (
+                <div className={ceilingLines.length > 0 ? "mt-3" : ""}>
+                  <ul className="list-disc space-y-1 pl-5">
+                    {lightingLines.map((line) => (
+                      <li key={line} className="whitespace-pre-line">
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+          </details>
+        )
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
