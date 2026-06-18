@@ -302,8 +302,9 @@ export function WizardStep1Lighting() {
     step1CatalogView, setStep1CatalogView,
     setStep1FooterAction,
     goToStep, showCeilingInUi, currentStep,
-    lightingDiscountMode, lightingDiscountEligible, lightingEffectiveTotal, lightingRegularTotal,
+    lightingDiscountMode, lightingEffectiveTotal, lightingRegularTotal,
   } = useCalculatorModal();
+  const hasCeilingContext = Boolean(showCeilingInUi || toNumber(snapshot?.total) > 0 || (snapshot?.roomBreakdown?.length ?? 0) > 0);
 
   const [activeTab, setActiveTab] = useState<Tab>("recommendations");
   const [catalogView, setCatalogView] = useState<CatalogView>("browse");
@@ -726,8 +727,8 @@ export function WizardStep1Lighting() {
     const regular = selectedViewItems.reduce((sum, x) => sum + x.item.qty * x.item.priceRub, 0);
     const standalone = applyLightingOnlyDiscount(regular);
     const withCeiling = applyLightingWithCeilingDiscount(regular);
-    const effective = lightingDiscountMode === "with-ceiling" ? withCeiling : standalone;
-    const effectivePercent = lightingDiscountMode === "with-ceiling"
+    const effective = hasCeilingContext ? withCeiling : standalone;
+    const effectivePercent = hasCeilingContext
       ? LIGHTING_WITH_CEILING_DISCOUNT_PERCENT
       : LIGHTING_ONLY_DISCOUNT_PERCENT;
     return {
@@ -739,9 +740,9 @@ export function WizardStep1Lighting() {
       effectiveBenefit: Math.max(0, regular - effective),
       withCeilingBenefit: Math.max(0, regular - withCeiling),
     };
-  }, [lightingDiscountMode, selectedViewItems]);
+  }, [hasCeilingContext, selectedViewItems]);
 
-  const cardDiscountPercent = lightingDiscountEligible || lightingDiscountMode === "with-ceiling"
+  const cardDiscountPercent = hasCeilingContext
     ? LIGHTING_WITH_CEILING_DISCOUNT_PERCENT
     : LIGHTING_ONLY_DISCOUNT_PERCENT;
 
@@ -1429,7 +1430,7 @@ export function WizardStep1Lighting() {
           )}
 
           {/* ─── STEP: Done ─── */}
-          {wStep === "done" && (
+          {wStep === "done" && requiredSelectionComplete && (
             <div className="space-y-3">
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
                 <p className="text-sm font-semibold text-emerald-950">✓ Комплект собран</p>
@@ -1469,6 +1470,21 @@ export function WizardStep1Lighting() {
             </div>
           )}
 
+          {wStep === "done" && !requiredSelectionComplete && missingAction ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+              <p className="font-semibold">Нужно ещё уточнить комплект</p>
+              <p className="mt-1 text-amber-900/80">
+                По параметрам потолка нужно добрать позиции. Верну к следующему действию автоматически.
+              </p>
+              <button
+                type="button"
+                onClick={goToMissingAction}
+                className="mt-3 rounded-xl bg-amber-700 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-800"
+              >
+                {missingAction.label}
+              </button>
+            </div>
+          ) : null}
 
           {hasRecommendations && (
             <div className="text-center max-sm:hidden">
