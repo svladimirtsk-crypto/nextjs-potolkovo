@@ -379,8 +379,6 @@ export function CatalogSectionClient({ data }: Props) {
 
   const lightingOnlySelectedTotal = useMemo(() => applyLightingOnlyDiscount(selectedTotal), [selectedTotal]);
   const withCeilingSelectedTotal = useMemo(() => applyLightingWithCeilingDiscount(selectedTotal), [selectedTotal]);
-  const lightingOnlyBenefit = Math.max(0, selectedTotal - lightingOnlySelectedTotal);
-  const withCeilingBenefit = Math.max(0, selectedTotal - withCeilingSelectedTotal);
   const additionalCeilingBenefit = Math.max(0, lightingOnlySelectedTotal - withCeilingSelectedTotal);
 
   useEffect(() => {
@@ -558,14 +556,6 @@ export function CatalogSectionClient({ data }: Props) {
     });
   };
 
-  const removeFromSelected = (productId: string) => {
-    setCartItems((prev) => {
-      const next = { ...prev };
-      delete next[productId];
-      return next;
-    });
-  };
-
   const openInCalculator = () => {
     const items: LightingItem[] = selectedEntries.map((entry) => productToLightingItem(entry.product, entry.qty));
 
@@ -737,7 +727,7 @@ export function CatalogSectionClient({ data }: Props) {
   }, [lampSocket, pointSubtype, products, query, section, smartOnly, trackGroup, trackSystem]);
 
   return (
-    <Section id="price" className={selectedEntries.length > 0 ? "scroll-mt-24 py-10 max-sm:pb-44" : "scroll-mt-24 py-10"}>
+    <Section id="price" className={selectedEntries.length > 0 ? "scroll-mt-24 py-10 pb-36 max-sm:pb-44" : "scroll-mt-24 py-10"}>
       <Container>
         <div className="flex items-start justify-between gap-6">
           <Heading title="Каталог освещения" />
@@ -970,83 +960,41 @@ export function CatalogSectionClient({ data }: Props) {
 
         {/* Selected cart */}
         {selectedEntries.length > 0 ? (
-          <div className="mt-6 rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-[0_10px_28px_rgba(15,23,42,0.04)] max-sm:hidden">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <p className="text-base font-semibold text-slate-950">Корзина света: {selectedEntries.length} поз.</p>
-                <p className="mt-1 text-sm text-slate-500">Вы можете оформить только освещение или добавить потолок и получить максимальную скидку на свет.</p>
+          <div className="fixed bottom-4 left-1/2 z-40 hidden w-[min(1120px,calc(100vw-2rem))] -translate-x-1/2 rounded-[1.5rem] border border-slate-200 bg-white/95 p-4 shadow-[0_14px_42px_rgba(15,23,42,0.16)] backdrop-blur sm:block">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-950">Корзина света: {selectedEntries.length} поз.</p>
+                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
+                  <span>Без скидки: <span className="line-through text-slate-400">{fmt(selectedTotal)} ₽</span></span>
+                  <span className="text-emerald-700">Только свет −10%: <span className="font-semibold">{fmt(lightingOnlySelectedTotal)} ₽</span></span>
+                  <span className="text-blue-700">С потолком −25%: <span className="font-semibold">{fmt(withCeilingSelectedTotal)} ₽</span></span>
+                  <span className="font-semibold text-slate-950">Доп. выгода: {fmt(additionalCeilingBenefit)} ₽</span>
+                </div>
               </div>
 
-              <button
-                type="button"
-                onClick={openInCalculator}
-                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-              >
-                Открыть в калькуляторе →
-              </button>
-            </div>
-
-            <div className="mt-4 grid gap-3 lg:grid-cols-4">
-              <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Без скидки</p>
-                <p className="mt-2 text-lg font-semibold text-slate-400 line-through">{fmt(selectedTotal)} ₽</p>
+              <div className="grid shrink-0 gap-2 sm:grid-cols-3">
+                <button
+                  type="button"
+                  onClick={openInCalculator}
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                >
+                  В калькулятор →
+                </button>
+                <button
+                  type="button"
+                  onClick={openLightingOrder}
+                  className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                >
+                  Свет −10%
+                </button>
+                <button
+                  type="button"
+                  onClick={openWithCeiling}
+                  className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                >
+                  Потолок −25%
+                </button>
               </div>
-              <div className="rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-200">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">Только свет −10%</p>
-                <p className="mt-2 text-lg font-semibold text-emerald-700">{fmt(lightingOnlySelectedTotal)} ₽</p>
-                <p className="mt-1 text-xs text-emerald-700/80">Выгода {fmt(lightingOnlyBenefit)} ₽</p>
-              </div>
-              <div className="rounded-2xl bg-blue-50 p-4 ring-1 ring-blue-200">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">С потолком −25%</p>
-                <p className="mt-2 text-lg font-semibold text-blue-700">{fmt(withCeilingSelectedTotal)} ₽</p>
-                <p className="mt-1 text-xs text-blue-700/80">Выгода {fmt(withCeilingBenefit)} ₽</p>
-              </div>
-              <div className="rounded-2xl bg-slate-950 p-4 text-white">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/55">Доп. выгода с потолком</p>
-                <p className="mt-2 text-lg font-semibold">{fmt(additionalCeilingBenefit)} ₽</p>
-                <p className="mt-1 text-xs text-white/60">По сравнению с покупкой только света</p>
-              </div>
-            </div>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              {selectedEntries.map((entry) => {
-                const productId = toText(entry.product.productId);
-                return (
-                  <div
-                    key={productId}
-                    className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-700"
-                  >
-                    <span className="max-w-[18rem] truncate">
-                      {toText(entry.product.name)} × {entry.qty}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => removeFromSelected(productId)}
-                      aria-label={`Удалить ${toText(entry.product.name)}`}
-                      className="rounded-full px-1 text-slate-500 hover:bg-slate-200 hover:text-slate-900"
-                    >
-                      ×
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="mt-5 grid gap-2 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={openLightingOrder}
-                className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
-              >
-                Оформить только свет −10%
-              </button>
-              <button
-                type="button"
-                onClick={openWithCeiling}
-                className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-100"
-              >
-                Добавить потолок и получить −25% на свет
-              </button>
             </div>
           </div>
         ) : null}
