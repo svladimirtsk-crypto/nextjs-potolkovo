@@ -38,26 +38,30 @@ export function PriceStrip() {
     grandTotal,
     currentStep,
     options,
+    step0SessionInteracted,
+    step0AreaConfirmed,
   } = useCalculatorModal();
 
   const hasLighting = lightingRegularTotal > 0;
+  const hideUnconfirmedCeiling = currentStep === 0 && !step0AreaConfirmed && !step0SessionInteracted;
+  const showCeilingPrice = showCeilingInUi && !hideUnconfirmedCeiling;
+  const displayGrandTotal = hideUnconfirmedCeiling ? lightingEffectiveTotal : grandTotal;
 
-  // P2.17: Price change animation key
-  const prevTotalRef = useRef(grandTotal);
+  // P2.17: Pulse animation key
+  const prevTotalRef = useRef(displayGrandTotal);
   const [animKey, setAnimKey] = useState(0);
   useEffect(() => {
-    if (grandTotal === prevTotalRef.current) return;
+    if (displayGrandTotal === prevTotalRef.current) return;
 
-    prevTotalRef.current = grandTotal;
+    prevTotalRef.current = displayGrandTotal;
     const frame = requestAnimationFrame(() => setAnimKey((k) => k + 1));
     return () => cancelAnimationFrame(frame);
-  }, [grandTotal]);
+  }, [displayGrandTotal]);
 
-  if (!showCeilingInUi && !hasLighting) {
-    if (currentStep !== 0) return null;
+  if (!showCeilingPrice && !hasLighting) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm max-sm:px-3 max-sm:py-2 max-sm:text-xs">
-        Выберите параметры — стоимость появится здесь
+        Подтвердите площадь — ориентир появится здесь
       </div>
     );
   }
@@ -84,10 +88,9 @@ export function PriceStrip() {
     ) : null;
 
   const mobileSubtitle = (() => {
-    if (!showCeilingInUi && hasLighting) {
-      if (lightingDiscountMode === "lighting-only") {
-        return `Свет −10%: ${fmt(lightingEffectiveTotal)} ₽`;
-      }
+    if (!showCeilingPrice && hasLighting) {
+      if (currentStep === 0) return `Свет сохранён: ${fmt(lightingEffectiveTotal)} ₽ · потолок уточняем`;
+      if (lightingDiscountMode === "lighting-only") return `Свет −10%: ${fmt(lightingEffectiveTotal)} ₽`;
       return `Свет: ${fmt(lightingEffectiveTotal)} ₽`;
     }
 
@@ -103,7 +106,7 @@ export function PriceStrip() {
     <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm max-sm:px-3 max-sm:py-2">
       <div className="sm:hidden">
         <p key={animKey} className="text-sm font-bold text-slate-950 animate-pulse-once">
-          Итого: ~{fmt(grandTotal)} ₽
+          {displayGrandTotal > 0 ? `Итого: ~${fmt(displayGrandTotal)} ₽` : "Ориентир появится после подтверждения"}
         </p>
         <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500">
           {mobileSubtitle}
@@ -111,12 +114,20 @@ export function PriceStrip() {
       </div>
 
       <div className="hidden sm:block">
-        {!showCeilingInUi && hasLighting ? (
+        {!showCeilingPrice && hasLighting ? (
+          <>
+            <span className="font-medium">Свет: {lightingPrice}</span>
+            {withCeilingHint}
+            <span className="text-slate-500"> · Потолок рассчитаем на этом шаге</span>
+          </>
+        ) : !showCeilingPrice ? (
+          <span className="text-slate-700">Подтвердите площадь — ориентир появится здесь</span>
+        ) : !showCeilingInUi && hasLighting ? (
           <>
             <span className="font-medium">Свет: {lightingPrice}</span>
             {withCeilingHint}
             <span className="text-slate-500"> · </span>
-            <span className="text-slate-700">Итого по свету: ~{fmt(grandTotal)} ₽</span>
+            <span className="text-slate-700">Итого по свету: ~{fmt(displayGrandTotal)} ₽</span>
             {options?.entryMode === "lighting-first" ? <span className="text-slate-500"> · Потолок — можно добавить на следующем шаге</span> : null}
           </>
         ) : (
@@ -129,13 +140,13 @@ export function PriceStrip() {
                 {withCeilingHint}
                 <span className="text-slate-500"> · </span>
                 <span key={animKey} className="font-semibold inline-block animate-pulse-once">
-                  Итого: ~{fmt(grandTotal)} ₽
+                  Итого: ~{fmt(displayGrandTotal)} ₽
                 </span>
               </>
             ) : (
               <span key={animKey} className="font-semibold inline-block animate-pulse-once">
                 {" "}
-                · Итого: ~{fmt(grandTotal)} ₽
+                · Итого: ~{fmt(displayGrandTotal)} ₽
               </span>
             )}
           </>
