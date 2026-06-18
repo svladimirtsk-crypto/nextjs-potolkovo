@@ -15,6 +15,7 @@ import {
   type DerivedInputs,
   type LightingDiscountMode,
   type LightingSnapshot,
+  type SolutionScenario,
 } from "@/lib/calculator-modal-types";
 
 export type CalculatorRoomBreakdown = {
@@ -39,6 +40,7 @@ export type CalculatorLeadSnapshot = {
   area: number;
   calculationScope?: "room" | "object";
   roomBreakdown?: CalculatorRoomBreakdown[];
+  solutionScenario?: SolutionScenario;
 
   ceilingTypeLabel: string;
   ceilingBaseRate: number;
@@ -162,8 +164,18 @@ export function getCalculatorSummaryLines(
 ): string[] {
   if (!snapshot) return [];
 
+  const scenarioLabel =
+    snapshot.solutionScenario === "advanced"
+      ? "Продвинутый — интерес к SMART-свету и управлению, обсудить лично"
+      : snapshot.solutionScenario === "modern"
+        ? "Современный"
+        : snapshot.solutionScenario === "standard"
+          ? "Стандартный"
+          : null;
+
   const lines: string[] = [
     "Расчёт потолка:",
+    ...(scenarioLabel ? [`Сценарий решения: ${scenarioLabel}`] : []),
     `Формат расчёта: ${snapshot.calculationScope === "object" ? "весь объект" : "отдельное помещение"}`,
     `Площадь: ${snapshot.area} м²`,
     `Тип потолка: ${snapshot.ceilingTypeLabel}`,
