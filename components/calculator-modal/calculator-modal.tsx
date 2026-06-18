@@ -397,7 +397,7 @@ export function CalculatorModal() {
           ) : null}
 
           {/* Content */}
-          <div ref={contentRef} className="calculator-modal-content flex-1 overflow-y-auto px-5 py-5 max-sm:px-4 max-sm:py-4">
+          <div ref={contentRef} className="calculator-modal-content flex-1 overflow-y-auto px-5 py-5 max-lg:pb-52 max-sm:px-4 max-sm:py-4">
             <div
               key="step0"
               aria-hidden={currentStep !== 0}
@@ -423,7 +423,7 @@ export function CalculatorModal() {
 
           {/* Footer */}
           <div
-            className="calculator-modal-footer shrink-0 border-t border-slate-200 bg-white px-5 py-4 max-lg:px-4 max-lg:py-3"
+            className="calculator-modal-footer shrink-0 border-t border-slate-200 bg-white px-5 py-4 max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-[145] max-lg:px-4 max-lg:py-3 max-lg:shadow-[0_-8px_24px_rgba(15,23,42,0.10)]"
             // P1.2: iOS safe-area for footer
             style={{ paddingBottom: "max(calc(env(safe-area-inset-bottom, 0px) + 12px), 16px)" }}
           >
