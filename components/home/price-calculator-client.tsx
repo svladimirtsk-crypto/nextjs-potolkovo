@@ -2867,6 +2867,9 @@ export function PriceCalculatorClient({
                   <Button type="button" variant="secondary" className="w-full" onClick={promptAddRoom}>
                     Добавить ещё помещение
                   </Button>
+                  <Button type="button" variant="ghost" className="w-full border border-white/10 !text-white/80 hover:border-white/25 hover:bg-white/10 hover:!text-white" onClick={() => scrollToAction()}>
+                    Записаться на бесплатный замер
+                  </Button>
                 </div>
               ) : null
             ) : (
