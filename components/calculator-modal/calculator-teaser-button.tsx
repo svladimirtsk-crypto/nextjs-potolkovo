@@ -2,7 +2,6 @@
 
 import type { ServiceCalculatorPreset } from "@/content/services";
 import { Button } from "@/components/ui/button";
-import { trackCalculatorOpen } from "@/lib/analytics";
 import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
 import { useCalculatorModal } from "./calculator-modal-context";
 
@@ -37,8 +36,6 @@ export function CalculatorTeaserButton({
       onClick={() => {
         const safeSource = String(source ?? "");
         const safeLabel = String(label ?? "");
-
-        trackCalculatorOpen(safeSource);
 
         if (shouldOpenLightingFirst(safeLabel, safeSource)) {
           openCalculator({
