@@ -46,6 +46,8 @@ function getRecommendedProfile(
   concern: Concern,
   _budget: BudgetLevel
 ): string {
+  void _budget;
+
   if (concern === "low-ceiling") {
     return "Обычный профиль (минимальная потеря высоты 3–4 см)";
   }
