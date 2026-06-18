@@ -56,13 +56,17 @@ export function HomeHero() {
             ) : null}
 
             <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
-              <Button href="#action" className="w-full sm:w-auto">
-                {hero.primaryCtaLabel}
+              <Button href="#price" className="w-full sm:w-auto">
+                Рассчитать потолок и свет
               </Button>
-              <Button href="#price" variant="secondary" className="w-full sm:w-auto">
-                Рассчитать стоимость
+              <Button href="#action" variant="secondary" className="w-full sm:w-auto">
+                Записаться на замер
               </Button>
             </div>
+
+            <p className="mt-3 max-w-xl text-sm leading-6 text-white/68">
+              Соберите ориентир по потолку, свету и монтажу — точную стоимость зафиксируем после бесплатного замера.
+            </p>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-[auto_auto_1fr]">
               <div className="rounded-2xl border border-white/12 bg-white/8 px-4 py-3 backdrop-blur-sm">
