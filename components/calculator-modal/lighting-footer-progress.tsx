@@ -167,6 +167,12 @@ export function LightingFooterProgress() {
     }, 0);
   }, [cartEntries]);
 
+  const selectedTrackFixtureQty = useMemo(() => {
+    return cartEntries.reduce((sum, entry) => {
+      return entry.product.kind === "TRACK_FIXTURE" ? sum + entry.qty : sum;
+    }, 0);
+  }, [cartEntries]);
+
   const lampRequiredBySocket = useMemo(() => {
     const result: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
     for (const entry of cartEntries) {
@@ -188,6 +194,7 @@ export function LightingFooterProgress() {
   }, [cartEntries]);
 
   const requiredTrackMeters = showCeilingInUi ? toNumber(snapshot?.derivedInputs?.trackLengthMeters) : 0;
+  const requiredTrackFixtureQty = requiredTrackMeters > 0 ? toNumber(snapshot?.derivedInputs?.recommendedTrackSpotsQty) : 0;
   const requiredPointQty = showCeilingInUi ? toNumber(snapshot?.derivedInputs?.pointSpotsQty) : 0;
   const requiredLampQty = (Object.keys(lampRequiredBySocket) as LampSocket[]).reduce(
     (sum, socket) => sum + lampRequiredBySocket[socket],
@@ -200,11 +207,15 @@ export function LightingFooterProgress() {
 
   const metrics: Metric[] = [
     { id: "track", label: "Профиль", current: selectedTrackMeters, required: requiredTrackMeters, unit: "м" },
+    { id: "track-fixtures", label: "Трековые", current: selectedTrackFixtureQty, required: requiredTrackFixtureQty, unit: "шт." },
     { id: "points", label: "Точки", current: selectedPointQty, required: requiredPointQty, unit: "шт." },
     { id: "lamps", label: "Лампы", current: currentLampQty, required: requiredLampQty, unit: "шт." },
   ];
 
   const visibleMetrics = metrics.filter((metric) => metric.required > 0);
+  const missingMetric =
+    visibleMetrics.find((metric) => metric.id !== "track-fixtures" && metric.current < metric.required) ??
+    visibleMetrics.find((metric) => metric.id === "track-fixtures" && metric.current < metric.required);
   const selectedCount = cartEntries.filter((entry) => entry.qty > 0).length;
 
   if (currentStep !== 1) return null;
@@ -220,7 +231,7 @@ export function LightingFooterProgress() {
       </div>
 
       {visibleMetrics.length > 0 ? (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(visibleMetrics.length, 4)}, minmax(0, 1fr))` }}>
           {visibleMetrics.map((metric) => (
             <div key={metric.id} className="min-w-0">
               <p className="mb-0.5 truncate text-[10px] font-medium text-slate-500">{metric.label}</p>
@@ -231,6 +242,13 @@ export function LightingFooterProgress() {
       ) : (
         <p className="text-xs text-slate-600">Позиции добавлены вручную — можно перейти к итогу.</p>
       )}
+
+      {missingMetric ? (
+        <p className="mt-2 text-[11px] font-medium text-slate-600">
+          {missingMetric.id === "track-fixtures" ? "Ориентир: " : "Нужно добавить: "}
+          {missingMetric.label.toLowerCase()} {missingMetric.unit === "м" ? fmtM(Math.max(0, missingMetric.required - missingMetric.current)) : fmt(Math.max(0, missingMetric.required - missingMetric.current))} {missingMetric.unit}
+        </p>
+      ) : null}
     </div>
   );
 }
