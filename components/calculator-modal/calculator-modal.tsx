@@ -397,7 +397,7 @@ export function CalculatorModal() {
           ) : null}
 
           {/* Content */}
-          <div ref={contentRef} className="flex-1 overflow-y-auto px-5 py-5 max-sm:px-4 max-sm:py-4 max-sm:pb-36">
+          <div ref={contentRef} className="flex-1 overflow-y-auto px-5 py-5 max-sm:px-4 max-sm:py-4 max-sm:pb-48">
             <div
               key="step0"
               aria-hidden={currentStep !== 0}
@@ -423,12 +423,12 @@ export function CalculatorModal() {
 
           {/* Footer */}
           <div
-            className="shrink-0 border-t border-slate-200 px-5 py-4 max-sm:px-4 max-sm:py-3"
+            className="shrink-0 border-t border-slate-200 bg-white px-5 py-4 max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:z-[145] max-sm:px-4 max-sm:py-3 max-sm:shadow-[0_-8px_24px_rgba(15,23,42,0.10)]"
             // P1.2: iOS safe-area for footer
-            style={{ paddingBottom: "max(env(safe-area-inset-bottom), 16px)" }}
+            style={{ paddingBottom: "max(calc(env(safe-area-inset-bottom, 0px) + 12px), 16px)" }}
           >
             <LightingFooterProgress />
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-3 max-sm:justify-stretch">
               {currentStep > 0 ? (
                 <button
                   type="button"
@@ -439,11 +439,11 @@ export function CalculatorModal() {
                   ← Назад
                 </button>
               ) : (
-                <div />
+                <div className="max-sm:hidden" />
               )}
 
               {currentStep < 2 ? (
-                <div className="flex flex-col items-end gap-1">
+                <div className="flex flex-col items-end gap-1 max-sm:flex-1 max-sm:items-stretch">
                   <button
                     type="button"
                     onClick={() => {
@@ -464,7 +464,7 @@ export function CalculatorModal() {
                     }}
                     disabled={currentStep === 1 && step1FooterAction ? Boolean(step1FooterAction.disabled) : isNextDisabled}
                     aria-disabled={currentStep === 1 && step1FooterAction ? Boolean(step1FooterAction.disabled) : isNextDisabled}
-                    className="flex h-12 items-center rounded-2xl bg-slate-950 px-6 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-slate-950 max-sm:h-11 max-sm:px-5"
+                    className="flex h-12 items-center justify-center rounded-2xl bg-slate-950 px-6 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-slate-950 max-sm:h-12 max-sm:w-full max-sm:px-5"
                     style={{ minHeight: 48 }}
                   >
                     {currentStep === 0 && step0HasConfirmButton
