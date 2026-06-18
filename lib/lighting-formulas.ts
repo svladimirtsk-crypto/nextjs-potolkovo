@@ -48,6 +48,8 @@ export function calcRecommendedTrackSpots(
   trackLengthMeters: number,
   _trackMountType?: "built-in" | "surface" | "none"
 ): number {
+  void _trackMountType;
+
   if (!Number.isFinite(trackLengthMeters) || trackLengthMeters <= 0) return 0;
   return Math.max(1, Math.ceil(trackLengthMeters * 2));
 }
