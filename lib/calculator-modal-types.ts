@@ -3,6 +3,7 @@ import type { ServiceCalculatorPreset } from "@/content/services";
 export type LightingMode = "kit" | "catalog" | "none";
 export type CatalogViewMode = "selected" | "browse";
 export type LightingDiscountMode = "none" | "lighting-only" | "with-ceiling";
+export type SolutionScenario = "standard" | "modern" | "advanced";
 
 export type LightingItem = {
   sku: string;
