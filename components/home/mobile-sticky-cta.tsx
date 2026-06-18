@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from "react";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 import { scrollToAnchorTarget } from "@/lib/scroll-to-anchor";
-import { trackCalculatorOpen } from "@/lib/analytics"; // ← NEW
 import { Button } from "@/components/ui/button";
 
 function formatCurrency(value: number) {
@@ -103,9 +102,7 @@ export function MobileStickyCta() {
 
   const hasLightingDisplay = displayTotal > (snapshot?.total ?? 0);
 
-  // ← NEW: добавляем trackCalculatorOpen
   const handleCalculatorClick = () => {
-    trackCalculatorOpen("mobile-sticky");
     openCalculator({ source: "mobile-sticky" });
   };
 
