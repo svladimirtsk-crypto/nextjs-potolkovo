@@ -38,8 +38,8 @@ export default function ProdazhaTrekovogoOsveshcheniyaPage() {
         proof={<LightKitShowcase />}
         price={
           <>
-            <TrackSaleSystemGuideSection />
             <CatalogSection />
+            <TrackSaleSystemGuideSection />
           </>
         }
         trust={<TrackSaleFaqSection />}
