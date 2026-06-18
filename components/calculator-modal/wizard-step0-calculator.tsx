@@ -195,24 +195,6 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
         </ul>
       </div>
 
-      {prefillMetrics.hasAny ? (
-        <div className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
-          <p className="font-semibold">Синхронизация со светом</p>
-          <p className="mt-1 text-blue-900/80">
-            В каталоге уже выбрано: профиль трека ~
-            <span className="font-semibold"> {prefillMetrics.trackProfileMeters.toFixed(1)} м</span>, точечные{" "}
-            <span className="font-semibold">{Math.round(prefillMetrics.pointSpotsQty)} шт.</span>
-          </p>
-
-          <button
-            type="button"
-            onClick={() => setPrefillTrigger((x) => x + 1)}
-            className="mt-3 rounded-xl bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800"
-          >
-            Обновить по выбранному свету →
-          </button>
-        </div>
-      ) : null}
 
       <PriceCalculatorClient
         preset={resolvedPreset}
