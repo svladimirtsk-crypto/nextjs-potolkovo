@@ -105,12 +105,25 @@ export function PriceStrip() {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm max-sm:px-3 max-sm:py-2">
       <div className="sm:hidden">
-        <p key={animKey} className="text-sm font-bold text-slate-950 animate-pulse-once">
-          {displayGrandTotal > 0 ? `Итого: ~${fmt(displayGrandTotal)} ₽` : "Ориентир появится после подтверждения"}
-        </p>
-        <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500">
-          {mobileSubtitle}
-        </p>
+        {hideUnconfirmedCeiling && hasLighting ? (
+          <>
+            <p key={animKey} className="text-sm font-bold text-slate-950 animate-pulse-once">
+              Свет сохранён: {fmt(lightingEffectiveTotal)} ₽
+            </p>
+            <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500">
+              потолок уточняем
+            </p>
+          </>
+        ) : (
+          <>
+            <p key={animKey} className="text-sm font-bold text-slate-950 animate-pulse-once">
+              {displayGrandTotal > 0 ? `Итого: ~${fmt(displayGrandTotal)} ₽` : "Ориентир появится после подтверждения"}
+            </p>
+            <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500">
+              {mobileSubtitle}
+            </p>
+          </>
+        )}
       </div>
 
       <div className="hidden sm:block">
