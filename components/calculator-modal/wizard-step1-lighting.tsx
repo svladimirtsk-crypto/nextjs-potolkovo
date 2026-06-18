@@ -302,7 +302,7 @@ export function WizardStep1Lighting() {
     step1CatalogView, setStep1CatalogView,
     setStep1FooterAction,
     goToStep, showCeilingInUi, currentStep,
-    lightingDiscountMode, lightingEffectiveTotal, lightingRegularTotal,
+    lightingDiscountMode, lightingDiscountEligible, lightingEffectiveTotal, lightingRegularTotal,
   } = useCalculatorModal();
 
   const [activeTab, setActiveTab] = useState<Tab>("recommendations");
@@ -741,7 +741,7 @@ export function WizardStep1Lighting() {
     };
   }, [lightingDiscountMode, selectedViewItems]);
 
-  const cardDiscountPercent = lightingDiscountMode === "with-ceiling"
+  const cardDiscountPercent = lightingDiscountEligible || lightingDiscountMode === "with-ceiling"
     ? LIGHTING_WITH_CEILING_DISCOUNT_PERCENT
     : LIGHTING_ONLY_DISCOUNT_PERCENT;
 
@@ -990,6 +990,16 @@ export function WizardStep1Lighting() {
     setCatalogViewAndSync("browse");
     setWStep(missingAction.step);
   }, [missingAction, setCatalogViewAndSync]);
+
+  useEffect(() => {
+    if (wStep !== "done") return;
+    if (requiredSelectionComplete) return;
+    if (!missingAction) return;
+
+    setActiveTab("recommendations");
+    setCatalogViewAndSync("browse");
+    setWStep(missingAction.step);
+  }, [missingAction, requiredSelectionComplete, setCatalogViewAndSync, wStep]);
 
   useEffect(() => {
     if (activeTab !== "recommendations") {
