@@ -182,6 +182,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       setCurrentStep(resolvedOpts.initialStep ?? 0);
 
       if (resolvedOpts.initialLighting) setLightingDraftState(resolvedOpts.initialLighting);
+      else if (snapshot?.lighting && snapshot.lighting.mode !== "none") setLightingDraftState(snapshot.lighting);
       else setLightingDraftState(null);
 
       // reset flags on each open
@@ -209,7 +210,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       });
       setIsOpen(true);
     },
-    [setSnapshot]
+    [setSnapshot, snapshot]
   );
 
   const closeCalculator = useCallback(() => {
