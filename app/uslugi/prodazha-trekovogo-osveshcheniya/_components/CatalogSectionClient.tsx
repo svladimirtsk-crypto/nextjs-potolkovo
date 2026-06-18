@@ -701,7 +701,9 @@ export function CatalogSectionClient({ data }: Props) {
   const filteredProducts = useMemo(() => {
     let scoped: FeedCatalogProduct[] = [];
 
-    if (section === "track-systems") {
+    if (smartOnly) {
+      scoped = products.filter(isSmartProduct);
+    } else if (section === "track-systems") {
       if (trackGroup === "TRACK_PROFILE") {
         const base = TRACK_PROFILE_WHITELIST[trackSystem] ?? [];
         const allowed =
@@ -724,8 +726,6 @@ export function CatalogSectionClient({ data }: Props) {
     } else {
       scoped = products.filter((product) => isMountsOrGrilles(product));
     }
-
-    if (smartOnly) scoped = scoped.filter(isSmartProduct);
 
     const q = toText(query).toLowerCase();
     if (!q) return scoped;
@@ -854,6 +854,7 @@ export function CatalogSectionClient({ data }: Props) {
               setSmartOnly((prev) => {
                 const next = !prev;
                 trackSmartInterestSelected({ placement: "catalog", enabled: next, source: "track-sale-page" });
+                if (next) setSection("track-systems");
                 return next;
               });
               setVisibleCount(24);
@@ -869,7 +870,7 @@ export function CatalogSectionClient({ data }: Props) {
 
         {smartOnly ? (
           <div className="mt-4 rounded-2xl border border-violet-200 bg-violet-50 p-4 text-sm leading-6 text-violet-950">
-            SMART-свет и управление лучше подбирать под сценарии помещения. Зафиксирую интерес и предложу вариант по телефону или на замере.
+            Показаны SMART-позиции: светильники, панели управления и аксессуары. Управление лучше подбирать под сценарии помещения — зафиксирую интерес и предложу вариант лично.
           </div>
         ) : null}
 
