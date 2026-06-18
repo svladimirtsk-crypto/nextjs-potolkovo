@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { homepage } from "@/content/homepage";
 import type { ServiceCalculatorPreset } from "@/content/services";
+import type { SolutionScenario } from "@/lib/calculator-modal-types";
 import { PriceCalculatorClient } from "@/components/home/price-calculator-client";
 
 import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
@@ -33,6 +34,33 @@ type WizardStep0CalculatorProps = {
   preset?: ServiceCalculatorPreset;
 };
 
+function resolveInitialSolutionScenario(
+  source: unknown,
+  preset?: ServiceCalculatorPreset
+): SolutionScenario {
+  const src = String(source ?? "").toLowerCase();
+
+  if (src.includes("individualnye-proekty")) return "advanced";
+
+  if (
+    src.includes("tenevoy-profil") ||
+    src.includes("paryashchie-potolki") ||
+    src.includes("svetovye-linii") ||
+    src.includes("trekovoe-osveshchenie") ||
+    src.includes("prodazha-trekovogo-osveshcheniya") ||
+    src.includes("track-sale") ||
+    src.includes("svetoprozrachnye-potolki")
+  ) {
+    return "modern";
+  }
+
+  if (preset?.ceilingType === "shadow" || preset?.ceilingType === "floating") return "modern";
+  if (preset?.trackType && preset.trackType !== "none") return "modern";
+  if (preset?.lightLinesEnabled) return "modern";
+
+  return "standard";
+}
+
 export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
   const { markStep0SessionInteracted, options, lightingDraft, step0SessionInteracted, goToStep } =
     useCalculatorModal();
@@ -48,6 +76,8 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
     introNote: preset?.introNote,
     lightingDefault: preset?.lightingDefault,
   };
+
+  const initialSolutionScenario = resolveInitialSolutionScenario(options?.source, resolvedPreset);
 
   const [prefillTrigger, setPrefillTrigger] = useState(0);
 
@@ -211,6 +241,7 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
         }
         prefillFromLightingTrigger={prefillTrigger}
         onPrimaryCtaClick={() => goToStep(1)}
+        initialSolutionScenario={initialSolutionScenario}
       />
     </div>
   );
