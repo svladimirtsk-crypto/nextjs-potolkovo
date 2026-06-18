@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import snapshotData from "@/data/eks-feed2-snapshot.json";
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
-import { trackLightingCartChanged, trackSmartInterestSelected } from "@/lib/analytics";
+import { trackLightingCartChanged } from "@/lib/analytics";
 import {
   LIGHTING_ONLY_DISCOUNT_PERCENT,
   LIGHTING_WITH_CEILING_DISCOUNT_PERCENT,
@@ -346,7 +346,6 @@ export function WizardStep1Lighting() {
   const [trackGroup, setTrackGroup] = useState<TrackGroupId>("TRACK_FIXTURE");
   const [pointSubtype, setPointSubtype] = useState<PointSubtypeId>("GX53");
   const [lampSocket, setLampSocket] = useState<LampSocket>("GX53");
-  const [smartOnly, setSmartOnly] = useState(false);
   const [query, setQuery] = useState("");
 
   /* ─── Cart state ─── */
@@ -1090,7 +1089,6 @@ export function WizardStep1Lighting() {
   const scopedProducts = useMemo(() => {
     let scoped: FeedCatalogProduct[] = [];
     if (catalogView === "selected") { scoped = selectedViewItems.map((i) => i.product); }
-    else if (smartOnly) { scoped = products.filter(isSmartProduct); }
     else if (section === "track-systems") {
       if (trackGroup === "TRACK_PROFILE") {
         const base = TRACK_PROFILE_WHITELIST[trackSystem] ?? [];
@@ -1106,7 +1104,7 @@ export function WizardStep1Lighting() {
       const h = `${toText(p.name)} ${toText(p.vendorCode)} ${toText(p.categoryPath)} ${pickAttrs(p).map((a) => `${a.label} ${a.value}`).join(" ")}`.toLowerCase();
       return h.includes(q);
     });
-  }, [catalogView, lampSocket, pointSubtype, products, query, section, selectedViewItems, smartOnly, trackGroup, trackSystem]);
+  }, [catalogView, lampSocket, pointSubtype, products, query, section, selectedViewItems, trackGroup, trackSystem]);
 
   /* ═══════════════════════════════════════════════════
      RENDER
@@ -1621,30 +1619,7 @@ export function WizardStep1Lighting() {
                     {item.label}
                   </button>
                 ))}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSmartOnly((prev) => {
-                      const next = !prev;
-                      trackSmartInterestSelected({ placement: "modal", enabled: next, source: String(options?.source ?? "unknown") });
-                      if (next) setSection("track-systems");
-                      return next;
-                    });
-                  }}
-                  className={[
-                    "whitespace-nowrap rounded-xl border px-3 py-2 text-sm max-sm:px-2.5 max-sm:py-1.5 max-sm:text-xs",
-                    smartOnly ? "border-violet-600 bg-violet-600 text-white" : "border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100",
-                  ].join(" ")}
-                >
-                  SMART
-                </button>
               </div>
-
-              {smartOnly ? (
-                <div className="rounded-2xl border border-violet-200 bg-violet-50 p-3 text-xs leading-5 text-violet-900">
-                  Показаны SMART-позиции: светильники, панели управления и аксессуары. Управление обсудим лично и зафиксируем в заявке.
-                </div>
-              ) : null}
 
               {section === "track-systems" && (
                 <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar max-sm:-mx-5 max-sm:px-5">
