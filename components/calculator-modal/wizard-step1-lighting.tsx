@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import snapshotData from "@/data/eks-feed2-snapshot.json";
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
-import { trackLightingCartChanged } from "@/lib/analytics";
+import { trackLightingCartChanged, trackSmartInterestSelected } from "@/lib/analytics";
 import {
   LIGHTING_ONLY_DISCOUNT_PERCENT,
   LIGHTING_WITH_CEILING_DISCOUNT_PERCENT,
@@ -71,6 +71,11 @@ function isPanelProduct(p: FeedCatalogProduct): boolean {
 
 function isLamp(p: FeedCatalogProduct): boolean {
   return p.kind === "LAMP" && toNumber(p.priceRub) > 0 && p.available !== false;
+}
+
+function isSmartProduct(p: FeedCatalogProduct): boolean {
+  const text = `${toText(p.name)} ${toText(p.categoryPath)} ${toText(p.vendorCode)}`.toLowerCase();
+  return text.includes("смарт") || text.includes("smart") || text.includes("умный дом");
 }
 
 function isMountsOrGrilles(p: FeedCatalogProduct): boolean {
@@ -177,8 +182,11 @@ function ProductCard({
 
       {/* Body */}
       <div className="p-4 max-sm:p-0">
-        {(systemBadge || kindBadge) ? (
+        {(systemBadge || kindBadge || isSmartProduct(product)) ? (
           <div className="mb-2 flex flex-wrap gap-1.5">
+            {isSmartProduct(product) ? (
+              <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700 max-sm:px-1.5 max-sm:text-[9px]">SMART</span>
+            ) : null}
             {systemBadge ? (
               <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 max-sm:px-1.5 max-sm:text-[9px]">{systemBadge}</span>
             ) : null}
@@ -338,6 +346,7 @@ export function WizardStep1Lighting() {
   const [trackGroup, setTrackGroup] = useState<TrackGroupId>("TRACK_FIXTURE");
   const [pointSubtype, setPointSubtype] = useState<PointSubtypeId>("GX53");
   const [lampSocket, setLampSocket] = useState<LampSocket>("GX53");
+  const [smartOnly, setSmartOnly] = useState(false);
   const [query, setQuery] = useState("");
 
   /* ─── Cart state ─── */
@@ -1090,13 +1099,15 @@ export function WizardStep1Lighting() {
     } else if (section === "point-fixtures") { scoped = products.filter((p) => matchesPointSubtype(p, pointSubtype)); }
     else if (section === "lamps") { scoped = products.filter((p) => isLamp(p) && detectSocket(p) === lampSocket); }
     else { scoped = products.filter(isMountsOrGrilles); }
+    if (smartOnly) scoped = scoped.filter(isSmartProduct);
+
     const q = toText(query).toLowerCase();
     if (!q) return scoped;
     return scoped.filter((p) => {
       const h = `${toText(p.name)} ${toText(p.vendorCode)} ${toText(p.categoryPath)} ${pickAttrs(p).map((a) => `${a.label} ${a.value}`).join(" ")}`.toLowerCase();
       return h.includes(q);
     });
-  }, [catalogView, lampSocket, pointSubtype, products, query, section, selectedViewItems, trackGroup, trackSystem]);
+  }, [catalogView, lampSocket, pointSubtype, products, query, section, selectedViewItems, smartOnly, trackGroup, trackSystem]);
 
   /* ═══════════════════════════════════════════════════
      RENDER
@@ -1407,7 +1418,7 @@ export function WizardStep1Lighting() {
                       </div>
                     ) : (
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-                        Лампы {socket} не найдены в текущем фиде.
+                        Подходящие лампы сейчас не найдены в каталоге. Я уточню вариант при звонке.
                       </div>
                     )}
                   </div>
@@ -1435,7 +1446,17 @@ export function WizardStep1Lighting() {
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
                 <p className="text-sm font-semibold text-emerald-950">✓ Комплект собран</p>
                 <p className="mt-1 text-xs text-emerald-800">
-                  {lightingDraft?.items?.length ?? 0} поз. {lightingDraft?.totalRub ? `· ${fmt(lightingDraft.totalRub)} ₽` : ""}
+                  {lightingDraft?.items?.length ?? 0} поз.
+                  {lightingRegularTotal > 0 ? (
+                    lightingRegularTotal > lightingEffectiveTotal ? (
+                      <>
+                        {" · "}<span className="line-through text-emerald-700/50">{fmt(lightingRegularTotal)} ₽</span>{" "}
+                        <span className="font-semibold">{fmt(lightingEffectiveTotal)} ₽</span>
+                      </>
+                    ) : (
+                      <> · {fmt(lightingRegularTotal)} ₽</>
+                    )
+                  ) : ""}
                 </p>
               </div>
 
@@ -1463,9 +1484,11 @@ export function WizardStep1Lighting() {
                 </div>
               )}
 
-              <div className="flex gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <button type="button" onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}
-                  className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Вернуться в каталог</button>
+                  className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Изменить в каталоге</button>
+                <button type="button" onClick={() => goToStep(2)}
+                  className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800">К итогу →</button>
               </div>
             </div>
           )}
@@ -1486,14 +1509,14 @@ export function WizardStep1Lighting() {
             </div>
           ) : null}
 
-          {hasRecommendations && (
+          {hasRecommendations && wStep !== "done" ? (
             <div className="text-center max-sm:hidden">
               <button type="button" onClick={() => setActiveTab("catalog")}
                 className="text-sm font-medium text-slate-500 underline decoration-slate-300 underline-offset-4 hover:text-slate-800">
                 Или выберите в каталоге →
               </button>
             </div>
-          )}
+          ) : null}
         </div>
       )}
 
@@ -1578,7 +1601,29 @@ export function WizardStep1Lighting() {
                     {item.label}
                   </button>
                 ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSmartOnly((prev) => {
+                      const next = !prev;
+                      trackSmartInterestSelected({ placement: "modal", enabled: next, source: String(options?.source ?? "unknown") });
+                      return next;
+                    });
+                  }}
+                  className={[
+                    "whitespace-nowrap rounded-xl border px-3 py-2 text-sm max-sm:px-2.5 max-sm:py-1.5 max-sm:text-xs",
+                    smartOnly ? "border-violet-600 bg-violet-600 text-white" : "border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100",
+                  ].join(" ")}
+                >
+                  SMART
+                </button>
               </div>
+
+              {smartOnly ? (
+                <div className="rounded-2xl border border-violet-200 bg-violet-50 p-3 text-xs leading-5 text-violet-900">
+                  SMART-свет и управление обсудим лично: зафиксирую интерес в заявке и подберу решение по телефону или на замере.
+                </div>
+              ) : null}
 
               {section === "track-systems" && (
                 <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar max-sm:-mx-5 max-sm:px-5">
@@ -1657,37 +1702,6 @@ export function WizardStep1Lighting() {
         </div>
       )}
 
-      {/* ─── Cart summary pill ─── */}
-      {lightingDraft?.mode === "catalog" && (lightingDraft.items?.length ?? 0) > 0 && !(activeTab === "recommendations" && wStep === "done") && (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 flex items-center justify-between gap-3 max-sm:hidden">
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">
-              {lightingDraft.items?.length ?? 0}
-            </span>
-            <span className="text-sm font-medium text-slate-950">
-              {lightingRegularTotal > lightingEffectiveTotal ? (
-                <>
-                  <span className="line-through text-slate-400">{fmt(lightingRegularTotal)} ₽</span>{" "}
-                  <span>{fmt(lightingEffectiveTotal)} ₽</span>
-                  <span className="ml-1 text-xs text-emerald-700">
-                    −{lightingDiscountMode === "with-ceiling" ? 25 : 10}% (−{fmt(lightingRegularTotal - lightingEffectiveTotal)} ₽)
-                  </span>
-                </>
-              ) : (
-                <>{fmt(lightingRegularTotal)} ₽</>
-              )}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => goToStep(2)}
-            disabled={!requiredSelectionComplete}
-            className="rounded-xl bg-emerald-700 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-emerald-700"
-          >
-            К итогу →
-          </button>
-        </div>
-      )}
     </div>
   );
 }
