@@ -99,10 +99,10 @@ export function LightKitCtaButton({ title, items, source }: LightKitCtaButtonPro
   return (
     <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
       <Button type="button" className="w-full justify-center" onClick={openLightingOnly}>
-        Купить комплект −10%
+        Оформить только свет −10%
       </Button>
       <Button type="button" variant="secondary" className="w-full justify-center" onClick={openWithCeiling}>
-        С потолком −25%
+        Добавить потолок и получить −25% на свет
       </Button>
     </div>
   );
