@@ -63,8 +63,8 @@ function CatalogLoadingState({ mode = "initial" }: { mode?: "initial" | "compone
 
           <p className="mt-6 text-sm text-slate-500">
             {mode === "initial"
-              ? "Каталог загрузится, когда пользователь дойдёт до этого блока."
-              : "Подключаем интерфейс подбора…"}
+              ? "Готовим каталог освещения — скоро можно будет выбрать комплект."
+              : "Готовим подбор освещения…"}
           </p>
         </div>
       </Container>
@@ -78,12 +78,12 @@ function CatalogErrorState({ onRetry }: { onRetry: () => void }) {
       <Container>
         <Heading
           title="Каталог освещения"
-          description="Не удалось загрузить каталог автоматически. Можно попробовать ещё раз."
+          description="Каталог временно не загрузился. Можно попробовать ещё раз или оставить заявку — подберу комплект вручную."
         />
 
         <div className="mt-8 rounded-[2rem] border border-rose-200 bg-rose-50 p-5 sm:p-6">
           <p className="text-sm leading-6 text-rose-900">
-            Ошибка загрузки каталога. Проверьте соединение и повторите попытку.
+            Каталог временно не загрузился. Попробуйте повторить загрузку или напишите мне — подберу свет вручную.
           </p>
 
           <button
