@@ -1090,6 +1090,7 @@ export function WizardStep1Lighting() {
   const scopedProducts = useMemo(() => {
     let scoped: FeedCatalogProduct[] = [];
     if (catalogView === "selected") { scoped = selectedViewItems.map((i) => i.product); }
+    else if (smartOnly) { scoped = products.filter(isSmartProduct); }
     else if (section === "track-systems") {
       if (trackGroup === "TRACK_PROFILE") {
         const base = TRACK_PROFILE_WHITELIST[trackSystem] ?? [];
@@ -1099,8 +1100,6 @@ export function WizardStep1Lighting() {
     } else if (section === "point-fixtures") { scoped = products.filter((p) => matchesPointSubtype(p, pointSubtype)); }
     else if (section === "lamps") { scoped = products.filter((p) => isLamp(p) && detectSocket(p) === lampSocket); }
     else { scoped = products.filter(isMountsOrGrilles); }
-    if (smartOnly) scoped = scoped.filter(isSmartProduct);
-
     const q = toText(query).toLowerCase();
     if (!q) return scoped;
     return scoped.filter((p) => {
@@ -1560,9 +1559,30 @@ export function WizardStep1Lighting() {
                               <p className="mt-2 text-xs text-slate-700">
                                 {item.qty} шт. · {fmt(regular)} ₽/шт · со скидкой −{selectedTotals.effectivePercent}%: {fmt(discounted)} ₽/шт
                               </p>
-                              <button type="button" onClick={() => setCartItems((prev) => { const n = { ...prev }; delete n[productId]; return n; })}
-                                aria-label={`Удалить ${item.name}`}
-                                className="mt-2 rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100">Удалить</button>
+                              <div className="mt-3 flex flex-wrap items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setProductQty(product, item.qty - (product.unit === "m" ? 0.5 : 1))}
+                                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
+                                  aria-label={`Уменьшить ${item.name}`}
+                                >
+                                  −
+                                </button>
+                                <span className="min-w-[4rem] text-center text-sm font-semibold text-slate-950">
+                                  {product.unit === "m" ? Number(item.qty.toFixed(1)) : item.qty} {product.unit === "m" ? "м" : "шт."}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setProductQty(product, item.qty + (product.unit === "m" ? 0.5 : 1))}
+                                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
+                                  aria-label={`Увеличить ${item.name}`}
+                                >
+                                  +
+                                </button>
+                                <button type="button" onClick={() => setCartItems((prev) => { const n = { ...prev }; delete n[productId]; return n; })}
+                                  aria-label={`Удалить ${item.name}`}
+                                  className="ml-auto rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100">Удалить</button>
+                              </div>
                             </div>
                           </div>
                         </li>
@@ -1607,6 +1627,7 @@ export function WizardStep1Lighting() {
                     setSmartOnly((prev) => {
                       const next = !prev;
                       trackSmartInterestSelected({ placement: "modal", enabled: next, source: String(options?.source ?? "unknown") });
+                      if (next) setSection("track-systems");
                       return next;
                     });
                   }}
@@ -1621,7 +1642,7 @@ export function WizardStep1Lighting() {
 
               {smartOnly ? (
                 <div className="rounded-2xl border border-violet-200 bg-violet-50 p-3 text-xs leading-5 text-violet-900">
-                  SMART-свет и управление обсудим лично: зафиксирую интерес в заявке и подберу решение по телефону или на замере.
+                  Показаны SMART-позиции: светильники, панели управления и аксессуары. Управление обсудим лично и зафиксируем в заявке.
                 </div>
               ) : null}
 
