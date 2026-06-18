@@ -58,6 +58,44 @@ export function trackKitClicked(params: {
   });
 }
 
+export function trackScenarioSelected(params: {
+  scenario: "standard" | "modern" | "advanced";
+  source?: string;
+}) {
+  ymReachGoal("scenario_selected", {
+    scenario: params.scenario,
+    ...(params.source ? { source: params.source } : {}),
+  });
+}
+
+export function trackSmartInterestSelected(params: {
+  placement: "modal" | "catalog";
+  enabled: boolean;
+  source?: string;
+}) {
+  ymReachGoal("smart_interest_selected", {
+    placement: params.placement,
+    enabled: params.enabled,
+    ...(params.source ? { source: params.source } : {}),
+  });
+}
+
+export function trackLightingCartCheckout(params: {
+  mode: "lighting-only" | "with-ceiling" | "open-calculator";
+  itemsCount: number;
+  lightingTotalRub: number;
+  lightingDiscountedRub: number;
+  source?: string;
+}) {
+  ymReachGoal("lighting_cart_checkout", {
+    mode: params.mode,
+    items_count: params.itemsCount,
+    lighting_total_rub: params.lightingTotalRub,
+    lighting_discounted_rub: params.lightingDiscountedRub,
+    ...(params.source ? { source: params.source } : {}),
+  });
+}
+
 export function trackLightingCartChanged(params: {
   action: "add" | "remove" | "change";
   sku: string;
@@ -71,6 +109,22 @@ export function trackLightingCartChanged(params: {
     kind: params.productKind,
     qty: params.qty,
     ...(params.source ? { source: params.source } : {}),
+  });
+}
+
+export function trackMessengerClick(params: {
+  messenger: "whatsapp" | "telegram";
+  placement: "modal_summary" | "page_action" | "catalog_error";
+  source?: string;
+  orderIntent?: string;
+  grandTotal?: number;
+}) {
+  ymReachGoal("messenger_click", {
+    messenger: params.messenger,
+    placement: params.placement,
+    ...(params.source ? { source: params.source } : {}),
+    ...(params.orderIntent ? { order_intent: params.orderIntent } : {}),
+    ...(typeof params.grandTotal === "number" ? { grand_total: params.grandTotal } : {}),
   });
 }
 
