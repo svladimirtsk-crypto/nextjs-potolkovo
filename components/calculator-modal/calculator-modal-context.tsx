@@ -61,7 +61,7 @@ function calcLightingRegularTotal(draft: LightingSnapshot | null): number {
 function createLightingOnlySnapshot(): CalculatorLeadSnapshot {
   return {
     area: 0,
-    ceilingTypeLabel: "Потолок не выбран",
+    ceilingTypeLabel: "Потолок пока не рассчитан",
     ceilingBaseRate: 0,
     ceilingBaseTotal: 0,
     ceilingExtraLabel: null,
@@ -195,11 +195,12 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       setStep1CatalogView(resolvedOpts.initialLightingView ?? null);
       setStep1FooterActionState(null);
 
-      // скидка: сбрасываем/ставим на snapshot (если он есть)
+      // скидка и источник: сбрасываем/ставим на snapshot (если он есть)
       setSnapshot((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
+          leadSource: effectiveSource,
           lightingDiscountApplied: false,
           lightingDiscountPercentApplied: 0,
           lightingDiscountMode: "none",
@@ -338,6 +339,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
 
       return {
         ...base,
+        leadSource: base.leadSource ?? String(options?.source ?? ""),
         lighting: lightingForSnapshot,
         lightingDiscountApplied: lightingDiscountMode !== "none",
         lightingDiscountPercentApplied,
@@ -352,6 +354,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
     lightingDraft,
     lightingEffectiveTotal,
     lightingRegularTotal,
+    options?.source,
     lightingStandaloneTotal,
     lightingWithCeilingTotal,
     setSnapshot,
