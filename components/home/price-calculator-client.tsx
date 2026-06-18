@@ -1754,11 +1754,9 @@ export function PriceCalculatorClient({
     if (!nextTarget) return;
 
     setTimeout(() => {
-      scrollToStep(nextTarget, "smooth");
-
+      setActiveStep(nextTarget);
       requestAnimationFrame(() => {
-        setActiveStep(nextTarget);
-        requestAnimationFrame(() => scrollToStep(nextTarget, "auto"));
+        scrollToStep(nextTarget, "smooth");
       });
     }, 0);
   };
@@ -1841,13 +1839,14 @@ export function PriceCalculatorClient({
     };
 
     const isModalCalculator = !showMobileStickyBar;
-    const sidebarShouldShowPrice = compactSections
-      ? calculationScope === "object"
-        ? confirmed.area
-        : calculationScope === "room"
-          ? confirmed.area || completedRoomsCount > 0
-          : false
-      : true;
+    const sidebarShouldShowPrice =
+      compactSections
+        ? calculationScope === "object"
+          ? confirmed.area
+          : calculationScope === "room"
+            ? confirmed.area || completedRoomsCount > 0
+            : false
+        : true;
 
     const corniceValue =
       selectedCornice.ratePerMeter > 0
