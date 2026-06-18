@@ -38,6 +38,7 @@ export function ProductImage({
         "aspect-square h-32 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-3"
       }
     >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={imageSrc}
         alt={safeAlt}
