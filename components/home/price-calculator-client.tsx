@@ -13,7 +13,8 @@ import {
 } from "./price-calculator-context";
 
 import { calcRecommendedTrackSpots } from "@/lib/lighting-formulas";
-import type { DerivedInputs } from "@/lib/calculator-modal-types";
+import type { DerivedInputs, SolutionScenario } from "@/lib/calculator-modal-types";
+import { trackScenarioSelected } from "@/lib/analytics";
 
 const calculator = homepage.price.calculator;
 
@@ -114,7 +115,7 @@ function createEmptySelectionSnapshot(calculationScope?: CalculationScope | null
   return {
     area: 0,
     calculationScope: calculationScope ?? undefined,
-    ceilingTypeLabel: "Параметры не выбраны",
+    ceilingTypeLabel: "Начните с выбора помещения и площади",
     ceilingBaseRate: 0,
     ceilingBaseTotal: 0,
     ceilingExtraLabel: null,
@@ -661,6 +662,9 @@ type PriceCalculatorClientProps = {
 
   // V-3: Mobile sticky bottom bar — disabled in modal context
   showMobileStickyBar?: boolean;
+
+  // Сценарий прохождения Step0 в модалке: стандартный / современный / продвинутый.
+  initialSolutionScenario?: SolutionScenario;
 };
 
 export function PriceCalculatorClient({
@@ -670,6 +674,7 @@ export function PriceCalculatorClient({
   prefillFromLightingTrigger = 0,
   onPrimaryCtaClick,
   showMobileStickyBar = true,
+  initialSolutionScenario = "standard",
 }: PriceCalculatorClientProps) {
   const { setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
 
@@ -788,6 +793,17 @@ export function PriceCalculatorClient({
   const [isChoosingRoom, setIsChoosingRoom] = useState(
     Boolean(compactSections && initialCompactCalculationScope === "room" && !preset?.roomLabelDefault)
   );
+
+  const [solutionScenario, setSolutionScenario] = useState<SolutionScenario>(initialSolutionScenario);
+  const [showOptionalModernOptions, setShowOptionalModernOptions] = useState(
+    initialSolutionScenario !== "standard"
+  );
+
+  useEffect(() => {
+    if (!compactSections) return;
+    setSolutionScenario(initialSolutionScenario);
+    setShowOptionalModernOptions(initialSolutionScenario !== "standard");
+  }, [compactSections, initialSolutionScenario]);
 
   // чтобы prefill не перетирал ручные правки
   const [trackTypeTouched, setTrackTypeTouched] = useState(false);
@@ -1193,6 +1209,7 @@ export function PriceCalculatorClient({
       return {
       area,
       calculationScope: calculationScope ?? undefined,
+      solutionScenario,
       ceilingTypeLabel: !shadowEnabled && !floatingEnabled
         ? "Простой потолок"
         : `${shadowEnabled ? "Теневой" : ""}${shadowEnabled && floatingEnabled ? " + " : ""}${floatingEnabled ? "Парящий" : ""}`,
@@ -1274,6 +1291,7 @@ export function PriceCalculatorClient({
     [
       area,
       calculationScope,
+      solutionScenario,
       selectedCeiling,
       ceilingBaseRate,
       ceilingBaseTotal,
@@ -1454,13 +1472,22 @@ export function PriceCalculatorClient({
   const showSlider = !compactSections;
 
   // ===== compact guided flow: один шаг открыт, остальные закрыты =====
+  const hasModernOptionSelection = lightLinesEnabled || trackType !== "none";
+  const showModernOptionSteps =
+    solutionScenario !== "standard" || showOptionalModernOptions || hasModernOptionSelection;
+  const showAdvancedCeilingTypeOptions =
+    solutionScenario !== "standard" || showOptionalModernOptions || shadowEnabled || floatingEnabled;
+
   const compactSteps: CompactStepId[] = useMemo(() => {
     const steps: CompactStepId[] = ["area", "ceiling"];
     if (shadowEnabled) steps.push("shadowProfile");
     if (floatingEnabled) steps.push("floatingProfile");
-    steps.push("lightLines", "cornice", "track", "chandeliers", "lights");
+    if (showModernOptionSteps) steps.push("lightLines");
+    steps.push("cornice");
+    if (showModernOptionSteps) steps.push("track");
+    steps.push("chandeliers", "lights");
     return steps;
-  }, [shadowEnabled, floatingEnabled]);
+  }, [shadowEnabled, floatingEnabled, showModernOptionSteps]);
 
   const [activeStep, setActiveStep] = useState<CompactStepId>("area");
   const [resumeStep, setResumeStep] = useState<CompactStepId | null>(null);
@@ -1511,7 +1538,11 @@ export function PriceCalculatorClient({
       const applicableSteps: CompactStepId[] = ["area", "ceiling"];
       if (room.shadowEnabled) applicableSteps.push("shadowProfile");
       if (room.floatingEnabled) applicableSteps.push("floatingProfile");
-      applicableSteps.push("lightLines", "cornice", "track", "chandeliers", "lights");
+      const roomHasModernOptions = showModernOptionSteps || room.lightLinesEnabled || room.trackType !== "none";
+      if (roomHasModernOptions) applicableSteps.push("lightLines");
+      applicableSteps.push("cornice");
+      if (roomHasModernOptions) applicableSteps.push("track");
+      applicableSteps.push("chandeliers", "lights");
 
       const done = state
         ? applicableSteps.reduce((sum, step) => sum + (state[step] ? 1 : 0), 0)
@@ -1774,8 +1805,10 @@ export function PriceCalculatorClient({
       });
 
       setActiveStep((prev) => {
-        if (prev === "shadowProfile" && !shadowEnabled) return "lightLines";
-        if (prev === "floatingProfile" && !floatingEnabled) return "lightLines";
+        const nextAfterProfile = showModernOptionSteps ? "lightLines" : "cornice";
+        if (prev === "shadowProfile" && !shadowEnabled) return nextAfterProfile;
+        if (prev === "floatingProfile" && !floatingEnabled) return nextAfterProfile;
+        if ((prev === "lightLines" || prev === "track") && !showModernOptionSteps) return "cornice";
         return prev;
       });
     });
@@ -1792,6 +1825,49 @@ export function PriceCalculatorClient({
         const el = document.getElementById("action");
         if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
       }
+    };
+
+    const scenarioOptions: Array<{ id: SolutionScenario; title: string; text: string }> = [
+      {
+        id: "standard",
+        title: "Стандартный",
+        text: "Обычный потолок, карниз, люстры и точечные светильники.",
+      },
+      {
+        id: "modern",
+        title: "Современный",
+        text: "Теневой/парящий профиль, встроенный карниз, линии, треки и свет.",
+      },
+      {
+        id: "advanced",
+        title: "Продвинутый",
+        text: "SMART-свет и сценарии управления — обсудим лично.",
+      },
+    ];
+
+    const chooseScenario = (scenario: SolutionScenario) => {
+      markInteracted();
+      trackScenarioSelected({ scenario });
+      setSolutionScenario(scenario);
+      const shouldShowModern = scenario !== "standard";
+      setShowOptionalModernOptions(shouldShowModern);
+      if (shouldShowModern) {
+        setConfirmed((prev) => ({ ...prev, lightLines: false, track: false }));
+      }
+    };
+
+    const revealModernOptions = () => {
+      markInteracted();
+      setShowOptionalModernOptions(true);
+      setConfirmed((prev) => ({ ...prev, lightLines: false, track: false }));
+    };
+
+    const openModernOptions = () => {
+      revealModernOptions();
+      setActiveStep("lightLines");
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => scrollToStep("lightLines", "smooth"));
+      });
     };
 
     const ceilingMeta =
@@ -1818,6 +1894,45 @@ export function PriceCalculatorClient({
       <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:p-8 max-sm:gap-3 max-sm:border-0 max-sm:bg-transparent max-sm:p-0 max-sm:shadow-none">
         {/* LEFT */}
         <div className="min-w-0 space-y-5 max-sm:space-y-3">
+          <SectionCard
+            title="Какой вариант решения рассматриваете?"
+            description="Выберите уровень подбора — дальше покажу только нужные шаги, а дополнительные опции можно открыть отдельно."
+          >
+            <div className="grid gap-2 sm:grid-cols-3">
+              {scenarioOptions.map((item) => {
+                const active = solutionScenario === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => chooseScenario(item.id)}
+                    aria-pressed={active}
+                    className={[
+                      "rounded-2xl border p-3 text-left transition-colors",
+                      active
+                        ? "border-slate-950 bg-slate-950 text-white"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50",
+                    ].join(" ")}
+                  >
+                    <p className="text-sm font-semibold">{item.title}</p>
+                    <p className={active ? "mt-1 text-xs leading-5 text-white/70" : "mt-1 text-xs leading-5 text-slate-500"}>
+                      {item.text}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+            {solutionScenario === "standard" ? (
+              <p className="mt-3 text-xs leading-5 text-slate-500">
+                Световые линии и треки доступны ниже, но не будут обязательными.
+              </p>
+            ) : solutionScenario === "advanced" ? (
+              <p className="mt-3 text-xs leading-5 text-slate-500">
+                Точную стоимость SMART-света и управления обсудим по телефону или на замере — интерес будет приложен к заявке.
+              </p>
+            ) : null}
+          </SectionCard>
+
           {showRoomManager ? (
             <div ref={roomManagerRef}>
             <SectionCard
@@ -2081,7 +2196,7 @@ export function PriceCalculatorClient({
                       quickValues={[1, 5, 10, 15, 20, 25, 30, 40, 50, 60, 80]}
                     />
                     <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
-                      <p className="text-xs text-slate-500">Пресет или введите вручную. Для больших площадей — просто наберите число.</p>
+                      <p className="text-xs text-slate-500">Выберите готовое значение или введите площадь вручную.</p>
                       <Button type="button" variant="secondary" className="step0-confirm-button step0-confirm-area max-sm:hidden" onClick={() => confirmAndNavigate("area")}>
                         Подтвердить
                       </Button>
@@ -2119,7 +2234,7 @@ export function PriceCalculatorClient({
                       quickValues={[1, 5, 10, 15, 20, 25, 30, 40, 50, 60, 80]}
                     />
                     <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
-                      <p className="text-xs text-slate-500">Пресет или введите вручную. Для больших площадей — просто наберите число.</p>
+                      <p className="text-xs text-slate-500">Выберите готовое значение или введите площадь вручную.</p>
                       <Button type="button" variant="secondary" className="step0-confirm-button step0-confirm-area max-sm:hidden" onClick={() => confirmAndNavigate("area")}>
                         Подтвердить
                       </Button>
@@ -2177,6 +2292,7 @@ export function PriceCalculatorClient({
                 </div>
 
                 {/* Shadow + Floating checkboxes */}
+                {showAdvancedCeilingTypeOptions ? (
                 <div className="space-y-3">
                   <div
                     className={["rounded-2xl border p-4 text-left transition-all",
@@ -2218,6 +2334,15 @@ export function PriceCalculatorClient({
                     </button>
                   </div>
                 </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={revealModernOptions}
+                    className="w-full rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    Показать теневой и парящий профиль →
+                  </button>
+                )}
 
                 <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
                   <p className="text-xs text-slate-500">Выберите вариант и подтвердите.</p>
@@ -2362,7 +2487,23 @@ export function PriceCalculatorClient({
             </div>
           ) : null}
 
+          {solutionScenario === "standard" && !showModernOptionSteps ? (
+            <SectionCard
+              title="Современные опции"
+              description="Если хотите добавить световые линии или трековое освещение — откройте этот блок."
+            >
+              <button
+                type="button"
+                onClick={openModernOptions}
+                className="w-full rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Добавить современные опции →
+              </button>
+            </SectionCard>
+          ) : null}
+
           {/* LIGHT LINES */}
+          {showModernOptionSteps ? (
           <div ref={lightLinesRef}>
             {confirmed.lightLines ? (
               <SectionCard title={`Световые линии`}>
@@ -2436,6 +2577,7 @@ export function PriceCalculatorClient({
               />
             )}
           </div>
+          ) : null}
 
           {/* CORNICE */}
           <div ref={corniceRef}>
@@ -2571,6 +2713,7 @@ export function PriceCalculatorClient({
           </div>
 
           {/* TRACK */}
+          {showModernOptionSteps ? (
           <div ref={trackRef}>
             {confirmed.track ? (
               <SectionCard title={`Трековое освещение`}>
@@ -2658,6 +2801,7 @@ export function PriceCalculatorClient({
               />
             )}
           </div>
+          ) : null}
 
           {/* CHANDELIERS */}
           <div ref={chandeliersRef}>
