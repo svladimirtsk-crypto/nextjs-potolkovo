@@ -1508,10 +1508,15 @@ export function PriceCalculatorClient({
   const roomProgressMap = effectiveRooms.reduce<Record<string, { done: number; total: number }>>(
     (acc, room) => {
       const state = roomConfirmedMap[room.id];
+      const applicableSteps: CompactStepId[] = ["area", "ceiling"];
+      if (room.shadowEnabled) applicableSteps.push("shadowProfile");
+      if (room.floatingEnabled) applicableSteps.push("floatingProfile");
+      applicableSteps.push("lightLines", "cornice", "track", "chandeliers", "lights");
+
       const done = state
-        ? ALL_COMPACT_STEPS.reduce((sum, step) => sum + (state[step] ? 1 : 0), 0)
+        ? applicableSteps.reduce((sum, step) => sum + (state[step] ? 1 : 0), 0)
         : 0;
-      acc[room.id] = { done, total: ALL_COMPACT_STEPS.length };
+      acc[room.id] = { done, total: applicableSteps.length };
       return acc;
     },
     {}
@@ -2847,7 +2852,24 @@ export function PriceCalculatorClient({
               </div>
             ) : null}
 
-            {!isRoomScopeMulti ? (
+            {isRoomScopeMulti ? (
+              isCurrentRoomComplete ? (
+                <div className="mt-6 space-y-2">
+                  {nextIncompleteRoom ? (
+                    <Button type="button" className="w-full" onClick={() => switchToRoom(nextIncompleteRoom.id)}>
+                      К следующей комнате →
+                    </Button>
+                  ) : (
+                    <Button type="button" className="w-full" onClick={onPrimaryCtaClick ?? (() => scrollToAction())}>
+                      Перейти к подбору освещения →
+                    </Button>
+                  )}
+                  <Button type="button" variant="secondary" className="w-full" onClick={promptAddRoom}>
+                    Добавить ещё помещение
+                  </Button>
+                </div>
+              ) : null
+            ) : (
             <div className="mt-6 space-y-2">
               <Button
                 type="button"
@@ -2857,7 +2879,7 @@ export function PriceCalculatorClient({
                 {homepage.price.primaryCtaLabel}
               </Button>
             </div>
-            ) : null}
+            )}
           </div>
         </div>
 
