@@ -34,7 +34,10 @@ export function Providers({ children }: { children: ReactNode }) {
 
     for (const key of keys) {
       const value = params.get(key);
-      if (value) sessionStorage.setItem(key, value);
+      // FIRST CLICK ATTRIBUTION: only set if NOT already present in sessionStorage!
+      if (value && !sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, value);
+      }
     }
 
     if (!sessionStorage.getItem("first_landing")) {
