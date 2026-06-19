@@ -938,6 +938,7 @@ export function PriceCalculatorClient({
 
     if (compactSections) {
       setConfirmed((prev) => ({ ...prev, area: false }));
+      return; // ТЗ: в модалке периметр выставляется ТОЛЬКО согласно подтвержденной площади!
     }
 
     const rec = getPerimeterSuggestion(v).recommended;
@@ -1930,6 +1931,32 @@ export function PriceCalculatorClient({
 
   const confirmAndNavigate = (id: CompactStepId) => {
     setConfirmed((prev) => ({ ...prev, [id]: true }));
+
+    if (id === "area") {
+      const rec = getPerimeterSuggestion(area).recommended;
+      if (customPerimeterAuto) {
+        setCustomPerimeter(rec);
+      }
+
+      const sharePerimeter = shadowEnabled && floatingEnabled;
+      if (sharePerimeter) {
+        if (shadowLengthAuto && floatingLengthAuto) {
+          setShadowLength(Math.max(1, Math.round(rec / 2)));
+          setFloatingLength(Math.max(1, Math.round(rec / 2)));
+        } else if (!shadowLengthAuto && floatingLengthAuto) {
+          setFloatingLength(Math.max(1, rec - shadowLength));
+        } else if (shadowLengthAuto && !floatingLengthAuto) {
+          setShadowLength(Math.max(1, rec - floatingLength));
+        }
+      } else {
+        if (shadowEnabled && shadowLengthAuto) {
+          setShadowLength(rec);
+        }
+        if (floatingEnabled && floatingLengthAuto) {
+          setFloatingLength(rec);
+        }
+      }
+    }
 
     const maybeResume =
       resumeStep && compactSteps.includes(resumeStep) ? resumeStep : null;
