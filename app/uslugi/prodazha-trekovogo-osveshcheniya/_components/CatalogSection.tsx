@@ -1,6 +1,6 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import { CatalogSectionClient } from "./CatalogSectionClient";
 
 import snapshotData from "@/data/eks-feed2-snapshot.json";
 import type { FeedCatalogProduct, FeedCatalogResult } from "@/lib/eks-feed2-catalog";
@@ -8,14 +8,6 @@ import type { FeedCatalogProduct, FeedCatalogResult } from "@/lib/eks-feed2-cata
 import { Container } from "@/components/ui/container";
 import { Heading } from "@/components/ui/heading";
 import { Section } from "@/components/ui/section";
-
-const CatalogSectionClient = dynamic(
-  () => import("./CatalogSectionClient").then((mod) => mod.CatalogSectionClient),
-  {
-    ssr: false,
-    loading: () => <CatalogLoadingState mode="component" />,
-  }
-);
 
 const snapshotCatalogData: FeedCatalogResult = {
   ok: true,
