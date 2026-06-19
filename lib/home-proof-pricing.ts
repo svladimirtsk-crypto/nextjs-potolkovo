@@ -51,6 +51,14 @@ export type HomeCalculatorConfig = {
     powerSupplyRate: number;
     powerSupplyDefault: number;
   };
+  chandeliers?: {
+    label: string;
+    ratePerUnit: number;
+    countMin: number;
+    countMax: number;
+    countStep: number;
+    countDefault: number;
+  };
 };
 
 export type ProofPricingInput = {
