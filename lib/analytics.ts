@@ -96,6 +96,9 @@ export function trackLightingCartCheckout(params: {
   });
 }
 
+let cartChangeTimeout: NodeJS.Timeout | null = null;
+const cartChangeBuffer: Record<string, { action: "add" | "remove" | "change"; sku: string; productKind: string; qty: number; source?: string }> = {};
+
 export function trackLightingCartChanged(params: {
   action: "add" | "remove" | "change";
   sku: string;
@@ -103,13 +106,27 @@ export function trackLightingCartChanged(params: {
   qty: number;
   source?: string;
 }) {
-  ymReachGoal("lighting_cart_changed", {
-    action: params.action,
-    sku: params.sku,
-    kind: params.productKind,
-    qty: params.qty,
-    ...(params.source ? { source: params.source } : {}),
-  });
+  if (typeof window === "undefined") return;
+
+  // Buffer the events by SKU so we only send the latest state for each product
+  cartChangeBuffer[params.sku] = params;
+
+  if (cartChangeTimeout) clearTimeout(cartChangeTimeout);
+
+  cartChangeTimeout = setTimeout(() => {
+    // Send all buffered changes
+    for (const sku of Object.keys(cartChangeBuffer)) {
+      const p = cartChangeBuffer[sku];
+      ymReachGoal("lighting_cart_changed", {
+        action: p.action,
+        sku: p.sku,
+        kind: p.productKind,
+        qty: p.qty,
+        ...(p.source ? { source: p.source } : {}),
+      });
+      delete cartChangeBuffer[sku];
+    }
+  }, 500);
 }
 
 export function trackMessengerClick(params: {
