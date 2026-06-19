@@ -25,6 +25,7 @@ type FieldErrors = { name?: string; phone?: string; address?: string };
 function normalizePhone(value: string): string {
   const digits = value.replace(/\D/g, "");
   if (!digits) return "";
+  if (digits.length === 10) return `+7${digits}`;
   if (digits.startsWith("8") && digits.length === 11) return `+7${digits.slice(1)}`;
   if (digits.startsWith("7") && digits.length === 11) return `+${digits}`;
   if (digits.length >= 10 && digits.length <= 15) return `+${digits}`;
