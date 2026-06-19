@@ -105,7 +105,10 @@ function captureUtmIntoSession() {
   ];
   for (const key of keys) {
     const v = params.get(key);
-    if (v) sessionStorage.setItem(key, v);
+    // FIRST CLICK ATTRIBUTION: only set if NOT already present in sessionStorage!
+    if (v && !sessionStorage.getItem(key)) {
+      sessionStorage.setItem(key, v);
+    }
   }
   if (!sessionStorage.getItem("first_landing")) {
     sessionStorage.setItem("first_landing", window.location.href);
@@ -181,9 +184,15 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       setOptions(resolvedOpts);
       setCurrentStep(resolvedOpts.initialStep ?? 0);
 
-      if (resolvedOpts.initialLighting) setLightingDraftState(resolvedOpts.initialLighting);
-      else if (snapshot?.lighting && snapshot.lighting.mode !== "none") setLightingDraftState(snapshot.lighting);
-      else setLightingDraftState(null);
+      if (resolvedOpts.initialLighting) {
+        setLightingDraftState(resolvedOpts.initialLighting);
+      } else if (snapshot?.lighting && snapshot.lighting.mode !== "none") {
+        setLightingDraftState(snapshot.lighting);
+      } else if (lightingDraft && lightingDraft.mode !== "none") {
+        setLightingDraftState(lightingDraft);
+      } else {
+        setLightingDraftState(null);
+      }
 
       // reset flags on each open
       setStep0SessionInteracted(false);
