@@ -167,10 +167,11 @@ function calcRoomSnapshot(room: RoomConfig): CalculatorLeadSnapshot {
   const ceilingExtraTotal = shadowExtraTotal + floatingExtraTotal;
   const lightLinesTotal = room.lightLinesEnabled ? room.lightLinesLength * calculator.lightLines.ratePerMeter : 0;
   const corniceTotal = selectedCornice.ratePerMeter > 0 ? room.corniceLength * selectedCornice.ratePerMeter : 0;
-  const corniceLightingMetersTotal = room.corniceLightingEnabled
+  const isCorniceLightingActive = room.corniceLightingEnabled && room.corniceType !== "none";
+  const corniceLightingMetersTotal = isCorniceLightingActive
     ? room.corniceLightingLength * calculator.corniceLighting.ratePerMeter
     : 0;
-  const corniceLightingPowerSupplyTotal = room.corniceLightingEnabled
+  const corniceLightingPowerSupplyTotal = isCorniceLightingActive
     ? room.corniceLightingPowerSupplies * calculator.corniceLighting.powerSupplyRate
     : 0;
   const corniceLightingTotal = corniceLightingMetersTotal + corniceLightingPowerSupplyTotal;
@@ -758,6 +759,10 @@ export function PriceCalculatorClient({
     useState<boolean>(resolvedLightsEnabled);
   const [lightsCount, setLightsCount] = useState<number>(resolvedLightsCount);
   const [roomLabel, setRoomLabel] = useState<string>(preset?.roomLabelDefault ?? "Помещение 1");
+  const [localRoomLabel, setLocalRoomLabel] = useState<string>(preset?.roomLabelDefault ?? "Помещение 1");
+  useEffect(() => {
+    setLocalRoomLabel(roomLabel);
+  }, [roomLabel]);
   const roomSequenceRef = useRef(2);
   const roomApplyLockRef = useRef(false);
   const loadedRoomIdRef = useRef<string | null>(null);
@@ -1032,10 +1037,11 @@ export function PriceCalculatorClient({
       ? corniceLength * selectedCornice.ratePerMeter
       : 0;
 
-  const corniceLightingMetersTotal = corniceLightingEnabled
+  const isCorniceLightingActiveTotal = corniceLightingEnabled && corniceType !== "none";
+  const corniceLightingMetersTotal = isCorniceLightingActiveTotal
     ? corniceLightingLength * calculator.corniceLighting.ratePerMeter
     : 0;
-  const corniceLightingPowerSupplyTotal = corniceLightingEnabled
+  const corniceLightingPowerSupplyTotal = isCorniceLightingActiveTotal
     ? corniceLightingPowerSupplies * calculator.corniceLighting.powerSupplyRate
     : 0;
   const corniceLightingTotal = corniceLightingMetersTotal + corniceLightingPowerSupplyTotal;
@@ -1543,6 +1549,8 @@ export function PriceCalculatorClient({
   ]);
 
   useEffect(() => {
+    if (roomApplyLockRef.current || isApplyingRoomConfigRef.current) return;
+
     setSnapshot((prev) => {
       if (prev == null) return effectiveSnapshot;
 
@@ -2393,10 +2401,18 @@ export function PriceCalculatorClient({
                       <div className="mt-4">
                         <Input
                           label="Своё название помещения"
-                          value={roomLabel}
+                          value={localRoomLabel}
                           onChange={(event) => {
+                            setLocalRoomLabel(event.target.value);
+                          }}
+                          onBlur={() => {
                             markInteracted();
-                            setRoomLabel(event.target.value);
+                            setRoomLabel(localRoomLabel.trim() || "Помещение");
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.currentTarget.blur();
+                            }
                           }}
                           placeholder="Например: Кухня-гостиная"
                         />
