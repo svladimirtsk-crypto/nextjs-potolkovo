@@ -48,6 +48,14 @@ const homeCalculator: HomeCalculatorConfig = {
     powerSupplyRate: 1500,
     powerSupplyDefault: 1,
   },
+  chandeliers: {
+    label: "Установка люстр",
+    ratePerUnit: 1000,
+    countMin: 1,
+    countMax: 10,
+    countStep: 1,
+    countDefault: 1,
+  },
 } as const;
 
 const proofBudgetCase1 = buildProofBudgetBreakdown(homeCalculator, {
