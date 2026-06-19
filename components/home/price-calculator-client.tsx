@@ -2389,9 +2389,9 @@ export function PriceCalculatorClient({
                     <p className="mt-3 text-xs text-slate-500">
                       Сначала выберите первое помещение, а затем задайте его площадь и параметры потолка.
                     </p>
-                    <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
+                    <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3">
                       <p className="text-xs text-slate-500">Выберите нужное помещение выше.</p>
-                      <Button type="button" variant="secondary" className="step0-confirm-button step0-confirm-room-picker max-sm:hidden" onClick={promptAddRoom}>
+                      <Button type="button" variant="secondary" className="step0-confirm-button step0-confirm-room-picker" onClick={promptAddRoom}>
                         Выбрать помещение
                       </Button>
                     </div>
@@ -2399,9 +2399,9 @@ export function PriceCalculatorClient({
                 ) : step0Phase === "choose-next-room" ? (
                   <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-4 text-sm text-slate-600">
                     Выберите следующее помещение в блоке «Помещения в расчёте» выше.
-                    <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
+                    <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3">
                       <p className="text-xs text-slate-500">Наверху выберите следующую комнату: кухня, гостиная, спальня и т.д.</p>
-                      <Button type="button" variant="secondary" className="step0-confirm-button step0-confirm-room-picker max-sm:hidden" onClick={promptAddRoom}>
+                      <Button type="button" variant="secondary" className="step0-confirm-button step0-confirm-room-picker" onClick={promptAddRoom}>
                         Выбрать помещение
                       </Button>
                     </div>
@@ -2420,9 +2420,9 @@ export function PriceCalculatorClient({
                       showSlider={showSlider}
                       quickValues={[1, 5, 10, 15, 20, 25, 30, 40, 50, 60, 80]}
                     />
-                    <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
+                    <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3">
                       <p className="text-xs text-slate-500">Выберите готовое значение или введите площадь вручную.</p>
-                      <Button type="button" variant="secondary" className="step0-confirm-button step0-confirm-area max-sm:hidden" onClick={() => confirmAndNavigate("area")}>
+                      <Button type="button" variant="secondary" className="step0-confirm-button step0-confirm-area" onClick={() => confirmAndNavigate("area")}>
                         Подтвердить
                       </Button>
                     </div>
@@ -2466,9 +2466,9 @@ export function PriceCalculatorClient({
                       showSlider={showSlider}
                       quickValues={[1, 5, 10, 15, 20, 25, 30, 40, 50, 60, 80]}
                     />
-                    <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
+                    <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3">
                       <p className="text-xs text-slate-500">Выберите готовое значение или введите площадь вручную.</p>
-                      <Button type="button" variant="secondary" className="step0-confirm-button step0-confirm-area max-sm:hidden" onClick={() => confirmAndNavigate("area")}>
+                      <Button type="button" variant="secondary" className="step0-confirm-button step0-confirm-area" onClick={() => confirmAndNavigate("area")}>
                         Подтвердить
                       </Button>
                     </div>
@@ -2577,12 +2577,12 @@ export function PriceCalculatorClient({
                   </button>
                 )}
 
-                <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
+                <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3">
                   <p className="text-xs text-slate-500">Выберите вариант и подтвердите.</p>
                   <Button
                     type="button"
                     variant="secondary"
-                    className="step0-confirm-button step0-confirm-ceiling max-sm:hidden"
+                    className="step0-confirm-button step0-confirm-ceiling"
                     onClick={() => confirmAndNavigate("ceiling")}
                     disabled={!isStepEnabled("ceiling")}
                   >
@@ -2686,12 +2686,12 @@ export function PriceCalculatorClient({
                     isAuto={customPerimeterAuto && shadowLengthAuto && floatingLengthAuto}
                   />
 
-                  <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
+                  <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3">
                     <p className="text-xs text-slate-500">Оставьте авто или измените вручную.</p>
                     <Button
                       type="button"
                       variant="secondary"
-                      className="step0-confirm-button step0-confirm-shadow max-sm:hidden"
+                      className="step0-confirm-button step0-confirm-shadow"
                       onClick={() => confirmAndNavigate("shadowProfile")}
                       disabled={!isStepEnabled("shadowProfile")}
                     >
@@ -2746,12 +2746,12 @@ export function PriceCalculatorClient({
                         isAuto={shadowLengthAuto}
                       />
 
-                      <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
+                      <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3">
                         <p className="text-xs text-slate-500">Оставьте авто 1:1 или измените вручную.</p>
                         <Button
                           type="button"
                           variant="secondary"
-                          className="step0-confirm-button step0-confirm-shadow max-sm:hidden"
+                          className="step0-confirm-button step0-confirm-shadow"
                           onClick={() => confirmAndNavigate("shadowProfile")}
                           disabled={!isStepEnabled("shadowProfile")}
                         >
@@ -2806,12 +2806,12 @@ export function PriceCalculatorClient({
                         isAuto={floatingLengthAuto}
                       />
 
-                      <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
+                      <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3">
                         <p className="text-xs text-slate-500">Оставьте авто 1:1 или измените вручную.</p>
                         <Button
                           type="button"
                           variant="secondary"
-                          className="step0-confirm-button step0-confirm-floating max-sm:hidden"
+                          className="step0-confirm-button step0-confirm-floating"
                           onClick={() => confirmAndNavigate("floatingProfile")}
                           disabled={!isStepEnabled("floatingProfile")}
                         >
@@ -2900,12 +2900,12 @@ export function PriceCalculatorClient({
                   </div>
                 ) : null}
 
-                <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
+                <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3">
                   <p className="text-xs text-slate-500">Выберите вариант и подтвердите.</p>
                   <Button
                     type="button"
                     variant="secondary"
-                    className="step0-confirm-button step0-confirm-light-lines max-sm:hidden"
+                    className="step0-confirm-button step0-confirm-light-lines"
                     onClick={() => confirmAndNavigate("lightLines")}
                     disabled={!isStepEnabled("lightLines")}
                   >
@@ -3034,12 +3034,12 @@ export function PriceCalculatorClient({
                   </div>
                 ) : null}
 
-                <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
+                <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3">
                   <p className="text-xs text-slate-500">Выберите вариант и подтвердите.</p>
                   <Button
                     type="button"
                     variant="secondary"
-                    className="step0-confirm-button step0-confirm-cornice max-sm:hidden"
+                    className="step0-confirm-button step0-confirm-cornice"
                     onClick={() => confirmAndNavigate("cornice")}
                     disabled={!isStepEnabled("cornice")}
                   >
@@ -3126,12 +3126,12 @@ export function PriceCalculatorClient({
                   </div>
                 ) : null}
 
-                <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
+                <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3">
                   <p className="text-xs text-slate-500">Выберите вариант и подтвердите.</p>
                   <Button
                     type="button"
                     variant="secondary"
-                    className="step0-confirm-button step0-confirm-track max-sm:hidden"
+                    className="step0-confirm-button step0-confirm-track"
                     onClick={() => confirmAndNavigate("track")}
                     disabled={!isStepEnabled("track")}
                   >
@@ -3207,12 +3207,12 @@ export function PriceCalculatorClient({
                   </div>
                 ) : null}
 
-                <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
+                <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3">
                   <p className="text-xs text-slate-500">Выберите вариант и подтвердите.</p>
                   <Button
                     type="button"
                     variant="secondary"
-                    className="step0-confirm-button step0-confirm-chandeliers max-sm:hidden"
+                    className="step0-confirm-button step0-confirm-chandeliers"
                     onClick={() => confirmAndNavigate("chandeliers")}
                     disabled={!isStepEnabled("chandeliers")}
                   >
@@ -3290,12 +3290,12 @@ export function PriceCalculatorClient({
                   </div>
                 ) : null}
 
-                <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
+                <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3">
                   <p className="text-xs text-slate-500">Выберите вариант и подтвердите.</p>
                   <Button
                     type="button"
                     variant="secondary"
-                    className="step0-confirm-button step0-confirm-lights max-sm:hidden"
+                    className="step0-confirm-button step0-confirm-lights"
                     onClick={() => confirmAndNavigate("lights")}
                     disabled={!isStepEnabled("lights")}
                   >
