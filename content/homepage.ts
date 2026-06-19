@@ -6,7 +6,7 @@ import {
 
 const homeCalculator: HomeCalculatorConfig = {
   areaMin: 1,
-  areaMax: 100,
+  areaMax: 1000,
   areaStep: 1,
   areaDefault: 1,
   perimeterHintMinMultiplier: 4,
