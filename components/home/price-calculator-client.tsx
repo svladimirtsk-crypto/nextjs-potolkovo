@@ -1,5 +1,6 @@
 "use client";
 
+import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
 import { homepage } from "@/content/homepage";
@@ -18,7 +19,7 @@ import { trackScenarioSelected } from "@/lib/analytics";
 
 const calculator = homepage.price.calculator;
 
-const CHANDELIERS_INSTALL_RATE_PER_UNIT = 1000;
+const CHANDELIERS_INSTALL_RATE_PER_UNIT = homepage.price.calculator.chandeliers?.ratePerUnit ?? 1000;
 
 type CeilingType = (typeof calculator.ceilingTypes)[number]["slug"] | "shadow-floating";
 type CorniceType = (typeof calculator.cornices)[number]["slug"];
@@ -457,7 +458,10 @@ function RangeField({
   quickValues?: number[];
 }) {
   const [manual, setManual] = useState<string>(String(value));
+  const isFocusedRef = useRef(false);
+
   useEffect(() => {
+    if (isFocusedRef.current) return;
     const frame = requestAnimationFrame(() => setManual(String(value)));
     return () => cancelAnimationFrame(frame);
   }, [value]);
@@ -475,7 +479,7 @@ function RangeField({
     const parsed = parseManual(raw);
     if (parsed === null) return;
     if (parsed < min || parsed > max) return;
-    onChange(normalize(parsed));
+    onChange(parsed);
   };
 
   const isIntegerStep = Number.isInteger(step);
@@ -503,12 +507,16 @@ function RangeField({
           <input
             id={id}
             value={manual}
+            onFocus={() => {
+              isFocusedRef.current = true;
+            }}
             onChange={(e) => {
               const next = e.target.value;
               setManual(next);
               commitWhileTyping(next);
             }}
             onBlur={() => {
+              isFocusedRef.current = false;
               const parsed = parseManual(manual);
               if (parsed === null) {
                 setManual(String(value));
@@ -752,6 +760,9 @@ export function PriceCalculatorClient({
   const [roomLabel, setRoomLabel] = useState<string>(preset?.roomLabelDefault ?? "Помещение 1");
   const roomSequenceRef = useRef(2);
   const roomApplyLockRef = useRef(false);
+  const loadedRoomIdRef = useRef<string | null>(null);
+  const isApplyingRoomConfigRef = useRef(false);
+  const lastScrollRef = useRef<{ id: string; time: number } | null>(null);
   const [rooms, setRooms] = useState<RoomConfig[]>(() =>
     initialCompactCalculationScope === "room"
       ? [
@@ -840,7 +851,7 @@ export function PriceCalculatorClient({
       const metersRaw = Number(prefillFromLighting.trackProfileMeters ?? 0);
       if (Number.isFinite(metersRaw) && metersRaw > 0 && !trackLengthTouched) {
         const normalized = clamp(
-          roundToStep(metersRaw, calculator.trackMeters.step),
+          metersRaw,
           calculator.trackMeters.min,
           calculator.trackMeters.max
         );
@@ -908,6 +919,10 @@ export function PriceCalculatorClient({
   const handleAreaChange = (v: number) => {
     markInteracted();
     setArea(v);
+
+    if (compactSections) {
+      setConfirmed((prev) => ({ ...prev, area: false }));
+    }
 
     if (shadowEnabled && shadowLengthAuto) {
       setShadowLength(getPerimeterSuggestion(v).recommended);
@@ -1087,7 +1102,7 @@ export function PriceCalculatorClient({
 
   useEffect(() => {
     if (!compactSections || calculationScope !== "room" || !activeRoomId) return;
-    if (roomApplyLockRef.current) return;
+    if (roomApplyLockRef.current || isApplyingRoomConfigRef.current) return;
 
     setRooms((prev) => {
       const hasRoom = prev.some((room) => room.id === activeRoomId);
@@ -1127,6 +1142,7 @@ export function PriceCalculatorClient({
 
   const applyRoomConfig = (room: RoomConfig) => {
     roomApplyLockRef.current = true;
+    isApplyingRoomConfigRef.current = true;
     setRoomLabel(room.label);
     setArea(room.area);
     setCeilingType(room.ceilingType);
@@ -1156,16 +1172,83 @@ export function PriceCalculatorClient({
   };
 
   useEffect(() => {
-    if (!compactSections || calculationScope !== "room" || !activeRoomId) return;
+    if (!compactSections || calculationScope !== "room" || !activeRoomId) {
+      loadedRoomIdRef.current = null;
+      return;
+    }
+
+    if (activeRoomId === loadedRoomIdRef.current) return;
+
     const room = rooms.find((item) => item.id === activeRoomId);
     if (!room) return;
-    if (roomApplyLockRef.current) return;
 
-    const isSame = JSON.stringify(room) === JSON.stringify(currentRoomConfig);
-    if (isSame) return;
-
+    loadedRoomIdRef.current = activeRoomId;
     applyRoomConfig(room);
-  }, [activeRoomId, calculationScope, compactSections, currentRoomConfig, rooms]);
+  }, [activeRoomId, calculationScope, compactSections, rooms]);
+
+  useEffect(() => {
+    if (!compactSections || calculationScope !== "room" || !activeRoomId) {
+      isApplyingRoomConfigRef.current = false;
+      return;
+    }
+    const room = rooms.find((item) => item.id === activeRoomId);
+    if (!room) return;
+
+    const isMatched =
+      roomLabel === room.label &&
+      area === room.area &&
+      ceilingType === room.ceilingType &&
+      shadowEnabled === room.shadowEnabled &&
+      shadowLength === room.shadowLength &&
+      shadowLengthAuto === room.shadowLengthAuto &&
+      floatingEnabled === room.floatingEnabled &&
+      floatingLength === room.floatingLength &&
+      floatingLengthAuto === room.floatingLengthAuto &&
+      lightLinesEnabled === room.lightLinesEnabled &&
+      lightLinesLength === room.lightLinesLength &&
+      corniceType === room.corniceType &&
+      corniceLength === room.corniceLength &&
+      corniceLightingEnabled === room.corniceLightingEnabled &&
+      corniceLightingLength === room.corniceLightingLength &&
+      corniceLightingPowerSupplies === room.corniceLightingPowerSupplies &&
+      trackType === room.trackType &&
+      trackLength === room.trackLength &&
+      chandeliersEnabled === room.chandeliersEnabled &&
+      chandeliersCount === room.chandeliersCount &&
+      lightsEnabled === room.lightsEnabled &&
+      lightsCount === room.lightsCount;
+
+    if (isMatched) {
+      isApplyingRoomConfigRef.current = false;
+    }
+  }, [
+    activeRoomId,
+    compactSections,
+    calculationScope,
+    rooms,
+    roomLabel,
+    area,
+    ceilingType,
+    shadowEnabled,
+    shadowLength,
+    shadowLengthAuto,
+    floatingEnabled,
+    floatingLength,
+    floatingLengthAuto,
+    lightLinesEnabled,
+    lightLinesLength,
+    corniceType,
+    corniceLength,
+    corniceLightingEnabled,
+    corniceLightingLength,
+    corniceLightingPowerSupplies,
+    trackType,
+    trackLength,
+    chandeliersEnabled,
+    chandeliersCount,
+    lightsEnabled,
+    lightsCount,
+  ]);
 
   const isSelectionPending =
     compactSections &&
@@ -1607,9 +1690,25 @@ export function PriceCalculatorClient({
   };
 
   const scrollToStep = (id: CompactStepId, behavior: ScrollBehavior = "smooth") => {
+    const now = Date.now();
+    if (lastScrollRef.current && lastScrollRef.current.id === id && now - lastScrollRef.current.time < 50) {
+      return; // prevent duplicate scrolling in the same frame
+    }
+    lastScrollRef.current = { id, time: now };
+
     const el = getRef(id).current;
     if (!el) return;
-    const OFFSET = 92;
+
+    // P6.1: Dynamic header offset calculation
+    let OFFSET = 92;
+    if (typeof window !== "undefined") {
+      const header = document.querySelector("header") || document.querySelector(".fixed-header") || document.getElementById("header");
+      if (header) {
+        const rect = header.getBoundingClientRect();
+        OFFSET = Math.max(92, rect.height + 16);
+      }
+    }
+
     scrollIntoViewWithOffset(el, OFFSET, behavior);
   };
 
@@ -1767,8 +1866,10 @@ export function PriceCalculatorClient({
     const frame = requestAnimationFrame(() => {
       setConfirmed((prev) => {
         const next = { ...prev };
-        next.shadowProfile = shadowEnabled ? false : true;
-        next.floatingProfile = floatingEnabled ? false : true;
+        next.shadowProfile = shadowEnabled ? (prev.shadowProfile === true ? true : false) : true;
+        next.floatingProfile = floatingEnabled ? (prev.floatingProfile === true ? true : false) : true;
+        next.lightLines = showModernOptionSteps ? (prev.lightLines === true ? true : false) : true;
+        next.track = showModernOptionSteps ? (prev.track === true ? true : false) : true;
         return next;
       });
 
@@ -1783,12 +1884,31 @@ export function PriceCalculatorClient({
 
     return () => cancelAnimationFrame(frame);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shadowEnabled, floatingEnabled, compactSections]);
+  }, [shadowEnabled, floatingEnabled, showModernOptionSteps, compactSections]);
 
   if (compactSections) {
     // V-5: step numbers removed — titles hardcoded without numbers
 
     const scrollToAction = () => {
+      let modalContext: any = null;
+      try {
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        modalContext = useCalculatorModal();
+      } catch (e) {
+        // not inside CalculatorModalProvider
+      }
+
+      if (modalContext && compactSections) {
+        modalContext.goToStep(2);
+        setTimeout(() => {
+          const el = document.getElementById("modal-action-form");
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }, 100);
+        return;
+      }
+
       if (typeof document !== "undefined") {
         const el = document.getElementById("action");
         if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1821,6 +1941,8 @@ export function PriceCalculatorClient({
       setShowOptionalModernOptions(shouldShowModern);
       if (shouldShowModern) {
         setConfirmed((prev) => ({ ...prev, lightLines: false, track: false }));
+      } else {
+        setConfirmed((prev) => ({ ...prev, lightLines: true, track: true }));
       }
     };
 
