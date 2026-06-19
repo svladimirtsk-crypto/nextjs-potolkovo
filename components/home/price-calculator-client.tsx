@@ -935,12 +935,24 @@ export function PriceCalculatorClient({
     const rec = getPerimeterSuggestion(v).recommended;
     const sharePerimeter = shadowEnabled && floatingEnabled;
 
-    if (shadowEnabled && shadowLengthAuto) {
-      setShadowLength(sharePerimeter ? Math.max(1, Math.round(rec / 2)) : rec);
+    if (sharePerimeter) {
+      if (shadowLengthAuto && floatingLengthAuto) {
+        setShadowLength(Math.max(1, Math.round(rec / 2)));
+        setFloatingLength(Math.max(1, Math.round(rec / 2)));
+      } else if (!shadowLengthAuto && floatingLengthAuto) {
+        setFloatingLength(Math.max(1, rec - shadowLength));
+      } else if (shadowLengthAuto && !floatingLengthAuto) {
+        setShadowLength(Math.max(1, rec - floatingLength));
+      }
+    } else {
+      if (shadowEnabled && shadowLengthAuto) {
+        setShadowLength(rec);
+      }
+      if (floatingEnabled && floatingLengthAuto) {
+        setFloatingLength(rec);
+      }
     }
-    if (floatingEnabled && floatingLengthAuto) {
-      setFloatingLength(sharePerimeter ? Math.max(1, Math.round(rec / 2)) : rec);
-    }
+
     if (hasSpecialCeiling && ceilingLengthAuto) {
       setCeilingLength(rec);
     }
@@ -1852,6 +1864,7 @@ export function PriceCalculatorClient({
         [activeRoomId]: confirmed,
       }));
     }
+    setActiveRoomId(null);
     setIsChoosingRoom(true);
     setResumeStep(null);
     setActiveStep("area");
