@@ -182,6 +182,10 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
     return () => cancelAnimationFrame(frame);
   }, [prefillMetrics.hasAny, step0SessionInteracted]);
 
+  const calcKey = useMemo(() => {
+    return JSON.stringify(resolvedPreset) + "-" + String(options?.source ?? "");
+  }, [resolvedPreset, options?.source]);
+
   return (
     <div
       onClickCapture={markStep0SessionInteracted}
@@ -227,6 +231,7 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
 
 
       <PriceCalculatorClient
+        key={calcKey}
         preset={resolvedPreset}
         compactSections
         showMobileStickyBar={false}
