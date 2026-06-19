@@ -101,6 +101,7 @@ export function CalculatorModal() {
   const contentRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const lastConfirmTimeRef = useRef(0);
 
   const [mounted, setMounted] = useState(false);
   const [isActionFormVisible, setIsActionFormVisible] = useState(false);
@@ -173,9 +174,15 @@ export function CalculatorModal() {
     };
 
     const update = () => {
-      const button = contentRef.current?.querySelector<HTMLButtonElement>(
+      const buttons = contentRef.current?.querySelectorAll<HTMLButtonElement>(
         ".step0-confirm-button:not(:disabled)"
-      ) ?? null;
+      ) ?? [];
+      let button: HTMLButtonElement | null = null;
+      for (const btn of Array.from(buttons)) {
+        if (btn.closest(".sr-only")) continue;
+        button = btn;
+        break;
+      }
       setStep0HasConfirmButtonState(Boolean(button));
       setStep0FooterLabelState(getConfirmLabel(button));
     };
@@ -235,9 +242,16 @@ export function CalculatorModal() {
   }, [snapshot, lightingDraft]);
 
   const requestClose = useCallback(() => {
+    const now = Date.now();
+    if (now - lastConfirmTimeRef.current < 300) {
+      return; // Skip if we recently closed a confirm dialog to prevent double execution
+    }
+
     // P0.7: confirm dialog if there's data
     if (hasAnyData && typeof window !== "undefined") {
+      lastConfirmTimeRef.current = now;
       const confirmed = window.confirm("Закрыть калькулятор? Ваш расчёт не сохранится.");
+      lastConfirmTimeRef.current = Date.now(); // update after confirm resolves
       if (!confirmed) return;
     }
     closeCalculator();
@@ -397,7 +411,7 @@ export function CalculatorModal() {
           ) : null}
 
           {/* Content */}
-          <div ref={contentRef} className="calculator-modal-content flex-1 overflow-y-auto px-5 py-5 max-lg:pb-52 max-sm:px-4 max-sm:py-4">
+          <div ref={contentRef} className="calculator-modal-content flex-1 overflow-y-auto px-5 py-5 max-lg:pb-8 max-sm:px-4 max-sm:py-4">
             <div
               key="step0"
               aria-hidden={currentStep !== 0}
@@ -448,9 +462,15 @@ export function CalculatorModal() {
                     type="button"
                     onClick={() => {
                       if (currentStep === 0 && step0HasConfirmButton) {
-                        const button = contentRef.current?.querySelector<HTMLButtonElement>(
+                        const buttons = contentRef.current?.querySelectorAll<HTMLButtonElement>(
                           ".step0-confirm-button:not(:disabled)"
-                        );
+                        ) ?? [];
+                        let button: HTMLButtonElement | null = null;
+                        for (const btn of Array.from(buttons)) {
+                          if (btn.closest(".sr-only")) continue;
+                          button = btn;
+                          break;
+                        }
                         if (button) {
                           button.click();
                           return;
