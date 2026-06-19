@@ -575,12 +575,83 @@ export function WizardStep1Lighting() {
       for (const [mv, rq] of Object.entries(mountRequiredByVendor)) {
         const mid = productIdByVendorCode.get(toText(mv)); if (!mid) continue;
         const cq = toNumber(next[mid]);
-        if (rq > 0 && cq > 0 && cq !== rq) { next[mid] = rq; ch = true; }
+        if (rq > 0 && cq !== rq) { next[mid] = rq; ch = true; }
         if (rq <= 0 && cq > 0) { delete next[mid]; ch = true; }
       }
       return ch ? next : prev;
     });
   }, [mountRequiredByVendor, productIdByVendorCode]);
+
+  /* ─── Clear orphaned track products when track is disabled ─── */
+  useEffect(() => {
+    if (requiredTrackMeters <= 0) {
+      const clarusPsuVendorCodes = new Set<string>(CLARUS_PSU_VENDOR_CODES);
+      setCartItems((prev) => {
+        const next = { ...prev };
+        let changed = false;
+        for (const id of Object.keys(prev)) {
+          const product = productsById.get(id);
+          if (!product) continue;
+
+          const isTrackProduct =
+            product.kind === "TRACK_PROFILE" ||
+            product.kind === "TRACK_FIXTURE" ||
+            product.kind === "TRACK_ACCESSORY";
+          const isClarusPsu = clarusPsuVendorCodes.has(toText(product.vendorCode));
+
+          if (isTrackProduct || isClarusPsu) {
+            delete next[id];
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }
+  }, [requiredTrackMeters, productsById]);
+
+  /* ─── Auto-sync lamps ─── */
+  useEffect(() => {
+    setCartItems((prev) => {
+      const next = { ...prev };
+      let changed = false;
+
+      for (const s of ["GX53", "MR16"] as LampSocket[]) {
+        const rq = toNumber(lampRequiredBySocket[s]);
+        const cq = toNumber(lampCurrentBySocket[s]);
+
+        if (rq > 0 && cq !== rq) {
+          const ids = lampOptionsBySocket[s].map((l) => toText(l.productId));
+          const activeLampIdsInCart = ids.filter((id) => toNumber(next[id]) > 0);
+
+          if (activeLampIdsInCart.length > 0) {
+            const firstId = activeLampIdsInCart[0];
+            const otherLampsTotal = activeLampIdsInCart.slice(1).reduce((sum, id) => sum + toNumber(next[id]), 0);
+            const targetQty = Math.max(1, rq - otherLampsTotal);
+            if (next[firstId] !== targetQty) {
+              next[firstId] = targetQty;
+              changed = true;
+            }
+          } else {
+            const cheapest = lampOptionsBySocket[s][0];
+            if (cheapest) {
+              next[toText(cheapest.productId)] = rq;
+              changed = true;
+            }
+          }
+        } else if (rq <= 0 && cq > 0) {
+          const ids = lampOptionsBySocket[s].map((l) => toText(l.productId));
+          for (const id of ids) {
+            if (next[id] > 0) {
+              delete next[id];
+              changed = true;
+            }
+          }
+        }
+      }
+
+      return changed ? next : prev;
+    });
+  }, [lampRequiredBySocket, lampCurrentBySocket, lampOptionsBySocket]);
 
   /* ─── Cart → lightingDraft sync (ONLY after rehydration is ready) ─── */
   useEffect(() => {
@@ -608,6 +679,24 @@ export function WizardStep1Lighting() {
     });
   }, [cartEntries, setLightingDraft, snapshot?.derivedInputs]);
 
+  const clearIncompatibleSystem = useCallback((next: CartItems, targetSystem: string) => {
+    if (!isTrackSystemId(targetSystem)) return;
+    const clarusPsuVendorCodes = new Set<string>(CLARUS_PSU_VENDOR_CODES);
+
+    for (const key of Object.keys(next)) {
+      const p = productsById.get(key);
+      if (!p) continue;
+
+      const isTrackProduct =
+        p.kind === "TRACK_PROFILE" || p.kind === "TRACK_FIXTURE" || p.kind === "TRACK_ACCESSORY";
+      const isClarusPsu = clarusPsuVendorCodes.has(toText(p.vendorCode));
+
+      if ((isTrackProduct && p.system !== targetSystem) || (isClarusPsu && targetSystem !== "CLARUS_48")) {
+        delete next[key];
+      }
+    }
+  }, [productsById]);
+
   /* ─── setProductQty ─── */
   const setProductQty = useCallback((product: FeedCatalogProduct, nextQtyRaw: number) => {
     const id = toText(product.productId);
@@ -619,8 +708,24 @@ export function WizardStep1Lighting() {
         sku: id, productKind: String(product.kind), qty: nextQty, source: String(options?.source ?? "unknown"),
       });
     }
-    setCartItems((prev) => { const n = { ...prev }; if (nextQty <= 0) delete n[id]; else n[id] = nextQty; return n; });
-  }, [cartItems, options?.source]);
+    setCartItems((prev) => {
+      const n = { ...prev };
+      if (nextQty <= 0) {
+        delete n[id];
+      } else {
+        const system = product.system;
+        if (system && isTrackSystemId(system)) {
+          clearIncompatibleSystem(n, system);
+        }
+        const clarusPsuVendorCodes = new Set<string>(CLARUS_PSU_VENDOR_CODES);
+        if (clarusPsuVendorCodes.has(toText(product.vendorCode))) {
+          clearIncompatibleSystem(n, "CLARUS_48");
+        }
+        n[id] = nextQty;
+      }
+      return n;
+    });
+  }, [cartItems, options?.source, clearIncompatibleSystem]);
 
   const clearTrackProductsForSystem = useCallback((system: TrackSystemId | null) => {
     const clarusPsuVendorCodes = new Set<string>(CLARUS_PSU_VENDOR_CODES);
@@ -726,10 +831,17 @@ export function WizardStep1Lighting() {
     setCatalogView(view);
     setStep1CatalogView(view);
   }, [setStep1CatalogView]);
+
   /* ─── Selected view ─── */
   const selectedViewItems = useMemo(() =>
     cartEntries.map((e) => ({ product: e.product, item: { sku: toText(e.productId), name: toText(e.product.name), qty: e.qty, priceRub: toNumber(e.product.priceRub) } })),
     [cartEntries]);
+
+  useEffect(() => {
+    if (catalogView === "selected" && selectedViewItems.length === 0) {
+      setCatalogViewAndSync("browse");
+    }
+  }, [catalogView, selectedViewItems.length, setCatalogViewAndSync]);
 
   const selectedTotals = useMemo(() => {
     const regular = selectedViewItems.reduce((sum, x) => sum + x.item.qty * x.item.priceRub, 0);
