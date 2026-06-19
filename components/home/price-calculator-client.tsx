@@ -763,6 +763,9 @@ export function PriceCalculatorClient({
   const loadedRoomIdRef = useRef<string | null>(null);
   const isApplyingRoomConfigRef = useRef(false);
   const lastScrollRef = useRef<{ id: string; time: number } | null>(null);
+  const prevShadowEnabledRef = useRef(resolvedCeilingType === "shadow" || resolvedCeilingType === "shadow-floating");
+  const prevFloatingEnabledRef = useRef(resolvedCeilingType === "floating" || resolvedCeilingType === "shadow-floating");
+  const prevShowModernOptionStepsRef = useRef(initialSolutionScenario !== "standard");
   const [rooms, setRooms] = useState<RoomConfig[]>(() =>
     initialCompactCalculationScope === "room"
       ? [
@@ -1883,10 +1886,47 @@ export function PriceCalculatorClient({
     const frame = requestAnimationFrame(() => {
       setConfirmed((prev) => {
         const next = { ...prev };
-        next.shadowProfile = shadowEnabled ? (prev.shadowProfile === true ? true : false) : true;
-        next.floatingProfile = floatingEnabled ? (prev.floatingProfile === true ? true : false) : true;
-        next.lightLines = showModernOptionSteps ? (prev.lightLines === true ? true : false) : true;
-        next.track = showModernOptionSteps ? (prev.track === true ? true : false) : true;
+
+        // Shadow profile
+        if (shadowEnabled) {
+          if (!prevShadowEnabledRef.current) {
+            next.shadowProfile = false; // newly enabled -> must configure
+          } else {
+            next.shadowProfile = prev.shadowProfile; // preserve user's confirmation
+          }
+        } else {
+          next.shadowProfile = true; // hidden -> skipped
+        }
+
+        // Floating profile
+        if (floatingEnabled) {
+          if (!prevFloatingEnabledRef.current) {
+            next.floatingProfile = false;
+          } else {
+            next.floatingProfile = prev.floatingProfile;
+          }
+        } else {
+          next.floatingProfile = true;
+        }
+
+        // Light lines & Track
+        if (showModernOptionSteps) {
+          if (!prevShowModernOptionStepsRef.current) {
+            next.lightLines = false;
+            next.track = false;
+          } else {
+            next.lightLines = prev.lightLines;
+            next.track = prev.track;
+          }
+        } else {
+          next.lightLines = true;
+          next.track = true;
+        }
+
+        prevShadowEnabledRef.current = shadowEnabled;
+        prevFloatingEnabledRef.current = floatingEnabled;
+        prevShowModernOptionStepsRef.current = showModernOptionSteps;
+
         return next;
       });
 
