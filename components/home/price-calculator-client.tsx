@@ -945,12 +945,16 @@ export function PriceCalculatorClient({
     markInteracted();
     setShadowEnabled((prev) => {
       const next = !prev;
+      const rec = getPerimeterSuggestion(area).recommended;
       if (next) {
         setShadowLengthAuto(true);
-        const rec = getPerimeterSuggestion(area).recommended;
         setShadowLength(floatingEnabled ? Math.max(1, Math.round(rec / 2)) : rec);
         if (floatingEnabled && floatingLengthAuto) {
           setFloatingLength(Math.max(1, Math.round(rec / 2)));
+        }
+      } else {
+        if (floatingEnabled && floatingLengthAuto) {
+          setFloatingLength(rec);
         }
       }
       return next;
@@ -961,12 +965,16 @@ export function PriceCalculatorClient({
     markInteracted();
     setFloatingEnabled((prev) => {
       const next = !prev;
+      const rec = getPerimeterSuggestion(area).recommended;
       if (next) {
         setFloatingLengthAuto(true);
-        const rec = getPerimeterSuggestion(area).recommended;
         setFloatingLength(shadowEnabled ? Math.max(1, Math.round(rec / 2)) : rec);
         if (shadowEnabled && shadowLengthAuto) {
           setShadowLength(Math.max(1, Math.round(rec / 2)));
+        }
+      } else {
+        if (shadowEnabled && shadowLengthAuto) {
+          setShadowLength(rec);
         }
       }
       return next;
@@ -977,12 +985,26 @@ export function PriceCalculatorClient({
     markInteracted();
     setShadowLengthAuto(false);
     setShadowLength(v);
+
+    if (floatingEnabled) {
+      const rec = getPerimeterSuggestion(area).recommended;
+      const remaining = Math.max(0, rec - v);
+      setFloatingLength(remaining);
+      setFloatingLengthAuto(false);
+    }
   };
 
   const handleFloatingLengthChange = (v: number) => {
     markInteracted();
     setFloatingLengthAuto(false);
     setFloatingLength(v);
+
+    if (shadowEnabled) {
+      const rec = getPerimeterSuggestion(area).recommended;
+      const remaining = Math.max(0, rec - v);
+      setShadowLength(remaining);
+      setShadowLengthAuto(false);
+    }
   };
 
   // ---- totals ----
@@ -1547,8 +1569,12 @@ export function PriceCalculatorClient({
 
   const compactSteps: CompactStepId[] = useMemo(() => {
     const steps: CompactStepId[] = ["area", "ceiling"];
-    if (shadowEnabled) steps.push("shadowProfile");
-    if (floatingEnabled) steps.push("floatingProfile");
+    if (shadowEnabled && floatingEnabled) {
+      steps.push("shadowProfile"); // Acts as the unified step!
+    } else {
+      if (shadowEnabled) steps.push("shadowProfile");
+      if (floatingEnabled) steps.push("floatingProfile");
+    }
     if (showModernOptionSteps) steps.push("lightLines");
     steps.push("cornice");
     if (showModernOptionSteps) steps.push("track");
@@ -2525,44 +2551,64 @@ export function PriceCalculatorClient({
             )}
           </div>
 
-          {/* SHADOW PROFILE (if shadow enabled) */}
-          {shadowEnabled ? (
+          {/* JOINT SHADOW & FLOATING PROFILES */}
+          {shadowEnabled && floatingEnabled ? (
             <div ref={shadowProfileRef}>
               {confirmed.shadowProfile ? (
-                <SectionCard title={`Теневой профиль`}>
+                <SectionCard title="Теневой и парящий профиль">
                   <SummaryRow
-                    label="Теневой профиль"
-                    value={`${shadowLength} м.п. (${shadowLengthAuto ? "авто 1:1" : "вручную"})`}
+                    label="Профили потолка"
+                    value={`Теневой: ${shadowLength} м.п., Парящий: ${floatingLength} м.п. (${shadowLengthAuto && floatingLengthAuto ? "авто 50/50" : "вручную"})`}
                     onEdit={() => beginEdit("shadowProfile")}
                   />
                 </SectionCard>
               ) : activeStep === "shadowProfile" ? (
                 <SectionCard
-                  title={`Теневой профиль`}
-                  description="Укажите только те метры, где действительно нужен теневой зазор. Это может быть не весь периметр комнаты."
+                  title="Теневой и парящий профиль"
+                  description={`Укажите метраж профилей. Общая длина автоматически балансируется по периметру комнаты (~${perimeterSuggestion.recommended} м.п.).`}
                 >
                   <RangeField
                     id="shadow-length-field"
                     label="Длина теневого профиля"
                     value={shadowLength}
                     min={calculator.specialMeters.min}
-                    max={calculator.specialMeters.max}
+                    max={perimeterSuggestion.recommended}
                     step={calculator.specialMeters.step}
                     unit="м.п."
                     onChange={handleShadowLengthChange}
                     showSlider={showSlider}
-                    quickValues={[perimeterSuggestion.recommended]}
                   />
+
+                  <div className="mt-4">
+                    <RangeField
+                      id="floating-length-field"
+                      label="Длина парящего профиля"
+                      value={floatingLength}
+                      min={calculator.specialMeters.min}
+                      max={perimeterSuggestion.recommended}
+                      step={calculator.specialMeters.step}
+                      unit="м.п."
+                      onChange={handleFloatingLengthChange}
+                      showSlider={showSlider}
+                    />
+                  </div>
 
                   <PerimeterHint
                     area={area}
                     recommended={perimeterSuggestion.recommended}
-                    onApply={() => { markInteracted(); setShadowLengthAuto(true); setShadowLength(perimeterSuggestion.recommended); }}
-                    isAuto={shadowLengthAuto}
+                    onApply={() => {
+                      markInteracted();
+                      setShadowLengthAuto(true);
+                      setFloatingLengthAuto(true);
+                      const rec = perimeterSuggestion.recommended;
+                      setShadowLength(Math.max(1, Math.round(rec / 2)));
+                      setFloatingLength(Math.max(1, Math.round(rec / 2)));
+                    }}
+                    isAuto={shadowLengthAuto && floatingLengthAuto}
                   />
 
                   <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
-                    <p className="text-xs text-slate-500">Оставьте авто 1:1 или измените вручную.</p>
+                    <p className="text-xs text-slate-500">Оставьте авто или измените вручную.</p>
                     <Button
                       type="button"
                       variant="secondary"
@@ -2576,74 +2622,136 @@ export function PriceCalculatorClient({
                 </SectionCard>
               ) : (
                 <CollapsedStep
-                  title={`Теневой профиль`}
+                  title="Теневой и парящий профиль"
                   subtitle={isStepEnabled("shadowProfile") ? "Настройте длину" : "Сначала выберите тип потолка"}
                   enabled={isStepEnabled("shadowProfile")}
                   onOpen={() => openStep("shadowProfile")}
                 />
               )}
             </div>
-          ) : null}
-
-          {/* FLOATING PROFILE (if floating enabled) */}
-          {floatingEnabled ? (
-            <div ref={floatingProfileRef}>
-              {confirmed.floatingProfile ? (
-                <SectionCard title={`Парящий профиль`}>
-                  <SummaryRow
-                    label="Парящий профиль"
-                    value={`${floatingLength} м.п. (${floatingLengthAuto ? "авто 1:1" : "вручную"})`}
-                    onEdit={() => beginEdit("floatingProfile")}
-                  />
-                </SectionCard>
-              ) : activeStep === "floatingProfile" ? (
-                <SectionCard
-                  title={`Парящий профиль`}
-                  description="Укажите только те метры, где нужен парящий эффект. Это может быть одна стена, ниша или отдельный участок."
-                >
-                  <RangeField
-                    id="floating-length-field"
-                    label="Длина парящего профиля"
-                    value={floatingLength}
-                    min={calculator.specialMeters.min}
-                    max={calculator.specialMeters.max}
-                    step={calculator.specialMeters.step}
-                    unit="м.п."
-                    onChange={handleFloatingLengthChange}
-                    showSlider={showSlider}
-                    quickValues={[perimeterSuggestion.recommended]}
-                  />
-
-                  <PerimeterHint
-                    area={area}
-                    recommended={perimeterSuggestion.recommended}
-                    onApply={() => { markInteracted(); setFloatingLengthAuto(true); setFloatingLength(perimeterSuggestion.recommended); }}
-                    isAuto={floatingLengthAuto}
-                  />
-
-                  <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
-                    <p className="text-xs text-slate-500">Оставьте авто 1:1 или измените вручную.</p>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="step0-confirm-button step0-confirm-floating max-sm:hidden"
-                      onClick={() => confirmAndNavigate("floatingProfile")}
-                      disabled={!isStepEnabled("floatingProfile")}
+          ) : (
+            <>
+              {/* SHADOW PROFILE (if shadow enabled) */}
+              {shadowEnabled ? (
+                <div ref={shadowProfileRef}>
+                  {confirmed.shadowProfile ? (
+                    <SectionCard title={`Теневой профиль`}>
+                      <SummaryRow
+                        label="Теневой профиль"
+                        value={`${shadowLength} м.п. (${shadowLengthAuto ? "авто 1:1" : "вручную"})`}
+                        onEdit={() => beginEdit("shadowProfile")}
+                      />
+                    </SectionCard>
+                  ) : activeStep === "shadowProfile" ? (
+                    <SectionCard
+                      title={`Теневой профиль`}
+                      description="Укажите только те метры, где действительно нужен теневой зазор. Это может быть не весь периметр комнаты."
                     >
-                      Подтвердить
-                    </Button>
-                  </div>
-                </SectionCard>
-              ) : (
-                <CollapsedStep
-                  title={`Парящий профиль`}
-                  subtitle={isStepEnabled("floatingProfile") ? "Настройте длину" : "Сначала выберите тип потолка"}
-                  enabled={isStepEnabled("floatingProfile")}
-                  onOpen={() => openStep("floatingProfile")}
-                />
-              )}
-            </div>
-          ) : null}
+                      <RangeField
+                        id="shadow-length-field"
+                        label="Длина теневого профиля"
+                        value={shadowLength}
+                        min={calculator.specialMeters.min}
+                        max={calculator.specialMeters.max}
+                        step={calculator.specialMeters.step}
+                        unit="м.п."
+                        onChange={handleShadowLengthChange}
+                        showSlider={showSlider}
+                        quickValues={[perimeterSuggestion.recommended]}
+                      />
+
+                      <PerimeterHint
+                        area={area}
+                        recommended={perimeterSuggestion.recommended}
+                        onApply={() => { markInteracted(); setShadowLengthAuto(true); setShadowLength(perimeterSuggestion.recommended); }}
+                        isAuto={shadowLengthAuto}
+                      />
+
+                      <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
+                        <p className="text-xs text-slate-500">Оставьте авто 1:1 или измените вручную.</p>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="step0-confirm-button step0-confirm-shadow max-sm:hidden"
+                          onClick={() => confirmAndNavigate("shadowProfile")}
+                          disabled={!isStepEnabled("shadowProfile")}
+                        >
+                          Подтвердить
+                        </Button>
+                      </div>
+                    </SectionCard>
+                  ) : (
+                    <CollapsedStep
+                      title={`Теневой профиль`}
+                      subtitle={isStepEnabled("shadowProfile") ? "Настройте длину" : "Сначала выберите тип потолка"}
+                      enabled={isStepEnabled("shadowProfile")}
+                      onOpen={() => openStep("shadowProfile")}
+                    />
+                  )}
+                </div>
+              ) : null}
+
+              {/* FLOATING PROFILE (if floating enabled) */}
+              {floatingEnabled ? (
+                <div ref={floatingProfileRef}>
+                  {confirmed.floatingProfile ? (
+                    <SectionCard title={`Парящий профиль`}>
+                      <SummaryRow
+                        label="Парящий профиль"
+                        value={`${floatingLength} м.п. (${floatingLengthAuto ? "авто 1:1" : "вручную"})`}
+                        onEdit={() => beginEdit("floatingProfile")}
+                      />
+                    </SectionCard>
+                  ) : activeStep === "floatingProfile" ? (
+                    <SectionCard
+                      title={`Парящий профиль`}
+                      description="Укажите только те метры, где нужен парящий эффект. Это может быть одна стена, ниша или отдельный участок."
+                    >
+                      <RangeField
+                        id="floating-length-field"
+                        label="Длина парящего профиля"
+                        value={floatingLength}
+                        min={calculator.specialMeters.min}
+                        max={calculator.specialMeters.max}
+                        step={calculator.specialMeters.step}
+                        unit="м.п."
+                        onChange={handleFloatingLengthChange}
+                        showSlider={showSlider}
+                        quickValues={[perimeterSuggestion.recommended]}
+                      />
+
+                      <PerimeterHint
+                        area={area}
+                        recommended={perimeterSuggestion.recommended}
+                        onApply={() => { markInteracted(); setFloatingLengthAuto(true); setFloatingLength(perimeterSuggestion.recommended); }}
+                        isAuto={floatingLengthAuto}
+                      />
+
+                      <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
+                        <p className="text-xs text-slate-500">Оставьте авто 1:1 или измените вручную.</p>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="step0-confirm-button step0-confirm-floating max-sm:hidden"
+                          onClick={() => confirmAndNavigate("floatingProfile")}
+                          disabled={!isStepEnabled("floatingProfile")}
+                        >
+                          Подтвердить
+                        </Button>
+                      </div>
+                    </SectionCard>
+                  ) : (
+                    <CollapsedStep
+                      title={`Парящий профиль`}
+                      subtitle={isStepEnabled("floatingProfile") ? "Настройте длину" : "Сначала выберите тип потолка"}
+                      enabled={isStepEnabled("floatingProfile")}
+                      onOpen={() => openStep("floatingProfile")}
+                    />
+                  )}
+                </div>
+              ) : null}
+            </>
+          )}
 
           {solutionScenario === "standard" && !showModernOptionSteps ? (
             <SectionCard
