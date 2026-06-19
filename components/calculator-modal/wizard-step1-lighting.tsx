@@ -1,592 +1,1815 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import snapshotData from "@/data/eks-feed2-snapshot.json";
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
-import { homepage } from "@/content/homepage";
-
-import { normalizeFeedCatalogProducts, toNumber, toText } from "@/lib/feed2-snapshot-normalize";
-import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
-import { calcTrackProfileMeters } from "@/lib/product-length-meters";
-
-import { contacts } from "@/content/contacts";
-import { trackMessengerClick } from "@/lib/analytics";
-
-import { ActionForm } from "@/components/home/action-form";
+import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
+import { trackLightingCartChanged } from "@/lib/analytics";
 import {
-  getCalculatorSummaryLines,
-  usePriceCalculatorBridge,
-} from "@/components/home/price-calculator-context";
-import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
+  LIGHTING_ONLY_DISCOUNT_PERCENT,
+  LIGHTING_WITH_CEILING_DISCOUNT_PERCENT,
+  applyLightingOnlyDiscount,
+  applyLightingWithCeilingDiscount,
+} from "@/lib/lighting-formulas";
+import {
+  buildProductsIndex,
+  computeBenefit,
+  detectSocket,
+  getDiscountedPrice,
+  getRequiredLampSocket,
+} from "@/lib/feed2-products";
+import { normalizeFeedCatalogProducts, toNumber, toText } from "@/lib/feed2-snapshot-normalize";
 
-import { getKitDisplayName } from "@/lib/calculator-modal-types";
+import {
+  CATALOG_SECTIONS,
+  POINT_SUBTYPES,
+  POINT_TO_MOUNT_VENDOR_CODE,
+  CLARUS_PSU_VENDOR_CODES,
+  REMOVED_COLIBRI_VENDOR_CODES,
+  TRACK_GROUPS,
+  TRACK_PROFILE_WHITELIST,
+  TRACK_SYSTEMS,
+  type CatalogSectionId,
+  type PointSubtypeId,
+  type TrackGroupId,
+  type TrackSystemId,
+  type LampSocket,
+} from "@/lib/catalog-ui-config";
 
-type CatalogLightingItem = {
-  sku: string;
-  name: string;
-  qty: number;
-  priceRub: number;
-};
+import {
+  ART_TRACK_PROFILE_VENDOR_WHITELIST,
+  applyVendorOverrides,
+} from "@/lib/vendor-code-overrides";
+import {
+  calcTrackProfileMeters,
+  inferPieceLengthMeters,
+} from "@/lib/product-length-meters";
 
-function fmt(value: number): string {
-  return new Intl.NumberFormat("ru-RU").format(Math.round(value));
+import { ProductImage } from "@/components/feed2/ProductImage";
+import { useCalculatorModal } from "./calculator-modal-context";
+import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
+
+/* ─── helpers ─── */
+
+type Tab = "recommendations" | "catalog";
+type CatalogView = "selected" | "browse";
+type CartItems = Record<string, number>;
+
+function fmt(v: number): string { return new Intl.NumberFormat("ru-RU").format(Math.round(v)); }
+function fmtM(v: number): string { return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 }).format(v); }
+
+function normalizeQty(raw: number, unit: "pcs" | "m"): number {
+  const step = unit === "m" ? 0.5 : 1;
+  return Math.max(0, Math.round(raw / step) * step);
 }
 
-function isPanelProduct(product: FeedCatalogProduct): boolean {
-  const text = `${toText(product.name)} ${toText(product.categoryPath)}`.toLowerCase();
-  return (
-    text.includes("панел") ||
-    text.includes("panel") ||
-    text.includes("600x600") ||
-    text.includes("595x595")
-  );
+function isPanelProduct(p: FeedCatalogProduct): boolean {
+  const t = `${toText(p.name)} ${toText(p.categoryPath)}`.toLowerCase();
+  return t.includes("панел") || t.includes("panel") || t.includes("600x600") || t.includes("595x595");
 }
 
-function sumTrackMetersFromLightingItems(
-  items: Array<{ sku: string; qty: number }>,
-  byId: Map<string, FeedCatalogProduct>,
-  byVendor: Map<string, string>
-): number {
-  let meters = 0;
+function isLamp(p: FeedCatalogProduct): boolean {
+  return p.kind === "LAMP" && toNumber(p.priceRub) > 0 && p.available !== false;
+}
 
-  for (const item of items) {
-    const sku = toText(item.sku);
-    const qty = toNumber(item.qty);
+function isSmartProduct(p: FeedCatalogProduct): boolean {
+  const text = `${toText(p.name)} ${toText(p.categoryPath)} ${toText(p.vendorCode)}`.toLowerCase();
+  return text.includes("смарт") || text.includes("smart") || text.includes("умный дом");
+}
 
-    const byProduct = byId.get(sku);
-    const byVendorId = byVendor.get(sku);
-    const resolvedId = byProduct ? sku : toText(byVendorId ?? "");
-    if (!resolvedId) continue;
+function isMountsOrGrilles(p: FeedCatalogProduct): boolean {
+  const t = `${toText(p.name)} ${toText(p.vendorCode)} ${toText(p.categoryPath)}`.toLowerCase();
+  if (p.kind === "CEILING_COMPONENT") return true;
+  return t.includes("заклад") || t.includes("решетк") || t.includes("решётк");
+}
 
-    const product = byId.get(resolvedId);
-    if (!product) continue;
+function matchesPointSubtype(p: FeedCatalogProduct, sub: PointSubtypeId): boolean {
+  if (sub === "PANELS") return isPanelProduct(p);
+  if (p.kind !== "SPOT_FIXTURE") return false;
+  const vc = toText(p.vendorCode);
+  if (sub === "GX53" && (vc === "0У-00007177" || vc === "0У-00007176")) return true;
+  if (sub === "MR16" && (vc === "0У-00001551" || vc === "0У-00001552")) return true;
+  const d = detectSocket(p);
+  return d === sub;
+}
 
-    if (product.kind !== "TRACK_PROFILE") continue;
-    meters += calcTrackProfileMeters(product, qty);
+function isTrackSystemId(value: unknown): value is TrackSystemId {
+  return value === "COLIBRI_220" || value === "CLARUS_48" || value === "TRACK_220";
+}
+
+function pickAttrs(p: FeedCatalogProduct): { label: string; value: string }[] {
+  const a = p.keyAttributes?.length ? p.keyAttributes : p.params;
+  return (a ?? []).slice(0, 4).map((x) => ({ label: toText(x.label), value: toText(x.value) }));
+}
+
+function getScrollParent(node: HTMLElement | null): HTMLElement | null {
+  if (!node || typeof window === "undefined") return null;
+
+  let parent = node.parentElement;
+  while (parent) {
+    const style = window.getComputedStyle(parent);
+    const overflowY = style.overflowY;
+    const canScroll =
+      (overflowY === "auto" || overflowY === "scroll") &&
+      parent.scrollHeight > parent.clientHeight;
+
+    if (canScroll) return parent;
+    parent = parent.parentElement;
   }
 
-  return meters;
+  return (document.scrollingElement as HTMLElement | null) ?? null;
 }
 
-function sumPointQtyFromLightingItems(
-  items: Array<{ sku: string; qty: number }>,
-  byId: Map<string, FeedCatalogProduct>,
-  byVendor: Map<string, string>
-): number {
-  let qtyTotal = 0;
+/* ─── small UI components ─── */
 
-  for (const item of items) {
-    const sku = toText(item.sku);
-    const qty = toNumber(item.qty);
-
-    const byProduct = byId.get(sku);
-    const byVendorId = byVendor.get(sku);
-    const resolvedId = byProduct ? sku : toText(byVendorId ?? "");
-    if (!resolvedId) continue;
-
-    const product = byId.get(resolvedId);
-    if (!product) continue;
-
-    if (product.kind === "SPOT_FIXTURE" || isPanelProduct(product)) qtyTotal += qty;
-  }
-
-  return qtyTotal;
-}
-
-export function WizardStep2Summary() {
-  const {
-    goToStep,
-    setStep1CatalogView,
-    closeCalculator,
-    step0AreaConfirmed,
-    step0SessionInteracted,
-    options,
-    lightingDraft,
-    showCeilingInUi,
-    lightingEffectiveTotal,
-    lightingDiscountedTotal,
-    lightingDiscountMode,
-    lightingDiscountEligible,
-    lightingRegularTotal,
-    lightingWithCeilingTotal,
-    ceilingTotal,
-    grandTotal,
-  } = useCalculatorModal();
-
-  const resolvedShowCeilingInUi =
-    options?.entryMode !== "lighting-first" || step0SessionInteracted || showCeilingInUi;
-  const resolvedLightingEffectiveTotal = toNumber(lightingEffectiveTotal || lightingDiscountedTotal);
-  const resolvedLightingRegularTotal = toNumber(lightingRegularTotal || resolvedLightingEffectiveTotal);
-  const resolvedLightingWithCeilingTotal = toNumber(
-    lightingWithCeilingTotal || lightingDiscountedTotal
-  );
-  const resolvedCeilingTotal = toNumber(ceilingTotal);
-  const resolvedGrandTotal =
-    toNumber(grandTotal) ||
-    (resolvedShowCeilingInUi ? resolvedCeilingTotal : 0) + resolvedLightingEffectiveTotal;
-
-  const lightingAppliedPercent =
-    lightingDiscountMode === "with-ceiling" ? 25 : lightingDiscountMode === "lighting-only" ? 10 : 0;
-  const orderIntent =
-    lightingDiscountMode === "with-ceiling"
-      ? "lighting_with_ceiling"
-      : lightingDiscountMode === "lighting-only"
-        ? "lighting_only"
-        : resolvedLightingEffectiveTotal > 0
-          ? "lighting"
-          : "ceiling_only";
-  const lightingAppliedBenefit = Math.max(
-    0,
-    resolvedLightingRegularTotal - resolvedLightingEffectiveTotal
-  );
-  const lightingPotentialBenefit = Math.max(
-    0,
-    resolvedLightingRegularTotal - resolvedLightingWithCeilingTotal
-  );
-  const [showResult, setShowResult] = useState(false);
-
-  const { snapshot, setSnapshot } = usePriceCalculatorBridge();
-  const lighting = snapshot?.lighting ?? lightingDraft ?? null;
-  const roomBreakdown = snapshot?.roomBreakdown ?? [];
-  const hasRoomBreakdown = roomBreakdown.length > 0;
-
-  const ceilingSummaryLines = useMemo(() => getCalculatorSummaryLines(snapshot), [snapshot]);
-
-  const kitDisplayName = useMemo(() => getKitDisplayName(lighting), [lighting]);
-
-  const lightingItems: CatalogLightingItem[] = useMemo(() => {
-    const items = lighting?.mode === "catalog" ? (lighting.items ?? []) : [];
-    return items.map((item) => ({
-      sku: toText(item.sku),
-      name: toText(item.name),
-      qty: toNumber(item.qty),
-      priceRub: toNumber(item.priceRub),
-    }));
-  }, [lighting]);
-
-  const catalogProducts = useMemo(() => {
-    const rawProducts = (snapshotData as { products?: unknown[] })?.products ?? [];
-    return normalizeFeedCatalogProducts(rawProducts).map((product) => applyVendorOverrides(product));
-  }, []);
-
-  const byId = useMemo(() => {
-    const map = new Map<string, FeedCatalogProduct>();
-    for (const p of catalogProducts) map.set(toText(p.productId), p);
-    return map;
-  }, [catalogProducts]);
-
-  const byVendor = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const p of catalogProducts) {
-      const v = toText(p.vendorCode);
-      const id = toText(p.productId);
-      if (v && id) map.set(v, id);
-    }
-    return map;
-  }, [catalogProducts]);
-
-  const selectedTrackMeters = useMemo(() => {
-    return sumTrackMetersFromLightingItems(
-      lightingItems.map((i) => ({ sku: i.sku, qty: i.qty })),
-      byId,
-      byVendor
-    );
-  }, [byId, byVendor, lightingItems]);
-
-  const selectedPointQty = useMemo(() => {
-    return sumPointQtyFromLightingItems(
-      lightingItems.map((i) => ({ sku: i.sku, qty: i.qty })),
-      byId,
-      byVendor
-    );
-  }, [byId, byVendor, lightingItems]);
-
-  const trackMountType = (snapshot?.derivedInputs?.trackMountType ?? "none") as
-    | "built-in"
-    | "surface"
-    | "none";
-
-  const effectiveTrackMountType = useMemo(() => {
-    if (trackMountType && trackMountType !== "none") return trackMountType;
-
-    // Detect from cart items
-    const hasBuiltInProfile = lightingItems.some((item) => {
-      const pId = byVendor.get(item.sku) ?? item.sku;
-      const p = byId.get(pId);
-      return p?.system === "COLIBRI_220" || p?.system === "CLARUS_48";
-    });
-    if (hasBuiltInProfile) return "built-in";
-
-    const hasSurfaceProfile = lightingItems.some((item) => {
-      const pId = byVendor.get(item.sku) ?? item.sku;
-      const p = byId.get(pId);
-      return p?.system === "TRACK_220";
-    });
-    if (hasSurfaceProfile) return "surface";
-
-    return "none";
-  }, [trackMountType, lightingItems, byId, byVendor]);
-
-  const canReconcileInstall = step0AreaConfirmed;
-
-  const trackRates = homepage.price.calculator.tracks;
-  const builtInRate = trackRates.find((t) => t.slug === "built-in")?.ratePerMeter ?? 0;
-  const surfaceRate = trackRates.find((t) => t.slug === "surface")?.ratePerMeter ?? 0;
-  const resolvedTrackRate = effectiveTrackMountType === "surface" ? surfaceRate : builtInRate;
-
-  const spotInstallRate = homepage.price.calculator.lights.ratePerUnit;
-
-  const includedTrackInstall = toNumber(snapshot?.trackTotal);
-  const includedSpotInstall = toNumber(snapshot?.lightsTotal);
-
-  const desiredTrackInstallMeters = selectedTrackMeters > 0 ? selectedTrackMeters : 0;
-  const desiredSpotInstallQty = selectedPointQty > 0 ? selectedPointQty : 0;
-
-  const desiredTrackInstallCost =
-    desiredTrackInstallMeters > 0 ? desiredTrackInstallMeters * resolvedTrackRate : 0;
-  const desiredSpotInstallCost =
-    desiredSpotInstallQty > 0 ? desiredSpotInstallQty * spotInstallRate : 0;
-
-  const extraTrackInstall =
-    desiredTrackInstallMeters > 0
-      ? Math.max(0, desiredTrackInstallCost - includedTrackInstall)
-      : 0;
-  const extraSpotInstall =
-    desiredSpotInstallQty > 0 ? Math.max(0, desiredSpotInstallCost - includedSpotInstall) : 0;
-
-  const extraInstallTotal = extraTrackInstall + extraSpotInstall;
-
-  useEffect(() => {
-    if (!canReconcileInstall) return;
-
-    setSnapshot((prev) => {
-      if (!prev) return prev;
-      const base = toNumber(prev.total);
-      const nextGrand = base + extraInstallTotal;
-      // Guard: don't mutate if value unchanged (prevents infinite re-renders)
-      const prevGrand = toNumber(prev.grandTotal);
-      if (Math.abs(prevGrand - nextGrand) < 0.5) return prev;
-      return { ...prev, grandTotal: nextGrand };
-    });
-  }, [canReconcileInstall, extraInstallTotal, setSnapshot]);
-
-  const handleEditLighting = () => {
-    setStep1CatalogView("selected");
-    goToStep(1);
-  };
-
-  const handleGoToCeiling = () => goToStep(0);
-
+function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
   return (
-    <div key="step2" className="animate-fade-slide-in space-y-4">
-      {/* Grand total — hero number */}
-      <div className="rounded-2xl bg-slate-950 p-6 text-center text-white shadow-xl">
-        <p className="text-sm text-white/70">Ориентировочный итог</p>
-        <p className="mt-2 text-4xl font-bold tracking-tight">~{fmt(resolvedGrandTotal)} ₽</p>
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-xs text-white/60">
-          {resolvedShowCeilingInUi ? <span>Потолок {fmt(resolvedCeilingTotal)} ₽</span> : null}
-          {resolvedShowCeilingInUi && resolvedLightingEffectiveTotal > 0 ? <span>+</span> : null}
-          {resolvedLightingEffectiveTotal > 0 ? (
-            <span>
-              Свет{" "}
-              {lightingDiscountEligible && lightingAppliedBenefit > 0 ? (
-                <>
-                  <span className="line-through text-white/35">{fmt(resolvedLightingRegularTotal)} ₽</span>{" "}
-                  <span>{fmt(resolvedLightingEffectiveTotal)} ₽</span>{" "}
-                  <span className="text-emerald-400">−{lightingAppliedPercent}% (−{fmt(lightingAppliedBenefit)} ₽)</span>
-                </>
-              ) : (
-                <>{fmt(resolvedLightingEffectiveTotal)} ₽</>
-              )}
-            </span>
-          ) : null}
-        </div>
-        {lightingDiscountMode !== "with-ceiling" && resolvedLightingEffectiveTotal > 0 && resolvedLightingWithCeilingTotal > 0 ? (
-          <p className="mt-2 text-xs text-white/50">
-            С потолком: <span className="line-through text-white/35">{fmt(resolvedLightingRegularTotal)} ₽</span>{" "}
-            {fmt(resolvedLightingWithCeilingTotal)} ₽ −25% (−{fmt(lightingPotentialBenefit)} ₽)
-          </p>
-        ) : null}
+    <button type="button" onClick={onClick}
+      className={["rounded-xl px-3 py-2 text-sm font-medium transition-colors max-sm:px-2.5 max-sm:py-1.5 max-sm:text-xs",
+        active ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"].join(" ")}>
+      {children}
+    </button>
+  );
+}
+
+/* Product card with zoomable image */
+function ProductCard({
+  product, qty, onInc, onDec, onImageClick, discountPercent,
+}: {
+  product: FeedCatalogProduct; qty: number; onInc: () => void; onDec: () => void;
+  onImageClick?: () => void;
+  discountPercent: number;
+}) {
+  const regular = toNumber(product.priceRub);
+  const discounted = getDiscountedPrice(regular, discountPercent);
+  const benefit = computeBenefit(regular, discounted);
+  const systemBadge = product.system === "COLIBRI_220"
+    ? "COLIBRI"
+    : product.system === "CLARUS_48"
+      ? "CLARUS"
+      : product.system === "TRACK_220"
+        ? "ART"
+        : null;
+  const kindBadge = product.kind === "TRACK_PROFILE"
+    ? "Профиль"
+    : product.kind === "TRACK_FIXTURE"
+      ? "Трековый свет"
+      : product.kind === "SPOT_FIXTURE" || isPanelProduct(product)
+        ? "Точка"
+        : product.kind === "LAMP"
+          ? "Лампа"
+          : null;
+  const [showDetails, setShowDetails] = useState(false);
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white max-sm:grid max-sm:grid-cols-[5.75rem_1fr] max-sm:gap-2.5 max-sm:p-2.5">
+      {/* Image — clickable for zoom */}
+      <div
+        className="relative cursor-zoom-in bg-slate-100 max-sm:rounded-xl"
+        onClick={onImageClick}
+      >
+        <ProductImage
+          src={toText(product.coverImage)}
+          alt={toText(product.name)}
+          containerClassName="aspect-square h-32 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-3 max-sm:h-[5.25rem] max-sm:p-1.5"
+        />
+        {qty > 0 && (
+          <span className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-[11px] font-bold text-white">
+            {product.unit === "m" ? qty.toFixed(1) : qty}
+          </span>
+        )}
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm sm:hidden">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-slate-500">Потолок</span>
-          <span className="font-semibold text-slate-950">{resolvedShowCeilingInUi ? `${fmt(resolvedCeilingTotal)} ₽` : "—"}</span>
-        </div>
-        {resolvedLightingEffectiveTotal > 0 ? (
-          <>
-            <div className="mt-2 flex items-center justify-between gap-3">
-              <span className="text-slate-500">Свет</span>
-              <span className="font-semibold text-slate-950">{fmt(resolvedLightingEffectiveTotal)} ₽</span>
-            </div>
-            {lightingAppliedBenefit > 0 ? (
-              <div className="mt-2 flex items-center justify-between gap-3 text-emerald-700">
-                <span>Скидка на свет</span>
-                <span className="font-semibold">−{fmt(lightingAppliedBenefit)} ₽</span>
-              </div>
+      {/* Body */}
+      <div className="p-4 max-sm:p-0">
+        {(systemBadge || kindBadge || isSmartProduct(product)) ? (
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {isSmartProduct(product) ? (
+              <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700 max-sm:px-1.5 max-sm:text-[9px]">SMART</span>
             ) : null}
-          </>
+            {systemBadge ? (
+              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 max-sm:px-1.5 max-sm:text-[9px]">{systemBadge}</span>
+            ) : null}
+            {kindBadge ? (
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600 max-sm:px-1.5 max-sm:text-[9px]">{kindBadge}</span>
+            ) : null}
+          </div>
         ) : null}
-        <div className="mt-3 border-t border-slate-200 pt-3 flex items-center justify-between gap-3">
-          <span className="font-semibold text-slate-950">Итого</span>
-          <span className="text-lg font-bold text-slate-950">~{fmt(resolvedGrandTotal)} ₽</span>
+        <p className="break-words text-sm font-semibold text-slate-950 leading-snug max-sm:text-[12px] max-sm:leading-4">
+          {toText(product.name)}
+        </p>
+
+        <div className="mt-2 text-xs leading-5 max-sm:mt-1.5 max-sm:text-[11px] max-sm:leading-4">
+          <span className="line-through text-slate-400">{fmt(regular)} ₽</span>{" "}
+          <span className="font-semibold text-emerald-700">{fmt(discounted)} ₽</span>
+          {benefit > 0 ? <span className="text-slate-500"> · −{discountPercent}% (−{fmt(benefit)} ₽)</span> : null}
+          <span className="text-slate-400"> · {discountPercent >= 25 ? "с потолком" : "только свет"}</span>
+        </div>
+
+        {pickAttrs(product).length > 0 || toText(product.vendorCode) ? (
+          <button type="button" onClick={() => setShowDetails(!showDetails)}
+            className="mt-1 text-xs font-medium text-slate-500 hover:text-slate-800 underline decoration-slate-300 underline-offset-2">
+            {showDetails ? "Скрыть" : "Подробнее"}
+          </button>
+        ) : null}
+
+        {showDetails && (
+          <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 space-y-0.5">
+            {toText(product.vendorCode) && <p className="text-slate-500">Артикул: {toText(product.vendorCode)}</p>}
+            {pickAttrs(product).map((a) => <p key={a.label}>{a.label}: {a.value}</p>)}
+          </div>
+        )}
+
+        {/* Qty controls */}
+        <div className="mt-3 flex items-center gap-2 max-sm:mt-2 max-sm:gap-1.5">
+          <button type="button" onClick={onDec}
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 active:scale-95 max-sm:h-9 max-sm:w-9"
+            style={{ minHeight: 36, minWidth: 36 }}>−</button>
+          <span className="min-w-[2.5rem] text-center text-sm font-semibold text-slate-950 max-sm:min-w-[2rem]">
+            {product.unit === "m" ? Number(qty.toFixed(1)) : qty}
+          </span>
+          <button type="button" onClick={onInc}
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 active:scale-95 max-sm:h-9 max-sm:w-9"
+            style={{ minHeight: 36, minWidth: 36 }}>+</button>
+          <span className="ml-auto text-xs text-slate-500 max-sm:text-[11px]">{product.unit === "m" ? "м" : "шт."}</span>
         </div>
       </div>
+    </div>
+  );
+}
 
-      {hasRoomBreakdown ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-slate-950">Помещения в расчёте</p>
-              <p className="mt-1 text-sm text-slate-600">
-                Сейчас итог собран из {roomBreakdown.length} {roomBreakdown.length === 1 ? "помещения" : roomBreakdown.length < 5 ? "помещений" : "помещений"}.
-              </p>
-            </div>
+/* Thin progress bar — compact, never blocks */
+function ThinProgress({ current, required, unit }: { current: number; required: number; unit: string }) {
+  if (required <= 0) return null;
+  const pct = Math.min(100, Math.round((current / required) * 100));
+  const done = current >= required;
+  return (
+    <div className="flex items-center gap-2 text-[11px]">
+      <div className="h-1 flex-1 rounded-full bg-slate-200">
+        <div
+          className={["h-1 rounded-full transition-all", done ? "bg-emerald-600" : "bg-slate-950"].join(" ")}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className={done ? "whitespace-nowrap font-semibold text-emerald-700" : "whitespace-nowrap text-slate-600"}>
+        {unit === "м" ? fmtM(current) : fmt(current)}/{unit === "м" ? fmtM(required) : fmt(required)} {unit}
+      </span>
+    </div>
+  );
+}
+
+function ImageQuickPreview({
+  image,
+  onClose,
+}: {
+  image: { src: string; alt: string } | null;
+  onClose: () => void;
+}) {
+  if (!image) return null;
+
+  return (
+    <>
+      <button
+        type="button"
+        aria-label="Закрыть фото"
+        className="fixed inset-0 z-[159] cursor-default bg-transparent"
+        onClick={onClose}
+      />
+      <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] left-3 right-3 z-[160] sm:bottom-auto sm:left-auto sm:right-8 sm:top-24 sm:w-[380px]">
+        <div className="rounded-3xl border border-slate-200 bg-white p-3 shadow-2xl">
+          <div className="mb-2 flex items-start justify-between gap-3">
+            <p className="line-clamp-2 text-sm font-semibold leading-5 text-slate-950">{image.alt}</p>
             <button
               type="button"
-              onClick={handleGoToCeiling}
-              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+              onClick={onClose}
+              aria-label="Закрыть фото"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200"
             >
-              Изменить комнаты
+              ✕
             </button>
           </div>
-          <div className="mt-4 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm font-medium text-slate-600">Общий ориентир по объекту</span>
-              <span className="text-lg font-semibold text-slate-950">{fmt(resolvedGrandTotal)} ₽</span>
-            </div>
-          </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {roomBreakdown.map((room, index) => (
-              <div key={`${room.id}-${index}`} className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-semibold text-slate-950">{index + 1}. {room.label}</p>
-                  <span className="text-sm font-semibold text-slate-950">{fmt(room.totalRub)} ₽</span>
-                </div>
-                <p className="mt-2 text-xs text-slate-500">{room.area} м² · {room.ceilingTypeLabel}</p>
-                <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-600">
-                  {room.shadowLength ? <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">Теневой {room.shadowLength} м.п.</span> : null}
-                  {room.floatingLength ? <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">Парящий {room.floatingLength} м.п.</span> : null}
-                  {room.lightLinesLength ? <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">Линии {room.lightLinesLength} м.п.</span> : null}
-                  {room.corniceLength && room.corniceLabel ? <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">{room.corniceLabel} {room.corniceLength} м.п.</span> : null}
-                  {room.corniceLightingLength ? <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">Подсветка {room.corniceLightingLength} м.п.</span> : null}
-                  {room.trackLength && room.trackLabel ? <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">{room.trackLabel} {room.trackLength} м.п.</span> : null}
-                  {room.lightsCount ? <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">Точки {room.lightsCount} шт.</span> : null}
-                  {room.chandeliersCount ? <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">Люстры {room.chandeliersCount} шт.</span> : null}
-                </div>
-              </div>
-            ))}
-          </div>
+          <ProductImage
+            src={image.src}
+            alt={image.alt}
+            containerClassName="h-[min(52dvh,420px)] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-3"
+            className="h-full w-full object-contain"
+          />
+          <p className="mt-2 text-center text-[11px] text-slate-500">Кликните вне фото или на крестик, чтобы закрыть.</p>
         </div>
-      ) : null}
+      </div>
+    </>
+  );
+}
 
-      {/* Edit buttons row */}
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={handleGoToCeiling}
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-        >
-          Изменить потолок
-        </button>
-        <button
-          type="button"
-          onClick={handleEditLighting}
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-        >
-          Изменить свет
-        </button>
+/* ─── MAIN COMPONENT ─── */
+
+export function WizardStep1Lighting() {
+  const { snapshot } = usePriceCalculatorBridge();
+  const {
+    lightingDraft, setLightingDraft, options,
+    step1CatalogView, setStep1CatalogView,
+    setStep1FooterAction,
+    goToStep, showCeilingInUi, currentStep,
+    lightingDiscountMode, lightingEffectiveTotal, lightingRegularTotal,
+  } = useCalculatorModal();
+  const hasCeilingContext = Boolean(showCeilingInUi || toNumber(snapshot?.total) > 0 || (snapshot?.roomBreakdown?.length ?? 0) > 0);
+
+  const [activeTab, setActiveTab] = useState<Tab>("recommendations");
+  const [catalogView, setCatalogView] = useState<CatalogView>("browse");
+
+  /* ─── Apply initial UI options once ─── */
+  const appliedInitialUiRef = useRef<string | null>(null);
+  useEffect(() => {
+    const key = JSON.stringify({
+      em: options?.entryMode,
+      is: options?.initialStep,
+      lt: options?.initialLightingTab,
+      lv: options?.initialLightingView,
+      s: options?.source,
+    });
+    if (appliedInitialUiRef.current === key) return;
+    appliedInitialUiRef.current = key;
+    const shouldCat = options?.entryMode === "lighting-first";
+    const t: Tab = options?.initialLightingTab === "catalog" ? "catalog"
+      : options?.initialLightingTab === "recommendations" ? "recommendations"
+      : shouldCat ? "catalog" : "recommendations";
+    const v: CatalogView = options?.initialLightingView === "selected" ? "selected" : "browse";
+    setActiveTab(t);
+    setCatalogView(v);
+    if (t === "catalog") setStep1CatalogView(v);
+    else setStep1CatalogView(null);
+  }, [options, setStep1CatalogView]);
+
+  /* ─── Catalog filters ─── */
+  const [section, setSection] = useState<CatalogSectionId>("track-systems");
+  const [trackSystem, setTrackSystem] = useState<TrackSystemId>("COLIBRI_220");
+  const [trackGroup, setTrackGroup] = useState<TrackGroupId>("TRACK_FIXTURE");
+  const [pointSubtype, setPointSubtype] = useState<PointSubtypeId>("GX53");
+  const [lampSocket, setLampSocket] = useState<LampSocket>("GX53");
+  const [query, setQuery] = useState("");
+
+  /* ─── Cart state ─── */
+  const [cartItems, setCartItems] = useState<CartItems>({});
+  const [removedHint, setRemovedHint] = useState(false);
+
+  /* ─── Products index ─── */
+  const products = useMemo(() => {
+    const raw = (snapshotData as { products?: unknown[] })?.products ?? [];
+    return normalizeFeedCatalogProducts(raw)
+      .map((product) => applyVendorOverrides(product))
+      .filter((product) => !REMOVED_COLIBRI_VENDOR_CODES.has(toText(product.vendorCode)));
+  }, []);
+
+  const productsById = useMemo(() => buildProductsIndex(products), [products]);
+
+  const productIdByVendorCode = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of products) { const vc = toText(p.vendorCode); const id = toText(p.productId); if (vc && id) m.set(vc, id); }
+    return m;
+  }, [products]);
+
+  /* ─── KEY FIX: Rehydrate + sync in single effect ─── */
+  const syncReadyRef = useRef(false);
+  const skipNextEmptySyncRef = useRef(false);
+
+  // On first mount: try to restore cart from lightingDraft BEFORE any draft→clear can fire
+  useEffect(() => {
+    if (syncReadyRef.current) return;
+
+    // Try rehydration from existing draft
+    const draft = lightingDraft;
+    if (draft && draft.mode === "catalog" && draft.items?.length) {
+      const next: CartItems = {};
+      let removedAny = false;
+      for (const item of draft.items) {
+        const sku = toText(item.sku);
+        const byP = productsById.get(sku);
+        const byV = productIdByVendorCode.get(sku);
+        const id = byP ? sku : toText(byV ?? "");
+        if (!id) { removedAny = true; continue; }
+        const p = productsById.get(id);
+        if (!p || REMOVED_COLIBRI_VENDOR_CODES.has(toText(p.vendorCode))) { removedAny = true; continue; }
+        next[id] = toNumber(item.qty);
+      }
+      if (Object.keys(next).length > 0) {
+        skipNextEmptySyncRef.current = true;
+        setCartItems(next);
+        if (removedAny) setRemovedHint(true);
+      }
+    }
+
+    syncReadyRef.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productsById, productIdByVendorCode]);
+
+  // Also handle options.initialLighting (lighting-first entry)
+  const prevInitialRef = useRef<LightingSnapshot | null | undefined>(undefined);
+  useEffect(() => {
+    const inc = options?.initialLighting;
+    if (inc === undefined || inc === prevInitialRef.current) return;
+    prevInitialRef.current = inc;
+    if (!inc || inc.mode !== "catalog" || !inc.items?.length) return;
+    const next: CartItems = {};
+    let removedAny = false;
+    for (const item of inc.items) {
+      const sku = toText(item.sku);
+      const byP = productsById.get(sku);
+      const byV = productIdByVendorCode.get(sku);
+      const id = byP ? sku : toText(byV ?? "");
+      if (!id) { removedAny = true; continue; }
+      const p = productsById.get(id);
+      if (!p || REMOVED_COLIBRI_VENDOR_CODES.has(toText(p.vendorCode))) { removedAny = true; continue; }
+      next[id] = toNumber(item.qty);
+    }
+    if (Object.keys(next).length > 0) skipNextEmptySyncRef.current = true;
+    setCartItems(next);
+    setRemovedHint(removedAny);
+    setActiveTab("catalog");
+    setCatalogView(options?.initialLightingView === "selected" ? "selected" : "browse");
+  }, [options?.initialLighting, options?.initialLightingView, productsById, productIdByVendorCode]);
+
+  useEffect(() => {
+    if (!step1CatalogView) return;
+    setActiveTab("catalog");
+    setCatalogView(step1CatalogView);
+  }, [step1CatalogView]);
+
+  const prevCurrentStepRef = useRef(currentStep);
+  useEffect(() => {
+    const prev = prevCurrentStepRef.current;
+    prevCurrentStepRef.current = currentStep;
+
+    if (prev === 0 && currentStep === 1) {
+      setActiveTab("recommendations");
+      setCatalogView("browse");
+      setStep1CatalogView(null);
+    }
+  }, [currentStep, setStep1CatalogView]);
+
+  /* ─── Derived cart data ─── */
+  const cartEntries = useMemo(() =>
+    Object.entries(cartItems)
+      .filter(([, q]) => q > 0)
+      .map(([id, qty]) => ({ productId: id, product: productsById.get(id), qty }))
+      .filter((e): e is { productId: string; product: FeedCatalogProduct; qty: number } => Boolean(e.product))
+      .filter((e) => !REMOVED_COLIBRI_VENDOR_CODES.has(toText(e.product.vendorCode))),
+    [cartItems, productsById]);
+
+  const selectedTrackMeters = useMemo(() => {
+    let m = 0; for (const e of cartEntries) { if (e.product.kind === "TRACK_PROFILE") m += calcTrackProfileMeters(e.product, e.qty); } return m;
+  }, [cartEntries]);
+
+  const selectedPointQty = useMemo(() => {
+    let q = 0; for (const e of cartEntries) { if (e.product.kind === "SPOT_FIXTURE" || isPanelProduct(e.product)) q += e.qty; } return q;
+  }, [cartEntries]);
+
+  const requiredTrackMeters = showCeilingInUi ? toNumber(snapshot?.derivedInputs?.trackLengthMeters) : 0;
+  const requiredPointQty = showCeilingInUi ? toNumber(snapshot?.derivedInputs?.pointSpotsQty) : 0;
+  const trackMountType = (snapshot?.derivedInputs?.trackMountType ?? "none") as "built-in" | "surface" | "none";
+
+  type WStep = "system" | "trackProfile" | "trackFixtures" | "points" | "lamps" | "done";
+  const [wStep, setWStep] = useState<WStep>(() =>
+    requiredTrackMeters > 0 ? "system" : requiredPointQty > 0 ? "points" : "system"
+  );
+  const [wSystem, setWSystem] = useState<TrackSystemId | null>(null);
+  const [wPointTab, setWPointTab] = useState<PointSubtypeId>("GX53");
+
+  /* ─── Recommendations ─── */
+  const recommendedTrackProfiles = useMemo(() => {
+    if (!showCeilingInUi || requiredTrackMeters <= 0) return [];
+    const targetSystems: TrackSystemId[] = trackMountType === "built-in" ? ["COLIBRI_220", "CLARUS_48"]
+      : trackMountType === "surface" ? ["TRACK_220"] : [];
+    return targetSystems.map((system) => {
+      const base = TRACK_PROFILE_WHITELIST[system] ?? [];
+      const allowed = system === "TRACK_220" ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST]) : new Set(base);
+      const profiles = products.filter((p) => p.kind === "TRACK_PROFILE" && p.system === system && p.priceRub > 0 && allowed.has(toText(p.vendorCode)));
+      if (!profiles.length) return null;
+      profiles.sort((a, b) => a.priceRub - b.priceRub);
+      const best = profiles[0];
+      const pieceM = inferPieceLengthMeters(best);
+      if (!pieceM || pieceM <= 0) return null;
+      const qty = Math.ceil(requiredTrackMeters / pieceM);
+      return { product: best, system, qty, totalMeters: qty * pieceM };
+    }).filter(Boolean) as Array<{ product: FeedCatalogProduct; system: TrackSystemId; qty: number; totalMeters: number }>;
+  }, [showCeilingInUi, requiredTrackMeters, trackMountType, products]);
+
+  const hasRecommendations = recommendedTrackProfiles.length > 0 || requiredPointQty > 0;
+
+  /* ─── Lamps / mounts deps ─── */
+  const lampOptionsBySocket = useMemo(() => {
+    const lamps = products.filter(isLamp);
+    const s = (a: FeedCatalogProduct, b: FeedCatalogProduct) => toNumber(a.priceRub) - toNumber(b.priceRub);
+    return { GX53: lamps.filter((l) => detectSocket(l) === "GX53").sort(s), MR16: lamps.filter((l) => detectSocket(l) === "MR16").sort(s) };
+  }, [products]);
+
+  const lampRequiredBySocket = useMemo(() => {
+    const r: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
+    for (const e of cartEntries) { if (e.product.kind === "LAMP") continue; const s = getRequiredLampSocket(e.product); if (s) r[s] += e.qty; }
+    return r;
+  }, [cartEntries]);
+
+  const lampCurrentBySocket = useMemo(() => {
+    const c: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
+    for (const s of ["GX53", "MR16"] as LampSocket[]) {
+      const ids = lampOptionsBySocket[s].map((l) => toText(l.productId));
+      c[s] = ids.reduce((sum, id) => sum + toNumber(cartItems[id]), 0);
+    }
+    return c;
+  }, [cartItems, lampOptionsBySocket]);
+
+  const mountRequiredByVendor = useMemo(() => {
+    const r: Record<string, number> = {};
+    for (const e of cartEntries) { const mv = POINT_TO_MOUNT_VENDOR_CODE[toText(e.product.vendorCode)]; if (mv) r[mv] = (r[mv] ?? 0) + e.qty; }
+    return r;
+  }, [cartEntries]);
+
+  const missingLamps = useMemo(() => {
+    const out: Array<{ socket: LampSocket; requiredQty: number; currentQty: number }> = [];
+    for (const s of ["GX53", "MR16"] as LampSocket[]) { const r = toNumber(lampRequiredBySocket[s]); if (r <= 0) continue; const c = toNumber(lampCurrentBySocket[s]); if (c < r) out.push({ socket: s, requiredQty: r, currentQty: c }); }
+    return out;
+  }, [lampCurrentBySocket, lampRequiredBySocket]);
+
+  const lampRequiredTotal = useMemo(() => {
+    return (["GX53", "MR16"] as LampSocket[]).reduce((sum, s) => sum + toNumber(lampRequiredBySocket[s]), 0);
+  }, [lampRequiredBySocket]);
+
+  const lampCurrentTotal = useMemo(() => {
+    return (["GX53", "MR16"] as LampSocket[]).reduce((sum, s) => {
+      if (toNumber(lampRequiredBySocket[s]) <= 0) return sum;
+      return sum + toNumber(lampCurrentBySocket[s]);
+    }, 0);
+  }, [lampCurrentBySocket, lampRequiredBySocket]);
+
+  const lampSocketsToShow = useMemo(() => {
+    return (["GX53", "MR16"] as LampSocket[]).filter((s) => {
+      return toNumber(lampRequiredBySocket[s]) > 0 || toNumber(lampCurrentBySocket[s]) > 0;
+    });
+  }, [lampCurrentBySocket, lampRequiredBySocket]);
+
+  const missingMounts = useMemo(() => {
+    const out: Array<{ fixtureVendorCode: string; mountVendorCode: string; fixtureName: string; mountName: string; requiredQty: number; currentQty: number }> = [];
+    for (const [fv, mv] of Object.entries(POINT_TO_MOUNT_VENDOR_CODE)) {
+      const fid = productIdByVendorCode.get(fv); const mid = productIdByVendorCode.get(mv);
+      if (!fid || !mid) continue; const fp = productsById.get(fid); const mp = productsById.get(mid);
+      if (!fp || !mp) continue; const fq = toNumber(cartItems[fid]); if (fq <= 0) continue;
+      const mq = toNumber(cartItems[mid]); if (mq < fq) out.push({ fixtureVendorCode: fv, mountVendorCode: mv, fixtureName: toText(fp.name), mountName: toText(mp.name), requiredQty: fq, currentQty: mq });
+    }
+    return out;
+  }, [cartItems, productIdByVendorCode, productsById]);
+
+  const hasClarusInCart = useMemo(() => cartEntries.some((e) => e.product.system === "CLARUS_48"), [cartEntries]);
+  const clarusPsuQty = useMemo(
+    () =>
+      cartEntries
+        .filter((entry) =>
+          CLARUS_PSU_VENDOR_CODES.some((vendorCode) => vendorCode === toText(entry.product.vendorCode))
+        )
+        .reduce((sum, entry) => sum + entry.qty, 0),
+    [cartEntries]
+  );
+
+  /* ─── Auto-sync mounts ─── */
+  useEffect(() => {
+    setCartItems((prev) => {
+      const next = { ...prev }; let ch = false;
+      for (const [mv, rq] of Object.entries(mountRequiredByVendor)) {
+        const mid = productIdByVendorCode.get(toText(mv)); if (!mid) continue;
+        const cq = toNumber(next[mid]);
+        if (rq > 0 && cq !== rq) { next[mid] = rq; ch = true; }
+        if (rq <= 0 && cq > 0) { delete next[mid]; ch = true; }
+      }
+      return ch ? next : prev;
+    });
+  }, [mountRequiredByVendor, productIdByVendorCode]);
+
+  /* ─── Clear orphaned track products when track is disabled ─── */
+  useEffect(() => {
+    if (requiredTrackMeters <= 0) {
+      const clarusPsuVendorCodes = new Set<string>(CLARUS_PSU_VENDOR_CODES);
+      setCartItems((prev) => {
+        const next = { ...prev };
+        let changed = false;
+        for (const id of Object.keys(prev)) {
+          const product = productsById.get(id);
+          if (!product) continue;
+
+          const isTrackProduct =
+            product.kind === "TRACK_PROFILE" ||
+            product.kind === "TRACK_FIXTURE" ||
+            product.kind === "TRACK_ACCESSORY";
+          const isClarusPsu = clarusPsuVendorCodes.has(toText(product.vendorCode));
+
+          if (isTrackProduct || isClarusPsu) {
+            delete next[id];
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }
+  }, [requiredTrackMeters, productsById]);
+
+  /* ─── Auto-sync lamps ─── */
+  useEffect(() => {
+    setCartItems((prev) => {
+      const next = { ...prev };
+      let changed = false;
+
+      for (const s of ["GX53", "MR16"] as LampSocket[]) {
+        const rq = toNumber(lampRequiredBySocket[s]);
+        const cq = toNumber(lampCurrentBySocket[s]);
+
+        if (rq > 0 && cq !== rq) {
+          const ids = lampOptionsBySocket[s].map((l) => toText(l.productId));
+          const activeLampIdsInCart = ids.filter((id) => toNumber(next[id]) > 0);
+
+          if (activeLampIdsInCart.length > 0) {
+            const firstId = activeLampIdsInCart[0];
+            const otherLampsTotal = activeLampIdsInCart.slice(1).reduce((sum, id) => sum + toNumber(next[id]), 0);
+            const targetQty = Math.max(1, rq - otherLampsTotal);
+            if (next[firstId] !== targetQty) {
+              next[firstId] = targetQty;
+              changed = true;
+            }
+          } else {
+            const cheapest = lampOptionsBySocket[s][0];
+            if (cheapest) {
+              next[toText(cheapest.productId)] = rq;
+              changed = true;
+            }
+          }
+        } else if (rq <= 0 && cq > 0) {
+          const ids = lampOptionsBySocket[s].map((l) => toText(l.productId));
+          for (const id of ids) {
+            if (next[id] > 0) {
+              delete next[id];
+              changed = true;
+            }
+          }
+        }
+      }
+
+      return changed ? next : prev;
+    });
+  }, [lampRequiredBySocket, lampCurrentBySocket, lampOptionsBySocket]);
+
+  /* ─── Cart → lightingDraft sync (ONLY after rehydration is ready) ─── */
+  useEffect(() => {
+    if (!syncReadyRef.current) return; // Don't clear draft before rehydration!
+    if (cartEntries.length === 0) {
+      if (skipNextEmptySyncRef.current) {
+        skipNextEmptySyncRef.current = false;
+        return;
+      }
+      setLightingDraft({ mode: "none", userCustomizedLighting: false });
+      return;
+    }
+    skipNextEmptySyncRef.current = false;
+    const items: LightingItem[] = cartEntries.map((e) => ({ sku: toText(e.productId), name: toText(e.product.name), qty: e.qty, priceRub: toNumber(e.product.priceRub) }));
+    const totalRub = items.reduce((s, i) => s + i.qty * i.priceRub, 0);
+    setLightingDraft({
+      mode: "catalog",
+      items,
+      totalRub,
+      discountedTotalRub: applyLightingOnlyDiscount(totalRub),
+      standaloneDiscountedTotalRub: applyLightingOnlyDiscount(totalRub),
+      withCeilingDiscountedTotalRub: applyLightingWithCeilingDiscount(totalRub),
+      userCustomizedLighting: true,
+      derivedInputsSnapshot: snapshot?.derivedInputs,
+    });
+  }, [cartEntries, setLightingDraft, snapshot?.derivedInputs]);
+
+  const clearIncompatibleSystem = useCallback((next: CartItems, targetSystem: string) => {
+    if (!isTrackSystemId(targetSystem)) return;
+    const clarusPsuVendorCodes = new Set<string>(CLARUS_PSU_VENDOR_CODES);
+
+    for (const key of Object.keys(next)) {
+      const p = productsById.get(key);
+      if (!p) continue;
+
+      const isTrackProduct =
+        p.kind === "TRACK_PROFILE" || p.kind === "TRACK_FIXTURE" || p.kind === "TRACK_ACCESSORY";
+      const isClarusPsu = clarusPsuVendorCodes.has(toText(p.vendorCode));
+
+      if ((isTrackProduct && p.system !== targetSystem) || (isClarusPsu && targetSystem !== "CLARUS_48")) {
+        delete next[key];
+      }
+    }
+  }, [productsById]);
+
+  /* ─── setProductQty ─── */
+  const setProductQty = useCallback((product: FeedCatalogProduct, nextQtyRaw: number) => {
+    const id = toText(product.productId);
+    const nextQty = normalizeQty(nextQtyRaw, product.unit);
+    const prevQty = toNumber(cartItems[id]);
+    if (prevQty !== nextQty) {
+      trackLightingCartChanged({
+        action: prevQty <= 0 && nextQty > 0 ? "add" : prevQty > 0 && nextQty <= 0 ? "remove" : "change",
+        sku: id, productKind: String(product.kind), qty: nextQty, source: String(options?.source ?? "unknown"),
+      });
+    }
+    setCartItems((prev) => {
+      const n = { ...prev };
+      if (nextQty <= 0) {
+        delete n[id];
+      } else {
+        const system = product.system;
+        if (system && isTrackSystemId(system)) {
+          clearIncompatibleSystem(n, system);
+        }
+        const clarusPsuVendorCodes = new Set<string>(CLARUS_PSU_VENDOR_CODES);
+        if (clarusPsuVendorCodes.has(toText(product.vendorCode))) {
+          clearIncompatibleSystem(n, "CLARUS_48");
+        }
+        n[id] = nextQty;
+      }
+      return n;
+    });
+  }, [cartItems, options?.source, clearIncompatibleSystem]);
+
+  const clearTrackProductsForSystem = useCallback((system: TrackSystemId | null) => {
+    const clarusPsuVendorCodes = new Set<string>(CLARUS_PSU_VENDOR_CODES);
+
+    setCartItems((prev) => {
+      const next = { ...prev };
+      let changed = false;
+
+      for (const id of Object.keys(prev)) {
+        const product = productsById.get(id);
+        if (!product) continue;
+
+        const kind = product.kind;
+        const isTrackProduct =
+          kind === "TRACK_PROFILE" || kind === "TRACK_FIXTURE" || kind === "TRACK_ACCESSORY";
+        const isClarusPsu = clarusPsuVendorCodes.has(toText(product.vendorCode));
+
+        const shouldRemove =
+          system === null
+            ? isTrackProduct || isClarusPsu
+            : (isTrackProduct && product.system !== system) || (isClarusPsu && system !== "CLARUS_48");
+
+        if (shouldRemove) {
+          delete next[id];
+          changed = true;
+        }
+      }
+
+      return changed ? next : prev;
+    });
+  }, [productsById]);
+
+  const setTrackProfileQty = useCallback((product: FeedCatalogProduct, nextQtyRaw: number) => {
+    const system = isTrackSystemId(product.system) ? product.system : null;
+    if (!system) return;
+
+    const id = toText(product.productId);
+    const nextQty = normalizeQty(nextQtyRaw, product.unit);
+    const prevQty = toNumber(cartItems[id]);
+
+    setWSystem(system);
+
+    if (prevQty !== nextQty) {
+      trackLightingCartChanged({
+        action: prevQty <= 0 && nextQty > 0 ? "add" : prevQty > 0 && nextQty <= 0 ? "remove" : "change",
+        sku: id,
+        productKind: String(product.kind),
+        qty: nextQty,
+        source: String(options?.source ?? "unknown"),
+      });
+    }
+
+    const clarusPsuVendorCodes = new Set<string>(CLARUS_PSU_VENDOR_CODES);
+
+    setCartItems((prev) => {
+      const next = { ...prev };
+
+      for (const key of Object.keys(prev)) {
+        const p = productsById.get(key);
+        if (!p) continue;
+
+        const isTrackProduct =
+          p.kind === "TRACK_PROFILE" || p.kind === "TRACK_FIXTURE" || p.kind === "TRACK_ACCESSORY";
+        const isClarusPsu = clarusPsuVendorCodes.has(toText(p.vendorCode));
+
+        if ((isTrackProduct && p.system !== system) || (isClarusPsu && system !== "CLARUS_48")) {
+          delete next[key];
+        }
+      }
+
+      if (nextQty <= 0) delete next[id];
+      else next[id] = nextQty;
+
+      return next;
+    });
+  }, [cartItems, options?.source, productsById]);
+
+  const addMountOneToOne = useCallback((fv: string) => {
+    const mv = POINT_TO_MOUNT_VENDOR_CODE[toText(fv)]; if (!mv) return;
+    const mid = productIdByVendorCode.get(mv); if (!mid) return;
+    const rq = toNumber(mountRequiredByVendor[mv]); if (rq <= 0) return;
+    setCartItems((prev) => ({ ...prev, [mid]: rq }));
+  }, [mountRequiredByVendor, productIdByVendorCode]);
+
+  const addCheapestLamps = useCallback((socket: LampSocket) => {
+    const rq = toNumber(lampRequiredBySocket[socket]); if (rq <= 0) return;
+    const c = toNumber(lampCurrentBySocket[socket]); const miss = Math.max(0, rq - c); if (miss <= 0) return;
+    const cheapest = lampOptionsBySocket[socket][0]; if (!cheapest) return;
+    const id = toText(cheapest.productId); if (!id) return;
+    setCartItems((prev) => ({ ...prev, [id]: toNumber(prev[id]) + miss }));
+  }, [lampRequiredBySocket, lampCurrentBySocket, lampOptionsBySocket]);
+
+  const setClarusPsu = useCallback((pid: string) => {
+    setCartItems((prev) => {
+      const n = { ...prev };
+      for (const v of CLARUS_PSU_VENDOR_CODES) { const id = productIdByVendorCode.get(v); if (id && id !== pid) delete n[id]; }
+      n[pid] = Math.max(1, toNumber(n[pid])); return n;
+    });
+  }, [productIdByVendorCode]);
+
+  /* ─── Navigation helpers ─── */
+  const setCatalogViewAndSync = useCallback((view: CatalogView) => {
+    setCatalogView(view);
+    setStep1CatalogView(view);
+  }, [setStep1CatalogView]);
+
+  /* ─── Selected view ─── */
+  const selectedViewItems = useMemo(() =>
+    cartEntries.map((e) => ({ product: e.product, item: { sku: toText(e.productId), name: toText(e.product.name), qty: e.qty, priceRub: toNumber(e.product.priceRub) } })),
+    [cartEntries]);
+
+  useEffect(() => {
+    if (catalogView === "selected" && selectedViewItems.length === 0) {
+      setCatalogViewAndSync("browse");
+    }
+  }, [catalogView, selectedViewItems.length, setCatalogViewAndSync]);
+
+  const selectedTotals = useMemo(() => {
+    const regular = selectedViewItems.reduce((sum, x) => sum + x.item.qty * x.item.priceRub, 0);
+    const standalone = applyLightingOnlyDiscount(regular);
+    const withCeiling = applyLightingWithCeilingDiscount(regular);
+    const effective = hasCeilingContext ? withCeiling : standalone;
+    const effectivePercent = hasCeilingContext
+      ? LIGHTING_WITH_CEILING_DISCOUNT_PERCENT
+      : LIGHTING_ONLY_DISCOUNT_PERCENT;
+    return {
+      regular,
+      standalone,
+      withCeiling,
+      effective,
+      effectivePercent,
+      effectiveBenefit: Math.max(0, regular - effective),
+      withCeilingBenefit: Math.max(0, regular - withCeiling),
+    };
+  }, [hasCeilingContext, selectedViewItems]);
+
+  const cardDiscountPercent = hasCeilingContext
+    ? LIGHTING_WITH_CEILING_DISCOUNT_PERCENT
+    : LIGHTING_ONLY_DISCOUNT_PERCENT;
+
+  /* ─── Image zoom state ─── */
+  const [zoomImage, setZoomImage] = useState<{ src: string; alt: string } | null>(null);
+
+  /* ═══════════════════════════════════════════════════
+     WIZARD (Подбор tab) — step-by-step guided flow
+     ═══════════════════════════════════════════════════ */
+  const wizardInitializedRef = useRef(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  const chooseWizardSystem = useCallback((system: TrackSystemId) => {
+    setWSystem(system);
+    clearTrackProductsForSystem(system);
+    setWStep("trackProfile");
+  }, [clearTrackProductsForSystem]);
+
+  const chooseNoTrackFlow = useCallback(() => {
+    setWSystem(null);
+    clearTrackProductsForSystem(null);
+    setWStep(requiredPointQty > 0 ? "points" : "done");
+  }, [clearTrackProductsForSystem, requiredPointQty]);
+
+  // Инициализация сценария: учитываем уже выбранную корзину и данные с шага потолка.
+  useEffect(() => {
+    if (wizardInitializedRef.current) return;
+
+    const draftHasItems = lightingDraft?.mode === "catalog" && (lightingDraft.items?.length ?? 0) > 0;
+    if (draftHasItems && cartEntries.length === 0) return;
+
+    wizardInitializedRef.current = true;
+
+    const trackEntry = cartEntries.find((e) =>
+      e.product.kind === "TRACK_PROFILE" || e.product.kind === "TRACK_FIXTURE"
+    );
+    if (trackEntry?.product.system === "COLIBRI_220" || trackEntry?.product.system === "CLARUS_48" || trackEntry?.product.system === "TRACK_220") {
+      setWSystem(trackEntry.product.system);
+    }
+
+    const hasTrackProfile = cartEntries.some((e) => e.product.kind === "TRACK_PROFILE");
+    const hasTrackFixture = cartEntries.some((e) => e.product.kind === "TRACK_FIXTURE");
+    const hasPoints = cartEntries.some((e) => e.product.kind === "SPOT_FIXTURE" || isPanelProduct(e.product));
+
+    if (cartEntries.length > 0) {
+      if (missingLamps.length > 0) setWStep("lamps");
+      else if (requiredPointQty > 0 && !hasPoints) setWStep("points");
+      else if (hasTrackProfile && !hasTrackFixture) setWStep("trackFixtures");
+      else setWStep("done");
+      return;
+    }
+
+    if (requiredTrackMeters > 0) setWStep("system");
+    else if (requiredPointQty > 0) setWStep("points");
+    else setWStep("system");
+  }, [cartEntries, lightingDraft, missingLamps.length, requiredPointQty, requiredTrackMeters]);
+
+  // При смене внутреннего шага/таба пользователь всегда видит начало следующего действия.
+  const didMountScrollRef = useRef(false);
+  useEffect(() => {
+    if (!didMountScrollRef.current) {
+      didMountScrollRef.current = true;
+      return;
+    }
+
+    const parent = getScrollParent(rootRef.current);
+    parent?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [activeTab, catalogView, wStep]);
+
+  useEffect(() => {
+    if (!zoomImage) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setZoomImage(null);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [zoomImage]);
+
+  const systemLabel = (id: TrackSystemId) =>
+    id === "COLIBRI_220" ? "COLIBRI 220V" : id === "CLARUS_48" ? "CLARUS 48V" : "ART 220V";
+
+  const wizardSystemOptions = useMemo<TrackSystemId[]>(() => {
+    if (requiredTrackMeters <= 0) return [];
+    if (trackMountType === "built-in") return ["COLIBRI_220", "CLARUS_48"];
+    if (trackMountType === "surface") return ["TRACK_220"];
+    return ["COLIBRI_220", "CLARUS_48", "TRACK_220"];
+  }, [requiredTrackMeters, trackMountType]);
+
+  const selectedTrackSystem = useMemo<TrackSystemId | null>(() => {
+    if (wSystem) return wSystem;
+
+    const trackEntry = cartEntries.find((e) =>
+      e.product.kind === "TRACK_PROFILE" || e.product.kind === "TRACK_FIXTURE" || e.product.kind === "TRACK_ACCESSORY"
+    );
+
+    return isTrackSystemId(trackEntry?.product.system) ? trackEntry.product.system : null;
+  }, [cartEntries, wSystem]);
+
+
+
+  // Products for each wizard step
+  const wTrackProfiles = useMemo(() => {
+    const systems: TrackSystemId[] = selectedTrackSystem
+      ? [selectedTrackSystem]
+      : recommendedTrackProfiles.length > 0
+        ? recommendedTrackProfiles.map((r) => r.system)
+        : trackMountType === "built-in"
+          ? ["COLIBRI_220", "CLARUS_48"]
+          : trackMountType === "surface"
+            ? ["TRACK_220"]
+            : ["COLIBRI_220", "CLARUS_48", "TRACK_220"];
+
+    const uniqueSystems = Array.from(new Set(systems));
+    const result: FeedCatalogProduct[] = [];
+
+    for (const sys of uniqueSystems) {
+      const base = TRACK_PROFILE_WHITELIST[sys] ?? [];
+      const allowed = sys === "TRACK_220" ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST]) : new Set(base);
+      result.push(
+        ...products.filter((p) =>
+          p.kind === "TRACK_PROFILE" &&
+          p.system === sys &&
+          p.priceRub > 0 &&
+          allowed.has(toText(p.vendorCode))
+        )
+      );
+    }
+
+    return result.sort((a, b) => {
+      const systemDiff = systemLabel(a.system as TrackSystemId).localeCompare(systemLabel(b.system as TrackSystemId), "ru");
+      return systemDiff || a.priceRub - b.priceRub;
+    });
+  }, [products, recommendedTrackProfiles, selectedTrackSystem, trackMountType]);
+
+  const wTrackFixtures = useMemo(() => {
+    if (!selectedTrackSystem) return [];
+    return products.filter((p) => p.kind === "TRACK_FIXTURE" && p.system === selectedTrackSystem && p.priceRub > 0)
+      .sort((a, b) => a.priceRub - b.priceRub);
+  }, [selectedTrackSystem, products]);
+
+  const wPointProducts = useMemo(() => {
+    return products.filter((p) => matchesPointSubtype(p, wPointTab) && p.priceRub > 0)
+      .sort((a, b) => a.priceRub - b.priceRub);
+  }, [wPointTab, products]);
+
+  const wLampProducts = useMemo(() => {
+    return lampOptionsBySocket; // use as-is, already sorted
+  }, [lampOptionsBySocket]);
+
+  // Point fixture progress by subtype
+  const pointProgressBySubtype = useMemo(() => {
+    const result: Record<PointSubtypeId, { current: number; required: number }> = {
+      GX53: { current: 0, required: 0 }, MR16: { current: 0, required: 0 }, PANELS: { current: 0, required: 0 },
+    };
+    for (const e of cartEntries) {
+      if (e.product.kind === "SPOT_FIXTURE") {
+        const s = detectSocket(e.product);
+        if (s === "GX53") result.GX53.current += e.qty;
+        else if (s === "MR16") result.MR16.current += e.qty;
+      }
+      if (isPanelProduct(e.product)) result.PANELS.current += e.qty;
+    }
+    // Общий план по точкам показываем в общей липкой полосе; в табах — только факт выбора.
+    if (requiredPointQty > 0) result.GX53.required = requiredPointQty;
+    return result;
+  }, [cartEntries, requiredPointQty]);
+
+  const goAfterTrackProfile = useCallback(() => {
+    if (requiredTrackMeters > 0 && (!selectedTrackSystem || selectedTrackMeters < requiredTrackMeters)) return;
+
+    if (wTrackFixtures.length > 0) {
+      setWStep("trackFixtures");
+      return;
+    }
+    if (requiredPointQty > 0 && selectedPointQty < requiredPointQty) {
+      setWStep("points");
+      return;
+    }
+    if (lampRequiredTotal > 0 && lampCurrentTotal < lampRequiredTotal) {
+      setWStep("lamps");
+      return;
+    }
+    setWStep("done");
+  }, [lampCurrentTotal, lampRequiredTotal, requiredPointQty, requiredTrackMeters, selectedPointQty, selectedTrackMeters, selectedTrackSystem, wTrackFixtures.length]);
+
+  const goAfterTrackFixtures = useCallback(() => {
+    if (requiredPointQty > 0 && selectedPointQty < requiredPointQty) {
+      setWStep("points");
+      return;
+    }
+    if (lampRequiredTotal > 0 && lampCurrentTotal < lampRequiredTotal) {
+      setWStep("lamps");
+      return;
+    }
+    setWStep("done");
+  }, [lampCurrentTotal, lampRequiredTotal, requiredPointQty, selectedPointQty]);
+
+  const goAfterPoints = useCallback(() => {
+    if (lampRequiredTotal > 0 && lampCurrentTotal < lampRequiredTotal) {
+      setWStep("lamps");
+      return;
+    }
+    setWStep("done");
+  }, [lampCurrentTotal, lampRequiredTotal]);
+
+  const goBackFromLamps = useCallback(() => {
+    if (requiredPointQty > 0) {
+      setWStep("points");
+      return;
+    }
+    if (selectedTrackSystem) {
+      setWStep("trackFixtures");
+      return;
+    }
+    if (requiredTrackMeters > 0) {
+      setWStep("trackProfile");
+      return;
+    }
+    setWStep("system");
+  }, [requiredPointQty, requiredTrackMeters, selectedTrackSystem]);
+
+
+  const trackComplete = requiredTrackMeters <= 0 || selectedTrackMeters >= requiredTrackMeters;
+  const pointsComplete = requiredPointQty <= 0 || selectedPointQty >= requiredPointQty;
+  const lampsComplete = lampRequiredTotal <= 0 || lampCurrentTotal >= lampRequiredTotal;
+  const requiredSelectionComplete = trackComplete && pointsComplete && lampsComplete;
+
+  const missingTrackMeters = Math.max(0, requiredTrackMeters - selectedTrackMeters);
+  const missingPointQty = Math.max(0, requiredPointQty - selectedPointQty);
+  const missingLampQty = Math.max(0, lampRequiredTotal - lampCurrentTotal);
+
+  const missingAction = useMemo(() => {
+    if (missingTrackMeters > 0) {
+      return { label: selectedTrackSystem ? "Добрать профиль →" : "Выбрать систему →", step: selectedTrackSystem ? "trackProfile" : "system" } as const;
+    }
+    if (missingPointQty > 0) return { label: "Выбрать точки →", step: "points" } as const;
+    if (missingLampQty > 0) return { label: "Добавить лампы →", step: "lamps" } as const;
+    return null;
+  }, [missingLampQty, missingPointQty, missingTrackMeters, selectedTrackSystem]);
+
+  const goToMissingAction = useCallback(() => {
+    if (!missingAction) return;
+    setActiveTab("recommendations");
+    setCatalogViewAndSync("browse");
+    setWStep(missingAction.step);
+  }, [missingAction, setCatalogViewAndSync]);
+
+  useEffect(() => {
+    if (wStep !== "done") return;
+    if (requiredSelectionComplete) return;
+    if (!missingAction) return;
+
+    setActiveTab("recommendations");
+    setCatalogViewAndSync("browse");
+    setWStep(missingAction.step);
+  }, [missingAction, requiredSelectionComplete, setCatalogViewAndSync, wStep]);
+
+  useEffect(() => {
+    if (activeTab !== "recommendations") {
+      setStep1FooterAction(
+        missingAction
+          ? { label: missingAction.label, onClick: goToMissingAction }
+          : { label: "К итогу →", onClick: () => goToStep(2) }
+      );
+      return () => setStep1FooterAction(null);
+    }
+
+    if (wStep === "system") {
+      if (wizardSystemOptions.length > 0) {
+        setStep1FooterAction({
+          label: "Выберите систему",
+          disabled: true,
+          onClick: () => undefined,
+        });
+      } else {
+        setStep1FooterAction({
+          label: "К итогу →",
+          disabled: !requiredSelectionComplete,
+          onClick: () => goToStep(2),
+        });
+      }
+    } else if (wStep === "trackProfile") {
+      setStep1FooterAction({
+        label: "Подтвердить профиль →",
+        disabled: requiredTrackMeters > 0 && (!selectedTrackSystem || !trackComplete),
+        onClick: goAfterTrackProfile,
+      });
+    } else if (wStep === "trackFixtures") {
+      setStep1FooterAction({
+        label: "Подтвердить светильники →",
+        onClick: goAfterTrackFixtures,
+      });
+    } else if (wStep === "points") {
+      setStep1FooterAction({
+        label: "Подтвердить точки →",
+        disabled: !pointsComplete,
+        onClick: goAfterPoints,
+      });
+    } else if (wStep === "lamps") {
+      setStep1FooterAction({
+        label: "Подтвердить лампы →",
+        disabled: !lampsComplete,
+        onClick: () => setWStep("done"),
+      });
+    } else {
+      setStep1FooterAction(
+        missingAction
+          ? { label: missingAction.label, onClick: goToMissingAction }
+          : { label: "К итогу →", onClick: () => goToStep(2) }
+      );
+    }
+
+    return () => setStep1FooterAction(null);
+  }, [
+    activeTab,
+    goAfterPoints,
+    goAfterTrackFixtures,
+    goAfterTrackProfile,
+    goToMissingAction,
+    goToStep,
+    lampsComplete,
+    pointsComplete,
+    missingAction,
+    requiredSelectionComplete,
+    requiredTrackMeters,
+    selectedTrackSystem,
+    setStep1FooterAction,
+    trackComplete,
+    wStep,
+    wizardSystemOptions.length,
+  ]);
+
+  /* ─── Scoped catalog products ─── */
+  const scopedProducts = useMemo(() => {
+    let scoped: FeedCatalogProduct[] = [];
+    if (catalogView === "selected") { scoped = selectedViewItems.map((i) => i.product); }
+    else if (section === "track-systems") {
+      if (trackGroup === "TRACK_PROFILE") {
+        const base = TRACK_PROFILE_WHITELIST[trackSystem] ?? [];
+        const allowed = trackSystem === "TRACK_220" ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST]) : new Set(base);
+        scoped = products.filter((p) => p.system === trackSystem && p.kind === "TRACK_PROFILE" && allowed.has(toText(p.vendorCode)));
+      } else { scoped = products.filter((p) => p.system === trackSystem && p.kind === trackGroup); }
+    } else if (section === "point-fixtures") { scoped = products.filter((p) => matchesPointSubtype(p, pointSubtype)); }
+    else if (section === "lamps") { scoped = products.filter((p) => isLamp(p) && detectSocket(p) === lampSocket); }
+    else { scoped = products.filter(isMountsOrGrilles); }
+    const q = toText(query).toLowerCase();
+    if (!q) return scoped;
+    return scoped.filter((p) => {
+      const h = `${toText(p.name)} ${toText(p.vendorCode)} ${toText(p.categoryPath)} ${pickAttrs(p).map((a) => `${a.label} ${a.value}`).join(" ")}`.toLowerCase();
+      return h.includes(q);
+    });
+  }, [catalogView, lampSocket, pointSubtype, products, query, section, selectedViewItems, trackGroup, trackSystem]);
+
+  /* ═══════════════════════════════════════════════════
+     RENDER
+     ═══════════════════════════════════════════════════ */
+  return (
+    <div ref={rootRef} className="space-y-4">
+
+      {/* ─── Compact image preview — not fullscreen ─── */}
+      <ImageQuickPreview image={zoomImage} onClose={() => setZoomImage(null)} />
+
+      {/* ─── Tabs ─── */}
+      <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar max-sm:-mx-5 max-sm:px-5">
+        <TabBtn active={activeTab === "recommendations"} onClick={() => setActiveTab("recommendations")}>Подбор</TabBtn>
+        <TabBtn active={activeTab === "catalog" && catalogView === "browse"} onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}>Каталог</TabBtn>
+        <TabBtn active={activeTab === "catalog" && catalogView === "selected"} onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("selected"); }}>
+          Выбранное ({selectedViewItems.length})
+        </TabBtn>
       </div>
 
-      {/* Detailed breakdown — only if user wants it */}
-      <details className="rounded-2xl border border-slate-200 bg-white">
-        <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-950">
-          Состав расчёта
-        </summary>
-        <div className="border-t border-slate-200 px-4 py-3 text-sm text-slate-700 space-y-2">
-          {resolvedShowCeilingInUi ? (
-            <div className="rounded-xl bg-slate-50 p-3">
-              <p className="mb-2 font-semibold text-slate-950">Расчёт потолка</p>
-              <ul className="space-y-1 text-slate-700">
-                {ceilingSummaryLines.map((line, idx) => (
-                  <li key={`ceiling-${idx}`} className="leading-5">{line}</li>
-                ))}
-              </ul>
-            </div>
-          ) : (
-            <div className="flex justify-between">
-              <span>Потолок</span>
-              <span className="text-slate-500">— (не рассчитан)</span>
+      {removedHint && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          Некоторые позиции удалены из ассортимента и автоматически убраны из выбранного.
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════
+          ПОДБОР — Guided Wizard
+          ═══════════════════════════════════════════════ */}
+      {activeTab === "recommendations" && (
+        <div key="rec-tab" className="animate-fade-in space-y-4">
+
+          {/* ─── STEP: Track System ─── */}
+          {wStep === "system" && (
+            wizardSystemOptions.length > 0 ? (
+              <div className="space-y-3">
+                <div className="rounded-2xl bg-slate-950 p-4 text-white">
+                  <p className="text-sm font-semibold">Сначала выберите систему трека</p>
+                  <p className="mt-1 text-xs text-white/70">
+                    {trackMountType === "built-in"
+                      ? "Для встроенного трека подойдут COLIBRI или CLARUS."
+                      : trackMountType === "surface"
+                        ? "Для накладного трека используем ART 220V."
+                        : "Система определит подходящие профили и светильники."}
+                  </p>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {wizardSystemOptions.map((system) => {
+                    const isRecommended = system === "COLIBRI_220" && trackMountType === "built-in";
+                    return (
+                      <button
+                        key={system}
+                        type="button"
+                        onClick={() => chooseWizardSystem(system)}
+                        className={[
+                          "rounded-2xl border-2 p-4 text-left transition-colors",
+                          isRecommended
+                            ? "border-blue-400 bg-blue-50 hover:border-blue-600"
+                            : "border-slate-200 bg-white hover:border-slate-400",
+                        ].join(" ")}
+                      >
+                        <p className={isRecommended ? "text-sm font-semibold text-blue-900" : "text-sm font-semibold text-slate-950"}>
+                          {systemLabel(system)}
+                        </p>
+                        <p className={isRecommended ? "mt-1 text-xs text-blue-700" : "mt-1 text-xs text-slate-500"}>
+                          {system === "COLIBRI_220"
+                            ? "220V · проще в подборе"
+                            : system === "CLARUS_48"
+                              ? "48V · нужен блок питания"
+                              : "Накладной · 220V"}
+                          {isRecommended ? " · рекомендуется" : ""}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {requiredPointQty > 0 ? (
+                  <button type="button" onClick={chooseNoTrackFlow}
+                    className="w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3 text-sm text-slate-600 hover:bg-slate-100">
+                    Без трека — только точечные →
+                  </button>
+                ) : null}
+
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
+                  <p className="font-medium text-slate-700">У меня уже есть освещение</p>
+                  <p className="mt-1">Если всё куплено — можно пропустить подбор.</p>
+                  <button type="button" onClick={() => goToStep(2)}
+                    className="mt-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
+                    Пропустить, к итогу →
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+                <p className="font-semibold text-slate-950">Освещение можно подобрать вручную</p>
+                <p className="mt-1 leading-5">
+                  На шаге потолка не задан трек или количество точечных светильников.
+                  Откройте каталог, если хотите добавить свет, или сразу переходите к итогу.
+                </p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}
+                    className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+                  >
+                    Открыть каталог
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => goToStep(2)}
+                    className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    К итогу →
+                  </button>
+                </div>
+              </div>
+            )
+          )}
+
+          {/* ─── STEP: Track Profiles ─── */}
+          {wStep === "trackProfile" && (
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
+                <p className="text-sm font-semibold text-emerald-950">
+                  Профиль трека: {selectedTrackSystem ? systemLabel(selectedTrackSystem) : ""}
+                </p>
+                <p className="mt-1 text-xs text-emerald-800">Одно нажатие «+» добавляет 1 шт. Можно собрать профиль из разных длин.</p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {wTrackProfiles.map((p) => {
+                  const id = toText(p.productId);
+                  const qty = toNumber(cartItems[id]);
+                  return (
+                    <ProductCard key={id} product={p} qty={qty}
+                      onInc={() => setTrackProfileQty(p, qty + 1)}
+                      onDec={() => setTrackProfileQty(p, qty - 1)}
+                      onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })}
+                      discountPercent={cardDiscountPercent} />
+                  );
+                })}
+              </div>
+
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setWStep("system")}
+                  className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                  ← Система
+                </button>
+                <button
+                  type="button"
+                  onClick={goAfterTrackProfile}
+                  disabled={requiredTrackMeters > 0 && (!selectedTrackSystem || !trackComplete)}
+                  className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-slate-950"
+                >
+                  Подтвердить →
+                </button>
+              </div>
             </div>
           )}
 
-          {lightingItems.length > 0 && resolvedLightingEffectiveTotal > 0 ? (
-            <div className="pt-2">
-              <p className="font-semibold text-slate-950">
-                Освещение{kitDisplayName ? ` — ${kitDisplayName}` : ""}
-              </p>
-              <ul className="mt-1 space-y-0.5 text-slate-600">
-                {lightingItems.map((item) => (
-                  <li key={`${item.sku}-${item.name}`} className="flex justify-between">
-                    <span>{toText(item.name)} × {toNumber(item.qty)}</span>
-                    <span>{fmt(toNumber(item.priceRub) * toNumber(item.qty))} ₽</span>
-                  </li>
+          {/* ─── STEP: Track Fixtures (spots for track) ─── */}
+          {wStep === "trackFixtures" && (
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
+                <p className="text-sm font-semibold text-emerald-950">Светильники для трека: {selectedTrackSystem ? systemLabel(selectedTrackSystem) : ""}</p>
+                <p className="mt-1 text-xs text-emerald-800">Показываем все светильники выбранной системы.</p>
+              </div>
+
+              {wTrackFixtures.length > 0 ? (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {wTrackFixtures.map((p) => {
+                    const id = toText(p.productId);
+                    const qty = toNumber(cartItems[id]);
+                    return (
+                      <ProductCard key={id} product={p} qty={qty}
+                        onInc={() => setProductQty(p, qty + 1)} onDec={() => setProductQty(p, qty - 1)}
+                        onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })}
+                      discountPercent={cardDiscountPercent} />
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-600">Нет светильников для этой системы.</p>
+              )}
+
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setWStep("trackProfile")}
+                  className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">← Назад</button>
+                <button type="button" onClick={goAfterTrackFixtures}
+                  className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800">Подтвердить →</button>
+              </div>
+            </div>
+          )}
+
+          {/* ─── STEP: Point Fixtures ─── */}
+          {wStep === "points" && (
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
+                <p className="text-sm font-semibold text-emerald-950">Точечные светильники</p>
+                <p className="mt-1 text-xs text-emerald-800">Выберите GX53, MR16 или панели.</p>
+              </div>
+
+              {/* Sub-tabs for point types */}
+              <div className="flex gap-2">
+                {POINT_SUBTYPES.map((st) => (
+                  <button key={st.id} type="button" onClick={() => setWPointTab(st.id)}
+                    className={["rounded-xl px-3 py-1.5 text-xs font-medium",
+                      wPointTab === st.id ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"].join(" ")}>
+                    {st.label}
+                    {pointProgressBySubtype[st.id].current > 0 && (
+                      <span className="ml-1 text-[10px] opacity-70">{pointProgressBySubtype[st.id].current} шт.</span>
+                    )}
+                  </button>
                 ))}
-              </ul>
-              {lightingAppliedPercent > 0 ? (
-                <p className="mt-1 text-xs text-emerald-700 font-medium">
-                  Скидка на свет учтена: {fmt(resolvedLightingRegularTotal)} ₽ −{lightingAppliedPercent}% (−{fmt(lightingAppliedBenefit)} ₽)
-                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {wPointProducts.map((p) => {
+                  const id = toText(p.productId);
+                  const qty = toNumber(cartItems[id]);
+                  return (
+                    <ProductCard key={id} product={p} qty={qty}
+                      onInc={() => setProductQty(p, qty + 1)} onDec={() => setProductQty(p, qty - 1)}
+                      onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })}
+                      discountPercent={cardDiscountPercent} />
+                  );
+                })}
+              </div>
+
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setWStep(selectedTrackSystem ? "trackFixtures" : requiredTrackMeters > 0 ? "trackProfile" : "system")}
+                  className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">← Назад</button>
+                <button
+                  type="button"
+                  onClick={goAfterPoints}
+                  disabled={!pointsComplete}
+                  className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-slate-950"
+                >
+                  Подтвердить →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ─── STEP: Lamps ─── */}
+          {wStep === "lamps" && (
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3">
+                <p className="text-sm font-semibold text-amber-950">Лампы к светильникам</p>
+                <p className="mt-1 text-xs text-amber-800">Показываем все подходящие лампы, не только первые позиции.</p>
+              </div>
+
+              {lampSocketsToShow.length === 0 ? (
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+                  Для выбранных светильников отдельные лампы не требуются.
+                </div>
               ) : null}
-              {lightingDiscountMode !== "with-ceiling" && resolvedLightingWithCeilingTotal > 0 ? (
-                <p className="mt-1 text-xs text-slate-500">
-                  С потолком: {fmt(resolvedLightingRegularTotal)} ₽ −25% (−{fmt(lightingPotentialBenefit)} ₽) = {fmt(resolvedLightingWithCeilingTotal)} ₽
+
+              {lampSocketsToShow.map((socket) => {
+                const required = toNumber(lampRequiredBySocket[socket]);
+                const current = toNumber(lampCurrentBySocket[socket]);
+                const missing = Math.max(0, required - current);
+                const lamps = wLampProducts[socket] ?? [];
+
+                return (
+                  <div key={socket} className="space-y-2">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-950">Лампы {socket}</p>
+                          <p className="text-xs text-slate-600">Нужно {fmt(required)} шт., выбрано {fmt(current)} шт.</p>
+                        </div>
+                        {missing > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => addCheapestLamps(socket)}
+                            className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                          >
+                            +{fmt(missing)} шт. доступных
+                          </button>
+                        ) : (
+                          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">Готово</span>
+                        )}
+                      </div>
+                      <div className="mt-2">
+                        <ThinProgress current={current} required={required} unit="шт." />
+                      </div>
+                    </div>
+
+                    {lamps.length > 0 ? (
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {lamps.map((p) => {
+                          const id = toText(p.productId);
+                          const qty = toNumber(cartItems[id]);
+                          return (
+                            <ProductCard
+                              key={id}
+                              product={p}
+                              qty={qty}
+                              onInc={() => setProductQty(p, qty + 1)}
+                              onDec={() => setProductQty(p, qty - 1)}
+                              onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })}
+                              discountPercent={cardDiscountPercent}
+                            />
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                        Подходящие лампы сейчас не найдены в каталоге. Я уточню вариант при звонке.
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              <div className="flex gap-3">
+                <button type="button" onClick={goBackFromLamps}
+                  className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">← Назад</button>
+                <button
+                  type="button"
+                  onClick={() => setWStep("done")}
+                  disabled={!lampsComplete}
+                  className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-slate-950"
+                >
+                  Подтвердить →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ─── STEP: Done ─── */}
+          {wStep === "done" && requiredSelectionComplete && (
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <p className="text-sm font-semibold text-emerald-950">✓ Комплект собран</p>
+                <p className="mt-1 text-xs text-emerald-800">
+                  {lightingDraft?.items?.length ?? 0} поз.
+                  {lightingRegularTotal > 0 ? (
+                    lightingRegularTotal > lightingEffectiveTotal ? (
+                      <>
+                        {" · "}<span className="line-through text-emerald-700/50">{fmt(lightingRegularTotal)} ₽</span>{" "}
+                        <span className="font-semibold">{fmt(lightingEffectiveTotal)} ₽</span>
+                      </>
+                    ) : (
+                      <> · {fmt(lightingRegularTotal)} ₽</>
+                    )
+                  ) : ""}
                 </p>
-              ) : null}
+              </div>
+
+              {missingMounts.map((item) => (
+                <div key={`${item.fixtureVendorCode}-${item.mountVendorCode}`}
+                  className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+                  <p className="font-semibold">Не хватает закладных</p>
+                  <p className="mt-1 text-amber-900/80">Для <span className="font-semibold">{item.fixtureName}</span> нужна <span className="font-semibold">{item.mountName}</span>.</p>
+                  <button type="button" onClick={() => addMountOneToOne(item.fixtureVendorCode)}
+                    className="mt-2 rounded-xl bg-amber-700 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-800">Добавить 1:1</button>
+                </div>
+              ))}
+
+              {hasClarusInCart && clarusPsuQty < 1 && (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-950">
+                  <p className="font-semibold">Для CLARUS обязателен блок питания.</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {CLARUS_PSU_VENDOR_CODES.map((v) => {
+                      const id = productIdByVendorCode.get(v); if (!id) return null;
+                      const p = productsById.get(id); if (!p) return null;
+                      return <button key={v} type="button" onClick={() => setClarusPsu(id)}
+                        className="rounded-xl bg-rose-700 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-800">{toText(p.name)}</button>;
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button type="button" onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}
+                  className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Изменить в каталоге</button>
+                <button type="button" onClick={() => goToStep(2)}
+                  className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800">К итогу →</button>
+              </div>
+            </div>
+          )}
+
+          {wStep === "done" && !requiredSelectionComplete && missingAction ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+              <p className="font-semibold">Нужно ещё уточнить комплект</p>
+              <p className="mt-1 text-amber-900/80">
+                По параметрам потолка нужно добрать позиции. Верну к следующему действию автоматически.
+              </p>
+              <button
+                type="button"
+                onClick={goToMissingAction}
+                className="mt-3 rounded-xl bg-amber-700 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-800"
+              >
+                {missingAction.label}
+              </button>
             </div>
           ) : null}
 
-          <div className="border-t border-slate-200 pt-2">
-            <div className="flex justify-between font-semibold text-slate-950">
-              <span>Итого</span>
-              <span>~{fmt(resolvedGrandTotal)} ₽</span>
+          {hasRecommendations && wStep !== "done" ? (
+            <div className="text-center max-sm:hidden">
+              <button type="button" onClick={() => setActiveTab("catalog")}
+                className="text-sm font-medium text-slate-500 underline decoration-slate-300 underline-offset-4 hover:text-slate-800">
+                Или выберите в каталоге →
+              </button>
             </div>
-          </div>
+          ) : null}
         </div>
-      </details>
-
-      {/* Discount hint */}
-      {lightingDiscountMode !== "with-ceiling" && resolvedLightingEffectiveTotal > 0 ? (
-        <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
-          <p className="font-semibold">Свет дешевле с натяжным потолком</p>
-          <p className="mt-1 text-blue-900/80">
-            При заказе потолка скидка на свет будет −25%: {fmt(resolvedLightingWithCeilingTotal)} ₽ вместо {fmt(resolvedLightingRegularTotal)} ₽.
-          </p>
-          <button
-            type="button"
-            onClick={handleGoToCeiling}
-            className="mt-2 rounded-xl bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800"
-          >
-            Рассчитать потолок →
-          </button>
-        </div>
-      ) : null}
-
-      {/* What's included */}
-      <div className="flex flex-wrap gap-2">
-        {["Договор", "Гарантия 2 года", "Монтаж за 1 день", "Уборка после"].map((item) => (
-          <span
-            key={item}
-            className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700"
-          >
-            ✓ {item}
-          </span>
-        ))}
-      </div>
-
-      {/* What happens next */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
-        <p className="text-sm font-semibold text-slate-950">Что происходит дальше</p>
-        <div className="mt-3 space-y-2">
-          <div className="flex items-start gap-2.5 text-sm text-slate-600">
-            <span className="mt-0.5 h-5 w-5 shrink-0 rounded-full bg-slate-950 text-xs font-semibold text-white flex items-center justify-center">1</span>
-            <span>Перезвоню, уточню детали и предложу вариант</span>
-          </div>
-          <div className="flex items-start gap-2.5 text-sm text-slate-600">
-            <span className="mt-0.5 h-5 w-5 shrink-0 rounded-full bg-slate-950 text-xs font-semibold text-white flex items-center justify-center">2</span>
-            <span>Бесплатный замер — зафиксирую точную стоимость</span>
-          </div>
-          <div className="flex items-start gap-2.5 text-sm text-slate-600">
-            <span className="mt-0.5 h-5 w-5 shrink-0 rounded-full bg-slate-950 text-xs font-semibold text-white flex items-center justify-center">3</span>
-            <span>Договор, монтаж за 1 день, гарантия 2 года</span>
-          </div>
-        </div>
-      </div>
-
-      {showResult ? (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center" aria-live="polite">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white text-2xl font-bold">
-            ✓
-          </div>
-          <p className="text-lg font-semibold text-emerald-950">Спасибо!</p>
-          <p className="mt-1 text-sm text-emerald-800">Перезвоню в ближайшее время</p>
-          <button
-            type="button"
-            onClick={closeCalculator}
-            className="mt-4 rounded-xl bg-emerald-700 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
-          >
-            Хорошо, жду
-          </button>
-        </div>
-      ) : (
-        <>
-          {/* WhatsApp/Telegram before form */}
-          <div className="flex flex-wrap items-center justify-center gap-3 text-sm">
-            <span className="text-slate-500">Хотите быстрее? Напишите</span>
-            <a
-              href={`https://wa.me/${contacts.phoneDisplay.replace(/\D/g, "")}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => {
-                try {
-                  trackMessengerClick({
-                    messenger: "whatsapp",
-                    placement: "modal_summary",
-                    source: String(options?.source ?? ""),
-                    orderIntent,
-                    grandTotal: resolvedGrandTotal,
-                  });
-                } catch (e) {
-                  console.error(e);
-                }
-              }}
-              className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 font-medium text-emerald-700 transition-colors hover:bg-emerald-100"
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18a8 8 0 01-4.243-1.214L4 20l1.214-3.757A8 8 0 1112 20z"/></svg>
-              WhatsApp
-            </a>
-            <a
-              href={contacts.telegramUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => {
-                try {
-                  trackMessengerClick({
-                    messenger: "telegram",
-                    placement: "modal_summary",
-                    source: String(options?.source ?? ""),
-                    orderIntent,
-                    grandTotal: resolvedGrandTotal,
-                  });
-                } catch (e) {
-                  console.error(e);
-                }
-              }}
-              className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 font-medium text-blue-600 transition-colors hover:bg-blue-100"
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0a12 12 0 00-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 01.171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
-              Telegram
-            </a>
-          </div>
-
-          {/* Form */}
-          <div id="modal-action-form" className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-base font-semibold text-slate-950">Записаться на бесплатный замер</p>
-            <p className="mt-2 text-sm text-slate-600">
-              Оставьте имя и телефон — перезвоню, уточню детали и предложу решение.
-            </p>
-            <div className="mt-4">
-              <ActionForm
-                source={String(options?.source ?? "")}
-                compactCalculationSummary
-                onSuccess={() => setShowResult(true)}
-              />
-            </div>
-          </div>
-        </>
       )}
+
+      {/* ═══════════════════════════════════════════════
+          КАТАЛОГ tab
+          ═══════════════════════════════════════════════ */}
+      {activeTab === "catalog" && (
+        <div key="catalog-tab" className="animate-fade-in space-y-4">
+          {/* Lamp reminder */}
+          {missingLamps.length > 0 && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+              <p className="font-semibold">Не хватает ламп</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {missingLamps.map((m) => (
+                  <button key={m.socket} type="button" onClick={() => addCheapestLamps(m.socket)}
+                    className="rounded-xl bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-800">
+                    +{m.requiredQty - m.currentQty} ламп {m.socket}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {catalogView === "selected" ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              {selectedViewItems.length === 0 ? (
+                <p className="text-sm text-slate-600">Пока ничего не выбрано.</p>
+              ) : (
+                <>
+                  <ul className="space-y-3">
+                    {selectedViewItems.map(({ item, product }) => {
+                      const regular = item.priceRub;
+                      const discounted = getDiscountedPrice(regular, selectedTotals.effectivePercent);
+                      const productId = toText(product.productId);
+                      return (
+                        <li key={toText(item.sku)} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                          <div className="grid grid-cols-[5.5rem_1fr] gap-3">
+                            <ProductImage src={toText(product.coverImage)} alt={toText(product.name)} />
+                            <div className="min-w-0">
+                              <p className="break-words text-sm font-semibold text-slate-950">{toText(item.name)}</p>
+                              <p className="mt-2 text-xs text-slate-700">
+                                {item.qty} шт. · {fmt(regular)} ₽/шт · со скидкой −{selectedTotals.effectivePercent}%: {fmt(discounted)} ₽/шт
+                              </p>
+                              <div className="mt-3 flex flex-wrap items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setProductQty(product, item.qty - (product.unit === "m" ? 0.5 : 1))}
+                                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
+                                  aria-label={`Уменьшить ${item.name}`}
+                                >
+                                  −
+                                </button>
+                                <span className="min-w-[4rem] text-center text-sm font-semibold text-slate-950">
+                                  {product.unit === "m" ? Number(item.qty.toFixed(1)) : item.qty} {product.unit === "m" ? "м" : "шт."}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setProductQty(product, item.qty + (product.unit === "m" ? 0.5 : 1))}
+                                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
+                                  aria-label={`Увеличить ${item.name}`}
+                                >
+                                  +
+                                </button>
+                                <button type="button" onClick={() => setCartItems((prev) => { const n = { ...prev }; delete n[productId]; return n; })}
+                                  aria-label={`Удалить ${item.name}`}
+                                  className="ml-auto rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100">Удалить</button>
+                              </div>
+                            </div>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-3 text-sm">
+                    <p>Итого: <span className="line-through text-slate-400">{fmt(selectedTotals.regular)} ₽</span></p>
+                    <p className="text-emerald-700">
+                      Сейчас: {fmt(selectedTotals.effective)} ₽ · −{selectedTotals.effectivePercent}% (−{fmt(selectedTotals.effectiveBenefit)} ₽)
+                    </p>
+                    {lightingDiscountMode !== "with-ceiling" ? (
+                      <p className="text-slate-500">
+                        С потолком: {fmt(selectedTotals.withCeiling)} ₽ · −25% (−{fmt(selectedTotals.withCeilingBenefit)} ₽)
+                      </p>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => goToStep(2)}
+                      disabled={!requiredSelectionComplete}
+                      className="mt-3 w-full rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-emerald-700 max-sm:hidden"
+                    >
+                      К итогу →
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar max-sm:-mx-5 max-sm:px-5">
+                {CATALOG_SECTIONS.map((item) => (
+                  <button key={item.id} type="button" onClick={() => { setSection(item.id); setQuery(""); }}
+                    className={["whitespace-nowrap rounded-xl border border-slate-200 px-3 py-2 text-sm max-sm:px-2.5 max-sm:py-1.5 max-sm:text-xs",
+                      section === item.id ? "bg-slate-950 text-white" : "bg-white text-slate-700 hover:bg-slate-50"].join(" ")}>
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+
+              {section === "track-systems" && (
+                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar max-sm:-mx-5 max-sm:px-5">
+                  {TRACK_SYSTEMS.map((sys) => {
+                    const isActive = trackSystem === sys.id;
+                    const isRec = sys.id === "COLIBRI_220";
+                    return (
+                      <button key={sys.id} type="button" onClick={() => { setTrackSystem(sys.id); setQuery(""); }}
+                        className={["whitespace-nowrap rounded-xl border px-3 py-1.5 text-xs transition-colors max-sm:px-2.5",
+                          isActive ? (isRec ? "bg-blue-600 text-white border-blue-600" : "bg-slate-900 text-white border-slate-900")
+                          : (isRec ? "border-blue-300 bg-blue-50 text-blue-800 hover:bg-blue-100" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50")].join(" ")}>
+                        {sys.label}{isRec && !isActive ? <span className="ml-1 text-[10px] opacity-70">● рек.</span> : null}
+                      </button>
+                    );
+                  })}
+                  {TRACK_GROUPS.map((g) => (
+                    <button key={g.id} type="button" onClick={() => { setTrackGroup(g.id); setQuery(""); }}
+                      className={["whitespace-nowrap rounded-xl border border-slate-200 px-3 py-1.5 text-xs max-sm:px-2.5",
+                        trackGroup === g.id ? "bg-slate-900 text-white" : "bg-white text-slate-700"].join(" ")}>
+                      {g.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {section === "point-fixtures" && (
+                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar max-sm:-mx-5 max-sm:px-5">
+                  {POINT_SUBTYPES.map((st) => (
+                    <button key={st.id} type="button" onClick={() => { setPointSubtype(st.id); setQuery(""); }}
+                      className={["whitespace-nowrap rounded-xl border border-slate-200 px-3 py-1.5 text-xs max-sm:px-2.5",
+                        pointSubtype === st.id ? "bg-slate-900 text-white" : "bg-white text-slate-700"].join(" ")}>
+                      {st.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {section === "lamps" && (
+                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar max-sm:-mx-5 max-sm:px-5">
+                  {(["GX53", "MR16"] as LampSocket[]).map((s) => (
+                    <button key={s} type="button" onClick={() => { setLampSocket(s); setQuery(""); }}
+                      className={["whitespace-nowrap rounded-xl border border-slate-200 px-3 py-1.5 text-xs max-sm:px-2.5",
+                        lampSocket === s ? "bg-slate-900 text-white" : "bg-white text-slate-700"].join(" ")}>
+                      {s} {lampCurrentBySocket[s] > 0 ? `(${lampCurrentBySocket[s]}/${lampRequiredBySocket[s]})` : ""}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">🔍</span>
+                <input value={query} onChange={(e) => setQuery(e.target.value ?? "")}
+                  placeholder="Поиск в текущем разделе"
+                  className="w-full rounded-2xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-sm text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2" />
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {scopedProducts.map((p) => {
+                  const id = toText(p.productId);
+                  const qty = toNumber(cartItems[id]);
+                  const step = p.unit === "m" ? 0.5 : 1;
+                  return (
+                    <ProductCard key={id} product={p} qty={qty}
+                      onInc={() => setProductQty(p, qty + step)} onDec={() => setProductQty(p, qty - step)}
+                      onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })}
+                      discountPercent={cardDiscountPercent} />
+                  );
+                })}
+              </div>
+
+              {scopedProducts.length === 0 && (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">Ничего не найдено</div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
     </div>
   );
 }
