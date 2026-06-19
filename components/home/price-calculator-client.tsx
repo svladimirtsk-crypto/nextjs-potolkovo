@@ -924,14 +924,17 @@ export function PriceCalculatorClient({
       setConfirmed((prev) => ({ ...prev, area: false }));
     }
 
+    const rec = getPerimeterSuggestion(v).recommended;
+    const sharePerimeter = shadowEnabled && floatingEnabled;
+
     if (shadowEnabled && shadowLengthAuto) {
-      setShadowLength(getPerimeterSuggestion(v).recommended);
+      setShadowLength(sharePerimeter ? Math.max(1, Math.round(rec / 2)) : rec);
     }
     if (floatingEnabled && floatingLengthAuto) {
-      setFloatingLength(getPerimeterSuggestion(v).recommended);
+      setFloatingLength(sharePerimeter ? Math.max(1, Math.round(rec / 2)) : rec);
     }
     if (hasSpecialCeiling && ceilingLengthAuto) {
-      setCeilingLength(getPerimeterSuggestion(v).recommended);
+      setCeilingLength(rec);
     }
   };
 
@@ -941,7 +944,11 @@ export function PriceCalculatorClient({
       const next = !prev;
       if (next) {
         setShadowLengthAuto(true);
-        setShadowLength(getPerimeterSuggestion(area).recommended);
+        const rec = getPerimeterSuggestion(area).recommended;
+        setShadowLength(floatingEnabled ? Math.max(1, Math.round(rec / 2)) : rec);
+        if (floatingEnabled && floatingLengthAuto) {
+          setFloatingLength(Math.max(1, Math.round(rec / 2)));
+        }
       }
       return next;
     });
@@ -953,7 +960,11 @@ export function PriceCalculatorClient({
       const next = !prev;
       if (next) {
         setFloatingLengthAuto(true);
-        setFloatingLength(getPerimeterSuggestion(area).recommended);
+        const rec = getPerimeterSuggestion(area).recommended;
+        setFloatingLength(shadowEnabled ? Math.max(1, Math.round(rec / 2)) : rec);
+        if (shadowEnabled && shadowLengthAuto) {
+          setShadowLength(Math.max(1, Math.round(rec / 2)));
+        }
       }
       return next;
     });
@@ -1740,6 +1751,7 @@ export function PriceCalculatorClient({
     setConfirmed(roomConfirmedMap[roomId] ?? getConfirmedStateForFilledRoom());
     setActiveStep("area");
     setResumeStep(null);
+    setIsChoosingRoom(false);
     applyRoomConfig(room);
   };
 
@@ -1793,6 +1805,10 @@ export function PriceCalculatorClient({
   };
 
   const promptAddRoom = () => {
+    if (rooms.length === 0) {
+      createRoomFromSelection(preset?.roomLabelDefault ?? "Комната");
+      return;
+    }
     if (activeRoomId) {
       setRoomConfirmedMap((prev) => ({
         ...prev,
@@ -1829,6 +1845,7 @@ export function PriceCalculatorClient({
       setActiveRoomId(nextRoom.id);
       setConfirmed(roomConfirmedMap[nextRoom.id] ?? getConfirmedStateForFilledRoom());
       setResumeStep(null);
+      setIsChoosingRoom(false);
       applyRoomConfig(nextRoom);
     }
   };
@@ -1885,6 +1902,12 @@ export function PriceCalculatorClient({
     return () => cancelAnimationFrame(frame);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shadowEnabled, floatingEnabled, showModernOptionSteps, compactSections]);
+
+  useEffect(() => {
+    if (corniceLightingEnabled && corniceLightingLength > corniceLength) {
+      setCorniceLightingLength(corniceLength);
+    }
+  }, [corniceLength, corniceLightingLength, corniceLightingEnabled]);
 
   if (compactSections) {
     // V-5: step numbers removed — titles hardcoded without numbers
