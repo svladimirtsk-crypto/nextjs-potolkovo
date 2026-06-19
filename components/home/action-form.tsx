@@ -49,6 +49,9 @@ function normalizePhone(value: string): string {
   const digits = value.replace(/\D/g, "");
   if (!digits) return "";
 
+  // 10 digits -> +7XXXXXXXXXX
+  if (digits.length === 10) return `+7${digits}`;
+
   // 8XXXXXXXXXX -> +7XXXXXXXXXX
   if (digits.startsWith("8") && digits.length === 11) return `+7${digits.slice(1)}`;
 
@@ -155,6 +158,22 @@ export function ActionForm({ source, compactCalculationSummary = false, onSucces
     const trimmedName = name.trim();
     const trimmedAddress = address.trim();
     const normalizedPhone = normalizePhone(phone);
+
+    const topArea = toNumber(snapshot?.area ?? 0);
+    const topLightingTotalRub = toNumber(snapshot?.lighting?.totalRub ?? 0);
+
+    // Empty lead check: area is 0 and lighting total is 0
+    if (topArea <= 0 && topLightingTotalRub <= 0) {
+      trackFormSubmitError({
+        kind: "validation",
+        formPlacement: placement,
+        source: effectiveSource,
+      });
+
+      setStatus("error");
+      setMessage("Нельзя отправить пустую заявку. Пожалуйста, укажите площадь потолка или выберите товары в каталоге освещения.");
+      return;
+    }
 
     const nextErrors: FieldErrors = {};
 
@@ -441,16 +460,16 @@ export function ActionForm({ source, compactCalculationSummary = false, onSucces
             <div className="border-t border-slate-200 px-4 py-3 text-sm text-slate-700">
               {ceilingLines.length > 0 ? (
                 <ul className="list-disc space-y-1 pl-5">
-                  {ceilingLines.map((line) => (
-                    <li key={line}>{line}</li>
+                  {ceilingLines.map((line, idx) => (
+                    <li key={`ceiling-${idx}`}>{line}</li>
                   ))}
                 </ul>
               ) : null}
               {lightingLines.length > 0 ? (
                 <div className={ceilingLines.length > 0 ? "mt-3" : ""}>
                   <ul className="list-disc space-y-1 pl-5">
-                    {lightingLines.map((line) => (
-                      <li key={line} className="whitespace-pre-line">
+                    {lightingLines.map((line, idx) => (
+                      <li key={`lighting-${idx}`} className="whitespace-pre-line">
                         {line}
                       </li>
                     ))}
