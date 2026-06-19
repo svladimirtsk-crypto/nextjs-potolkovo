@@ -62,6 +62,8 @@ type RoomConfig = {
   floatingEnabled: boolean;
   floatingLength: number;
   floatingLengthAuto: boolean;
+  customPerimeter?: number;
+  customPerimeterAuto?: boolean;
   lightLinesEnabled: boolean;
   lightLinesLength: number;
   corniceType: CorniceType;
@@ -760,6 +762,9 @@ export function PriceCalculatorClient({
   const [lightsCount, setLightsCount] = useState<number>(resolvedLightsCount);
   const [roomLabel, setRoomLabel] = useState<string>(preset?.roomLabelDefault ?? "Помещение 1");
   const [localRoomLabel, setLocalRoomLabel] = useState<string>(preset?.roomLabelDefault ?? "Помещение 1");
+
+  const [customPerimeter, setCustomPerimeter] = useState<number>(() => getPerimeterSuggestion(resolvedAreaDefault).recommended);
+  const [customPerimeterAuto, setCustomPerimeterAuto] = useState<boolean>(true);
   useEffect(() => {
     setLocalRoomLabel(roomLabel);
   }, [roomLabel]);
@@ -785,6 +790,8 @@ export function PriceCalculatorClient({
             floatingEnabled: resolvedCeilingType === "floating" || resolvedCeilingType === "shadow-floating",
             floatingLength: preset?.floatingLengthDefault ?? getPerimeterSuggestion(resolvedAreaDefault).recommended,
             floatingLengthAuto: preset?.floatingLengthDefault == null,
+            customPerimeter: getPerimeterSuggestion(resolvedAreaDefault).recommended,
+            customPerimeterAuto: true,
             lightLinesEnabled: preset?.lightLinesEnabled ?? false,
             lightLinesLength: preset?.lightLinesLengthDefault ?? calculator.lightLineMeters.default,
             corniceType: resolvedCorniceType,
@@ -1113,6 +1120,8 @@ export function PriceCalculatorClient({
       floatingEnabled,
       floatingLength,
       floatingLengthAuto,
+      customPerimeter,
+      customPerimeterAuto,
       lightLinesEnabled,
       lightLinesLength,
       corniceType,
@@ -1138,6 +1147,8 @@ export function PriceCalculatorClient({
       floatingEnabled,
       floatingLength,
       floatingLengthAuto,
+      customPerimeter,
+      customPerimeterAuto,
       lightLinesEnabled,
       lightLinesLength,
       corniceType,
@@ -1206,6 +1217,8 @@ export function PriceCalculatorClient({
     setFloatingEnabled(room.floatingEnabled);
     setFloatingLength(room.floatingLength);
     setFloatingLengthAuto(room.floatingLengthAuto);
+    setCustomPerimeter(room.customPerimeter ?? getPerimeterSuggestion(room.area).recommended);
+    setCustomPerimeterAuto(room.customPerimeterAuto ?? true);
     setLightLinesEnabled(room.lightLinesEnabled);
     setLightLinesLength(room.lightLinesLength);
     setCorniceType(room.corniceType);
@@ -1258,6 +1271,8 @@ export function PriceCalculatorClient({
       floatingEnabled === room.floatingEnabled &&
       floatingLength === room.floatingLength &&
       floatingLengthAuto === room.floatingLengthAuto &&
+      customPerimeter === (room.customPerimeter ?? getPerimeterSuggestion(room.area).recommended) &&
+      customPerimeterAuto === (room.customPerimeterAuto ?? true) &&
       lightLinesEnabled === room.lightLinesEnabled &&
       lightLinesLength === room.lightLinesLength &&
       corniceType === room.corniceType &&
@@ -1289,6 +1304,8 @@ export function PriceCalculatorClient({
     floatingEnabled,
     floatingLength,
     floatingLengthAuto,
+    customPerimeter,
+    customPerimeterAuto,
     lightLinesEnabled,
     lightLinesLength,
     corniceType,
@@ -1806,17 +1823,20 @@ export function PriceCalculatorClient({
 
   const buildBlankRoom = (label?: string): RoomConfig => {
     const nextLabel = label && label !== "Другое" ? label : "Новая комната";
+    const defaultRec = getPerimeterSuggestion(calculator.areaDefault).recommended;
     return {
       id: `room-${roomSequenceRef.current}`,
       label: nextLabel,
       area: calculator.areaDefault,
       ceilingType: "standard",
       shadowEnabled: false,
-      shadowLength: getPerimeterSuggestion(calculator.areaDefault).recommended,
+      shadowLength: defaultRec,
       shadowLengthAuto: true,
       floatingEnabled: false,
-      floatingLength: getPerimeterSuggestion(calculator.areaDefault).recommended,
+      floatingLength: defaultRec,
       floatingLengthAuto: true,
+      customPerimeter: defaultRec,
+      customPerimeterAuto: true,
       lightLinesEnabled: false,
       lightLinesLength: calculator.lightLineMeters.default,
       corniceType: "none",
@@ -2594,14 +2614,42 @@ export function PriceCalculatorClient({
               ) : activeStep === "shadowProfile" ? (
                 <SectionCard
                   title="Теневой и парящий профиль"
-                  description={`Укажите метраж профилей. Общая длина автоматически балансируется по периметру комнаты (~${perimeterSuggestion.recommended} м.п.).`}
+                  description="Укажите метраж профилей. Общая длина автоматически балансируется по периметру комнаты."
                 >
+                  <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <RangeField
+                      id="room-perimeter-field-joint"
+                      label="Периметр помещения (длина стен)"
+                      value={customPerimeter}
+                      min={calculator.specialMeters.min}
+                      max={calculator.specialMeters.max}
+                      step={calculator.specialMeters.step}
+                      unit="м.п."
+                      onChange={(v) => {
+                        markInteracted();
+                        setCustomPerimeterAuto(false);
+                        setCustomPerimeter(v);
+                        if (shadowLengthAuto && floatingLengthAuto) {
+                          setShadowLength(Math.max(1, Math.round(v / 2)));
+                          setFloatingLength(Math.max(1, Math.round(v / 2)));
+                        } else {
+                          setFloatingLength(Math.max(1, v - shadowLength));
+                        }
+                      }}
+                      showSlider={showSlider}
+                      quickValues={[perimeterSuggestion.recommended]}
+                    />
+                    <p className="mt-2 text-xs text-slate-500">
+                      По умолчанию периметр равен {perimeterSuggestion.recommended} м.п. (для площади {area} м²). Вы можете изменить его, если знаете точную длину стен.
+                    </p>
+                  </div>
+
                   <RangeField
                     id="shadow-length-field"
                     label="Длина теневого профиля"
                     value={shadowLength}
                     min={calculator.specialMeters.min}
-                    max={perimeterSuggestion.recommended}
+                    max={customPerimeter}
                     step={calculator.specialMeters.step}
                     unit="м.п."
                     onChange={handleShadowLengthChange}
@@ -2614,7 +2662,7 @@ export function PriceCalculatorClient({
                       label="Длина парящего профиля"
                       value={floatingLength}
                       min={calculator.specialMeters.min}
-                      max={perimeterSuggestion.recommended}
+                      max={customPerimeter}
                       step={calculator.specialMeters.step}
                       unit="м.п."
                       onChange={handleFloatingLengthChange}
@@ -2627,13 +2675,15 @@ export function PriceCalculatorClient({
                     recommended={perimeterSuggestion.recommended}
                     onApply={() => {
                       markInteracted();
+                      setCustomPerimeterAuto(true);
+                      setCustomPerimeter(perimeterSuggestion.recommended);
                       setShadowLengthAuto(true);
                       setFloatingLengthAuto(true);
                       const rec = perimeterSuggestion.recommended;
                       setShadowLength(Math.max(1, Math.round(rec / 2)));
                       setFloatingLength(Math.max(1, Math.round(rec / 2)));
                     }}
-                    isAuto={shadowLengthAuto && floatingLengthAuto}
+                    isAuto={customPerimeterAuto && shadowLengthAuto && floatingLengthAuto}
                   />
 
                   <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3 max-sm:hidden">
