@@ -691,9 +691,7 @@ export function CatalogSectionClient({ data }: Props) {
   const filteredProducts = useMemo(() => {
     let scoped: FeedCatalogProduct[] = [];
 
-    if (smartOnly) {
-      scoped = products.filter(isSmartProduct);
-    } else if (section === "track-systems") {
+    if (section === "track-systems") {
       if (trackGroup === "TRACK_PROFILE") {
         const base = TRACK_PROFILE_WHITELIST[trackSystem] ?? [];
         const allowed =
@@ -715,6 +713,10 @@ export function CatalogSectionClient({ data }: Props) {
         .filter((p) => detectSocket(p) === lampSocket);
     } else {
       scoped = products.filter((product) => isMountsOrGrilles(product));
+    }
+
+    if (smartOnly) {
+      scoped = scoped.filter(isSmartProduct);
     }
 
     const q = toText(query).toLowerCase();
@@ -740,83 +742,6 @@ export function CatalogSectionClient({ data }: Props) {
 Собрать в калькуляторе →
           </button>
         </div>
-
-        {/* Dependencies / warnings */}
-        {selectedEntries.length > 0 ? (
-          <div className="mt-6 space-y-3">
-            {hasClarusFixtures && clarusPsuQty < 1 ? (
-              <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-950">
-                <p className="font-semibold">Для системы CLARUS обязателен минимум 1 блок питания.</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {CLARUS_PSU_VENDOR_CODES.map((vendor) => {
-                    const id = productIdByVendorCode.get(vendor);
-                    if (!id) return null;
-                    const product = byProductId.get(id);
-                    if (!product) return null;
-
-                    return (
-                      <button
-                        key={vendor}
-                        type="button"
-                        onClick={() => setClarusPsu(id)}
-                        className="rounded-xl bg-rose-700 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-800"
-                      >
-                        Добавить: {toText(product.name)}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : null}
-
-            {missingMounts.map((m) => (
-              <div
-                key={`${m.fixtureVendorCode}-${m.mountVendorCode}`}
-                className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
-              >
-                <p className="font-semibold">Не хватает закладных 1:1</p>
-                <p className="mt-2">
-                  Нужно: <span className="font-semibold">{m.requiredQty}</span> шт., в корзине:{" "}
-                  <span className="font-semibold">{m.currentQty}</span> шт.
-                  {m.mountName ? ` · Закладная: ${toText(m.mountName)}` : ""}
-                </p>
-
-                <button
-                  type="button"
-                  onClick={() => addMountOneToOne(m.fixtureVendorCode)}
-                  className="mt-3 rounded-xl bg-amber-700 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-800"
-                >
-                  Добавить 1:1
-                </button>
-              </div>
-            ))}
-
-            {missingLamps.map((m) => (
-              <div key={m.socket} className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
-                <p className="font-semibold">Не хватает ламп {m.socket} (1:1)</p>
-                <p className="mt-2">
-                  Нужно: <span className="font-semibold">{m.requiredQty}</span> шт., в корзине:{" "}
-                  <span className="font-semibold">{m.currentQty}</span> шт.
-                </p>
-
-                <button
-                  type="button"
-                  disabled={!m.cheapestLampId}
-                  onClick={() => {
-                    if (!m.cheapestLampId) return;
-                    addLampOneToOneCheapest(m.socket, m.cheapestLampId);
-                    setSection("lamps");
-                    setLampSocket(m.socket);
-                    setQuery("");
-                  }}
-                  className="mt-3 rounded-xl bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
-                >
-                  Добавить 1:1 (самые доступные)
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : null}
 
         {/* Controls */}
         <div className="mt-8 flex gap-2 overflow-x-auto pb-1 no-scrollbar sm:flex-wrap">
@@ -1078,6 +1003,83 @@ export function CatalogSectionClient({ data }: Props) {
         {filteredProducts.length === 0 ? (
           <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
             Ничего не найдено
+          </div>
+        ) : null}
+
+        {/* Dependencies / warnings */}
+        {selectedEntries.length > 0 ? (
+          <div className="mt-6 space-y-3">
+            {hasClarusFixtures && clarusPsuQty < 1 ? (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-950">
+                <p className="font-semibold">Для системы CLARUS обязателен минимум 1 блок питания.</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {CLARUS_PSU_VENDOR_CODES.map((vendor) => {
+                    const id = productIdByVendorCode.get(vendor);
+                    if (!id) return null;
+                    const product = byProductId.get(id);
+                    if (!product) return null;
+
+                    return (
+                      <button
+                        key={vendor}
+                        type="button"
+                        onClick={() => setClarusPsu(id)}
+                        className="rounded-xl bg-rose-700 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-800"
+                      >
+                        Добавить: {toText(product.name)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+            {missingMounts.map((m) => (
+              <div
+                key={`${m.fixtureVendorCode}-${m.mountVendorCode}`}
+                className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
+              >
+                <p className="font-semibold">Не хватает закладных 1:1</p>
+                <p className="mt-2">
+                  Нужно: <span className="font-semibold">{m.requiredQty}</span> шт., в корзине:{" "}
+                  <span className="font-semibold">{m.currentQty}</span> шт.
+                  {m.mountName ? ` · Закладная: ${toText(m.mountName)}` : ""}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => addMountOneToOne(m.fixtureVendorCode)}
+                  className="mt-3 rounded-xl bg-amber-700 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-800"
+                >
+                  Добавить 1:1
+                </button>
+              </div>
+            ))}
+
+            {missingLamps.map((m) => (
+              <div key={m.socket} className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+                <p className="font-semibold">Не хватает ламп {m.socket} (1:1)</p>
+                <p className="mt-2">
+                  Нужно: <span className="font-semibold">{m.requiredQty}</span> шт., в корзине:{" "}
+                  <span className="font-semibold">{m.currentQty}</span> шт.
+                </p>
+
+                <button
+                  type="button"
+                  disabled={!m.cheapestLampId}
+                  onClick={() => {
+                    if (!m.cheapestLampId) return;
+                    addLampOneToOneCheapest(m.socket, m.cheapestLampId);
+                    setSection("lamps");
+                    setLampSocket(m.socket);
+                    setQuery("");
+                  }}
+                  className="mt-3 rounded-xl bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
+                >
+                  Добавить 1:1 (самые доступные)
+                </button>
+              </div>
+            ))}
           </div>
         ) : null}
 
