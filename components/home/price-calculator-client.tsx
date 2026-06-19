@@ -13,6 +13,7 @@ import {
   usePriceCalculatorBridge,
 } from "./price-calculator-context";
 
+import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
 import { calcRecommendedTrackSpots } from "@/lib/lighting-formulas";
 import type { DerivedInputs, SolutionScenario } from "@/lib/calculator-modal-types";
 import { trackScenarioSelected } from "@/lib/analytics";
@@ -1823,11 +1824,12 @@ export function PriceCalculatorClient({
 
   const buildBlankRoom = (label?: string): RoomConfig => {
     const nextLabel = label && label !== "Другое" ? label : "Новая комната";
-    const defaultRec = getPerimeterSuggestion(calculator.areaDefault).recommended;
+    const initialArea = DEFAULT_CALCULATOR_AREA;
+    const defaultRec = getPerimeterSuggestion(initialArea).recommended;
     return {
       id: `room-${roomSequenceRef.current}`,
       label: nextLabel,
-      area: calculator.areaDefault,
+      area: initialArea,
       ceilingType: "standard",
       shadowEnabled: false,
       shadowLength: defaultRec,
