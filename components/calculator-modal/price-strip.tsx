@@ -43,7 +43,7 @@ export function PriceStrip() {
   } = useCalculatorModal();
 
   const hasLighting = lightingRegularTotal > 0;
-  const hideUnconfirmedCeiling = currentStep === 0 && !step0AreaConfirmed && !step0SessionInteracted;
+  const hideUnconfirmedCeiling = !step0AreaConfirmed;
   const showCeilingPrice = showCeilingInUi && !hideUnconfirmedCeiling;
   const displayGrandTotal = hideUnconfirmedCeiling ? lightingEffectiveTotal : grandTotal;
 
