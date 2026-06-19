@@ -1793,7 +1793,7 @@ export function PriceCalculatorClient({
     setRooms((prev) => [...prev, nextRoom]);
     setRoomConfirmedMap((prev) => ({
       ...prev,
-      ...(activeRoomId ? { [activeRoomId]: getConfirmedStateForFilledRoom() } : {}),
+      ...(activeRoomId ? { [activeRoomId]: confirmed } : {}),
       [nextRoom.id]: getConfirmedStateForBlankRoom(),
     }));
     setActiveRoomId(nextRoom.id);
@@ -1815,7 +1815,7 @@ export function PriceCalculatorClient({
     if (activeRoomId) {
       setRoomConfirmedMap((prev) => ({
         ...prev,
-        [activeRoomId]: getConfirmedStateForFilledRoom(),
+        [activeRoomId]: confirmed,
       }));
     }
     setIsChoosingRoom(true);
@@ -2762,10 +2762,10 @@ export function PriceCalculatorClient({
                       }
                       onClick={() => {
                         markInteracted();
-                        setCorniceType(option.slug);
-                        if (option.slug !== "none") {
+                        if (option.slug !== "none" && corniceType === "none") {
                           setCorniceLength(calculator.corniceMeters.default);
                         }
+                        setCorniceType(option.slug);
                       }}
                     />
                   ))}
@@ -2906,11 +2906,13 @@ export function PriceCalculatorClient({
                         onClick={() => {
                           markInteracted();
                           setTrackTypeTouched(true);
-                          setTrackType(option.slug);
                           if (option.slug !== "none") {
                             setTrackLengthTouched(true);
-                            setTrackLength(calculator.trackMeters.default);
+                            if (trackType === "none") {
+                              setTrackLength(calculator.trackMeters.default);
+                            }
                           }
+                          setTrackType(option.slug);
                         }}
                       />
                     );
@@ -3439,8 +3441,10 @@ export function PriceCalculatorClient({
                 }
                 onClick={() => {
                   markInteracted();
+                  if (option.slug !== "none" && corniceType === "none") {
+                    setCorniceLength(calculator.corniceMeters.default);
+                  }
                   setCorniceType(option.slug);
-                  if (option.slug !== "none") setCorniceLength(calculator.corniceMeters.default);
                 }}
               />
             ))}
@@ -3546,8 +3550,12 @@ export function PriceCalculatorClient({
                   onClick={() => {
                     markInteracted();
                     setTrackTypeTouched(true);
+                    if (option.slug !== "none") {
+                      if (trackType === "none") {
+                        setTrackLength(calculator.trackMeters.default);
+                      }
+                    }
                     setTrackType(option.slug);
-                    if (option.slug !== "none") setTrackLength(calculator.trackMeters.default);
                   }}
                 />
               );
