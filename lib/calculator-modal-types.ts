@@ -135,6 +135,14 @@ export type CalculatorModalContextValue = {
   /** СТРОГОЕ правило: досчёт монтажа в Step3 делаем только если Step0 был подтверждён (0->1). */
   step0AreaConfirmed: boolean;
 
+  /** Квиз-флоу: прогресс Step 0 (X из Y шагов). null если compactSections=false или модалка не на Step 0. */
+  step0Progress: { done: number; total: number } | null;
+  setStep0Progress: (progress: { done: number; total: number } | null) => void;
+
+  /** Квиз-флоу: достигнута ли сводка (все шаги подтверждены). Используется для смены title и dots-индикатора. */
+  isStep0SummaryReady: boolean;
+  setIsStep0SummaryReady: (ready: boolean) => void;
+
   step1CatalogView: CatalogViewMode | null;
   setStep1CatalogView: (view: CatalogViewMode | null) => void;
 
