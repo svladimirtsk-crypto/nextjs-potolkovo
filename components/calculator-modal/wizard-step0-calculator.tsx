@@ -4,8 +4,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { homepage } from "@/content/homepage";
 import type { ServiceCalculatorPreset } from "@/content/services";
-import type { SolutionScenario } from "@/lib/calculator-modal-types";
+import {
+  getStep0NextDestination,
+  type SolutionScenario,
+} from "@/lib/calculator-modal-types";
 import { PriceCalculatorClient } from "@/components/home/price-calculator-client";
+import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 
 import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
@@ -64,6 +68,7 @@ function resolveInitialSolutionScenario(
 export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
   const { markStep0SessionInteracted, options, lightingDraft, step0SessionInteracted, goToStep } =
     useCalculatorModal();
+  const { snapshot } = usePriceCalculatorBridge();
 
   const forcePreset = Boolean(options?.forcePreset);
   const resolvedPreset: ServiceCalculatorPreset = {
@@ -245,7 +250,20 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
             : null
         }
         prefillFromLightingTrigger={prefillTrigger}
-        onPrimaryCtaClick={() => goToStep(1)}
+        onPrimaryCtaClick={() => {
+          // Квиз-флоу: после сводки Step 0 переходим в зависимости от сценария.
+          // - Modern: всегда Step 1 (свет — обязательная часть)
+          // - Standard: Step 2 по умолчанию, Step 1 если уже выбран свет
+          // - Advanced: Step 2 по умолчанию (телефон), Step 1 если уже выбран свет
+          const scenario = snapshot?.solutionScenario ?? initialSolutionScenario;
+          const hasLighting = Boolean(
+            lightingDraft &&
+              lightingDraft.mode !== "none" &&
+              (lightingDraft.items?.length ?? 0) > 0
+          );
+          const destination = getStep0NextDestination(scenario, hasLighting);
+          goToStep(destination);
+        }}
         initialSolutionScenario={initialSolutionScenario}
       />
     </div>
