@@ -270,3 +270,24 @@ input.pc-range[type="range"] {
     min-height: 48px;
   }
 }
+
+/* Accessibility: respect user's motion preferences.
+   Отключаем декоративные анимации для пользователей с настройкой
+   "снизить движение" в OS. Контент остаётся полностью доступным,
+   просто без визуальных транзишенов.
+
+   ВАЖНО: НЕ трогаем `transition-*` на интерактивных элементах
+   (hover/focus), это не анимация движения — это сигнал состояния,
+   который критичен для accessibility. */
+@media (prefers-reduced-motion: reduce) {
+  /* Декоративные keyframe-анимации */
+  .animate-fade-slide-in,
+  .animate-fade-in,
+  .animate-pulse-once,
+  .discount-stamp-emerald,
+  .discount-stamp-blue,
+  .discount-stamp-shine {
+    animation: none !important;
+  }
+}
+
