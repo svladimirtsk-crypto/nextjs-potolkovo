@@ -96,6 +96,7 @@ export function CalculatorModal() {
     step1FooterAction,
     step0Progress,
     isStep0SummaryReady,
+    hideStep0PriceStrip,
   } = useCalculatorModal();
   const { snapshot } = usePriceCalculatorBridge();
 
@@ -463,8 +464,8 @@ export function CalculatorModal() {
             </button>
           </div>
 
-          {/* P2.14: Sticky PriceStrip */}
-          {currentStep !== 2 ? (
+          {/* P2.14: Sticky PriceStrip — скрыт во время full-quiz Step 0 (hero виден только на сводке). */}
+          {currentStep !== 2 && !hideStep0PriceStrip ? (
             <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-5 py-3 max-sm:px-4 max-sm:py-2">
               <PriceStrip />
             </div>
