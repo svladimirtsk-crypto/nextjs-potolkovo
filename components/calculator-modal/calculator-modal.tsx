@@ -169,6 +169,14 @@ export function CalculatorModal() {
       if (classes.contains("step0-confirm-room-picker")) return "Выбрать помещение →";
       if (classes.contains("step0-confirm-room-continue")) return "Продолжить помещение →";
       if (classes.contains("step0-confirm-room-next")) return "К следующей комнате →";
+      // Квиз-флоу: routing-кнопки из data-step0-routing (НЕ .sr-only) для финального перехода.
+      // Класс динамический по (scenario, hasLighting) — см. price-calculator-client.tsx.
+      if (classes.contains("step0-confirm-room-light-modern")) return "К подбору освещения →";
+      if (classes.contains("step0-confirm-room-light-standard-no-light")) return "К итогу →";
+      if (classes.contains("step0-confirm-room-light-standard-with-light")) return "Добавить свет →";
+      if (classes.contains("step0-confirm-room-light-advanced-no-light")) return "Связаться и обсудить →";
+      if (classes.contains("step0-confirm-room-light-advanced-with-light")) return "Подобрать свет →";
+      // Legacy fallback на случай если остался старый класс.
       if (classes.contains("step0-confirm-room-light")) return "К подбору освещения →";
       return "Подтвердить →";
     };
