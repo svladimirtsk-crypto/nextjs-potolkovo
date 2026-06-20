@@ -130,6 +130,11 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   const [step0SessionInteracted, setStep0SessionInteracted] = useState(false);
   const [step0AreaConfirmed, setStep0AreaConfirmed] = useState(false);
 
+  // Квиз-флоу: прогресс Step 0 (X из Y шагов) и состояние сводки.
+  // Обновляется из PriceCalculatorClient через setter. Используется в header модалки.
+  const [step0Progress, setStep0Progress] = useState<{ done: number; total: number } | null>(null);
+  const [isStep0SummaryReady, setIsStep0SummaryReady] = useState(false);
+
   // скидка с потолком: разрешена только после подтверждения потолка 0->1
   const [lightingDiscountEligible, setLightingDiscountEligible] = useState(false);
 
@@ -197,6 +202,8 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       // reset flags on each open
       setStep0SessionInteracted(false);
       setStep0AreaConfirmed(false);
+      setStep0Progress(null);
+      setIsStep0SummaryReady(false);
 
       // В lighting-first скидка с потолком НЕ применяется сразу: сначала действует −10% на свет.
       const enableDiscountNow = false;
@@ -219,6 +226,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       });
       setIsOpen(true);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [setSnapshot, snapshot]
   );
 
@@ -404,6 +412,10 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
         step0SessionInteracted,
         markStep0SessionInteracted,
         step0AreaConfirmed,
+        step0Progress,
+        setStep0Progress,
+        isStep0SummaryReady,
+        setIsStep0SummaryReady,
 
         step1CatalogView,
         setStep1CatalogView,
@@ -434,6 +446,8 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       step0SessionInteracted,
       markStep0SessionInteracted,
       step0AreaConfirmed,
+      step0Progress,
+      isStep0SummaryReady,
       step1CatalogView,
       setStep1CatalogView,
       step1FooterAction,
