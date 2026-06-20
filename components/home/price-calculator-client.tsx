@@ -13,6 +13,13 @@ import {
   usePriceCalculatorBridge,
 } from "./price-calculator-context";
 
+import {
+  Step0Provider,
+  summarizeRooms,
+  type Step0ContextValue,
+} from "@/components/calculator-modal/step0/step0-context";
+import { Step0SectionSummary } from "@/components/calculator-modal/step0/step0-section-summary";
+
 import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
 import { calcRecommendedTrackSpots } from "@/lib/lighting-formulas";
 import type { DerivedInputs, SolutionScenario } from "@/lib/calculator-modal-types";
@@ -2189,8 +2196,34 @@ export function PriceCalculatorClient({
     const lightLinesValue = lightLinesEnabled ? `${lightLinesLength} м.п.` : "не нужны";
 
     return (
-      <>
-      <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:p-8 max-sm:gap-3 max-sm:border-0 max-sm:bg-transparent max-sm:p-0 max-sm:shadow-none">
+      <Step0Provider
+        value={
+          {
+            solutionScenario,
+            calculationScope,
+            isSummaryReady,
+            effectiveSnapshot,
+            effectiveRooms: summarizeRooms(effectiveSnapshot?.roomBreakdown),
+            hasLighting,
+            onPrimaryCtaClick: onPrimaryCtaClick ?? (() => scrollToAction()),
+            onBeginEditLastStep: isSummaryReady
+              ? () => {
+                  const lastStep = compactSteps[compactSteps.length - 1];
+                  if (lastStep) beginEdit(lastStep);
+                }
+              : undefined,
+            onPromptAddRoom:
+              compactSections && calculationScope === "room"
+                ? promptAddRoom
+                : undefined,
+          } satisfies Step0ContextValue
+        }
+      >
+        {isSummaryReady ? (
+          <Step0SectionSummary />
+        ) : (
+          <>
+            <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:p-8 max-sm:gap-3 max-sm:border-0 max-sm:bg-transparent max-sm:p-0 max-sm:shadow-none">
         {/* LEFT */}
         <div className="min-w-0 space-y-5 max-sm:space-y-3">
           <SectionCard
@@ -3560,7 +3593,9 @@ export function PriceCalculatorClient({
       {showMobileStickyBar ? (
         <div className="h-20 lg:hidden" aria-hidden="true" />
       ) : null}
-      </>
+          </>
+        )}
+      </Step0Provider>
     );
   }
 
