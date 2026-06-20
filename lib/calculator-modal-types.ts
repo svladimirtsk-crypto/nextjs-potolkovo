@@ -143,6 +143,11 @@ export type CalculatorModalContextValue = {
   isStep0SummaryReady: boolean;
   setIsStep0SummaryReady: (ready: boolean) => void;
 
+  /** Квиз-флоу: скрыть PriceStrip во время прохождения Step 0 (hero виден только на сводке).
+      Решает problem "decision fatigue" — пользователь видит только одну задачу за раз. */
+  hideStep0PriceStrip: boolean;
+  setHideStep0PriceStrip: (hide: boolean) => void;
+
   step1CatalogView: CatalogViewMode | null;
   setStep1CatalogView: (view: CatalogViewMode | null) => void;
 
