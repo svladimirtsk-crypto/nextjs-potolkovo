@@ -320,13 +320,22 @@ function SectionCard({
   title,
   description,
   children,
+  className,
 }: {
   title: string;
   description?: string;
   children: ReactNode;
+  className?: string;
 }) {
   return (
-    <section className="rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-4 sm:p-5 max-sm:rounded-2xl max-sm:p-3">
+    <section
+      className={[
+        "rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-4 sm:p-5 max-sm:rounded-2xl max-sm:p-3",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <div className="mb-4 max-sm:mb-3">
         <p className="text-sm font-semibold text-slate-950">{title}</p>
         {description ? (
@@ -684,6 +693,11 @@ type PriceCalculatorClientProps = {
 
   // Сценарий прохождения Step0 в модалке: стандартный / современный / продвинутый.
   initialSolutionScenario?: SolutionScenario;
+
+  // Квиз-флоу: колбэки для прогресс-индикатора в header модалки и состояния сводки.
+  // Передаются из wizard-step0-calculator.tsx (оттуда — из modal context).
+  onStep0ProgressChange?: (progress: { done: number; total: number } | null) => void;
+  onIsStep0SummaryReadyChange?: (ready: boolean) => void;
 };
 
 export function PriceCalculatorClient({
@@ -694,6 +708,8 @@ export function PriceCalculatorClient({
   onPrimaryCtaClick,
   showMobileStickyBar = true,
   initialSolutionScenario = "standard",
+  onStep0ProgressChange,
+  onIsStep0SummaryReadyChange,
 }: PriceCalculatorClientProps) {
   const { snapshot: bridgeSnapshot, setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
 
@@ -1716,6 +1732,32 @@ export function PriceCalculatorClient({
     const prev = idx > 0 ? compactSteps[idx - 1] : null;
     if (prev) beginEdit(prev);
   };
+
+  // Квиз-флоу: синхронизируем прогресс Step 0 в modal context для header-индикатора.
+  // - В compact-режиме: {done, total} compactSteps
+  // - В homepage-режиме (compactSections=false): null (модалка закрыта, индикатор не нужен)
+  useEffect(() => {
+    if (!compactSections) {
+      onStep0ProgressChange?.(null);
+      onIsStep0SummaryReadyChange?.(false);
+      return;
+    }
+    const total = compactSteps.length;
+    const done = compactSteps.reduce(
+      (sum, step) => sum + (confirmed[step] ? 1 : 0),
+      0
+    );
+    onStep0ProgressChange?.({ done, total });
+    onIsStep0SummaryReadyChange?.(isSummaryReady);
+  }, [
+    compactSections,
+    compactSteps,
+    confirmed,
+    isSummaryReady,
+    onStep0ProgressChange,
+    onIsStep0SummaryReadyChange,
+  ]);
+
   const roomProgressMap = effectiveRooms.reduce<Record<string, { done: number; total: number }>>(
     (acc, room) => {
       const state = roomConfirmedMap[room.id];
@@ -2407,6 +2449,8 @@ export function PriceCalculatorClient({
               </SectionCard>
             ) : activeStep === "area" ? (
               <SectionCard
+                key={activeStep}
+                className="animate-fade-slide-in"
                 title={
                   step0Phase === "choose-mode"
                     ? "Что хотите посчитать?"
@@ -2599,6 +2643,8 @@ export function PriceCalculatorClient({
               </SectionCard>
             ) : activeStep === "ceiling" ? (
               <SectionCard
+                key={activeStep}
+                className="animate-fade-slide-in"
                 title={`Тип потолка`}
                 description="Базовая площадь считается отдельно. Теневой и парящий указывайте только на нужных участках — они не обязаны идти по всему периметру."
               >
@@ -2711,6 +2757,8 @@ export function PriceCalculatorClient({
                 </SectionCard>
               ) : activeStep === "shadowProfile" ? (
                 <SectionCard
+                  key={activeStep}
+                  className="animate-fade-slide-in"
                   title="Теневой и парящий профиль"
                   description="Укажите метраж профилей. Общая длина автоматически балансируется по периметру комнаты."
                 >
@@ -2821,6 +2869,8 @@ export function PriceCalculatorClient({
                     </SectionCard>
                   ) : activeStep === "shadowProfile" ? (
                     <SectionCard
+                      key={activeStep}
+                      className="animate-fade-slide-in"
                       title={`Теневой профиль`}
                       description="Укажите только те метры, где действительно нужен теневой зазор. Это может быть не весь периметр комнаты."
                     >
@@ -2881,6 +2931,8 @@ export function PriceCalculatorClient({
                     </SectionCard>
                   ) : activeStep === "floatingProfile" ? (
                     <SectionCard
+                      key={activeStep}
+                      className="animate-fade-slide-in"
                       title={`Парящий профиль`}
                       description="Укажите только те метры, где нужен парящий эффект. Это может быть одна стена, ниша или отдельный участок."
                     >
@@ -2957,7 +3009,11 @@ export function PriceCalculatorClient({
                 />
               </SectionCard>
             ) : activeStep === "lightLines" ? (
-              <SectionCard title={`Световые линии`}>
+              <SectionCard
+                key={activeStep}
+                className="animate-fade-slide-in"
+                title={`Световые линии`}
+              >
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <OptionCard
                     active={!lightLinesEnabled}
@@ -3033,7 +3089,11 @@ export function PriceCalculatorClient({
                 />
               </SectionCard>
             ) : activeStep === "cornice" ? (
-              <SectionCard title={`Карнизы`}>
+              <SectionCard
+                key={activeStep}
+                className="animate-fade-slide-in"
+                title={`Карнизы`}
+              >
                 <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2">
                   {calculator.cornices.map((option) => (
                     <OptionCard
@@ -3167,7 +3227,11 @@ export function PriceCalculatorClient({
                 />
               </SectionCard>
             ) : activeStep === "track" ? (
-              <SectionCard title={`Трековое освещение`}>
+              <SectionCard
+                key={activeStep}
+                className="animate-fade-slide-in"
+                title={`Трековое освещение`}
+              >
                 <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2">
                   {calculator.tracks.map((option) => {
                     const systemHint =
@@ -3259,7 +3323,11 @@ export function PriceCalculatorClient({
                 />
               </SectionCard>
             ) : activeStep === "chandeliers" ? (
-              <SectionCard title={`Установка люстр`}>
+              <SectionCard
+                key={activeStep}
+                className="animate-fade-slide-in"
+                title={`Установка люстр`}
+              >
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <OptionCard
                     active={!chandeliersEnabled}
@@ -3343,7 +3411,11 @@ export function PriceCalculatorClient({
                 />
               </SectionCard>
             ) : activeStep === "lights" ? (
-              <SectionCard title={`Точечные светильники`}>
+              <SectionCard
+                key={activeStep}
+                className="animate-fade-slide-in"
+                title={`Точечные светильники`}
+              >
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <OptionCard
                     active={!lightsEnabled}
