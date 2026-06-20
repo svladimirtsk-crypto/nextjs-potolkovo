@@ -134,7 +134,6 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   // Обновляется из PriceCalculatorClient через setter. Используется в header модалки.
   const [step0Progress, setStep0Progress] = useState<{ done: number; total: number } | null>(null);
   const [isStep0SummaryReady, setIsStep0SummaryReady] = useState(false);
-  const [hideStep0PriceStrip, setHideStep0PriceStrip] = useState(false);
 
   // скидка с потолком: разрешена только после подтверждения потолка 0->1
   const [lightingDiscountEligible, setLightingDiscountEligible] = useState(false);
@@ -205,7 +204,6 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       setStep0AreaConfirmed(false);
       setStep0Progress(null);
       setIsStep0SummaryReady(false);
-      setHideStep0PriceStrip(false);
 
       // В lighting-first скидка с потолком НЕ применяется сразу: сначала действует −10% на свет.
       const enableDiscountNow = false;
@@ -418,8 +416,6 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
         setStep0Progress,
         isStep0SummaryReady,
         setIsStep0SummaryReady,
-        hideStep0PriceStrip,
-        setHideStep0PriceStrip,
 
         step1CatalogView,
         setStep1CatalogView,
@@ -452,7 +448,6 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       step0AreaConfirmed,
       step0Progress,
       isStep0SummaryReady,
-      hideStep0PriceStrip,
       step1CatalogView,
       setStep1CatalogView,
       step1FooterAction,
