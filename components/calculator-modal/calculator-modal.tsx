@@ -94,6 +94,8 @@ export function CalculatorModal() {
     options,
     lightingDraft,
     step1FooterAction,
+    step0Progress,
+    isStep0SummaryReady,
   } = useCalculatorModal();
   const { snapshot } = usePriceCalculatorBridge();
 
@@ -244,13 +246,17 @@ export function CalculatorModal() {
       );
       return hasLight ? "Освещение ✓" : "Освещение";
     }
+    if (currentStep === 0 && isStep0SummaryReady) {
+      // Квиз-флоу: на сводке показываем «Проверка» вместо «Параметры потолка».
+      return "Проверка";
+    }
     const titles: Record<WizardStep, string> = {
       0: "Параметры потолка",
       1: "Освещение",
       2: "Итог расчета",
     };
     return titles[currentStep];
-  }, [currentStep, lightingDraft]);
+  }, [currentStep, lightingDraft, isStep0SummaryReady]);
 
   // P0.7: confirm before close if has data
   const hasAnyData = useMemo(() => {
@@ -397,10 +403,46 @@ export function CalculatorModal() {
         >
           {/* Header */}
           <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4 max-sm:px-4 max-sm:py-3">
-            <div>
+            <div className="min-w-0 flex-1">
               <h2 id="calc-modal-title" className="text-lg font-semibold text-slate-950 max-sm:text-base">
                 {stepTitle}
               </h2>
+              {/* Квиз-флоу: под title показываем прогресс «X из Y шагов» для Step 0 (только desktop).
+                  На mobile показываем компактный dots-индикатор. Для Step 1/2 — только ProgressBar. */}
+              {currentStep === 0 && step0Progress ? (
+                <>
+                  <div className="mt-2 hidden text-xs text-slate-600 sm:flex sm:items-center sm:gap-2">
+                    <span className="font-semibold text-slate-950">
+                      Шаг {step0Progress.done} из {step0Progress.total}
+                    </span>
+                    <div className="relative h-1.5 w-32 overflow-hidden rounded-full bg-slate-200">
+                      <div
+                        className="h-full rounded-full bg-slate-950 transition-all duration-300 ease-out"
+                        style={{
+                          width: `${
+                            step0Progress.total > 0
+                              ? Math.round((step0Progress.done / step0Progress.total) * 100)
+                              : 0
+                          }%`,
+                        }}
+                        aria-hidden="true"
+                      />
+                    </div>
+                  </div>
+                  {/* Dots-индикатор на mobile */}
+                  <div className="mt-2 flex items-center gap-1.5 sm:hidden" aria-label={`Прогресс: ${step0Progress.done} из ${step0Progress.total}`}>
+                    {Array.from({ length: step0Progress.total }).map((_, i) => (
+                      <span
+                        key={i}
+                        className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${
+                          i < step0Progress.done ? "bg-slate-950" : "bg-slate-300"
+                        }`}
+                        aria-hidden="true"
+                      />
+                    ))}
+                  </div>
+                </>
+              ) : null}
               {/* P0.6: progress bar instead of text */}
               <div className="mt-2 max-sm:mt-1.5">
                 <ProgressBar
