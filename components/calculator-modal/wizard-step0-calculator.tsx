@@ -74,8 +74,17 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
     goToStep,
     setStep0Progress,
     setIsStep0SummaryReady,
+    setHideStep0PriceStrip,
   } = useCalculatorModal();
   const { snapshot } = usePriceCalculatorBridge();
+
+  // Квиз-флоу (Phase B): включаем full-quiz mode — каждая секция как отдельный экран,
+  // PriceStrip скрыт (decision fatigue), только сводка показывает hero.
+  // Устанавливаем флаг при mount, сбрасываем при unmount (cleanup).
+  useEffect(() => {
+    setHideStep0PriceStrip(true);
+    return () => setHideStep0PriceStrip(false);
+  }, [setHideStep0PriceStrip]);
 
   const forcePreset = Boolean(options?.forcePreset);
   const resolvedPreset: ServiceCalculatorPreset = {
@@ -274,6 +283,7 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
         initialSolutionScenario={initialSolutionScenario}
         onStep0ProgressChange={setStep0Progress}
         onIsStep0SummaryReadyChange={setIsStep0SummaryReady}
+        fullQuizMode
       />
     </div>
   );
