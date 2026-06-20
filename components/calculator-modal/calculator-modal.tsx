@@ -107,6 +107,7 @@ export function CalculatorModal() {
   const [isActionFormVisible, setIsActionFormVisible] = useState(false);
   const [step0HasConfirmButtonState, setStep0HasConfirmButtonState] = useState(false);
   const [step0FooterLabelState, setStep0FooterLabelState] = useState("Подтвердить →");
+  const [step0HasBackButtonState, setStep0HasBackButtonState] = useState(false);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => setMounted(true));
@@ -193,6 +194,14 @@ export function CalculatorModal() {
       }
       setStep0HasConfirmButtonState(Boolean(button));
       setStep0FooterLabelState(getConfirmLabel(button));
+
+      // Квиз-флоу: детектим наличие кнопки «← Назад» в Step 0.
+      // Кнопка рендерится в <div data-step0-routing> (visibility:hidden), но НЕ в .sr-only —
+      // поэтому обычный querySelector её находит.
+      const backButton = contentRef.current?.querySelector<HTMLButtonElement>(
+        ".step0-back-button:not(:disabled)"
+      );
+      setStep0HasBackButtonState(Boolean(backButton));
     };
 
     const frame = requestAnimationFrame(update);
@@ -219,6 +228,7 @@ export function CalculatorModal() {
 
   const snapshotValid = isSnapshotValid(snapshot);
   const step0HasConfirmButton = currentStep === 0 ? step0HasConfirmButtonState : false;
+  const step0HasBackButton = currentStep === 0 ? step0HasBackButtonState : false;
   const step0FooterLabel = currentStep === 0 ? step0FooterLabelState : "Подтвердить →";
   const actionFormVisible = currentStep === 2 ? isActionFormVisible : false;
 
@@ -455,6 +465,22 @@ export function CalculatorModal() {
                 <button
                   type="button"
                   onClick={() => goToStep((currentStep - 1) as WizardStep)}
+                  className="h-12 rounded-2xl px-5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 max-sm:h-11 max-sm:px-3"
+                  style={{ minHeight: 48 }}
+                >
+                  ← Назад
+                </button>
+              ) : step0HasBackButton ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Кликаем скрытую .step0-back-button в PriceCalculatorClient,
+                    // которая вызывает beginEdit(previousStep) / beginEdit(lastStep).
+                    const backBtn = contentRef.current?.querySelector<HTMLButtonElement>(
+                      ".step0-back-button:not(:disabled)"
+                    );
+                    backBtn?.click();
+                  }}
                   className="h-12 rounded-2xl px-5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 max-sm:h-11 max-sm:px-3"
                   style={{ minHeight: 48 }}
                 >
