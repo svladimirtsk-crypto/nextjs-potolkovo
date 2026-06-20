@@ -66,8 +66,15 @@ function resolveInitialSolutionScenario(
 }
 
 export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
-  const { markStep0SessionInteracted, options, lightingDraft, step0SessionInteracted, goToStep } =
-    useCalculatorModal();
+  const {
+    markStep0SessionInteracted,
+    options,
+    lightingDraft,
+    step0SessionInteracted,
+    goToStep,
+    setStep0Progress,
+    setIsStep0SummaryReady,
+  } = useCalculatorModal();
   const { snapshot } = usePriceCalculatorBridge();
 
   const forcePreset = Boolean(options?.forcePreset);
@@ -265,6 +272,8 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
           goToStep(destination);
         }}
         initialSolutionScenario={initialSolutionScenario}
+        onStep0ProgressChange={setStep0Progress}
+        onIsStep0SummaryReadyChange={setIsStep0SummaryReady}
       />
     </div>
   );
