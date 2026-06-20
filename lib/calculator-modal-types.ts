@@ -43,6 +43,29 @@ export type LightingSnapshot = {
 
 export type WizardStep = 0 | 1 | 2;
 
+/**
+ * Куда переходить из Step 0 в зависимости от сценария и наличия света.
+ * Используется в квиз-флоу для решения, какой шаг следующий.
+ *
+ * Логика:
+ * - Modern: всегда Step 1 (свет — обязательная часть сценария)
+ * - Standard: Step 2 по умолчанию (потолок — главная CTA), Step 1 если уже выбран свет
+ * - Advanced: Step 2 по умолчанию (телефон), Step 1 если уже выбран свет
+ * - Без scenario (fallback): Step 1
+ *
+ * Если у лида уже есть свет (lighting-first / prefill из каталога), он
+ * возвращается в Step 1 чтобы увидеть свой выбор, а не в Step 2.
+ */
+export function getStep0NextDestination(
+  scenario: SolutionScenario | undefined,
+  hasLighting: boolean
+): WizardStep {
+  if (scenario === "modern") return 1;
+  if (scenario === "standard") return hasLighting ? 1 : 2;
+  if (scenario === "advanced") return hasLighting ? 1 : 2;
+  return 1;
+}
+
 export type Step1FooterAction = {
   label: string;
   disabled?: boolean;
