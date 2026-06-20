@@ -1707,27 +1707,56 @@ export function PriceCalculatorClient({
   );
 
   // Квиз-флоу: можно ли назад?
-  // - Сводка (всё подтверждено) — да, открываем последний compactStep для редактирования.
-  // - В середине потока — да, если activeStep !== "area" (самый первый).
-  // - На первом шаге (area) — нет.
-  const canGoBack =
-    compactSections &&
-    calculationScope !== null &&
-    !isChoosingRoom &&
-    (isSummaryReady || (activeStep !== "area" && compactSteps.includes(activeStep)));
+  // SetupScreen (calculationScope=null) — корень, назад не нужен.
+  // Все остальные состояния (room picker, active section, summary) — назад работает.
+  const canGoBack = compactSections && calculationScope !== null;
 
   const handleBackClick = () => {
     if (!canGoBack) return;
 
     if (isSummaryReady) {
       // На сводке: открываем последний compactStep для редактирования.
-      // resumeStep = activeStep (= последний шаг), чтобы после re-confirm вернуться в сводку.
       const lastStep = compactSteps[compactSteps.length - 1];
       if (lastStep) beginEdit(lastStep);
       return;
     }
 
-    // В середине: один шаг назад. resumeStep сохраняет текущий шаг.
+    if (isChoosingRoom) {
+      // Room picker (выбор комнаты):
+      // - choose-next-room: возвращаемся к последней завершённой комнате
+      // - choose-first-room: сбрасываем на SetupScreen
+      if (effectiveRooms.length > 0) {
+        const lastCompletedRoom = rooms.find((room) => {
+          const state = roomConfirmedMap[room.id];
+          return state && compactSteps.every((step) => state[step]);
+        });
+        if (lastCompletedRoom) {
+          switchToRoom(lastCompletedRoom.id);
+          return;
+        }
+      }
+      // choose-first-room или нет завершённых: сброс на SetupScreen
+      setCalculationScope(null);
+      setRooms([]);
+      setRoomConfirmedMap({});
+      setActiveRoomId(null);
+      setIsChoosingRoom(false);
+      setConfirmed(getConfirmedStateForBlankRoom());
+      return;
+    }
+
+    if (activeStep === "area") {
+      // Первая секция (area): сброс на SetupScreen (лид передумал со сценарием).
+      setCalculationScope(null);
+      setRooms([]);
+      setRoomConfirmedMap({});
+      setActiveRoomId(null);
+      setIsChoosingRoom(false);
+      setConfirmed(getConfirmedStateForBlankRoom());
+      return;
+    }
+
+    // Mid-flow: один шаг назад. resumeStep сохраняет текущий шаг.
     const idx = compactSteps.indexOf(activeStep);
     const prev = idx > 0 ? compactSteps[idx - 1] : null;
     if (prev) beginEdit(prev);
