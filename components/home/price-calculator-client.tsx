@@ -698,12 +698,6 @@ type PriceCalculatorClientProps = {
   // Передаются из wizard-step0-calculator.tsx (оттуда — из modal context).
   onStep0ProgressChange?: (progress: { done: number; total: number } | null) => void;
   onIsStep0SummaryReadyChange?: (ready: boolean) => void;
-
-  // Квиз-флоу (Phase B): full-quiz mode — каждая секция как отдельный экран,
-  // без длинного скролла и без sidebar/sticky bar. Setup screen на первом экране,
-  // активная секция в середине, сводка в конце.
-  // В homepage-контексте (compactSections=false) не используется.
-  fullQuizMode?: boolean;
 };
 
 export function PriceCalculatorClient({
@@ -716,7 +710,6 @@ export function PriceCalculatorClient({
   initialSolutionScenario = "standard",
   onStep0ProgressChange,
   onIsStep0SummaryReadyChange,
-  fullQuizMode = false,
 }: PriceCalculatorClientProps) {
   const { snapshot: bridgeSnapshot, setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
 
@@ -2272,59 +2265,51 @@ export function PriceCalculatorClient({
           <Step0SectionSummary />
         ) : (
           <>
-            <div className={[
-              "grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:items-start lg:gap-8 lg:p-8 max-sm:gap-3 max-sm:border-0 max-sm:bg-transparent max-sm:p-0 max-sm:shadow-none",
-              fullQuizMode ? "mx-auto max-w-2xl" : "lg:grid-cols-[minmax(0,1fr)_360px]",
-            ].join(" ")}>
+            <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:p-8 max-sm:gap-3 max-sm:border-0 max-sm:bg-transparent max-sm:p-0 max-sm:shadow-none">
         {/* LEFT */}
         <div className="min-w-0 space-y-5 max-sm:space-y-3">
-          {/* Квиз-флоу (Phase B): scenario picker виден в SetupScreen (choose-mode)
-              и в long-scroll mode. В active section phase full-quiz сценарий уже
-              зафиксирован — picker скрыт. */}
-          {!fullQuizMode || step0Phase === "choose-mode" ? (
-            <SectionCard
-              title="Какой вариант решения рассматриваете?"
-              description="Выберите уровень подбора — дальше покажу только нужные шаги, а дополнительные опции можно открыть отдельно."
-            >
-              <div className="grid gap-2 sm:grid-cols-3">
-                {scenarioOptions.map((item) => {
-                  const active = solutionScenario === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => chooseScenario(item.id)}
-                      aria-pressed={active}
-                      className={[
-                        "rounded-2xl border p-3 text-left transition-colors",
-                        active
-                          ? "border-slate-950 bg-slate-950 text-white"
-                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50",
-                      ].join(" ")}
-                    >
-                      <p className="text-sm font-semibold">{item.title}</p>
-                      <p className={active ? "mt-1 text-xs leading-5 text-white/70" : "mt-1 text-xs leading-5 text-slate-500"}>
-                        {item.text}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
-              {solutionScenario === "standard" ? (
-                <p className="mt-3 text-xs leading-5 text-slate-500">
-                  Световые линии и треки доступны ниже, но не будут обязательными.
-                </p>
-              ) : solutionScenario === "advanced" ? (
-                <p className="mt-3 text-xs leading-5 text-slate-500">
-                  Точную стоимость SMART-света и управления обсудим по телефону или на замере — интерес будет приложен к заявке.
-                </p>
-              ) : null}
-            </SectionCard>
-          ) : null}
+          <SectionCard
+            title="Какой вариант решения рассматриваете?"
+            description="Выберите уровень подбора — дальше покажу только нужные шаги, а дополнительные опции можно открыть отдельно."
+          >
+            <div className="grid gap-2 sm:grid-cols-3">
+              {scenarioOptions.map((item) => {
+                const active = solutionScenario === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => chooseScenario(item.id)}
+                    aria-pressed={active}
+                    className={[
+                      "rounded-2xl border p-3 text-left transition-colors",
+                      active
+                        ? "border-slate-950 bg-slate-950 text-white"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50",
+                    ].join(" ")}
+                  >
+                    <p className="text-sm font-semibold">{item.title}</p>
+                    <p className={active ? "mt-1 text-xs leading-5 text-white/70" : "mt-1 text-xs leading-5 text-slate-500"}>
+                      {item.text}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+            {solutionScenario === "standard" ? (
+              <p className="mt-3 text-xs leading-5 text-slate-500">
+                Световые линии и треки доступны ниже, но не будут обязательными.
+              </p>
+            ) : solutionScenario === "advanced" ? (
+              <p className="mt-3 text-xs leading-5 text-slate-500">
+                Точную стоимость SMART-света и управления обсудим по телефону или на замере — интерес будет приложен к заявке.
+              </p>
+            ) : null}
+          </SectionCard>
 
-          {/* Квиз-флоу (Phase B): в full-quiz mode room manager скрыт — пользователь
-              видит только активную секцию. Add room доступен на сводке через Step0SectionSummary. */}
-          {!fullQuizMode && showRoomManager ? (
+          {/* Room manager виден когда есть несколько комнат — здесь можно
+              переключаться между комнатами и добавлять новые. */}
+          {showRoomManager ? (
             <div ref={roomManagerRef}>
             <SectionCard
               title="Помещения в расчёте"
@@ -2455,7 +2440,7 @@ export function PriceCalculatorClient({
           ) : null}
 
           {/* AREA */}
-          <div ref={areaRef} className={fullQuizMode && activeStep !== "area" ? "hidden" : ""}>
+          <div ref={areaRef}>
             {confirmed.area && !(calculationScope === "room" && isChoosingRoom) ? (
               <SectionCard title={`Площадь`}>
                 <SummaryRow
@@ -2645,7 +2630,7 @@ export function PriceCalculatorClient({
           </div>
 
           {/* CEILING */}
-          <div ref={ceilingRef} className={fullQuizMode && activeStep !== "ceiling" ? "hidden" : ""}>
+          <div ref={ceilingRef}>
             {confirmed.ceiling ? (
               <SectionCard title={`Тип потолка`}>
                 <SummaryRow
@@ -2763,7 +2748,7 @@ export function PriceCalculatorClient({
 
           {/* JOINT SHADOW & FLOATING PROFILES */}
           {shadowEnabled && floatingEnabled ? (
-            <div ref={shadowProfileRef} className={fullQuizMode && activeStep !== "shadowProfile" ? "hidden" : ""}>
+            <div ref={shadowProfileRef}>
               {confirmed.shadowProfile ? (
                 <SectionCard title="Теневой и парящий профиль">
                   <SummaryRow
@@ -2875,7 +2860,7 @@ export function PriceCalculatorClient({
             <>
               {/* SHADOW PROFILE (if shadow enabled) */}
               {shadowEnabled ? (
-                <div ref={shadowProfileRef} className={fullQuizMode && activeStep !== "shadowProfile" ? "hidden" : ""}>
+                <div ref={shadowProfileRef}>
                   {confirmed.shadowProfile ? (
                     <SectionCard title={`Теневой профиль`}>
                       <SummaryRow
@@ -2937,7 +2922,7 @@ export function PriceCalculatorClient({
 
               {/* FLOATING PROFILE (if floating enabled) */}
               {floatingEnabled ? (
-                <div ref={floatingProfileRef} className={fullQuizMode && activeStep !== "floatingProfile" ? "hidden" : ""}>
+                <div ref={floatingProfileRef}>
                   {confirmed.floatingProfile ? (
                     <SectionCard title={`Парящий профиль`}>
                       <SummaryRow
@@ -3016,7 +3001,7 @@ export function PriceCalculatorClient({
 
           {/* LIGHT LINES */}
           {showModernOptionSteps ? (
-          <div ref={lightLinesRef} className={fullQuizMode && activeStep !== "lightLines" ? "hidden" : ""}>
+          <div ref={lightLinesRef}>
             {confirmed.lightLines ? (
               <SectionCard title={`Световые линии`}>
                 <SummaryRow
@@ -3096,7 +3081,7 @@ export function PriceCalculatorClient({
           ) : null}
 
           {/* CORNICE */}
-          <div ref={corniceRef} className={fullQuizMode && activeStep !== "cornice" ? "hidden" : ""}>
+          <div ref={corniceRef}>
             {confirmed.cornice ? (
               <SectionCard title={`Карнизы`}>
                 <SummaryRow
@@ -3234,7 +3219,7 @@ export function PriceCalculatorClient({
 
           {/* TRACK */}
           {showModernOptionSteps ? (
-          <div ref={trackRef} className={fullQuizMode && activeStep !== "track" ? "hidden" : ""}>
+          <div ref={trackRef}>
             {confirmed.track ? (
               <SectionCard title={`Трековое освещение`}>
                 <SummaryRow
@@ -3330,7 +3315,7 @@ export function PriceCalculatorClient({
           ) : null}
 
           {/* CHANDELIERS */}
-          <div ref={chandeliersRef} className={fullQuizMode && activeStep !== "chandeliers" ? "hidden" : ""}>
+          <div ref={chandeliersRef}>
             {confirmed.chandeliers ? (
               <SectionCard title={`Установка люстр`}>
                 <SummaryRow
@@ -3418,7 +3403,7 @@ export function PriceCalculatorClient({
           </div>
 
           {/* LIGHTS */}
-          <div ref={lightsRef} className={fullQuizMode && activeStep !== "lights" ? "hidden" : ""}>
+          <div ref={lightsRef}>
             {confirmed.lights ? (
               <SectionCard title={`Точечные светильники`}>
                 <SummaryRow
@@ -3568,8 +3553,7 @@ export function PriceCalculatorClient({
           ) : null}
         </div>
 
-        {/* RIGHT summary — desktop sidebar (скрыт в full-quiz mode) */}
-        {!fullQuizMode ? (
+        {/* RIGHT summary — desktop sidebar */}
         <div className="hidden lg:block lg:sticky lg:top-24 lg:self-start">
           <div className="rounded-[1.75rem] bg-slate-950 p-6 text-white shadow-2xl shadow-slate-950/10">
             <p className="text-sm text-white/70">
@@ -3652,10 +3636,9 @@ export function PriceCalculatorClient({
             )}
           </div>
         </div>
-        ) : null}
 
-        {/* V-3: Mobile sticky bottom bar with price + CTA (скрыт в full-quiz mode) */}
-        {showMobileStickyBar && !fullQuizMode ? (
+        {/* V-3: Mobile sticky bottom bar with price + CTA */}
+        {showMobileStickyBar ? (
         <div className="calc-sticky-bar fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] backdrop-blur lg:hidden"
           style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}
         >
@@ -3681,7 +3664,7 @@ export function PriceCalculatorClient({
       </div>
 
       {/* Spacer for mobile sticky bar so last step isn't hidden */}
-      {showMobileStickyBar && !fullQuizMode ? (
+      {showMobileStickyBar ? (
         <div className="h-20 lg:hidden" aria-hidden="true" />
       ) : null}
           </>
