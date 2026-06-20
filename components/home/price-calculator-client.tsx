@@ -1682,6 +1682,33 @@ export function PriceCalculatorClient({
       bridgeSnapshot.lighting.mode !== "none" &&
       (bridgeSnapshot.lighting.items?.length ?? 0) > 0
   );
+
+  // Квиз-флоу: можно ли назад?
+  // - Сводка (всё подтверждено) — да, открываем последний compactStep для редактирования.
+  // - В середине потока — да, если activeStep !== "area" (самый первый).
+  // - На первом шаге (area) — нет.
+  const canGoBack =
+    compactSections &&
+    calculationScope !== null &&
+    !isChoosingRoom &&
+    (isSummaryReady || (activeStep !== "area" && compactSteps.includes(activeStep)));
+
+  const handleBackClick = () => {
+    if (!canGoBack) return;
+
+    if (isSummaryReady) {
+      // На сводке: открываем последний compactStep для редактирования.
+      // resumeStep = activeStep (= последний шаг), чтобы после re-confirm вернуться в сводку.
+      const lastStep = compactSteps[compactSteps.length - 1];
+      if (lastStep) beginEdit(lastStep);
+      return;
+    }
+
+    // В середине: один шаг назад. resumeStep сохраняет текущий шаг.
+    const idx = compactSteps.indexOf(activeStep);
+    const prev = idx > 0 ? compactSteps[idx - 1] : null;
+    if (prev) beginEdit(prev);
+  };
   const roomProgressMap = effectiveRooms.reduce<Record<string, { done: number; total: number }>>(
     (acc, room) => {
       const state = roomConfirmedMap[room.id];
@@ -3355,7 +3382,7 @@ export function PriceCalculatorClient({
               MutationObserver в calculator-modal.tsx найдёт её через querySelectorAll,
               а visibility:hidden прячет от пользователя. Класс динамический по (scenario, hasLighting),
               чтобы getConfirmLabel подобрал правильный label в footer. */}
-          {isSummaryReady ? (
+          {(isSummaryReady || canGoBack) ? (
             <div
               data-step0-routing
               style={{
@@ -3368,38 +3395,53 @@ export function PriceCalculatorClient({
               }}
               aria-hidden="true"
             >
-              <button
-                type="button"
-                className={[
-                  "step0-confirm-button",
-                  solutionScenario === "modern" && "step0-confirm-room-light-modern",
-                  solutionScenario === "standard" &&
-                    !hasLighting &&
-                    "step0-confirm-room-light-standard-no-light",
-                  solutionScenario === "standard" &&
-                    hasLighting &&
-                    "step0-confirm-room-light-standard-with-light",
-                  solutionScenario === "advanced" &&
-                    !hasLighting &&
-                    "step0-confirm-room-light-advanced-no-light",
-                  solutionScenario === "advanced" &&
-                    hasLighting &&
-                    "step0-confirm-room-light-advanced-with-light",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                onClick={onPrimaryCtaClick ?? (() => scrollToAction())}
-                tabIndex={-1}
-              >
-                {(() => {
-                  if (solutionScenario === "modern") return "К подбору освещения →";
-                  if (solutionScenario === "standard")
-                    return hasLighting ? "Добавить свет →" : "К итогу →";
-                  if (solutionScenario === "advanced")
-                    return hasLighting ? "Подобрать свет →" : "Связаться и обсудить →";
-                  return "К подбору освещения →";
-                })()}
-              </button>
+              {isSummaryReady ? (
+                <button
+                  type="button"
+                  className={[
+                    "step0-confirm-button",
+                    solutionScenario === "modern" && "step0-confirm-room-light-modern",
+                    solutionScenario === "standard" &&
+                      !hasLighting &&
+                      "step0-confirm-room-light-standard-no-light",
+                    solutionScenario === "standard" &&
+                      hasLighting &&
+                      "step0-confirm-room-light-standard-with-light",
+                    solutionScenario === "advanced" &&
+                      !hasLighting &&
+                      "step0-confirm-room-light-advanced-no-light",
+                    solutionScenario === "advanced" &&
+                      hasLighting &&
+                      "step0-confirm-room-light-advanced-with-light",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  onClick={onPrimaryCtaClick ?? (() => scrollToAction())}
+                  tabIndex={-1}
+                >
+                  {(() => {
+                    if (solutionScenario === "modern") return "К подбору освещения →";
+                    if (solutionScenario === "standard")
+                      return hasLighting ? "Добавить свет →" : "К итогу →";
+                    if (solutionScenario === "advanced")
+                      return hasLighting ? "Подобрать свет →" : "Связаться и обсудить →";
+                    return "К подбору освещения →";
+                  })()}
+                </button>
+              ) : null}
+
+              {/* Кнопка «← Назад» для footer модалки. MutationObserver детектит
+                  её через .step0-back-button:not(:disabled) и показывает в footer. */}
+              {canGoBack ? (
+                <button
+                  type="button"
+                  className="step0-back-button"
+                  onClick={handleBackClick}
+                  tabIndex={-1}
+                >
+                  ← Назад
+                </button>
+              ) : null}
             </div>
           ) : null}
         </div>
