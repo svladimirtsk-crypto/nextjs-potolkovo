@@ -688,7 +688,7 @@ export function PriceCalculatorClient({
   showMobileStickyBar = true,
   initialSolutionScenario = "standard",
 }: PriceCalculatorClientProps) {
-  const { setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
+  const { snapshot: bridgeSnapshot, setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
 
   const resolvedAreaDefault = preset?.areaDefault ?? calculator.areaDefault;
   const resolvedCalculationScope = (preset?.calculationScopeDefault ?? "room") as CalculationScope;
@@ -1664,6 +1664,24 @@ export function PriceCalculatorClient({
       return !(state && compactSteps.every((step) => state[step]));
     }) ?? null;
   const showRoomManager = isRoomScopeMulti && effectiveRooms.length > 0;
+
+  // Квиз-флоу: готовность сводки (когда показывать routing-кнопку в footer).
+  // - object scope: все compactSteps подтверждены
+  // - room scope: текущая комната complete И нет следующей неполной
+  const allObjectStepsConfirmed = compactSteps.every((step) => confirmed[step]);
+  const isSummaryReady =
+    compactSections &&
+    calculationScope !== null &&
+    !isChoosingRoom &&
+    ((calculationScope === "object" && allObjectStepsConfirmed) ||
+      (calculationScope === "room" && isCurrentRoomComplete && !nextIncompleteRoom));
+
+  // Уже выбран свет? Используем bridge.snapshot.lighting (безопасно и в modal, и в homepage-контекстах).
+  const hasLighting = Boolean(
+    bridgeSnapshot?.lighting &&
+      bridgeSnapshot.lighting.mode !== "none" &&
+      (bridgeSnapshot.lighting.items?.length ?? 0) > 0
+  );
   const roomProgressMap = effectiveRooms.reduce<Record<string, { done: number; total: number }>>(
     (acc, room) => {
       const state = roomConfirmedMap[room.id];
@@ -2300,15 +2318,6 @@ export function PriceCalculatorClient({
                     onClick={() => switchToRoom(nextIncompleteRoom.id)}
                   >
                     К следующей комнате →
-                  </Button>
-                ) : null}
-                {isCurrentRoomComplete ? (
-                  <Button
-                    type="button"
-                    className="step0-confirm-button step0-confirm-room-light"
-                    onClick={onPrimaryCtaClick ?? (() => scrollToAction())}
-                  >
-                    Перейти к подбору освещения →
                   </Button>
                 ) : null}
                 {step0Phase === "choose-next-room" ? (
@@ -3341,6 +3350,58 @@ export function PriceCalculatorClient({
               />
             )}
           </div>
+
+          {/* Квиз-флоу: routing-кнопка для footer-«Далее» (НЕ в .sr-only!).
+              MutationObserver в calculator-modal.tsx найдёт её через querySelectorAll,
+              а visibility:hidden прячет от пользователя. Класс динамический по (scenario, hasLighting),
+              чтобы getConfirmLabel подобрал правильный label в footer. */}
+          {isSummaryReady ? (
+            <div
+              data-step0-routing
+              style={{
+                visibility: "hidden",
+                position: "absolute",
+                width: 0,
+                height: 0,
+                overflow: "hidden",
+                pointerEvents: "none",
+              }}
+              aria-hidden="true"
+            >
+              <button
+                type="button"
+                className={[
+                  "step0-confirm-button",
+                  solutionScenario === "modern" && "step0-confirm-room-light-modern",
+                  solutionScenario === "standard" &&
+                    !hasLighting &&
+                    "step0-confirm-room-light-standard-no-light",
+                  solutionScenario === "standard" &&
+                    hasLighting &&
+                    "step0-confirm-room-light-standard-with-light",
+                  solutionScenario === "advanced" &&
+                    !hasLighting &&
+                    "step0-confirm-room-light-advanced-no-light",
+                  solutionScenario === "advanced" &&
+                    hasLighting &&
+                    "step0-confirm-room-light-advanced-with-light",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                onClick={onPrimaryCtaClick ?? (() => scrollToAction())}
+                tabIndex={-1}
+              >
+                {(() => {
+                  if (solutionScenario === "modern") return "К подбору освещения →";
+                  if (solutionScenario === "standard")
+                    return hasLighting ? "Добавить свет →" : "К итогу →";
+                  if (solutionScenario === "advanced")
+                    return hasLighting ? "Подобрать свет →" : "Связаться и обсудить →";
+                  return "К подбору освещения →";
+                })()}
+              </button>
+            </div>
+          ) : null}
         </div>
 
         {/* RIGHT summary — desktop sidebar */}
@@ -3383,7 +3444,14 @@ export function PriceCalculatorClient({
                     </Button>
                   ) : (
                     <Button type="button" className="w-full" onClick={onPrimaryCtaClick ?? (() => scrollToAction())}>
-                      Перейти к подбору освещения →
+                      {(() => {
+                        if (solutionScenario === "modern") return "К подбору освещения →";
+                        if (solutionScenario === "standard")
+                          return hasLighting ? "Добавить свет →" : "К итогу →";
+                        if (solutionScenario === "advanced")
+                          return hasLighting ? "Подобрать свет →" : "Связаться и обсудить →";
+                        return "К подбору освещения →";
+                      })()}
                     </Button>
                   )}
                   <Button type="button" variant="secondary" className="w-full" onClick={promptAddRoom}>
@@ -3403,7 +3471,17 @@ export function PriceCalculatorClient({
                 className="w-full"
                 onClick={onPrimaryCtaClick ?? (() => scrollToAction())}
               >
-                {homepage.price.primaryCtaLabel}
+                {(() => {
+                  // Sidebar CTA — scenario-aware label (квиз-флоу).
+                  // Для Modern всегда ведём в Step 1.
+                  // Для Standard/Advanced: если уже есть свет — в Step 1, иначе в Step 2.
+                  if (solutionScenario === "modern") return "К подбору освещения →";
+                  if (solutionScenario === "standard")
+                    return hasLighting ? "Добавить свет →" : "К итогу →";
+                  if (solutionScenario === "advanced")
+                    return hasLighting ? "Подобрать свет →" : "Связаться и обсудить →";
+                  return homepage.price.primaryCtaLabel;
+                })()}
               </Button>
             </div>
             )}
