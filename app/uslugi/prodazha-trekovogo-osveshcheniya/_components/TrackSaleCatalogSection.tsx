@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useState } from "react";
 
 import { catalog } from "@/content/eksmarket-assortment";
@@ -26,7 +27,7 @@ export function TrackSaleCatalogSection({
   sectionTitle,
   sectionIntro,
 }: TrackSaleCatalogSectionProps) {
-  const { mode, selectedProducts, toggleProduct, clearSelection, isSelected, count } =
+  const { mode, toggleProduct, clearSelection, isSelected, count } =
     useTrackSaleIntent();
 
   const [activeCategory, setActiveCategory] = useState<string>("all");
@@ -325,9 +326,11 @@ function ProductImage({
   if (imageUrl) {
     return (
       <div className="mb-4 rounded-xl overflow-hidden bg-slate-100 aspect-[4/3]">
-        <img
+        <Image
           src={imageUrl}
           alt={title}
+          width={480}
+          height={360}
           loading="lazy"
           className="w-full h-full object-cover"
         />
