@@ -1,6 +1,6 @@
 "use client";
+/* eslint-disable react-hooks/immutability, react-hooks/purity */
 
-import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
 import { homepage } from "@/content/homepage";
@@ -22,7 +22,8 @@ import { Step0SectionSummary } from "@/components/calculator-modal/step0/step0-s
 
 import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
 import { calcRecommendedTrackSpots } from "@/lib/lighting-formulas";
-import type { DerivedInputs, SolutionScenario } from "@/lib/calculator-modal-types";
+import type { CalculatorFooterAction, CalculatorFooterBackAction, DerivedInputs, SolutionScenario } from "@/lib/calculator-modal-types";
+import { resolveStep0ConfirmLabel, resolveStep0SummaryActions } from "@/lib/calculator-flow";
 import { trackScenarioSelected } from "@/lib/analytics";
 
 const calculator = homepage.price.calculator;
@@ -58,6 +59,59 @@ const ALL_COMPACT_STEPS: CompactStepId[] = [
   "chandeliers",
   "lights",
 ];
+
+function Step0FooterBridge({
+  action,
+  backAction,
+  onActionChange,
+  onBackActionChange,
+}: {
+  action: CalculatorFooterAction | null;
+  backAction: CalculatorFooterBackAction;
+  onActionChange?: (action: CalculatorFooterAction | null) => void;
+  onBackActionChange?: (action: CalculatorFooterBackAction) => void;
+}) {
+  const latestActionRef = useRef<CalculatorFooterAction | null>(null);
+  const latestBackActionRef = useRef<CalculatorFooterBackAction>({ visible: false });
+
+  const actionLabel = action?.label ?? null;
+  const actionDisabled = action?.disabled ?? false;
+  const backVisible = Boolean(backAction.visible);
+
+  useEffect(() => {
+    latestActionRef.current = action;
+  }, [action]);
+
+  useEffect(() => {
+    latestBackActionRef.current = backAction;
+  }, [backAction]);
+
+  useEffect(() => {
+    if (!actionLabel) {
+      onActionChange?.(null);
+      return () => onActionChange?.(null);
+    }
+
+    onActionChange?.({
+      label: actionLabel,
+      disabled: actionDisabled,
+      onClick: () => latestActionRef.current?.onClick(),
+    });
+
+    return () => onActionChange?.(null);
+  }, [actionDisabled, actionLabel, onActionChange]);
+
+  useEffect(() => {
+    onBackActionChange?.({
+      visible: backVisible,
+      onClick: backVisible ? () => latestBackActionRef.current.onClick?.() : undefined,
+    });
+
+    return () => onBackActionChange?.({ visible: false });
+  }, [backVisible, onBackActionChange]);
+
+  return null;
+}
 
 type RoomConfig = {
   id: string;
@@ -694,10 +748,12 @@ type PriceCalculatorClientProps = {
   // Сценарий прохождения Step0 в модалке: стандартный / современный / продвинутый.
   initialSolutionScenario?: SolutionScenario;
 
-  // Квиз-флоу: колбэки для прогресс-индикатора в header модалки и состояния сводки.
+  // Квиз-флоу: колбэки для progress/header/footer модалки.
   // Передаются из wizard-step0-calculator.tsx (оттуда — из modal context).
   onStep0ProgressChange?: (progress: { done: number; total: number } | null) => void;
   onIsStep0SummaryReadyChange?: (ready: boolean) => void;
+  onStep0FooterActionChange?: (action: CalculatorFooterAction | null) => void;
+  onStep0BackActionChange?: (action: CalculatorFooterBackAction) => void;
 };
 
 export function PriceCalculatorClient({
@@ -710,6 +766,8 @@ export function PriceCalculatorClient({
   initialSolutionScenario = "standard",
   onStep0ProgressChange,
   onIsStep0SummaryReadyChange,
+  onStep0FooterActionChange,
+  onStep0BackActionChange,
 }: PriceCalculatorClientProps) {
   const { snapshot: bridgeSnapshot, setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
 
@@ -2159,7 +2217,6 @@ export function PriceCalculatorClient({
     });
 
     return () => cancelAnimationFrame(frame);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shadowEnabled, floatingEnabled, showModernOptionSteps, compactSections]);
 
   useEffect(() => {
@@ -2172,29 +2229,9 @@ export function PriceCalculatorClient({
     // V-5: step numbers removed — titles hardcoded without numbers
 
     const scrollToAction = () => {
-      let modalContext: any = null;
-      try {
-        // eslint-disable-next-line react-hooks/rules-of-hooks
-        modalContext = useCalculatorModal();
-      } catch (e) {
-        // not inside CalculatorModalProvider
-      }
-
-      if (modalContext && compactSections) {
-        modalContext.goToStep(2);
-        setTimeout(() => {
-          const el = document.getElementById("modal-action-form");
-          if (el) {
-            el.scrollIntoView({ behavior: "smooth", block: "start" });
-          }
-        }, 100);
-        return;
-      }
-
-      if (typeof document !== "undefined") {
-        const el = document.getElementById("action");
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
+      if (typeof document === "undefined") return;
+      const el = document.getElementById("action") || document.getElementById("lead-form");
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
     };
 
     const scenarioOptions: Array<{ id: SolutionScenario; title: string; text: string }> = [
@@ -2257,6 +2294,38 @@ export function PriceCalculatorClient({
         ? `${selectedCornice.label}, ${corniceLength} м.п.${corniceLightingEnabled ? ` · подсветка ${corniceLightingLength} м.п. · БП ${corniceLightingPowerSupplies} шт.` : ""}`
         : "не нужен";
 
+    const summaryActions = resolveStep0SummaryActions({
+      scenario: solutionScenario,
+      hasLighting,
+    });
+
+    const primaryStep0Action = isSummaryReady
+      ? {
+          label: summaryActions.primary.label,
+          onClick: () => {
+            if (onPrimaryCtaClick) {
+              onPrimaryCtaClick();
+              return;
+            }
+            scrollToAction();
+          },
+        }
+      : null;
+
+    const step0FooterAction: CalculatorFooterAction | null = primaryStep0Action ??
+      (calculationScope !== null && !isChoosingRoom && activeStep
+        ? {
+            label: resolveStep0ConfirmLabel(activeStep),
+            disabled: !isStepEnabled(activeStep),
+            onClick: () => confirmAndNavigate(activeStep),
+          }
+        : null);
+
+    const step0BackAction: CalculatorFooterBackAction = {
+      visible: canGoBack,
+      onClick: canGoBack ? handleBackClick : undefined,
+    };
+
     const trackValue =
       selectedTrack.ratePerMeter > 0
         ? `${selectedTrack.label}, ${trackLength} м.п.`
@@ -2267,6 +2336,13 @@ export function PriceCalculatorClient({
     const lightLinesValue = lightLinesEnabled ? `${lightLinesLength} м.п.` : "не нужны";
 
     return (
+      <>
+      <Step0FooterBridge
+        action={step0FooterAction}
+        backAction={step0BackAction}
+        onActionChange={onStep0FooterActionChange}
+        onBackActionChange={onStep0BackActionChange}
+      />
       <Step0Provider
         value={
           {
@@ -2276,7 +2352,9 @@ export function PriceCalculatorClient({
             effectiveSnapshot,
             effectiveRooms: summarizeRooms(effectiveSnapshot?.roomBreakdown),
             hasLighting,
-            onPrimaryCtaClick: onPrimaryCtaClick ?? (() => scrollToAction()),
+            onPrimaryCtaClick: primaryStep0Action?.onClick ?? onPrimaryCtaClick ?? (() => scrollToAction()),
+            footerAction: step0FooterAction,
+            backAction: step0BackAction,
             onBeginEditLastStep: isSummaryReady
               ? () => {
                   const lastStep = compactSteps[compactSteps.length - 1];
@@ -3514,72 +3592,7 @@ export function PriceCalculatorClient({
             )}
           </div>
 
-          {/* Квиз-флоу: routing-кнопка для footer-«Далее» (НЕ в .sr-only!).
-              MutationObserver в calculator-modal.tsx найдёт её через querySelectorAll,
-              а visibility:hidden прячет от пользователя. Класс динамический по (scenario, hasLighting),
-              чтобы getConfirmLabel подобрал правильный label в footer. */}
-          {(isSummaryReady || canGoBack) ? (
-            <div
-              data-step0-routing
-              style={{
-                visibility: "hidden",
-                position: "absolute",
-                width: 0,
-                height: 0,
-                overflow: "hidden",
-                pointerEvents: "none",
-              }}
-              aria-hidden="true"
-            >
-              {isSummaryReady ? (
-                <button
-                  type="button"
-                  className={[
-                    "step0-confirm-button",
-                    solutionScenario === "modern" && "step0-confirm-room-light-modern",
-                    solutionScenario === "standard" &&
-                      !hasLighting &&
-                      "step0-confirm-room-light-standard-no-light",
-                    solutionScenario === "standard" &&
-                      hasLighting &&
-                      "step0-confirm-room-light-standard-with-light",
-                    solutionScenario === "advanced" &&
-                      !hasLighting &&
-                      "step0-confirm-room-light-advanced-no-light",
-                    solutionScenario === "advanced" &&
-                      hasLighting &&
-                      "step0-confirm-room-light-advanced-with-light",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  onClick={onPrimaryCtaClick ?? (() => scrollToAction())}
-                  tabIndex={-1}
-                >
-                  {(() => {
-                    if (solutionScenario === "modern") return "К подбору освещения →";
-                    if (solutionScenario === "standard")
-                      return hasLighting ? "Добавить свет →" : "К итогу →";
-                    if (solutionScenario === "advanced")
-                      return hasLighting ? "Подобрать свет →" : "Связаться и обсудить →";
-                    return "К подбору освещения →";
-                  })()}
-                </button>
-              ) : null}
 
-              {/* Кнопка «← Назад» для footer модалки. MutationObserver детектит
-                  её через .step0-back-button:not(:disabled) и показывает в footer. */}
-              {canGoBack ? (
-                <button
-                  type="button"
-                  className="step0-back-button"
-                  onClick={handleBackClick}
-                  tabIndex={-1}
-                >
-                  ← Назад
-                </button>
-              ) : null}
-            </div>
-          ) : null}
         </div>
 
         {/* RIGHT summary — desktop sidebar */}
@@ -3621,15 +3634,8 @@ export function PriceCalculatorClient({
                       К следующей комнате →
                     </Button>
                   ) : (
-                    <Button type="button" className="w-full" onClick={onPrimaryCtaClick ?? (() => scrollToAction())}>
-                      {(() => {
-                        if (solutionScenario === "modern") return "К подбору освещения →";
-                        if (solutionScenario === "standard")
-                          return hasLighting ? "Добавить свет →" : "К итогу →";
-                        if (solutionScenario === "advanced")
-                          return hasLighting ? "Подобрать свет →" : "Связаться и обсудить →";
-                        return "К подбору освещения →";
-                      })()}
+                    <Button type="button" className="w-full" onClick={primaryStep0Action?.onClick ?? onPrimaryCtaClick ?? (() => scrollToAction())}>
+                      {summaryActions.primary.label}
                     </Button>
                   )}
                   <Button type="button" variant="secondary" className="w-full" onClick={promptAddRoom}>
@@ -3647,19 +3653,9 @@ export function PriceCalculatorClient({
               <Button
                 type="button"
                 className="w-full"
-                onClick={onPrimaryCtaClick ?? (() => scrollToAction())}
+                onClick={primaryStep0Action?.onClick ?? onPrimaryCtaClick ?? (() => scrollToAction())}
               >
-                {(() => {
-                  // Sidebar CTA — scenario-aware label (квиз-флоу).
-                  // Для Modern всегда ведём в Step 1.
-                  // Для Standard/Advanced: если уже есть свет — в Step 1, иначе в Step 2.
-                  if (solutionScenario === "modern") return "К подбору освещения →";
-                  if (solutionScenario === "standard")
-                    return hasLighting ? "Добавить свет →" : "К итогу →";
-                  if (solutionScenario === "advanced")
-                    return hasLighting ? "Подобрать свет →" : "Связаться и обсудить →";
-                  return homepage.price.primaryCtaLabel;
-                })()}
+                {summaryActions.primary.label}
               </Button>
             </div>
             )}
@@ -3699,6 +3695,7 @@ export function PriceCalculatorClient({
           </>
         )}
       </Step0Provider>
+      </>
     );
   }
 

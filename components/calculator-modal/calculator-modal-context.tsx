@@ -17,7 +17,15 @@ import type {
   WizardStep,
   Step1FooterAction,
   LightingDiscountMode,
+  CalculatorFooterAction,
+  CalculatorFooterBackAction,
 } from "@/lib/calculator-modal-types";
+import {
+  resolveInitialLightingTab,
+  resolveInitialLightingView,
+  resolveInitialWizardStep,
+  resolveLightingDiscountMode,
+} from "@/lib/calculator-flow";
 
 import {
   LIGHTING_ONLY_DISCOUNT_PERCENT,
@@ -139,6 +147,8 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   const [lightingDiscountEligible, setLightingDiscountEligible] = useState(false);
 
   const [step1CatalogView, setStep1CatalogView] = useState<"selected" | "browse" | null>(null);
+  const [step0FooterAction, setStep0FooterActionState] = useState<CalculatorFooterAction | null>(null);
+  const [step0BackAction, setStep0BackActionState] = useState<CalculatorFooterBackAction>({ visible: false });
   const [step1FooterAction, setStep1FooterActionState] = useState<Step1FooterAction | null>(null);
 
   const { snapshot, setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
@@ -153,6 +163,14 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
     setStep0AreaConfirmed(false);
   }, []);
 
+  const setStep0FooterAction = useCallback((action: CalculatorFooterAction | null) => {
+    setStep0FooterActionState(action);
+  }, []);
+
+  const setStep0BackAction = useCallback((action: CalculatorFooterBackAction) => {
+    setStep0BackActionState(action);
+  }, []);
+
   const setStep1FooterAction = useCallback((action: Step1FooterAction | null) => {
     setStep1FooterActionState(action);
   }, []);
@@ -164,11 +182,18 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
 
       const resolvedOpts: OpenCalculatorOptions = {
         ...incoming,
-        initialStep: incoming.initialStep ?? (isLightingFirst ? 1 : 0),
-        initialLightingTab:
-          incoming.initialLightingTab ?? (isLightingFirst ? "catalog" : undefined),
-        initialLightingView:
-          incoming.initialLightingView ?? (isLightingFirst ? "browse" : undefined),
+        initialStep: resolveInitialWizardStep({
+          entryMode: incoming.entryMode,
+          initialStep: incoming.initialStep,
+        }),
+        initialLightingTab: resolveInitialLightingTab({
+          entryMode: incoming.entryMode,
+          initialLightingTab: incoming.initialLightingTab,
+        }),
+        initialLightingView: resolveInitialLightingView({
+          entryMode: incoming.entryMode,
+          initialLightingView: incoming.initialLightingView,
+        }),
         preset:
           incoming.preset ??
           (isLightingFirst
@@ -210,6 +235,8 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       setLightingDiscountEligible(enableDiscountNow);
 
       setStep1CatalogView(resolvedOpts.initialLightingView ?? null);
+      setStep0FooterActionState(null);
+      setStep0BackActionState({ visible: false });
       setStep1FooterActionState(null);
 
       // скидка и источник: сбрасываем/ставим на snapshot (если он есть)
@@ -288,10 +315,17 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   const lightingDiscountedTotal = lightingWithCeilingTotal;
 
   const lightingDiscountMode = useMemo<LightingDiscountMode>(() => {
-    if (!lightingDraft || lightingRegularTotal <= 0) return "none";
-    if (lightingDiscountEligible) return "with-ceiling";
-    if (options?.entryMode === "lighting-first") return "lighting-only";
-    return "none";
+    const hasLighting = Boolean(
+      lightingDraft &&
+        lightingDraft.mode !== "none" &&
+        ((lightingDraft.items?.length ?? 0) > 0 || lightingRegularTotal > 0)
+    );
+    return resolveLightingDiscountMode({
+      hasLighting,
+      regularTotal: lightingRegularTotal,
+      discountEligibleWithCeiling: lightingDiscountEligible,
+      entryMode: options?.entryMode,
+    });
   }, [lightingDiscountEligible, lightingDraft, lightingRegularTotal, options?.entryMode]);
 
   const lightingEffectiveTotal = useMemo(() => {
@@ -417,6 +451,11 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
         isStep0SummaryReady,
         setIsStep0SummaryReady,
 
+        step0FooterAction,
+        setStep0FooterAction,
+        step0BackAction,
+        setStep0BackAction,
+
         step1CatalogView,
         setStep1CatalogView,
         step1FooterAction,
@@ -448,6 +487,10 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       step0AreaConfirmed,
       step0Progress,
       isStep0SummaryReady,
+      step0FooterAction,
+      setStep0FooterAction,
+      step0BackAction,
+      setStep0BackAction,
       step1CatalogView,
       setStep1CatalogView,
       step1FooterAction,

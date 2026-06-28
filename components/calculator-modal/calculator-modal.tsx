@@ -94,6 +94,8 @@ export function CalculatorModal() {
     options,
     lightingDraft,
     step1FooterAction,
+    step0FooterAction,
+    step0BackAction,
     step0Progress,
     isStep0SummaryReady,
   } = useCalculatorModal();
@@ -107,9 +109,6 @@ export function CalculatorModal() {
 
   const [mounted, setMounted] = useState(false);
   const [isActionFormVisible, setIsActionFormVisible] = useState(false);
-  const [step0HasConfirmButtonState, setStep0HasConfirmButtonState] = useState(false);
-  const [step0FooterLabelState, setStep0FooterLabelState] = useState("Подтвердить →");
-  const [step0HasBackButtonState, setStep0HasBackButtonState] = useState(false);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => setMounted(true));
@@ -154,90 +153,15 @@ export function CalculatorModal() {
     };
   }, [currentStep]);
 
-  useEffect(() => {
-    if (currentStep !== 0) return;
-
-    const getConfirmLabel = (button: HTMLButtonElement | null) => {
-      if (!button) return "Подтвердить →";
-      const classes = button.classList;
-      if (classes.contains("step0-confirm-area")) return "Подтвердить площадь →";
-      if (classes.contains("step0-confirm-ceiling")) return "Подтвердить тип →";
-      if (classes.contains("step0-confirm-shadow")) return "Подтвердить профиль →";
-      if (classes.contains("step0-confirm-floating")) return "Подтвердить профиль →";
-      if (classes.contains("step0-confirm-light-lines")) return "Подтвердить линии →";
-      if (classes.contains("step0-confirm-cornice")) return "Подтвердить карниз →";
-      if (classes.contains("step0-confirm-track")) return "Подтвердить трек →";
-      if (classes.contains("step0-confirm-chandeliers")) return "Подтвердить люстры →";
-      if (classes.contains("step0-confirm-lights")) return "Подтвердить точки →";
-      if (classes.contains("step0-confirm-room-picker")) return "Выбрать помещение →";
-      if (classes.contains("step0-confirm-room-continue")) return "Продолжить помещение →";
-      if (classes.contains("step0-confirm-room-next")) return "К следующей комнате →";
-      // Квиз-флоу: routing-кнопки из data-step0-routing (НЕ .sr-only) для финального перехода.
-      // Класс динамический по (scenario, hasLighting) — см. price-calculator-client.tsx.
-      if (classes.contains("step0-confirm-room-light-modern")) return "К подбору освещения →";
-      if (classes.contains("step0-confirm-room-light-standard-no-light")) return "К итогу →";
-      if (classes.contains("step0-confirm-room-light-standard-with-light")) return "Добавить свет →";
-      if (classes.contains("step0-confirm-room-light-advanced-no-light")) return "Связаться и обсудить →";
-      if (classes.contains("step0-confirm-room-light-advanced-with-light")) return "Подобрать свет →";
-      // Legacy fallback на случай если остался старый класс.
-      if (classes.contains("step0-confirm-room-light")) return "К подбору освещения →";
-      return "Подтвердить →";
-    };
-
-    const update = () => {
-      const buttons = contentRef.current?.querySelectorAll<HTMLButtonElement>(
-        ".step0-confirm-button:not(:disabled)"
-      ) ?? [];
-      let button: HTMLButtonElement | null = null;
-      for (const btn of Array.from(buttons)) {
-        if (btn.closest(".sr-only")) continue;
-        button = btn;
-        break;
-      }
-      setStep0HasConfirmButtonState(Boolean(button));
-      setStep0FooterLabelState(getConfirmLabel(button));
-
-      // Квиз-флоу: детектим наличие кнопки «← Назад» в Step 0.
-      // Кнопка рендерится в <div data-step0-routing> (visibility:hidden), но НЕ в .sr-only —
-      // поэтому обычный querySelector её находит.
-      const backButton = contentRef.current?.querySelector<HTMLButtonElement>(
-        ".step0-back-button:not(:disabled)"
-      );
-      setStep0HasBackButtonState(Boolean(backButton));
-    };
-
-    const frame = requestAnimationFrame(update);
-
-    const root = contentRef.current;
-    if (!root) return;
-
-    const observer = new MutationObserver(update);
-    observer.observe(root, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["class", "disabled", "style", "aria-hidden"],
-    });
-
-    window.addEventListener("resize", update);
-
-    return () => {
-      cancelAnimationFrame(frame);
-      observer.disconnect();
-      window.removeEventListener("resize", update);
-    };
-  }, [currentStep]);
-
-  const snapshotValid = isSnapshotValid(snapshot);
-  const step0HasConfirmButton = currentStep === 0 ? step0HasConfirmButtonState : false;
-  const step0HasBackButton = currentStep === 0 ? step0HasBackButtonState : false;
-  const step0FooterLabel = currentStep === 0 ? step0FooterLabelState : "Подтвердить →";
+  const step0HasConfirmButton = currentStep === 0 ? Boolean(step0FooterAction) : false;
+  const step0HasBackButton = currentStep === 0 ? Boolean(step0BackAction.visible && step0BackAction.onClick) : false;
+  const step0FooterLabel = currentStep === 0 ? (step0FooterAction?.label ?? "Подтвердить →") : "Подтвердить →";
   const actionFormVisible = currentStep === 2 ? isActionFormVisible : false;
 
   const isNextDisabled = useMemo(() => {
-    if (currentStep === 0) return !snapshotValid;
+    if (currentStep === 0) return step0FooterAction ? Boolean(step0FooterAction.disabled) : !isSnapshotValid(snapshot);
     return false;
-  }, [currentStep, snapshotValid]);
+  }, [currentStep, snapshot, step0FooterAction]);
 
   const stepTitle = useMemo(() => {
     if (currentStep === 1) {
@@ -515,14 +439,7 @@ export function CalculatorModal() {
               ) : step0HasBackButton ? (
                 <button
                   type="button"
-                  onClick={() => {
-                    // Кликаем скрытую .step0-back-button в PriceCalculatorClient,
-                    // которая вызывает beginEdit(previousStep) / beginEdit(lastStep).
-                    const backBtn = contentRef.current?.querySelector<HTMLButtonElement>(
-                      ".step0-back-button:not(:disabled)"
-                    );
-                    backBtn?.click();
-                  }}
+                  onClick={() => step0BackAction.onClick?.()}
                   className="h-12 rounded-2xl px-5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 max-sm:h-11 max-sm:px-3"
                   style={{ minHeight: 48 }}
                 >
@@ -537,20 +454,9 @@ export function CalculatorModal() {
                   <button
                     type="button"
                     onClick={() => {
-                      if (currentStep === 0 && step0HasConfirmButton) {
-                        const buttons = contentRef.current?.querySelectorAll<HTMLButtonElement>(
-                          ".step0-confirm-button:not(:disabled)"
-                        ) ?? [];
-                        let button: HTMLButtonElement | null = null;
-                        for (const btn of Array.from(buttons)) {
-                          if (btn.closest(".sr-only")) continue;
-                          button = btn;
-                          break;
-                        }
-                        if (button) {
-                          button.click();
-                          return;
-                        }
+                      if (currentStep === 0 && step0FooterAction) {
+                        step0FooterAction.onClick();
+                        return;
                       }
                       if (currentStep === 1 && step1FooterAction) {
                         step1FooterAction.onClick();

@@ -38,7 +38,6 @@ export function PriceStrip() {
     grandTotal,
     currentStep,
     options,
-    step0SessionInteracted,
     step0AreaConfirmed,
   } = useCalculatorModal();
 

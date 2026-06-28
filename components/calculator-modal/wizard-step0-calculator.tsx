@@ -4,10 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { homepage } from "@/content/homepage";
 import type { ServiceCalculatorPreset } from "@/content/services";
-import {
-  getStep0NextDestination,
-  type SolutionScenario,
-} from "@/lib/calculator-modal-types";
+import type { SolutionScenario } from "@/lib/calculator-modal-types";
+import { resolveStep0SummaryActions } from "@/lib/calculator-flow";
 import { PriceCalculatorClient } from "@/components/home/price-calculator-client";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 
@@ -74,22 +72,40 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
     goToStep,
     setStep0Progress,
     setIsStep0SummaryReady,
+    setStep0FooterAction,
+    setStep0BackAction,
   } = useCalculatorModal();
   const { snapshot } = usePriceCalculatorBridge();
 
   const forcePreset = Boolean(options?.forcePreset);
-  const resolvedPreset: ServiceCalculatorPreset = {
-    ceilingType: String(preset?.ceilingType ?? "standard") as ServiceCalculatorPreset["ceilingType"],
-    areaDefault: forcePreset ? Number(preset?.areaDefault ?? DEFAULT_CALCULATOR_AREA) : DEFAULT_CALCULATOR_AREA,
-    corniceType: preset?.corniceType,
-    trackType: preset?.trackType,
-    lightsEnabled: preset?.lightsEnabled,
-    lightsCount: preset?.lightsCount,
-    introNote: preset?.introNote,
-    lightingDefault: preset?.lightingDefault,
-  };
+  const resolvedPreset: ServiceCalculatorPreset = useMemo(
+    () => ({
+      ceilingType: String(preset?.ceilingType ?? "standard") as ServiceCalculatorPreset["ceilingType"],
+      areaDefault: forcePreset ? Number(preset?.areaDefault ?? DEFAULT_CALCULATOR_AREA) : DEFAULT_CALCULATOR_AREA,
+      corniceType: preset?.corniceType,
+      trackType: preset?.trackType,
+      lightsEnabled: preset?.lightsEnabled,
+      lightsCount: preset?.lightsCount,
+      introNote: preset?.introNote,
+      lightingDefault: preset?.lightingDefault,
+    }),
+    [
+      forcePreset,
+      preset?.areaDefault,
+      preset?.ceilingType,
+      preset?.corniceType,
+      preset?.introNote,
+      preset?.lightingDefault,
+      preset?.lightsCount,
+      preset?.lightsEnabled,
+      preset?.trackType,
+    ]
+  );
 
-  const initialSolutionScenario = resolveInitialSolutionScenario(options?.source, resolvedPreset);
+  const initialSolutionScenario = useMemo(
+    () => resolveInitialSolutionScenario(options?.source, resolvedPreset),
+    [options?.source, resolvedPreset]
+  );
 
   const [prefillTrigger, setPrefillTrigger] = useState(0);
 
@@ -258,22 +274,20 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
         }
         prefillFromLightingTrigger={prefillTrigger}
         onPrimaryCtaClick={() => {
-          // Квиз-флоу: после сводки Step 0 переходим в зависимости от сценария.
-          // - Modern: всегда Step 1 (свет — обязательная часть)
-          // - Standard: Step 2 по умолчанию, Step 1 если уже выбран свет
-          // - Advanced: Step 2 по умолчанию (телефон), Step 1 если уже выбран свет
           const scenario = snapshot?.solutionScenario ?? initialSolutionScenario;
           const hasLighting = Boolean(
             lightingDraft &&
               lightingDraft.mode !== "none" &&
               (lightingDraft.items?.length ?? 0) > 0
           );
-          const destination = getStep0NextDestination(scenario, hasLighting);
-          goToStep(destination);
+          const actions = resolveStep0SummaryActions({ scenario, hasLighting });
+          goToStep(actions.primary.destination);
         }}
         initialSolutionScenario={initialSolutionScenario}
         onStep0ProgressChange={setStep0Progress}
         onIsStep0SummaryReadyChange={setIsStep0SummaryReady}
+        onStep0FooterActionChange={setStep0FooterAction}
+        onStep0BackActionChange={setStep0BackAction}
       />
     </div>
   );

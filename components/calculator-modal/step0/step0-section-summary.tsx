@@ -4,7 +4,8 @@ import { useMemo, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
-import type { SolutionScenario, WizardStep } from "@/lib/calculator-modal-types";
+import { resolveStep0SummaryActions } from "@/lib/calculator-flow";
+import type { SolutionScenario } from "@/lib/calculator-modal-types";
 
 import {
   useStep0Context,
@@ -28,40 +29,6 @@ const SCENARIO_SUBTITLES: Record<SolutionScenario, string> = {
   modern: "Современный сценарий",
   advanced: "Продвинутый сценарий · обсудим лично",
 };
-
-type SummaryRouting = {
-  primary: { label: string; destination: WizardStep };
-  secondary: { label: string; destination: WizardStep } | null;
-};
-
-/**
- * Логика кнопок «Куда дальше?» в сводке.
- * Из отчёта (Часть 3.0):
- * - Standard: главная «К итогу →» (Step 2) + альтернатива «Добавить свет →» (Step 1)
- * - Modern: одна кнопка «К подбору освещения →» (Step 1)
- * - Advanced: главная «Связаться и обсудить →» (Step 2) + альтернатива «Подобрать свет →» (Step 1)
- *
- * Не зависит от hasLighting — обе опции доступны всегда.
- */
-function getSummaryRouting(scenario: SolutionScenario): SummaryRouting {
-  switch (scenario) {
-    case "standard":
-      return {
-        primary: { label: "К итогу →", destination: 2 },
-        secondary: { label: "Добавить свет →", destination: 1 },
-      };
-    case "modern":
-      return {
-        primary: { label: "К подбору освещения →", destination: 1 },
-        secondary: null,
-      };
-    case "advanced":
-      return {
-        primary: { label: "Связаться и обсудить →", destination: 2 },
-        secondary: { label: "Подобрать свет →", destination: 1 },
-      };
-  }
-}
 
 function Tag({ children }: { children: ReactNode }) {
   return (
@@ -147,12 +114,15 @@ export function Step0SectionSummary() {
     effectiveRooms,
     solutionScenario,
     isSummaryReady,
-    onPrimaryCtaClick,
     onPromptAddRoom,
+    hasLighting,
   } = useStep0Context();
   const { goToStep } = useCalculatorModal();
 
-  const routing = useMemo(() => getSummaryRouting(solutionScenario), [solutionScenario]);
+  const routing = useMemo(
+    () => resolveStep0SummaryActions({ scenario: solutionScenario, hasLighting }),
+    [solutionScenario, hasLighting]
+  );
   const total = effectiveSnapshot?.total ?? 0;
 
   if (!isSummaryReady) return null;
@@ -243,30 +213,6 @@ export function Step0SectionSummary() {
             : "Стандартный сценарий — потолок без обязательного подбора света. Можно добавить свет отдельно или сразу записаться на замер."}
       </p>
 
-      {/* Скрытая кнопка для совместимости с MutationObserver / footer-«Далее».
-          Если по какой-то причине footer-кнопка «Далее» всё ещё ищет .step0-confirm-button,
-          эта скрытая кнопка с onPrimaryCtaClick обеспечит фолбэк. */}
-      <div
-        data-step0-summary-routing-fallback
-        style={{
-          visibility: "hidden",
-          position: "absolute",
-          width: 0,
-          height: 0,
-          overflow: "hidden",
-          pointerEvents: "none",
-        }}
-        aria-hidden="true"
-      >
-        <button
-          type="button"
-          className="step0-confirm-button step0-confirm-room-light-modern"
-          onClick={onPrimaryCtaClick}
-          tabIndex={-1}
-        >
-          Дальше
-        </button>
-      </div>
     </div>
   );
 }

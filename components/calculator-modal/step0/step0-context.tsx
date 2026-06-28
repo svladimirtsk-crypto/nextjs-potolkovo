@@ -61,6 +61,10 @@ export type Step0ContextValue = {
   onBeginEditLastStep?: () => void;
   /** Открыть диалог добавления помещения (только для room-scope). */
   onPromptAddRoom?: () => void;
+  /** Текущее действие footer-кнопки Step 0; источник истины для модалки. */
+  footerAction?: { label: string; onClick: () => void; disabled?: boolean } | null;
+  /** Действие «Назад» в footer Step 0; источник истины для модалки. */
+  backAction?: { visible: boolean; onClick?: () => void };
 };
 
 const Step0Context = createContext<Step0ContextValue | null>(null);
@@ -110,9 +114,4 @@ export function summarizeRooms(
   }));
 }
 
-/**
- * Хелпер для выбора destination из Step 0 в зависимости от сценария и наличия света.
- * Переэкспорт из calculator-modal-types, чтобы секциям не приходилось импортить оттуда.
- */
-export { getStep0NextDestination } from "@/lib/calculator-modal-types";
 export type { WizardStep };
