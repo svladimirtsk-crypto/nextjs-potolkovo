@@ -325,12 +325,18 @@ input.pc-range[type="range"] {
 /* Правый sidebar скрыт: бегущий итог уже виден в шапке (PriceStrip). */
 .step0-quiz .quiz-right { display: none !important; }
 
-/* Quiz: одна колонка, читаемая ширина, по центру. */
+/* Quiz: одна колонка, читаемая ширина, по центру, с вертикальным
+   центрированием на просторных экранах — ощущение «один вопрос на
+   весь экран», а не длинной формы. */
 .step0-quiz {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) !important;
-  max-width: 740px;
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  max-width: 640px;
   margin-inline: auto;
+  min-height: calc(100dvh - var(--header-height, 4.5rem) - 12rem);
+  gap: 1rem;
   /* В fullscreen-модалке убираем собственный «панельный» фон/рамку/тень,
      чтобы фокус был на карточке-вопросе. */
   background: transparent !important;
@@ -339,14 +345,62 @@ input.pc-range[type="range"] {
   padding: 0 !important;
 }
 
-/* Активная карточка-вопрос — выразительнее: белый фон, мягкая тень. */
+@media (max-width: 640px) {
+  .step0-quiz {
+    min-height: 0;
+    justify-content: flex-start;
+  }
+}
+
+/* Активная карточка-вопрос — выразительнее: белый фон, мягкая тень,
+   больше «воздуха», чтобы глаз фокусировался только на текущем шаге. */
 .step0-quiz [data-step] > section {
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 14px 34px rgba(15, 23, 42, 0.08);
+  border-radius: 1.75rem;
+  padding: 1.75rem !important;
 }
-/* Крупнее заголовок вопроса. */
+
+@media (max-width: 640px) {
+  .step0-quiz [data-step] > section {
+    padding: 1.25rem !important;
+    border-radius: 1.25rem;
+  }
+}
+
+/* Крупнее заголовок вопроса — как в типичном полноэкранном квизе. */
 .step0-quiz [data-step] > section > div > p:first-child {
-  font-size: 1.125rem;
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.75rem;
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 640px) {
+  .step0-quiz [data-step] > section > div > p:first-child {
+    font-size: 1.125rem;
+    line-height: 1.5rem;
+  }
+}
+
+/* Описание вопроса — чуть крупнее и спокойнее по цвету, снижает
+   ментальную нагрузку за счёт чёткой иерархии текста. */
+.step0-quiz [data-step] > section > div > p:nth-child(2) {
+  font-size: 0.9375rem;
   line-height: 1.5rem;
+}
+
+/* Карточки-варианты (тип потолка, карниз, трек и т.д.) — крупнее и
+   с более заметным состоянием "выбрано", чтобы решение принималось
+   в одно касание, без разглядывания мелких деталей. */
+.step0-quiz [data-step] section button[aria-pressed] {
+  min-height: 3.25rem;
+}
+
+/* Quiz-rail (чипы пройденных шагов) — аккуратно прижат к верху,
+   не конкурирует по вниманию с активным вопросом. */
+.step0-quiz .quiz-rail {
+  order: -1;
+  opacity: 0.9;
 }
 
 /* В quiz-режиме inline «Подтвердить» внутри карточки дублирует footer
