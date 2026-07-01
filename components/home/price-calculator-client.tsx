@@ -60,6 +60,23 @@ const ALL_COMPACT_STEPS: CompactStepId[] = [
   "lights",
 ];
 
+/**
+ * STEP_QUIZ_META — реестр шагов квиза (Этап 1: presentation layer).
+ * Принцип: движок расчёта не трогаем. Шаг квиза = данные; показ/скрытие
+ * экрана делается через [data-step] + CSS (см. globals.css).
+ */
+const STEP_QUIZ_META: Record<CompactStepId, { title: string }> = {
+  area: { title: "Площадь" },
+  ceiling: { title: "Тип потолка" },
+  shadowProfile: { title: "Теневой профиль" },
+  floatingProfile: { title: "Парящий профиль" },
+  lightLines: { title: "Световые линии" },
+  cornice: { title: "Карниз" },
+  track: { title: "Трек / профиль" },
+  chandeliers: { title: "Люстры" },
+  lights: { title: "Точечный свет" },
+};
+
 function Step0FooterBridge({
   action,
   backAction,
@@ -2335,6 +2352,53 @@ export function PriceCalculatorClient({
     const lightsValue = lightsEnabled ? `${lightsCount} шт.` : "не нужны";
     const lightLinesValue = lightLinesEnabled ? `${lightLinesLength} м.п.` : "не нужны";
 
+    // ===== Этап 1: Quiz presentation layer (аддитивно, без изменения движка) =====
+    const quizMode = compactSections;
+
+    // Состояние шага для data-атрибута: active | done | pending.
+    const isStepDone = (id: CompactStepId): boolean =>
+      currentRoomConfirmedState ? Boolean(currentRoomConfirmedState[id]) : Boolean(confirmed[id]);
+
+    const stepState = (id: CompactStepId): "active" | "done" | "pending" =>
+      activeStep === id ? "active" : isStepDone(id) ? "done" : "pending";
+
+    // Короткий «чип»-свод по шагу для рельса пройденных шагов.
+    const stepChip = (id: CompactStepId): string => {
+      switch (id) {
+        case "area":
+          return `${area} м²`;
+        case "ceiling":
+          return !shadowEnabled && !floatingEnabled
+            ? "Простой"
+            : `${shadowEnabled ? "Теневой" : ""}${shadowEnabled && floatingEnabled ? " + " : ""}${floatingEnabled ? "Парящий" : ""}`;
+        case "shadowProfile":
+          return shadowEnabled && floatingEnabled
+            ? `Т ${shadowLength} · П ${floatingLength} м`
+            : `Теневой ${shadowLength} м`;
+        case "floatingProfile":
+          return `Парящий ${floatingLength} м`;
+        case "lightLines":
+          return lightLinesEnabled ? `${lightLinesLength} м.п.` : "—";
+        case "cornice":
+          return selectedCornice.ratePerMeter > 0 ? selectedCornice.label : "—";
+        case "track":
+          return selectedTrack.ratePerMeter > 0 ? (trackLength ? `${trackLength} м` : selectedTrack.label) : "—";
+        case "chandeliers":
+          return chandeliersEnabled ? `${chandeliersCount} шт` : "—";
+        case "lights":
+          return lightsEnabled ? `${lightsCount} шт` : "—";
+        default:
+          return "✓";
+      }
+    };
+
+    // Рельс пройденных шагов: подтверждённые шаги текущего флоу, кроме активного.
+    const completedRail = quizMode
+      ? compactSteps
+          .filter((id) => isStepDone(id) && id !== activeStep)
+          .map((id) => ({ id, title: STEP_QUIZ_META[id].title, chip: stepChip(id) }))
+      : [];
+
     return (
       <>
       <Step0FooterBridge
@@ -2372,10 +2436,34 @@ export function PriceCalculatorClient({
           <Step0SectionSummary />
         ) : (
           <>
-            <div className="grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:p-8 max-sm:gap-3 max-sm:border-0 max-sm:bg-transparent max-sm:p-0 max-sm:shadow-none">
+            <div
+              data-active-step={activeStep}
+              className={`grid gap-6 rounded-[2rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:p-8 max-sm:gap-3 max-sm:border-0 max-sm:bg-transparent max-sm:p-0 max-sm:shadow-none ${quizMode ? "step0-quiz" : ""}`}
+            >
         {/* LEFT */}
         <div className="min-w-0 space-y-5 max-sm:space-y-3">
+          {/* Quiz rail: пройденные шаги как чипы (клик → редактирование) */}
+          {completedRail.length > 0 ? (
+            <div className="quiz-rail flex flex-wrap items-center gap-2">
+              {completedRail.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => beginEdit(item.id)}
+                  className="group inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:border-slate-400 hover:bg-slate-50"
+                  aria-label={`Изменить: ${item.title}`}
+                >
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-600 text-[9px] font-bold text-white">✓</span>
+                  <span className="text-slate-950">{item.title}</span>
+                  <span className="text-slate-400">·</span>
+                  <span className="text-slate-500">{item.chip}</span>
+                  <span className="text-slate-400 transition-colors group-hover:text-slate-600">✎</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
           <SectionCard
+            className="quiz-setup-card"
             title="Какой вариант решения рассматриваете?"
             description="Выберите уровень подбора — дальше покажу только нужные шаги, а дополнительные опции можно открыть отдельно."
           >
@@ -2417,7 +2505,7 @@ export function PriceCalculatorClient({
           {/* Room manager виден когда есть несколько комнат — здесь можно
               переключаться между комнатами и добавлять новые. */}
           {showRoomManager ? (
-            <div ref={roomManagerRef}>
+            <div ref={roomManagerRef} className="quiz-setup-card">
             <SectionCard
               title="Помещения в расчёте"
               description="Считайте комнаты по очереди: у каждой помещения своя конфигурация, а справа и внизу сразу виден общий итог по объекту."
@@ -2547,7 +2635,7 @@ export function PriceCalculatorClient({
           ) : null}
 
           {/* AREA */}
-          <div ref={areaRef}>
+          <div ref={areaRef} data-step="area" data-state={stepState("area")}>
             {confirmed.area && !(calculationScope === "room" && isChoosingRoom) ? (
               <SectionCard title={`Площадь`}>
                 <SummaryRow
@@ -2737,7 +2825,7 @@ export function PriceCalculatorClient({
           </div>
 
           {/* CEILING */}
-          <div ref={ceilingRef}>
+          <div ref={ceilingRef} data-step="ceiling" data-state={stepState("ceiling")}>
             {confirmed.ceiling ? (
               <SectionCard title={`Тип потолка`}>
                 <SummaryRow
@@ -2855,7 +2943,7 @@ export function PriceCalculatorClient({
 
           {/* JOINT SHADOW & FLOATING PROFILES */}
           {shadowEnabled && floatingEnabled ? (
-            <div ref={shadowProfileRef}>
+            <div ref={shadowProfileRef} data-step="shadowProfile" data-state={stepState("shadowProfile")}>
               {confirmed.shadowProfile ? (
                 <SectionCard title="Теневой и парящий профиль">
                   <SummaryRow
@@ -2967,7 +3055,7 @@ export function PriceCalculatorClient({
             <>
               {/* SHADOW PROFILE (if shadow enabled) */}
               {shadowEnabled ? (
-                <div ref={shadowProfileRef}>
+                <div ref={shadowProfileRef} data-step="shadowProfile" data-state={stepState("shadowProfile")}>
                   {confirmed.shadowProfile ? (
                     <SectionCard title={`Теневой профиль`}>
                       <SummaryRow
@@ -3029,7 +3117,7 @@ export function PriceCalculatorClient({
 
               {/* FLOATING PROFILE (if floating enabled) */}
               {floatingEnabled ? (
-                <div ref={floatingProfileRef}>
+                <div ref={floatingProfileRef} data-step="floatingProfile" data-state={stepState("floatingProfile")}>
                   {confirmed.floatingProfile ? (
                     <SectionCard title={`Парящий профиль`}>
                       <SummaryRow
@@ -3108,7 +3196,7 @@ export function PriceCalculatorClient({
 
           {/* LIGHT LINES */}
           {showModernOptionSteps ? (
-          <div ref={lightLinesRef}>
+          <div ref={lightLinesRef} data-step="lightLines" data-state={stepState("lightLines")}>
             {confirmed.lightLines ? (
               <SectionCard title={`Световые линии`}>
                 <SummaryRow
@@ -3188,7 +3276,7 @@ export function PriceCalculatorClient({
           ) : null}
 
           {/* CORNICE */}
-          <div ref={corniceRef}>
+          <div ref={corniceRef} data-step="cornice" data-state={stepState("cornice")}>
             {confirmed.cornice ? (
               <SectionCard title={`Карнизы`}>
                 <SummaryRow
@@ -3326,7 +3414,7 @@ export function PriceCalculatorClient({
 
           {/* TRACK */}
           {showModernOptionSteps ? (
-          <div ref={trackRef}>
+          <div ref={trackRef} data-step="track" data-state={stepState("track")}>
             {confirmed.track ? (
               <SectionCard title={`Трековое освещение`}>
                 <SummaryRow
@@ -3422,7 +3510,7 @@ export function PriceCalculatorClient({
           ) : null}
 
           {/* CHANDELIERS */}
-          <div ref={chandeliersRef}>
+          <div ref={chandeliersRef} data-step="chandeliers" data-state={stepState("chandeliers")}>
             {confirmed.chandeliers ? (
               <SectionCard title={`Установка люстр`}>
                 <SummaryRow
@@ -3510,7 +3598,7 @@ export function PriceCalculatorClient({
           </div>
 
           {/* LIGHTS */}
-          <div ref={lightsRef}>
+          <div ref={lightsRef} data-step="lights" data-state={stepState("lights")}>
             {confirmed.lights ? (
               <SectionCard title={`Точечные светильники`}>
                 <SummaryRow
@@ -3596,7 +3684,7 @@ export function PriceCalculatorClient({
         </div>
 
         {/* RIGHT summary — desktop sidebar */}
-        <div className="hidden lg:block lg:sticky lg:top-24 lg:self-start">
+        <div className="quiz-right hidden lg:block lg:sticky lg:top-24 lg:self-start">
           <div className="rounded-[1.75rem] bg-slate-950 p-6 text-white shadow-2xl shadow-slate-950/10">
             <p className="text-sm text-white/70">
               {isRoomScopeMulti ? "Общий ориентир по всем помещениям" : "Ориентировочная стоимость от"}
