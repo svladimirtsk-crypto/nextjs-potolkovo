@@ -108,6 +108,7 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
   );
 
   const [prefillTrigger, setPrefillTrigger] = useState(0);
+  const [introHidden, setIntroHidden] = useState(false);
 
   const proofSourceSlug = options?.source?.startsWith("proof-")
     ? options.source.replace(/^proof-/, "")
@@ -220,42 +221,35 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
       onKeyDownCapture={markStep0SessionInteracted}
       onChangeCapture={markStep0SessionInteracted}
     >
-      {proofContext ? (
-        <div className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
-          <p className="font-semibold">Похожее решение загружено</p>
-          <p className="mt-1 text-blue-900/80">
-            {proofContext.actionPreset?.introNote ?? (
-              <>
-                Мы подставили стартовые параметры по кейсу <span className="font-semibold">«{proofContext.title}»</span>.
-                Проверьте площадь и скорректируйте только те участки, где реально нужен профиль, трек, карниз или линии.
-              </>
-            )}
+      {(proofContext || isTrackSaleFlow) && !introHidden ? (
+        <div
+          className={[
+            "relative mb-4 rounded-2xl border p-4 pr-10 text-sm",
+            isTrackSaleFlow
+              ? "border-emerald-200 bg-emerald-50 text-emerald-950"
+              : "border-blue-200 bg-blue-50 text-blue-950",
+          ].join(" ")}
+        >
+          <button
+            type="button"
+            onClick={() => setIntroHidden(true)}
+            aria-label="Скрыть подсказку"
+            className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-black/5 hover:text-slate-700"
+          >
+            ✕
+          </button>
+          <p className="font-semibold">{isTrackSaleFlow ? "Освещение уже выбрано" : "Похожее решение загружено"}</p>
+          <p className={isTrackSaleFlow ? "mt-1 text-emerald-900/80" : "mt-1 text-blue-900/80"}>
+            {isTrackSaleFlow
+              ? "Теперь добавьте параметры потолка, чтобы увидеть общий бюджет. Площадь считается отдельно, а трек, карнизы и профили — только по фактическим метрам."
+              : (proofContext?.actionPreset?.introNote ?? (
+                <>
+                  Мы подставили стартовые параметры по кейсу «{proofContext?.title}». Проверьте площадь и уточните только нужные участки профилей и узлов.
+                </>
+              ))}
           </p>
-          <div className="mt-3 grid gap-2 text-xs text-blue-900/80 sm:grid-cols-3">
-            <div className="rounded-xl bg-white px-3 py-2 ring-1 ring-blue-100">1. Проверьте площадь</div>
-            <div className="rounded-xl bg-white px-3 py-2 ring-1 ring-blue-100">2. Уточните метры профилей и узлов</div>
-            <div className="rounded-xl bg-white px-3 py-2 ring-1 ring-blue-100">3. Дальше можно уточнить свет и итог</div>
-          </div>
         </div>
       ) : null}
-
-      {isTrackSaleFlow ? (
-        <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
-          <p className="font-semibold">Освещение уже выбрано</p>
-          <p className="mt-1 text-emerald-900/80">
-            Теперь добавьте параметры потолка, чтобы увидеть общий бюджет. Площадь считается отдельно, а трек, карнизы и профили — только по фактическим метрам.
-          </p>
-        </div>
-      ) : null}
-
-      <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
-        <p className="font-semibold text-slate-950">Как считать правильно</p>
-        <ul className="mt-2 space-y-1.5 text-slate-600">
-          <li>• Площадь — это всё помещение или весь объект.</li>
-          <li>• Теневой и парящий профиль указывайте только на нужных участках в метрах.</li>
-          <li>• Обычный, теневой и парящий можно сочетать в одном объекте.</li>
-        </ul>
-      </div>
 
 
       <PriceCalculatorClient
