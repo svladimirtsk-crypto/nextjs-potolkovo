@@ -291,3 +291,74 @@ input.pc-range[type="range"] {
   }
 }
 
+
+/* =====================================================================
+   Этап 1: Step 0 — полноэкранный пошаговый QUIZ (presentation layer).
+   Принцип: движок расчёта не трогаем. Один вопрос на экран достигается
+   CSS по data-атрибутам: контейнер .step0-quiz[data-active-step="X"]
+   показывает только [data-step="X"]. Состояние шагов (active/done/
+   pending) считает PriceCalculatorClient; здесь — только показ.
+   ===================================================================== */
+
+/* По умолчанию в quiz-режиме скрываем все шаги. */
+.step0-quiz [data-step] { display: none; }
+
+/* Показываем только активный шаг + лёгкая анимация входа. */
+.step0-quiz[data-active-step="area"] [data-step="area"],
+.step0-quiz[data-active-step="ceiling"] [data-step="ceiling"],
+.step0-quiz[data-active-step="shadowProfile"] [data-step="shadowProfile"],
+.step0-quiz[data-active-step="floatingProfile"] [data-step="floatingProfile"],
+.step0-quiz[data-active-step="lightLines"] [data-step="lightLines"],
+.step0-quiz[data-active-step="cornice"] [data-step="cornice"],
+.step0-quiz[data-active-step="track"] [data-step="track"],
+.step0-quiz[data-active-step="chandeliers"] [data-step="chandeliers"],
+.step0-quiz[data-active-step="lights"] [data-step="lights"] {
+  display: block;
+  animation: quiz-step-in 0.26s ease-out both;
+}
+
+/* Setup-карточки (выбор сценария / менеджер помещений) — только на
+   первом экране (area), далее не отвлекают. */
+.step0-quiz .quiz-setup-card { display: none; }
+.step0-quiz[data-active-step="area"] .quiz-setup-card { display: block; }
+
+/* Правый sidebar скрыт: бегущий итог уже виден в шапке (PriceStrip). */
+.step0-quiz .quiz-right { display: none !important; }
+
+/* Quiz: одна колонка, читаемая ширина, по центру. */
+.step0-quiz {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) !important;
+  max-width: 740px;
+  margin-inline: auto;
+  /* В fullscreen-модалке убираем собственный «панельный» фон/рамку/тень,
+     чтобы фокус был на карточке-вопросе. */
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* Активная карточка-вопрос — выразительнее: белый фон, мягкая тень. */
+.step0-quiz [data-step] > section {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 14px 34px rgba(15, 23, 42, 0.08);
+}
+/* Крупнее заголовок вопроса. */
+.step0-quiz [data-step] > section > div > p:first-child {
+  font-size: 1.125rem;
+  line-height: 1.5rem;
+}
+
+/* В quiz-режиме inline «Подтвердить» внутри карточки дублирует footer
+   (footer Next уже показывает корректный label шага). Прячем, чтобы
+   снизить ментальную нагрузку. Навигация — через footer Назад/Далее. */
+.step0-quiz .step0-confirm-row { display: none; }
+
+@keyframes quiz-step-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step0-quiz [data-step] { animation: none !important; }
+}
