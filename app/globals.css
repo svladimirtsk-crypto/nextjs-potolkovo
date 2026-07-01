@@ -333,10 +333,13 @@ input.pc-range[type="range"] {
   flex-direction: column;
   justify-content: center;
   width: 100%;
-  max-width: 640px;
+  max-width: 680px;
   margin-inline: auto;
-  min-height: calc(100dvh - var(--header-height, 4.5rem) - 12rem);
-  gap: 1rem;
+  /* Заполняем доступную высоту контента модалки за вычетом её «хрома»
+     (шапка + прогресс + PriceStrip + футер). Так один вопрос ощущается
+     как отдельный экран, а не как длинная форма. */
+  min-height: calc(100dvh - 15rem);
+  gap: 0.875rem;
   /* В fullscreen-модалке убираем собственный «панельный» фон/рамку/тень,
      чтобы фокус был на карточке-вопросе. */
   background: transparent !important;
@@ -349,58 +352,104 @@ input.pc-range[type="range"] {
   .step0-quiz {
     min-height: 0;
     justify-content: flex-start;
+    max-width: 100%;
   }
 }
 
-/* Активная карточка-вопрос — выразительнее: белый фон, мягкая тень,
-   больше «воздуха», чтобы глаз фокусировался только на текущем шаге. */
-.step0-quiz [data-step] > section {
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 14px 34px rgba(15, 23, 42, 0.08);
+/* Низкие/альбомные экраны: не навязываем большую min-height — иначе
+   появится вертикальный скролл. Прижимаем вопрос к верху. */
+@media (max-height: 720px) {
+  .step0-quiz {
+    min-height: 0;
+    justify-content: flex-start;
+  }
+}
+
+/* Активная карточка-вопрос — выразительный «герой»: белый фон, мягкая
+   тень, больше «воздуха», чтобы глаз фокусировался только на текущем шаге. */
+.step0-quiz [data-step] > section,
+.step0-quiz section.quiz-setup-card,
+.step0-quiz .quiz-setup-card > section {
+  background: #ffffff !important;
+  border: 1px solid rgb(226 232 240) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 18px 44px rgba(15, 23, 42, 0.10);
   border-radius: 1.75rem;
-  padding: 1.75rem !important;
+  padding: 2rem !important;
 }
 
 @media (max-width: 640px) {
-  .step0-quiz [data-step] > section {
+  .step0-quiz [data-step] > section,
+  .step0-quiz section.quiz-setup-card,
+  .step0-quiz .quiz-setup-card > section {
     padding: 1.25rem !important;
-    border-radius: 1.25rem;
+    border-radius: 1.5rem;
   }
+}
+
+/* Больше «воздуха» между заголовком вопроса и вариантами. */
+.step0-quiz [data-step] > section > div:first-child {
+  margin-bottom: 1.5rem;
 }
 
 /* Крупнее заголовок вопроса — как в типичном полноэкранном квизе. */
-.step0-quiz [data-step] > section > div > p:first-child {
-  font-size: 1.375rem;
+.step0-quiz [data-step] > section > div > p:first-child,
+.step0-quiz section.quiz-setup-card > div > p:first-child {
+  font-size: 1.5rem;
   font-weight: 700;
-  line-height: 1.75rem;
-  letter-spacing: -0.01em;
+  line-height: 1.9rem;
+  letter-spacing: -0.02em;
+  color: rgb(2 6 23);
 }
 
 @media (max-width: 640px) {
-  .step0-quiz [data-step] > section > div > p:first-child {
-    font-size: 1.125rem;
-    line-height: 1.5rem;
+  .step0-quiz [data-step] > section > div > p:first-child,
+  .step0-quiz section.quiz-setup-card > div > p:first-child {
+    font-size: 1.1875rem;
+    line-height: 1.55rem;
   }
 }
 
 /* Описание вопроса — чуть крупнее и спокойнее по цвету, снижает
    ментальную нагрузку за счёт чёткой иерархии текста. */
-.step0-quiz [data-step] > section > div > p:nth-child(2) {
+.step0-quiz [data-step] > section > div > p:nth-child(2),
+.step0-quiz section.quiz-setup-card > div > p:nth-child(2) {
   font-size: 0.9375rem;
-  line-height: 1.5rem;
+  line-height: 1.55rem;
+  color: rgb(71 85 105);
 }
 
 /* Карточки-варианты (тип потолка, карниз, трек и т.д.) — крупнее и
    с более заметным состоянием "выбрано", чтобы решение принималось
    в одно касание, без разглядывания мелких деталей. */
 .step0-quiz [data-step] section button[aria-pressed] {
-  min-height: 3.25rem;
+  min-height: 3.75rem;
+  border-radius: 1rem;
+  transition: transform 0.12s ease, border-color 0.15s ease,
+    background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.step0-quiz [data-step] section button[aria-pressed]:hover {
+  transform: translateY(-1px);
+}
+
+.step0-quiz [data-step] section button[aria-pressed]:active {
+  transform: translateY(0);
+}
+
+/* Числовой степпер (площадь / метры) — крупнее и легче попасть пальцем. */
+.step0-quiz [data-step] section input[type="number"],
+.step0-quiz [data-step] section input[inputmode="decimal"],
+.step0-quiz [data-step] section input[inputmode="numeric"] {
+  font-size: 1.125rem;
+  font-weight: 600;
 }
 
 /* Quiz-rail (чипы пройденных шагов) — аккуратно прижат к верху,
    не конкурирует по вниманию с активным вопросом. */
 .step0-quiz .quiz-rail {
   order: -1;
-  opacity: 0.9;
+  opacity: 0.95;
+  margin-bottom: 0.25rem;
 }
 
 /* В quiz-режиме inline «Подтвердить» внутри карточки дублирует footer
