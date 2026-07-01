@@ -1801,7 +1801,9 @@ export function PriceCalculatorClient({
       // - choose-next-room: возвращаемся к последней завершённой комнате
       // - choose-first-room: сбрасываем на SetupScreen
       if (effectiveRooms.length > 0) {
-        const lastCompletedRoom = rooms.find((room) => {
+        // Ищем с конца списка: лид ожидает вернуться к комнате, которую
+        // заполнял последней, а не всегда к первой в списке.
+        const lastCompletedRoom = [...rooms].reverse().find((room) => {
           const state = roomConfirmedMap[room.id];
           return state && compactSteps.every((step) => state[step]);
         });
@@ -1817,6 +1819,20 @@ export function PriceCalculatorClient({
       setActiveRoomId(null);
       setIsChoosingRoom(false);
       setConfirmed(getConfirmedStateForBlankRoom());
+      return;
+    }
+
+    if (resumeStep && compactSteps.includes(resumeStep) && resumeStep !== activeStep) {
+      // Лид сейчас редактирует произвольный шаг (пришёл сюда через чип
+      // "Изменить" на сводке/quiz-rail, а не идёт по шагам линейно). Кнопка
+      // "Назад" в этом состоянии обязана ОТМЕНИТЬ незавершённое редактирование
+      // и вернуть туда, откуда лид пришёл — а не откатывать весь сценарий
+      // (даже если activeStep случайно оказался "area") и не "проваливаться"
+      // на предыдущий шаг по списку, которого лид не касался.
+      setConfirmed((prev) => (prev[activeStep] === false ? { ...prev, [activeStep]: true } : prev));
+      const target = resumeStep;
+      setResumeStep(null);
+      openStep(target);
       return;
     }
 
@@ -2123,7 +2139,20 @@ export function PriceCalculatorClient({
 
   const beginEdit = (id: CompactStepId) => {
     setResumeStep((prev) => prev ?? activeStep);
-    setConfirmed((prev) => ({ ...prev, [id]: false }));
+    setConfirmed((prev) => {
+      // Если лид уходит редактировать другой шаг, не закончив текущий
+      // (например, кликнул по чипу "Изменить" в quiz-rail, стоя на ещё не
+      // подтверждённом шаге), нельзя оставлять activeStep навсегда
+      // неподтверждённым — это создаёт «дыру», которая позже блокирует
+      // кнопку «Подтвердить» на всех последующих шагах (isStepEnabled
+      // проверяет confirmed[предыдущий шаг]). Сами значения полей никуда
+      // не делись и остаются валидными, поэтому просто восстанавливаем флаг.
+      const next = { ...prev, [id]: false };
+      if (activeStep !== id && prev[activeStep] === false) {
+        next[activeStep] = true;
+      }
+      return next;
+    });
     openStep(id);
   };
 
@@ -2229,12 +2258,36 @@ export function PriceCalculatorClient({
         if (prev === "shadowProfile" && !shadowEnabled) return nextAfterProfile;
         if (prev === "floatingProfile" && !floatingEnabled) return nextAfterProfile;
         if ((prev === "lightLines" || prev === "track") && !showModernOptionSteps) return "cornice";
-        return prev;
+
+        // Защита от «пустого экрана»: любое другое изменение конфигурации
+        // (например shadow+floating слились в один общий шаг "shadowProfile",
+        // пока лид стоял на "floatingProfile") могло оставить activeStep
+        // указывать на шаг, которого больше нет в compactSteps — в quiz-режиме
+        // это рендерит пустой экран, потому что нет узла с соответствующим
+        // data-step. Ниже — универсальный safety-net на все такие случаи.
+        if (compactSteps.includes(prev)) return prev;
+
+        if (
+          (prev === "floatingProfile" || prev === "shadowProfile") &&
+          compactSteps.includes("shadowProfile")
+        ) {
+          // Оба профиля слились в один объединённый шаг — это тот же смысловой шаг.
+          return "shadowProfile";
+        }
+
+        // Общий случай: ищем ближайший актуальный шаг слева по каноническому
+        // порядку ALL_COMPACT_STEPS, иначе — первый доступный шаг.
+        const prevIdx = ALL_COMPACT_STEPS.indexOf(prev);
+        for (let i = prevIdx - 1; i >= 0; i--) {
+          const candidate = ALL_COMPACT_STEPS[i];
+          if (compactSteps.includes(candidate)) return candidate;
+        }
+        return compactSteps[0] ?? prev;
       });
     });
 
     return () => cancelAnimationFrame(frame);
-  }, [shadowEnabled, floatingEnabled, showModernOptionSteps, compactSections]);
+  }, [shadowEnabled, floatingEnabled, showModernOptionSteps, compactSections, compactSteps]);
 
   useEffect(() => {
     if (corniceLightingEnabled && corniceLightingLength > corniceLength) {
