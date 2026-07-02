@@ -43,7 +43,7 @@ test("Step 0 summary routing decision table", () => {
       { scenario: "standard", hasLighting: false },
       {
         primary: { label: "К итогу →", destination: 2 },
-        secondary: { label: "Добавить свет →", destination: 1 },
+        secondary: { label: "Подобрать свет −25% →", destination: 1 },
       },
     ],
     [
@@ -56,7 +56,7 @@ test("Step 0 summary routing decision table", () => {
     [
       { scenario: "modern", hasLighting: false },
       {
-        primary: { label: "К подбору освещения →", destination: 1 },
+        primary: { label: "Подобрать свет −25% →", destination: 1 },
         secondary: null,
       },
     ],
@@ -71,7 +71,7 @@ test("Step 0 summary routing decision table", () => {
       { scenario: "advanced", hasLighting: false },
       {
         primary: { label: "Связаться и обсудить →", destination: 2 },
-        secondary: { label: "Подобрать свет →", destination: 1 },
+        secondary: { label: "Подобрать свет −25% →", destination: 1 },
       },
     ],
     [
@@ -195,7 +195,7 @@ test("unknown scenario falls back to standard summary routing", () => {
     plain(resolveStep0SummaryActions({ scenario: undefined, hasLighting: false })),
     {
       primary: { label: "К итогу →", destination: 2 },
-      secondary: { label: "Добавить свет →", destination: 1 },
+      secondary: { label: "Подобрать свет −25% →", destination: 1 },
     }
   );
 });
