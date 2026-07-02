@@ -1786,33 +1786,69 @@ export function PriceCalculatorClient({
   // Все остальные состояния (room picker, active section, summary) — назад работает.
   const canGoBack = compactSections && calculationScope !== null;
 
+  /**
+   * Линейный шаг назад по квизу (без resume-механики).
+   *
+   * Раньше mid-flow «Назад» делался через beginEdit(prev), который выставлял
+   * resumeStep = activeStep. Это создавало ловушку двойного «Назад»:
+   * cornice → Назад → ceiling → Назад — и лида выбрасывало ВПЕРЁД обратно на
+   * cornice (срабатывала ветка «отмена редактирования»). Теперь «Назад» —
+   * это честный линейный откат: предыдущий шаг раскрывается, resumeStep
+   * сбрасывается, а движение вперёд продолжается по nextUnconfirmedAfter.
+   */
+  const goBackOneStep = (target: CompactStepId) => {
+    setResumeStep(null);
+    setConfirmed((prev) => ({ ...prev, [target]: false }));
+    setActiveStep(target);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => scrollToStep(target, "smooth"));
+    });
+  };
+
   const handleBackClick = () => {
     if (!canGoBack) return;
 
     if (isSummaryReady) {
       // На сводке: открываем последний compactStep для редактирования.
+      // Без resumeStep — после подтверждения лид вернётся на сводку,
+      // а не «отскочит» на случайный ранее активный шаг.
       const lastStep = compactSteps[compactSteps.length - 1];
-      if (lastStep) beginEdit(lastStep);
+      if (lastStep) goBackOneStep(lastStep);
       return;
     }
 
     if (isChoosingRoom) {
       // Room picker (выбор комнаты):
-      // - choose-next-room: возвращаемся к последней завершённой комнате
-      // - choose-first-room: сбрасываем на SetupScreen
-      if (effectiveRooms.length > 0) {
+      // - есть комнаты: возвращаемся к последней завершённой, а если
+      //   завершённых нет — к последней добавленной (НЕ стираем прогресс
+      //   лида молча — раньше здесь сбрасывался весь room-scope).
+      // - комнат нет вовсе (choose-first-room): сброс на SetupScreen.
+      if (rooms.length > 0) {
         // Ищем с конца списка: лид ожидает вернуться к комнате, которую
         // заполнял последней, а не всегда к первой в списке.
         const lastCompletedRoom = [...rooms].reverse().find((room) => {
           const state = roomConfirmedMap[room.id];
           return state && compactSteps.every((step) => state[step]);
         });
-        if (lastCompletedRoom) {
-          switchToRoom(lastCompletedRoom.id);
+        const fallbackRoom = lastCompletedRoom ?? rooms[rooms.length - 1] ?? null;
+        if (fallbackRoom) {
+          switchToRoom(fallbackRoom.id);
+          // Если комната не дозаполнена — сразу открываем её первый
+          // неподтверждённый шаг, а не сводку-заглушку по «area».
+          const state = roomConfirmedMap[fallbackRoom.id];
+          const pending = state
+            ? compactSteps.find((step) => !state[step]) ?? null
+            : null;
+          if (pending) {
+            setActiveStep(pending);
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => scrollToStep(pending, "smooth"));
+            });
+          }
           return;
         }
       }
-      // choose-first-room или нет завершённых: сброс на SetupScreen
+      // choose-first-room (комнат ещё нет): сброс на SetupScreen
       setCalculationScope(null);
       setRooms([]);
       setRoomConfirmedMap({});
@@ -1837,7 +1873,19 @@ export function PriceCalculatorClient({
     }
 
     if (activeStep === "area") {
-      // Первая секция (area): сброс на SetupScreen (лид передумал со сценарием).
+      // Первая секция (area).
+      // Room-scope с несколькими комнатами: НЕ стираем весь прогресс — лид,
+      // редактирующий вторую комнату, ожидает вернуться к списку помещений,
+      // а не потерять все посчитанные комнаты. Открываем room picker.
+      if (calculationScope === "room" && rooms.length > 1 && activeRoomId) {
+        setRoomConfirmedMap((prev) => ({ ...prev, [activeRoomId]: confirmed }));
+        setActiveRoomId(null);
+        setIsChoosingRoom(true);
+        setResumeStep(null);
+        return;
+      }
+      // Единственная комната / object-scope: сброс на SetupScreen
+      // (лид передумал со сценарием расчёта).
       setCalculationScope(null);
       setRooms([]);
       setRoomConfirmedMap({});
@@ -1847,10 +1895,10 @@ export function PriceCalculatorClient({
       return;
     }
 
-    // Mid-flow: один шаг назад. resumeStep сохраняет текущий шаг.
+    // Mid-flow: один линейный шаг назад (без resume-ловушки).
     const idx = compactSteps.indexOf(activeStep);
     const prev = idx > 0 ? compactSteps[idx - 1] : null;
-    if (prev) beginEdit(prev);
+    if (prev) goBackOneStep(prev);
   };
 
   // Квиз-флоу: синхронизируем прогресс Step 0 в modal context для header-индикатора.
@@ -2475,13 +2523,28 @@ export function PriceCalculatorClient({
             onBeginEditLastStep: isSummaryReady
               ? () => {
                   const lastStep = compactSteps[compactSteps.length - 1];
-                  if (lastStep) beginEdit(lastStep);
+                  if (lastStep) goBackOneStep(lastStep);
                 }
               : undefined,
             onPromptAddRoom:
               compactSections && calculationScope === "room"
                 ? promptAddRoom
                 : undefined,
+            // Кнопка «Редактировать» на карточке помещения в сводке:
+            // переключаемся на нужную комнату и открываем первый шаг —
+            // дальше лид перемещается по чипам quiz-rail к любому параметру.
+            onEditRoom:
+              compactSections && calculationScope === "room"
+                ? (roomId: string) => {
+                    switchToRoom(roomId);
+                    goBackOneStep("area");
+                  }
+                : undefined,
+            // «Редактировать расчёт» на сводке (object-scope): открываем
+            // первый шаг, остальные подтверждённые шаги доступны через чипы.
+            onEditCalculation: isSummaryReady
+              ? () => goBackOneStep("area")
+              : undefined,
           } satisfies Step0ContextValue
         }
       >
@@ -2561,7 +2624,7 @@ export function PriceCalculatorClient({
             <div ref={roomManagerRef} className="quiz-setup-card">
             <SectionCard
               title="Помещения в расчёте"
-              description="Считайте комнаты по очереди: у каждой помещения своя конфигурация, а справа и внизу сразу виден общий итог по объекту."
+              description="Считайте комнаты по очереди: у каждого помещения своя конфигурация, а справа и внизу сразу виден общий итог по объекту."
             >
               <div className="grid gap-3 rounded-2xl bg-white p-4 ring-1 ring-slate-200 sm:grid-cols-4">
                 <div>
