@@ -13,6 +13,7 @@ import { WizardStep1Lighting } from "./wizard-step1-lighting";
 import { WizardStep2Summary } from "./wizard-step2-summary";
 
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
+import { showConfirmDialog } from "@/components/ui/confirm-dialog";
 
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
   const selector = [
@@ -193,16 +194,22 @@ export function CalculatorModal() {
     return false;
   }, [snapshot, lightingDraft]);
 
-  const requestClose = useCallback(() => {
+  const requestClose = useCallback(async () => {
     const now = Date.now();
     if (now - lastConfirmTimeRef.current < 300) {
       return; // Skip if we recently closed a confirm dialog to prevent double execution
     }
 
-    // P0.7: confirm dialog if there's data
+    // P0.7: confirm dialog if there's data (теперь кастомный, не блокирующий поток)
     if (hasAnyData && typeof window !== "undefined") {
       lastConfirmTimeRef.current = now;
-      const confirmed = window.confirm("Закрыть калькулятор? Ваш расчёт не сохранится.");
+      const confirmed = await showConfirmDialog({
+        title: "Закрыть калькулятор?",
+        message: "Ваш расчёт не сохранится.",
+        confirmLabel: "Закрыть",
+        cancelLabel: "Отмена",
+        variant: "warning",
+      });
       lastConfirmTimeRef.current = Date.now(); // update after confirm resolves
       if (!confirmed) return;
     }
