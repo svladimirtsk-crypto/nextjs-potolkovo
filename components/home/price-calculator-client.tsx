@@ -925,30 +925,6 @@ export function PriceCalculatorClient({
     initialSolutionScenario !== "standard"
   );
 
-  /**
-   * firstStepPhase — визуальное разделение первого шага на три фазы
-   * без изменения CompactStepId и механики подтверждения:
-   *
-   * 1. "scenario" — выбор сценария (Стандартный / Современный / Продвинутый)
-   * 2. "scope" — выбор формата (Одна комната / Весь объект)
-   * 3. "input" — ввод площади (текущее поведение area-шага)
-   *
-   * Переход: scenario → (выбор сделан) → scope → (выбор сделан) → input.
-   * Назад: input → scope → scenario → (назад за пределы).
-   * Механика расчёта, confirmed-состояние и compactSteps не меняются.
-   */
-  const [firstStepPhase, setFirstStepPhase] = useState<"scenario" | "scope" | "input">(
-    initialCompactCalculationScope !== null && !compactSections
-      ? "input"
-      : compactSections && initialSolutionScenario !== "standard"
-        ? "scenario"
-        : compactSections && calculationScope === null && isChoosingRoom
-          ? "scope"
-          : compactSections && calculationScope !== null && activeRoomId
-            ? "input"
-            : "scenario"
-  );
-
   useEffect(() => {
     if (!compactSections) return;
     setSolutionScenario(initialSolutionScenario);
@@ -2462,43 +2438,30 @@ export function PriceCalculatorClient({
       : null;
 
     const step0FooterAction: CalculatorFooterAction | null = primaryStep0Action ??
-      (calculationScope !== null && !isChoosingRoom && activeStep && activeStep !== "area"
+      (calculationScope === null
         ? {
-            label: resolveStep0ConfirmLabel(activeStep),
-            disabled: !isStepEnabled(activeStep),
-            onClick: () => confirmAndNavigate(activeStep),
+            // На экране выбора сценария: «Выберите вариант выше» — 
+            // кнопка неактивна, пока лид не выбрал сценарий и формат.
+            label: "Выберите вариант выше",
+            disabled: true,
+            onClick: () => {},
           }
-        : activeStep === "area" && compactSections
-          ? firstStepPhase === "scenario"
-            ? {
-                label: "Далее →",
-                disabled: false,
-                onClick: () => {
-                  setFirstStepPhase("scope");
-                },
-              }
-            : firstStepPhase === "scope"
-              ? {
-                  label: "Далее →",
-                  disabled: calculationScope === null,
-                  onClick: () => {
-                    if (calculationScope === "room" && rooms.length === 0 && !activeRoomId) {
-                      setFirstStepPhase("input");
-                      setIsChoosingRoom(true);
-                    } else {
-                      setFirstStepPhase("input");
-                      if (activeStep === "area" && !confirmed.area) {
-                        setConfirmed((prev) => ({ ...prev, area: true }));
-                      }
-                    }
-                  },
+        : isChoosingRoom
+          ? {
+              label: "Далее →",
+              disabled: !activeRoomId && rooms.length === 0,
+              onClick: () => {
+                if (rooms.length > 0) {
+                  // Есть комнаты, надо выбрать какую-то или добавить новую
+                  // Показываем первую неполную комнату или просто первую
+                  const firstRoom = rooms[0];
+                  if (firstRoom) {
+                    switchToRoom(firstRoom.id);
+                  }
                 }
-              : {
-                  label: resolveStep0ConfirmLabel("area"),
-                  disabled: !isStepEnabled("area"),
-                  onClick: () => confirmAndNavigate("area"),
-                }
-          : calculationScope !== null && !isChoosingRoom && activeStep
+              },
+            }
+          : activeStep
             ? {
                 label: resolveStep0ConfirmLabel(activeStep),
                 disabled: !isStepEnabled(activeStep),
@@ -2646,10 +2609,11 @@ export function PriceCalculatorClient({
               ))}
             </div>
           ) : null}
+          {calculationScope === null ? (
           <SectionCard
             className="quiz-setup-card"
             title="Какой вариант решения рассматриваете?"
-            description="Выберите уровень подбора — дальше покажу только нужные шаги, а дополнительные опции можно открыть отдельно."
+            description="Выберите сценарий и формат расчёта."
           >
             <div className="grid gap-2 sm:grid-cols-3">
               {scenarioOptions.map((item) => {
@@ -2684,7 +2648,43 @@ export function PriceCalculatorClient({
                 Точную стоимость SMART-света и управления обсудим по телефону или на замере — интерес будет приложен к заявке.
               </p>
             ) : null}
+
+            {/* Scope selection — внутри той же карточки */}
+            <div className="mt-6 border-t border-slate-100 pt-6">
+              <p className="mb-3 text-sm font-semibold text-slate-950">
+                Что хотите посчитать?
+              </p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <OptionCard
+                  active={calculationScope === "room"}
+                  title="Одна комната"
+                  meta="Быстрый расчёт для кухни, спальни, гостиной, санузла или другой комнаты"
+                  onClick={async () => {
+                    markInteracted();
+                    setCalculationScope("room");
+                    setRooms([]);
+                    setRoomConfirmedMap({});
+                    setActiveRoomId(null);
+                    setIsChoosingRoom(true);
+                  }}
+                />
+                <OptionCard
+                  active={calculationScope === "object"}
+                  title="Вся квартира или дом"
+                  meta="Если хотите прикинуть бюджет по объекту целиком одной суммой"
+                  onClick={async () => {
+                    markInteracted();
+                    setCalculationScope("object");
+                    setRooms([]);
+                    setRoomConfirmedMap({});
+                    setActiveRoomId(null);
+                    setIsChoosingRoom(false);
+                  }}
+                />
+              </div>
+            </div>
           </SectionCard>
+          ) : null}
 
           {/* Room manager виден когда есть несколько комнат — здесь можно
               переключаться между комнатами и добавлять новые. */}
@@ -2820,15 +2820,7 @@ export function PriceCalculatorClient({
 
           {/* AREA */}
           <div ref={areaRef} data-step="area" data-state={stepState("area")}>
-            {confirmed.area && !(calculationScope === "room" && isChoosingRoom) ? (
-              <SectionCard title={`Площадь`}>
-                <SummaryRow
-                  label="Расчёт"
-                  value={`${calculationScope === "object" ? "Весь объект" : (roomLabel || "Одна комната")} · ${area} м²`}
-                  onEdit={() => beginEdit("area")}
-                />
-              </SectionCard>
-            ) : activeStep === "area" ? (
+            {activeStep === "area" && calculationScope !== null ? (
               <SectionCard
                 key={activeStep}
                 className="animate-fade-slide-in"
@@ -2849,50 +2841,7 @@ export function PriceCalculatorClient({
                       : "Площадь считается отдельно, а профили и узлы — только по нужным участкам в метрах."
                 }
               >
-                {step0Phase === "choose-mode" ? (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <OptionCard
-                      active={calculationScope === "room"}
-                      title="Одна комната"
-                      meta="Быстрый расчёт для кухни, спальни, гостиной, санузла или другой комнаты"
-                      onClick={async () => {
-                        markInteracted();
-                        if (
-                          calculationScope === "object" &&
-                          (area !== calculator.areaDefault || shadowEnabled || floatingEnabled || lightLinesEnabled || corniceType !== "none" || trackType !== "none" || lightsEnabled || chandeliersEnabled || corniceLightingEnabled)
-                        ) {
-                          const confirmed = await showConfirmDialog({ title: "Переключить режим расчёта?", message: "Прогресс по текущему сценарию будет сброшен.", confirmLabel: "Переключить", cancelLabel: "Отмена", variant: "warning" });
-                          if (!confirmed) return;
-                        }
-                        setCalculationScope("room");
-                        setRooms([]);
-                        setRoomConfirmedMap({});
-                        setActiveRoomId(null);
-                        setIsChoosingRoom(true);
-                      }}
-                    />
-                    <OptionCard
-                      active={calculationScope === "object"}
-                      title="Вся квартира или дом"
-                      meta="Если хотите прикинуть бюджет по объекту целиком одной суммой"
-                      onClick={async () => {
-                        markInteracted();
-                        if (
-                          calculationScope === "room" &&
-                          (effectiveRooms.length > 0 || completedRoomsCount > 0)
-                        ) {
-                          const confirmed = await showConfirmDialog({ title: "Переключить режим расчёта?", message: "Прогресс по комнатам будет сброшен.", confirmLabel: "Переключить", cancelLabel: "Отмена", variant: "warning" });
-                          if (!confirmed) return;
-                        }
-                        setCalculationScope("object");
-                        setRooms([]);
-                        setRoomConfirmedMap({});
-                        setActiveRoomId(null);
-                        setIsChoosingRoom(false);
-                      }}
-                    />
-                  </div>
-                ) : step0Phase === "choose-first-room" ? (
+                {step0Phase === "choose-first-room" ? (
                   <div className="rounded-2xl bg-white p-4 ring-1 ring-slate-200">
                     <div className="flex flex-wrap gap-2">
                       {ROOM_TYPE_OPTIONS.map((label) => (
@@ -2998,14 +2947,7 @@ export function PriceCalculatorClient({
                   </>
                 )}
               </SectionCard>
-            ) : (
-              <CollapsedStep
-                title={`Площадь`}
-                subtitle={calculationScope === "object" ? "Выберите формат и общую площадь" : "Выберите формат, помещение и площадь"}
-                enabled
-                onOpen={() => openStep("area")}
-              />
-            )}
+            ) : null}
           </div>
 
           {/* CEILING */}
