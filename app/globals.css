@@ -210,6 +210,63 @@ body.modal-open .mobile-sticky-cta {
   pointer-events: none;
 }
 
+/* =====================================================================
+   Зелёные кнопки со скидкой — для CTA «Подобрать свет −25%» и т.п.
+   ===================================================================== */
+@keyframes discountPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+}
+
+@keyframes discountShimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.btn-discount-green {
+  background: linear-gradient(135deg, #059669 0%, #10b981 50%, #059669 100%);
+  background-size: 200% auto;
+  color: white;
+  border: none;
+  font-weight: 700;
+  animation: discountPulse 2.5s ease-in-out infinite, discountShimmer 3s linear infinite;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-discount-green:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+}
+
+.btn-discount-green:active {
+  transform: translateY(0);
+}
+
+.btn-discount-green .discount-highlight {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75em;
+  font-weight: 800;
+  margin-left: 0.25rem;
+  animation: pulseOnce 1.5s ease-in-out infinite;
+}
+
+/* Discount label variant for non-button elements */
+.discount-badge-green {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: white;
+  border-radius: 9999px;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75em;
+  font-weight: 800;
+  animation: pulseOnce 2s ease-in-out infinite;
+}
+
 /* Price calculator range: force black slider on mobile (esp. iOS Safari) */
 input.pc-range[type="range"] {
   accent-color: var(--color-dark);
