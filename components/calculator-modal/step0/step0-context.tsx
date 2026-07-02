@@ -61,6 +61,10 @@ export type Step0ContextValue = {
   onBeginEditLastStep?: () => void;
   /** Открыть диалог добавления помещения (только для room-scope). */
   onPromptAddRoom?: () => void;
+  /** Открыть редактирование конкретного помещения со сводки (room-scope). */
+  onEditRoom?: (roomId: string) => void;
+  /** Открыть редактирование расчёта со сводки (object-scope / single-room). */
+  onEditCalculation?: () => void;
   /** Текущее действие footer-кнопки Step 0; источник истины для модалки. */
   footerAction?: { label: string; onClick: () => void; disabled?: boolean } | null;
   /** Действие «Назад» в footer Step 0; источник истины для модалки. */
