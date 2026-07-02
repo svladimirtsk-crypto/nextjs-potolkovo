@@ -55,7 +55,9 @@ export function resolveStep0SummaryActions({
     case "modern":
       return {
         primary: {
-          label: hasLighting ? "Проверить освещение →" : "К подбору освещения →",
+          // «−25%» в label: лид сразу видит, что переход к подбору света в
+          // каталоге даёт скидку при заказе потолка, а не «услугу установки».
+          label: hasLighting ? "Проверить освещение →" : "Подобрать свет −25% →",
           destination: 1,
         },
         secondary: hasLighting
@@ -67,7 +69,10 @@ export function resolveStep0SummaryActions({
       return {
         primary: { label: "Связаться и обсудить →", destination: 2 },
         secondary: {
-          label: hasLighting ? "Проверить свет →" : "Подобрать свет →",
+          // «Подобрать свет −25%» вместо «Подобрать свет»: кнопка ведёт в каталог
+          // освещения, где к заказу потолка действует скидка. Лид должен понимать,
+          // что это подбор/покупка со скидкой, а не услуга «установка света».
+          label: hasLighting ? "Проверить свет →" : "Подобрать свет −25% →",
           destination: 1,
         },
       };
@@ -77,7 +82,10 @@ export function resolveStep0SummaryActions({
       return {
         primary: { label: "К итогу →", destination: 2 },
         secondary: {
-          label: hasLighting ? "Проверить свет →" : "Добавить свет →",
+          // Раньше было «Добавить свет →» — звучало как «добавить установку
+          // освещения». Новый label честно говорит: переход к подбору света
+          // в каталоге со скидкой −25% при заказе потолка.
+          label: hasLighting ? "Проверить свет →" : "Подобрать свет −25% →",
           destination: 1,
         },
       };
