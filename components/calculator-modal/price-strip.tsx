@@ -38,13 +38,16 @@ export function PriceStrip() {
     grandTotal,
     currentStep,
     options,
-    step0AreaConfirmed,
   } = useCalculatorModal();
 
   const hasLighting = lightingRegularTotal > 0;
-  const hideUnconfirmedCeiling = !step0AreaConfirmed;
-  const showCeilingPrice = showCeilingInUi && !hideUnconfirmedCeiling;
-  const displayGrandTotal = hideUnconfirmedCeiling ? lightingEffectiveTotal : grandTotal;
+  // Динамический ориентир: показываем цену потолка сразу, как только движок
+  // её посчитал (ceilingTotal > 0), не дожидаясь «инженерного подтверждения»
+  // Step0. Подтверждение (step0AreaConfirmed) по-прежнему управляет только
+  // досчётом монтажа (grandTotal в snapshot) — механика не меняется.
+  const hasCeilingEstimate = showCeilingInUi && ceilingTotal > 0;
+  const showCeilingPrice = hasCeilingEstimate;
+  const displayGrandTotal = hasCeilingEstimate ? grandTotal : lightingEffectiveTotal;
 
   // P2.17: Pulse animation key
   const prevTotalRef = useRef(displayGrandTotal);
@@ -58,9 +61,12 @@ export function PriceStrip() {
   }, [displayGrandTotal]);
 
   if (!showCeilingPrice && !hasLighting) {
+    // До первого расчёта (экран выбора сценария): нейтральная строка вместо
+    // требования «подтвердите площадь» — цена появится сама, как только
+    // движок посчитает первую конфигурацию.
     return (
       <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm max-sm:px-3 max-sm:py-2 max-sm:text-xs">
-        Подтвердите площадь — ориентир появится здесь
+        Цена считается автоматически по мере выбора параметров
       </div>
     );
   }
@@ -104,7 +110,7 @@ export function PriceStrip() {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm max-sm:px-3 max-sm:py-2">
       <div className="sm:hidden">
-        {hideUnconfirmedCeiling && hasLighting ? (
+        {!hasCeilingEstimate && hasLighting ? (
           <>
             <p key={animKey} className="text-sm font-bold text-slate-950 animate-pulse-once">
               Свет сохранён: {fmt(lightingEffectiveTotal)} ₽
@@ -116,7 +122,7 @@ export function PriceStrip() {
         ) : (
           <>
             <p key={animKey} className="text-sm font-bold text-slate-950 animate-pulse-once">
-              {displayGrandTotal > 0 ? `Итого: ~${fmt(displayGrandTotal)} ₽` : "Ориентир появится после подтверждения"}
+              {displayGrandTotal > 0 ? `Итого: ~${fmt(displayGrandTotal)} ₽` : "Цена появится по мере выбора параметров"}
             </p>
             <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500">
               {mobileSubtitle}
@@ -133,7 +139,7 @@ export function PriceStrip() {
             <span className="text-slate-500"> · Потолок рассчитаем на этом шаге</span>
           </>
         ) : !showCeilingPrice ? (
-          <span className="text-slate-700">Подтвердите площадь — ориентир появится здесь</span>
+          <span className="text-slate-700">Цена считается автоматически по мере выбора параметров</span>
         ) : !showCeilingInUi && hasLighting ? (
           <>
             <span className="font-medium">Свет: {lightingPrice}</span>
