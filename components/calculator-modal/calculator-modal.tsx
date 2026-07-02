@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import type { WizardStep } from "@/lib/calculator-modal-types";
-import { isSnapshotValid } from "@/lib/calculator-snapshot-guard";
 import { trackWizardConfirm } from "@/lib/analytics";
 import { useCalculatorModal } from "./calculator-modal-context";
 import { PriceStrip } from "./price-strip";
@@ -153,15 +152,20 @@ export function CalculatorModal() {
     };
   }, [currentStep]);
 
-  const step0HasConfirmButton = currentStep === 0 ? Boolean(step0FooterAction) : false;
   const step0HasBackButton = currentStep === 0 ? Boolean(step0BackAction.visible && step0BackAction.onClick) : false;
-  const step0FooterLabel = currentStep === 0 ? (step0FooterAction?.label ?? "Подтвердить →") : "Подтвердить →";
+  // Пока конкретного действия нет (экран выбора сценария/помещения),
+  // показываем понятную подпись вместо «мёртвой» кнопки «Подтвердить →».
+  const step0FooterLabel = currentStep === 0 ? (step0FooterAction?.label ?? "Выберите вариант выше") : "Подтвердить →";
   const actionFormVisible = currentStep === 2 ? isActionFormVisible : false;
 
   const isNextDisabled = useMemo(() => {
-    if (currentStep === 0) return step0FooterAction ? Boolean(step0FooterAction.disabled) : !isSnapshotValid(snapshot);
+    // Step 0: пока квиз не выдал конкретное действие (экран выбора сценария
+    // или выбора помещения), кнопка «Далее» неактивна. Раньше при валидном
+    // snapshot (например, уже есть посчитанная комната) клик проваливался в
+    // goToStep(1) и лида выбрасывало на Шаг 1 в обход квиза.
+    if (currentStep === 0) return step0FooterAction ? Boolean(step0FooterAction.disabled) : true;
     return false;
-  }, [currentStep, snapshot, step0FooterAction]);
+  }, [currentStep, step0FooterAction]);
 
   const stepTitle = useMemo(() => {
     if (currentStep === 1) {
@@ -430,7 +434,17 @@ export function CalculatorModal() {
               {currentStep > 0 ? (
                 <button
                   type="button"
-                  onClick={() => goToStep((currentStep - 1) as WizardStep)}
+                  onClick={() => {
+                    // «Назад» со Step 2: если свет не выбирался (лид шёл
+                    // 0 → 2 по сценарию standard/advanced), возвращаем на
+                    // Step 0 — а не в пропущенный шаг освещения, которого
+                    // лид не видел. Если свет есть — назад на Step 1.
+                    if (currentStep === 2 && !hasLightingSelected) {
+                      goToStep(0);
+                      return;
+                    }
+                    goToStep((currentStep - 1) as WizardStep);
+                  }}
                   className="h-12 rounded-2xl px-5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 max-sm:h-11 max-sm:px-3"
                   style={{ minHeight: 48 }}
                 >
@@ -469,7 +483,7 @@ export function CalculatorModal() {
                     className="flex h-12 items-center justify-center rounded-2xl bg-slate-950 px-6 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-slate-950 max-lg:h-12 max-lg:w-full max-lg:px-5"
                     style={{ minHeight: 48 }}
                   >
-                    {currentStep === 0 && step0HasConfirmButton
+                    {currentStep === 0
                       ? step0FooterLabel
                       : currentStep === 1 && step1FooterAction
                         ? step1FooterAction.label
