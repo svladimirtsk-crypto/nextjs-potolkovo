@@ -407,8 +407,8 @@ input.pc-range[type="range"] {
 
 @media (max-width: 640px) {
   .step0-quiz {
-    min-height: 0;
-    justify-content: flex-start;
+    min-height: calc(100dvh - 14rem);
+    justify-content: center;
     max-width: 100%;
   }
 }
@@ -432,6 +432,9 @@ input.pc-range[type="range"] {
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 18px 44px rgba(15, 23, 42, 0.10);
   border-radius: 1.75rem;
   padding: 2rem !important;
+  /* Без скролла внутри карточки: контент должен помещаться целиком.
+     Если не помещается — карточка сожмётся по высоте. */
+  overflow: visible;
 }
 
 @media (max-width: 640px) {
@@ -491,6 +494,29 @@ input.pc-range[type="range"] {
 
 .step0-quiz [data-step] section button[aria-pressed]:active {
   transform: translateY(0);
+}
+
+/* Компактные карточки-варианты внутри квиза — меньше паддинга,
+   чтобы помещалось больше опций без скролла. */
+.step0-quiz [data-step] section button[aria-pressed] {
+  padding: 0.625rem 0.75rem !important;
+  min-height: 2.75rem !important;
+}
+
+.step0-quiz [data-step] section button[aria-pressed] p:first-child {
+  font-size: 0.8125rem !important;
+  line-height: 1.15rem !important;
+}
+
+.step0-quiz [data-step] section button[aria-pressed] p:nth-child(2) {
+  font-size: 0.6875rem !important;
+  line-height: 0.95rem !important;
+  margin-top: 0.125rem !important;
+}
+
+/* Сетка вариантов в квизе — более плотная. */
+.step0-quiz [data-step] section .grid {
+  gap: 0.5rem !important;
 }
 
 /* Числовой степпер (площадь / метры) — крупнее и легче попасть пальцем. */
