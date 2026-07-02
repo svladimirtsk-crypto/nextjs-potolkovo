@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { homepage } from "@/content/homepage";
-import type { ServiceCalculatorPreset } from "@/content/services";
+import type { ServiceCalculatorPreset, Phase2ServiceSlug } from "@/content/services";
 import type { SolutionScenario } from "@/lib/calculator-modal-types";
 import { resolveStep0SummaryActions } from "@/lib/calculator-flow";
 import { PriceCalculatorClient } from "@/components/home/price-calculator-client";
@@ -36,26 +36,48 @@ type WizardStep0CalculatorProps = {
   preset?: ServiceCalculatorPreset;
 };
 
+/**
+ * Единый реестр slug'ов услуг → сценарий решения.
+ *
+ * Вместо хардкодных строк, разбросанных в условной цепочке, используем
+ * явную таблицу решений. При добавлении новой услуги достаточно добавить
+ * запись в этот массив — сценарий подхватится автоматически.
+ *
+ * Синхронизирован с phase2ServiceSlugs из content/services.ts
+ * и servicePageContent оттуда же.
+ */
+const SERVICE_SLUG_TO_SCENARIO: Array<{
+  slugPrefix: string;
+  scenario: SolutionScenario;
+}> = [
+  // Продвинутый: индивидуальные проекты, сложные конструкции
+  { slugPrefix: "individualnye-proekty", scenario: "advanced" },
+
+  // Современный: теневой, парящий, световые линии, треки
+  { slugPrefix: "tenevoy-profil", scenario: "modern" },
+  { slugPrefix: "paryashchie-potolki", scenario: "modern" },
+  { slugPrefix: "svetovye-linii", scenario: "modern" },
+  { slugPrefix: "trekovoe-osveshchenie", scenario: "modern" },
+  { slugPrefix: "prodazha-trekovogo-osveshcheniya", scenario: "modern" },
+  { slugPrefix: "svetoprozrachnye-potolki", scenario: "modern" },
+  { slugPrefix: "skrytye-karnizy", scenario: "modern" },
+
+  // Специальный: track-sale
+  { slugPrefix: "track-sale", scenario: "modern" },
+];
+
 function resolveInitialSolutionScenario(
   source: unknown,
   preset?: ServiceCalculatorPreset
 ): SolutionScenario {
   const src = String(source ?? "").toLowerCase();
 
-  if (src.includes("individualnye-proekty")) return "advanced";
-
-  if (
-    src.includes("tenevoy-profil") ||
-    src.includes("paryashchie-potolki") ||
-    src.includes("svetovye-linii") ||
-    src.includes("trekovoe-osveshchenie") ||
-    src.includes("prodazha-trekovogo-osveshcheniya") ||
-    src.includes("track-sale") ||
-    src.includes("svetoprozrachnye-potolki")
-  ) {
-    return "modern";
+  // 1. Проверяем по реестру slug'ов
+  for (const entry of SERVICE_SLUG_TO_SCENARIO) {
+    if (src.includes(entry.slugPrefix)) return entry.scenario;
   }
 
+  // 2. Проверяем по пресету калькулятора
   if (preset?.ceilingType === "shadow" || preset?.ceilingType === "floating") return "modern";
   if (preset?.trackType && preset.trackType !== "none") return "modern";
   if (preset?.lightLinesEnabled) return "modern";
