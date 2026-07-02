@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 
 import { PriceCalculatorProvider } from "@/components/home/price-calculator-context";
 import { CalculatorModalProvider } from "@/components/calculator-modal/calculator-modal-context";
+import { ConfirmDialogPortal } from "@/components/ui/confirm-dialog";
 
 const CalculatorModal = dynamic(
   () =>
@@ -56,6 +57,7 @@ export function Providers({ children }: { children: ReactNode }) {
       <CalculatorModalProvider>
         {children}
         <CalculatorModal />
+        <ConfirmDialogPortal />
       </CalculatorModalProvider>
     </PriceCalculatorProvider>
   );
