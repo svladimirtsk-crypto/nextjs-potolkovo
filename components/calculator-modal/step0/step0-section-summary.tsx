@@ -146,6 +146,9 @@ export function Step0SectionSummary() {
   );
   const total = effectiveSnapshot?.total ?? 0;
 
+  const hasPrimaryDiscount = routing.primary.label.includes("−25%");
+  const hasSecondaryDiscount = routing.secondary ? routing.secondary.label.includes("−25%") : false;
+
   if (!isSummaryReady) return null;
 
   return (
@@ -216,7 +219,11 @@ export function Step0SectionSummary() {
       >
         <Button
           type="button"
-          className="h-12 rounded-2xl bg-slate-950 text-sm font-semibold text-white transition-colors hover:bg-slate-800 sm:h-14"
+          className={`h-12 rounded-2xl text-sm font-semibold text-white transition-all sm:h-14 ${
+            hasPrimaryDiscount
+              ? "btn-discount-green"
+              : "bg-slate-950 hover:bg-slate-800"
+          }`}
           onClick={() => goToStep(routing.primary.destination)}
           data-step0-summary-primary
           data-destination={routing.primary.destination}
@@ -227,8 +234,12 @@ export function Step0SectionSummary() {
         {routing.secondary ? (
           <Button
             type="button"
-            variant="secondary"
-            className="h-12 rounded-2xl text-sm font-semibold sm:h-14"
+            variant={hasSecondaryDiscount ? "primary" : "secondary"}
+            className={`h-12 rounded-2xl text-sm font-semibold transition-all sm:h-14 ${
+              hasSecondaryDiscount
+                ? "btn-discount-green !border-none"
+                : ""
+            }`}
             onClick={() => goToStep(routing.secondary!.destination)}
             data-step0-summary-secondary
             data-destination={routing.secondary.destination}
