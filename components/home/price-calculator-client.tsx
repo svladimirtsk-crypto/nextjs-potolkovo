@@ -24,7 +24,8 @@ import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
 import { calcRecommendedTrackSpots } from "@/lib/lighting-formulas";
 import type { CalculatorFooterAction, CalculatorFooterBackAction, DerivedInputs, SolutionScenario } from "@/lib/calculator-modal-types";
 import { resolveStep0ConfirmLabel, resolveStep0SummaryActions } from "@/lib/calculator-flow";
-import { trackScenarioSelected } from "@/lib/analytics";
+import { trackScenarioSelected, trackWizardBack } from "@/lib/analytics";
+import { showConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const calculator = homepage.price.calculator;
 
@@ -486,7 +487,7 @@ function OptionCard({
   active: boolean;
   title: string;
   meta: string;
-  onClick: () => void;
+  onClick: () => void | Promise<void>;
 }) {
   return (
     <button
@@ -1808,6 +1809,12 @@ export function PriceCalculatorClient({
   const handleBackClick = () => {
     if (!canGoBack) return;
 
+    // Аналитика: трекаем каждое нажатие «Назад» внутри Step 0
+    trackWizardBack({
+      step: activeStep ? compactSteps.indexOf(activeStep) + 1 : 0,
+      fromSummary: isSummaryReady || false,
+    });
+
     if (isSummaryReady) {
       // На сводке: открываем последний compactStep для редактирования.
       // Без resumeStep — после подтверждения лид вернётся на сводку,
@@ -2787,13 +2794,13 @@ export function PriceCalculatorClient({
                       active={calculationScope === "room"}
                       title="Одна комната"
                       meta="Быстрый расчёт для кухни, спальни, гостиной, санузла или другой комнаты"
-                      onClick={() => {
+                      onClick={async () => {
                         markInteracted();
                         if (
                           calculationScope === "object" &&
                           (area !== calculator.areaDefault || shadowEnabled || floatingEnabled || lightLinesEnabled || corniceType !== "none" || trackType !== "none" || lightsEnabled || chandeliersEnabled || corniceLightingEnabled)
                         ) {
-                          const confirmed = window.confirm("Переключить режим расчёта? Прогресс по текущему сценарию будет сброшен.");
+                          const confirmed = await showConfirmDialog({ title: "Переключить режим расчёта?", message: "Прогресс по текущему сценарию будет сброшен.", confirmLabel: "Переключить", cancelLabel: "Отмена", variant: "warning" });
                           if (!confirmed) return;
                         }
                         setCalculationScope("room");
@@ -2807,13 +2814,13 @@ export function PriceCalculatorClient({
                       active={calculationScope === "object"}
                       title="Вся квартира или дом"
                       meta="Если хотите прикинуть бюджет по объекту целиком одной суммой"
-                      onClick={() => {
+                      onClick={async () => {
                         markInteracted();
                         if (
                           calculationScope === "room" &&
                           (effectiveRooms.length > 0 || completedRoomsCount > 0)
                         ) {
-                          const confirmed = window.confirm("Переключить режим расчёта? Прогресс по комнатам будет сброшен.");
+                          const confirmed = await showConfirmDialog({ title: "Переключить режим расчёта?", message: "Прогресс по комнатам будет сброшен.", confirmLabel: "Переключить", cancelLabel: "Отмена", variant: "warning" });
                           if (!confirmed) return;
                         }
                         setCalculationScope("object");
