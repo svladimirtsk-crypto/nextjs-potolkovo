@@ -38,7 +38,15 @@ function Tag({ children }: { children: ReactNode }) {
   );
 }
 
-function RoomCard({ index, room }: { index: number; room: Step0RoomSummary }) {
+function RoomCard({
+  index,
+  room,
+  onEdit,
+}: {
+  index: number;
+  room: Step0RoomSummary;
+  onEdit?: () => void;
+}) {
   const hasFeatures =
     room.shadowLength ||
     room.floatingLength ||
@@ -95,6 +103,17 @@ function RoomCard({ index, room }: { index: number; room: Step0RoomSummary }) {
           ) : null}
         </div>
       ) : null}
+
+      {onEdit ? (
+        <button
+          type="button"
+          onClick={onEdit}
+          className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+          aria-label={`Редактировать: ${room.label}`}
+        >
+          ✎ Редактировать
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -115,6 +134,8 @@ export function Step0SectionSummary() {
     solutionScenario,
     isSummaryReady,
     onPromptAddRoom,
+    onEditRoom,
+    onEditCalculation,
     hasLighting,
   } = useStep0Context();
   const { goToStep } = useCalculatorModal();
@@ -145,6 +166,15 @@ export function Step0SectionSummary() {
             ? ` · ${effectiveRooms.length} ${pluralizeRu(effectiveRooms.length, "помещение", "помещения", "помещений")}`
             : ""}
         </p>
+        {onEditCalculation && effectiveRooms.length === 0 ? (
+          <button
+            type="button"
+            onClick={onEditCalculation}
+            className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-white/10 px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-white/20"
+          >
+            ✎ Редактировать расчёт
+          </button>
+        ) : null}
       </div>
 
       {/* Карточки помещений (только для room-scope) */}
@@ -155,7 +185,12 @@ export function Step0SectionSummary() {
           </h3>
           <div className="grid gap-3">
             {effectiveRooms.map((room, idx) => (
-              <RoomCard key={room.id} index={idx + 1} room={room} />
+              <RoomCard
+                key={room.id}
+                index={idx + 1}
+                room={room}
+                onEdit={onEditRoom ? () => onEditRoom(room.id) : undefined}
+              />
             ))}
           </div>
 
@@ -207,10 +242,10 @@ export function Step0SectionSummary() {
       {/* Подсказка: сценарий адаптирует дальнейший путь */}
       <p className="text-xs leading-5 text-slate-500">
         {solutionScenario === "modern"
-          ? "Современный сценарий — обязательно подобрать свет, чтобы зафиксировать скидку −25% на комплект."
+          ? "Современный сценарий — подберите свет из каталога, чтобы зафиксировать скидку −25% при заказе потолка."
           : solutionScenario === "advanced"
             ? "Продвинутый сценарий — SMART-свет и сценарии управления обсудим по телефону после замера."
-            : "Стандартный сценарий — потолок без обязательного подбора света. Можно добавить свет отдельно или сразу записаться на замер."}
+            : "Стандартный сценарий — потолок без обязательного подбора света. Можно подобрать свет из каталога со скидкой −25% или сразу записаться на замер."}
       </p>
 
     </div>
