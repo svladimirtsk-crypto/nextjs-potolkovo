@@ -925,6 +925,30 @@ export function PriceCalculatorClient({
     initialSolutionScenario !== "standard"
   );
 
+  /**
+   * firstStepPhase — визуальное разделение первого шага на три фазы
+   * без изменения CompactStepId и механики подтверждения:
+   *
+   * 1. "scenario" — выбор сценария (Стандартный / Современный / Продвинутый)
+   * 2. "scope" — выбор формата (Одна комната / Весь объект)
+   * 3. "input" — ввод площади (текущее поведение area-шага)
+   *
+   * Переход: scenario → (выбор сделан) → scope → (выбор сделан) → input.
+   * Назад: input → scope → scenario → (назад за пределы).
+   * Механика расчёта, confirmed-состояние и compactSteps не меняются.
+   */
+  const [firstStepPhase, setFirstStepPhase] = useState<"scenario" | "scope" | "input">(
+    initialCompactCalculationScope !== null && !compactSections
+      ? "input"
+      : compactSections && initialSolutionScenario !== "standard"
+        ? "scenario"
+        : compactSections && calculationScope === null && isChoosingRoom
+          ? "scope"
+          : compactSections && calculationScope !== null && activeRoomId
+            ? "input"
+            : "scenario"
+  );
+
   useEffect(() => {
     if (!compactSections) return;
     setSolutionScenario(initialSolutionScenario);
@@ -2438,13 +2462,50 @@ export function PriceCalculatorClient({
       : null;
 
     const step0FooterAction: CalculatorFooterAction | null = primaryStep0Action ??
-      (calculationScope !== null && !isChoosingRoom && activeStep
+      (calculationScope !== null && !isChoosingRoom && activeStep && activeStep !== "area"
         ? {
             label: resolveStep0ConfirmLabel(activeStep),
             disabled: !isStepEnabled(activeStep),
             onClick: () => confirmAndNavigate(activeStep),
           }
-        : null);
+        : activeStep === "area" && compactSections
+          ? firstStepPhase === "scenario"
+            ? {
+                label: "Далее →",
+                disabled: false,
+                onClick: () => {
+                  setFirstStepPhase("scope");
+                },
+              }
+            : firstStepPhase === "scope"
+              ? {
+                  label: "Далее →",
+                  disabled: calculationScope === null,
+                  onClick: () => {
+                    if (calculationScope === "room" && rooms.length === 0 && !activeRoomId) {
+                      setFirstStepPhase("input");
+                      setIsChoosingRoom(true);
+                    } else {
+                      setFirstStepPhase("input");
+                      if (activeStep === "area" && !confirmed.area) {
+                        setConfirmed((prev) => ({ ...prev, area: true }));
+                      }
+                    }
+                  },
+                }
+              : {
+                  label: resolveStep0ConfirmLabel("area"),
+                  disabled: !isStepEnabled("area"),
+                  onClick: () => confirmAndNavigate("area"),
+                }
+          : calculationScope !== null && !isChoosingRoom && activeStep
+            ? {
+                label: resolveStep0ConfirmLabel(activeStep),
+                disabled: !isStepEnabled(activeStep),
+                onClick: () => confirmAndNavigate(activeStep),
+              }
+            : null
+      );
 
     const step0BackAction: CalculatorFooterBackAction = {
       visible: canGoBack,
@@ -2988,8 +3049,10 @@ export function PriceCalculatorClient({
                   </button>
                 </div>
 
-                {/* Shadow + Floating checkboxes */}
-                {showAdvancedCeilingTypeOptions ? (
+                {/* Shadow + Floating checkboxes — только для non-standard.
+                    При standard сценарии показываем только простой потолок
+                    без кнопок-призывов переключиться на современный. */}
+                {solutionScenario !== "standard" && showAdvancedCeilingTypeOptions ? (
                 <div className="space-y-3">
                   <div
                     className={["rounded-2xl border p-4 text-left transition-all",
@@ -3031,7 +3094,7 @@ export function PriceCalculatorClient({
                     </button>
                   </div>
                 </div>
-                ) : (
+                ) : solutionScenario !== "standard" ? (
                   <button
                     type="button"
                     onClick={revealModernOptions}
@@ -3039,7 +3102,7 @@ export function PriceCalculatorClient({
                   >
                     Показать теневой и парящий профиль →
                   </button>
-                )}
+                ) : null}
 
                 <div className="step0-confirm-row mt-4 flex items-center justify-between gap-3">
                   <p className="text-xs text-slate-500">Выберите вариант и подтвердите.</p>
@@ -3302,20 +3365,11 @@ export function PriceCalculatorClient({
             </>
           )}
 
-          {solutionScenario === "standard" && !showModernOptionSteps ? (
-            <SectionCard
-              title="Современные опции"
-              description="Если хотите добавить световые линии или трековое освещение — откройте этот блок."
-            >
-              <button
-                type="button"
-                onClick={openModernOptions}
-                className="w-full rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Добавить современные опции →
-              </button>
-            </SectionCard>
-          ) : null}
+          {/* Standard сценарий: без навязывания современных опций.
+              Если лид выбрал «Стандартный», он получает ровно то, что
+              выбрал — простой потолок, карниз, люстры, точки. Никаких
+              кнопок «Добавить современные опции →» или «Показать теневой
+              и парящий профиль →». */}
 
           {/* LIGHT LINES */}
           {showModernOptionSteps ? (
