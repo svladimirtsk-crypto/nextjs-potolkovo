@@ -144,10 +144,9 @@ export function Step0SectionSummary() {
     () => resolveStep0SummaryActions({ scenario: solutionScenario, hasLighting }),
     [solutionScenario, hasLighting]
   );
-  const total = effectiveSnapshot?.total ?? 0;
-
   const hasPrimaryDiscount = routing.primary.label.includes("−25%");
   const hasSecondaryDiscount = routing.secondary ? routing.secondary.label.includes("−25%") : false;
+  const total = effectiveSnapshot?.total ?? 0;
 
   if (!isSummaryReady) return null;
 
