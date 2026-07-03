@@ -126,7 +126,7 @@ export function CollapsibleRoomManager({
             })}
             <button
               type="button"
-              onClick={() => setExpanded(false)}
+              onClick={() => setExpanded(true)}
               className="rounded-xl border border-dashed border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-50"
             >
               + Добавить
