@@ -3303,20 +3303,7 @@ export function PriceCalculatorClient({
             </>
           )}
 
-          {solutionScenario === "standard" && !showModernOptionSteps ? (
-            <SectionCard
-              title="Современные опции"
-              description="Если хотите добавить световые линии или трековое освещение — откройте этот блок."
-            >
-              <button
-                type="button"
-                onClick={openModernOptions}
-                className="w-full rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Добавить современные опции →
-              </button>
-            </SectionCard>
-          ) : null}
+          {/* Standard: без навязывания современных опций */}
 
           {/* LIGHT LINES */}
           {showModernOptionSteps ? (
