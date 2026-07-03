@@ -465,3 +465,19 @@ input.pc-range[type="range"] {
 @media (prefers-reduced-motion: reduce) {
   .step0-quiz [data-step] { animation: none !important; }
 }
+
+@media (min-width: 640px) {
+  .step0-quiz [data-step] section {
+    min-height: 20rem;
+    display: flex;
+    flex-direction: column;
+  }
+  .step0-quiz [data-step] section > div:last-child {
+    margin-top: auto;
+  }
+}
+@media (max-width: 640px) {
+  .step0-quiz [data-step] section {
+    min-height: auto;
+  }
+}
