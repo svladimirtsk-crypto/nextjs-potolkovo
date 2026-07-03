@@ -60,9 +60,7 @@ export function resolveStep0SummaryActions({
           label: hasLighting ? "Проверить освещение →" : "Подобрать свет −25% →",
           destination: 1,
         },
-        secondary: hasLighting
-          ? { label: "К итогу →", destination: 2 }
-          : null,
+        secondary: { label: "К итогу →", destination: 2 },
       };
 
     case "advanced":
