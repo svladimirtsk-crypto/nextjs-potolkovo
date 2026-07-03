@@ -57,7 +57,7 @@ test("Step 0 summary routing decision table", () => {
       { scenario: "modern", hasLighting: false },
       {
         primary: { label: "Подобрать свет −25% →", destination: 1 },
-        secondary: null,
+        secondary: { label: "К итогу →", destination: 2 },
       },
     ],
     [
@@ -154,7 +154,7 @@ test("90-case combined flow matrix keeps routing and discount invariants", () =>
 
           if (scenario === "modern" && !hasLighting) {
             assert.equal(route.primary.destination, 1);
-            assert.equal(route.secondary, null);
+            assert.equal(route.secondary?.destination, 2);
           }
 
           if (scenario === "standard") {
