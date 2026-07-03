@@ -562,9 +562,17 @@ input.pc-range[type="range"] {
   margin-top: auto;
 }
 
-/* На десктопе в quiz-режиме все SectionCard внутри data-step имеют фикс. высоту */
-.step0-quiz [data-step] section {
-  min-height: 20rem;
+/* На десктопе в quiz-режиме все SectionCard внутри data-step имеют фикс. высоту,
+   чтобы карточки не прыгали размером при переключении шагов. */
+@media (min-width: 640px) {
+  .step0-quiz [data-step] section {
+    min-height: 20rem;
+    display: flex;
+    flex-direction: column;
+  }
+  .step0-quiz [data-step] section > div:last-child {
+    margin-top: auto;
+  }
 }
 
 @media (max-width: 640px) {
