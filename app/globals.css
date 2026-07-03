@@ -548,3 +548,38 @@ input.pc-range[type="range"] {
 @media (prefers-reduced-motion: reduce) {
   .step0-quiz [data-step] { animation: none !important; }
 }
+
+/* ====================================================================
+   Единая высота карточек параметров (одинаковый размер на всех шагах).
+   ==================================================================== */
+.quiz-card-uniform {
+  min-height: 18rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.quiz-card-uniform > div:last-child {
+  margin-top: auto;
+}
+
+/* На десктопе в quiz-режиме все SectionCard внутри data-step имеют фикс. высоту */
+.step0-quiz [data-step] section {
+  min-height: 20rem;
+}
+
+@media (max-width: 640px) {
+  .step0-quiz [data-step] section {
+    min-height: auto;
+  }
+}
+
+/* Range input внутри quiz — меньше отступов чтобы помещалось */
+.step0-quiz [data-step] .pc-range {
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.25rem !important;
+}
+
+/* Quick values — более плотно */
+.step0-quiz [data-step] .pc-quick-values {
+  margin-top: 0.25rem !important;
+}
