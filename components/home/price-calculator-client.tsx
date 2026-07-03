@@ -24,11 +24,12 @@ import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
 import { calcRecommendedTrackSpots } from "@/lib/lighting-formulas";
 import type { CalculatorFooterAction, CalculatorFooterBackAction, DerivedInputs, SolutionScenario } from "@/lib/calculator-modal-types";
 import { resolveStep0ConfirmLabel, resolveStep0SummaryActions } from "@/lib/calculator-flow";
-import { trackScenarioSelected } from "@/lib/analytics";
+import { trackScenarioSelected, trackWizardBack } from "@/lib/analytics";
 
 const calculator = homepage.price.calculator;
 
 const CHANDELIERS_INSTALL_RATE_PER_UNIT = homepage.price.calculator.chandeliers?.ratePerUnit ?? 1000;
+const MINIMUM_TOTAL = 18000;
 
 type CeilingType = (typeof calculator.ceilingTypes)[number]["slug"] | "shadow-floating";
 type CorniceType = (typeof calculator.cornices)[number]["slug"];
@@ -919,7 +920,6 @@ export function PriceCalculatorClient({
     Boolean(compactSections && initialCompactCalculationScope === "room" && !preset?.roomLabelDefault)
   );
 
-  const [setupPhase, setSetupPhase] = useState<"scenario" | "scope" | "room" | "input">("scenario");
   const [solutionScenario, setSolutionScenario] = useState<SolutionScenario>(initialSolutionScenario);
   const [showOptionalModernOptions, setShowOptionalModernOptions] = useState(
     initialSolutionScenario !== "standard"
@@ -1785,7 +1785,7 @@ export function PriceCalculatorClient({
   // Квиз-флоу: можно ли назад?
   // SetupScreen (calculationScope=null) — корень, назад не нужен.
   // Все остальные состояния (room picker, active section, summary) — назад работает.
-  const canGoBack = compactSections && (calculationScope !== null || setupPhase !== "scenario");
+  const canGoBack = compactSections && calculationScope !== null;
 
   /**
    * Линейный шаг назад по квизу (без resume-механики).
@@ -1874,26 +1874,6 @@ export function PriceCalculatorClient({
     }
 
     if (activeStep === "area") {
-      // Назад по фазам setupPhase
-      if (setupPhase === "input" && calculationScope === "room" && activeRoomId) {
-        setRoomConfirmedMap((prev) => ({ ...prev, [activeRoomId!]: confirmed }));
-        setActiveRoomId(null);
-        setIsChoosingRoom(true);
-        setSetupPhase("room");
-        return;
-      }
-      if (setupPhase === "input" && calculationScope === "object") {
-        setSetupPhase("scope");
-        return;
-      }
-      if (setupPhase === "room") {
-        setSetupPhase("scope");
-        return;
-      }
-      if (setupPhase === "scope") {
-        setSetupPhase("scenario");
-        return;
-      }
       // Первая секция (area).
       // Room-scope с несколькими комнатами: НЕ стираем весь прогресс — лид,
       // редактирующий вторую комнату, ожидает вернуться к списку помещений,
@@ -1906,15 +1886,13 @@ export function PriceCalculatorClient({
         return;
       }
       // Единственная комната / object-scope: сброс на SetupScreen
-      if (calculationScope === "room" || calculationScope === "object") {
-        setCalculationScope(null);
-        setRooms([]);
-        setRoomConfirmedMap({});
-        setActiveRoomId(null);
-        setIsChoosingRoom(false);
-        setConfirmed(getConfirmedStateForBlankRoom());
-        setSetupPhase("scenario");
-      }
+      // (лид передумал со сценарием расчёта).
+      setCalculationScope(null);
+      setRooms([]);
+      setRoomConfirmedMap({});
+      setActiveRoomId(null);
+      setIsChoosingRoom(false);
+      setConfirmed(getConfirmedStateForBlankRoom());
       return;
     }
 
@@ -2152,7 +2130,6 @@ export function PriceCalculatorClient({
     }));
     setActiveRoomId(nextRoom.id);
     setConfirmed(getConfirmedStateForBlankRoom());
-    setSetupPhase("input");
     setResumeStep(null);
     setActiveStep("area");
     setIsChoosingRoom(false);
@@ -2367,6 +2344,13 @@ export function PriceCalculatorClient({
     }
   }, [corniceLength, corniceLightingLength, corniceLightingEnabled]);
 
+  // Авто-подстройка длины подсветки под длину карниза
+  useEffect(() => {
+    if (corniceLightingEnabled && corniceLength > 0 && corniceLightingLength !== corniceLength) {
+      setCorniceLightingLength(corniceLength);
+    }
+  }, [corniceLightingEnabled]);
+
   if (compactSections) {
     // V-5: step numbers removed — titles hardcoded without numbers
 
@@ -2455,52 +2439,13 @@ export function PriceCalculatorClient({
       : null;
 
     const step0FooterAction: CalculatorFooterAction | null = primaryStep0Action ??
-      (setupPhase === "scenario"
+      (calculationScope !== null && !isChoosingRoom && activeStep
         ? {
-            label: solutionScenario ? "Далее →" : "Выберите сценарий",
-            disabled: !solutionScenario,
-            onClick: () => setSetupPhase("scope"),
+            label: resolveStep0ConfirmLabel(activeStep),
+            disabled: !isStepEnabled(activeStep),
+            onClick: () => confirmAndNavigate(activeStep),
           }
-        : setupPhase === "scope"
-          ? {
-              label: "Далее →",
-              disabled: calculationScope === null,
-              onClick: () => {
-                if (calculationScope === "room") {
-                  setSetupPhase("room");
-                } else {
-                  setSetupPhase("input");
-                }
-              },
-            }
-          : setupPhase === "room"
-            ? isChoosingRoom
-              ? {
-                  label: rooms.length > 0 ? "Далее →" : "Добавьте помещение",
-                  disabled: rooms.length === 0,
-                  onClick: () => {
-                    if (rooms.length > 0) {
-                      const firstRoom = rooms[0];
-                      if (firstRoom) {
-                        switchToRoom(firstRoom.id);
-                        setSetupPhase("input");
-                      }
-                    }
-                  },
-                }
-              : {
-                  label: resolveStep0ConfirmLabel("area"),
-                  disabled: !isStepEnabled("area"),
-                  onClick: () => confirmAndNavigate("area"),
-                }
-            : activeStep
-              ? {
-                  label: resolveStep0ConfirmLabel(activeStep),
-                  disabled: !isStepEnabled(activeStep),
-                  onClick: () => confirmAndNavigate(activeStep),
-                }
-              : null
-      );
+        : null);
 
     const step0BackAction: CalculatorFooterBackAction = {
       visible: canGoBack,
@@ -2641,11 +2586,10 @@ export function PriceCalculatorClient({
               ))}
             </div>
           ) : null}
-          {setupPhase === "scenario" ? (
           <SectionCard
             className="quiz-setup-card"
             title="Какой вариант решения рассматриваете?"
-            description="Выберите сценарий — это определит набор доступных шагов."
+            description="Выберите уровень подбора — дальше покажу только нужные шаги, а дополнительные опции можно открыть отдельно."
           >
             <div className="grid gap-2 sm:grid-cols-3">
               {scenarioOptions.map((item) => {
@@ -2681,46 +2625,6 @@ export function PriceCalculatorClient({
               </p>
             ) : null}
           </SectionCard>
-          ) : null}
-          {/* SCOPE: выбор формата */}
-          {setupPhase === "scope" ? (
-          <SectionCard
-            className="quiz-setup-card"
-            title="Что хотите посчитать?"
-            description="Выберите формат расчёта."
-          >
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <OptionCard
-                active={calculationScope === "room"}
-                title="Одна комната"
-                meta="Быстрый расчёт для кухни, спальни, гостиной, санузла или другой комнаты"
-                onClick={async () => {
-                  markInteracted();
-                  setCalculationScope("room");
-                  setRooms([]);
-                  setRoomConfirmedMap({});
-                  setActiveRoomId(null);
-                  setIsChoosingRoom(true);
-                  setSetupPhase("room");
-                }}
-              />
-              <OptionCard
-                active={calculationScope === "object"}
-                title="Вся квартира или дом"
-                meta="Если хотите прикинуть бюджет по объекту целиком одной суммой"
-                onClick={async () => {
-                  markInteracted();
-                  setCalculationScope("object");
-                  setRooms([]);
-                  setRoomConfirmedMap({});
-                  setActiveRoomId(null);
-                  setIsChoosingRoom(false);
-                  setSetupPhase("input");
-                }}
-              />
-            </div>
-          </SectionCard>
-          ) : null}
 
           {/* Room manager виден когда есть несколько комнат — здесь можно
               переключаться между комнатами и добавлять новые. */}
@@ -2864,7 +2768,7 @@ export function PriceCalculatorClient({
                   onEdit={() => beginEdit("area")}
                 />
               </SectionCard>
-            ) : activeStep === "area" && setupPhase !== "scenario" && setupPhase !== "scope" ? (
+            ) : activeStep === "area" ? (
               <SectionCard
                 key={activeStep}
                 className="animate-fade-slide-in"
@@ -3910,7 +3814,7 @@ export function PriceCalculatorClient({
               {isRoomScopeMulti ? "Общий ориентир по всем помещениям" : "Ориентировочная стоимость от"}
             </p>
             <p className="mt-2 text-3xl font-semibold tracking-tight">
-              {sidebarShouldShowPrice ? `${formatCurrency(displayTotal)} ₽` : "—"}
+              {sidebarShouldShowPrice ? `${formatCurrency(Math.max(displayTotal, MINIMUM_TOTAL))} ₽` : "—"}
             </p>
 
             <p className="mt-2 text-xs text-white/70">
@@ -3979,7 +3883,7 @@ export function PriceCalculatorClient({
             <div className="min-w-0">
               <p className="text-xs text-slate-500">{isRoomScopeMulti ? "Общий итог" : "Итого от"}</p>
               <p className="text-lg font-bold tracking-tight text-slate-950">
-                {formatCurrency(displayTotal)} ₽
+                {formatCurrency(Math.max(displayTotal, MINIMUM_TOTAL))} ₽
               </p>
             </div>
             {!isRoomScopeMulti ? (
