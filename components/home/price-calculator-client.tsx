@@ -19,7 +19,6 @@ import {
   type Step0ContextValue,
 } from "@/components/calculator-modal/step0/step0-context";
 import { Step0SectionSummary } from "@/components/calculator-modal/step0/step0-section-summary";
-import { CollapsibleRoomManager } from "@/components/calculator-modal/step0/collapsible-room-manager";
 
 import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
 import { calcRecommendedTrackSpots } from "@/lib/lighting-formulas";
@@ -804,7 +803,6 @@ export function PriceCalculatorClient({
 
   const [calculationScope, setCalculationScope] = useState<CalculationScope | null>(initialCompactCalculationScope);
   const [area, setArea] = useState<number>(resolvedAreaDefault);
-  const [ceilingFinish, setCeilingFinish] = useState<"matte" | "satin" | "glossy" | null>(null);
   const [ceilingType, setCeilingType] =
     useState<CeilingType>(resolvedCeilingType);
 
@@ -1070,7 +1068,6 @@ export function PriceCalculatorClient({
 
   const toggleShadow = () => {
     markInteracted();
-    setCeilingFinish(null);
     setShadowEnabled((prev) => {
       const next = !prev;
       const rec = getPerimeterSuggestion(area).recommended;
@@ -1091,7 +1088,6 @@ export function PriceCalculatorClient({
 
   const toggleFloating = () => {
     markInteracted();
-    setCeilingFinish(null);
     setFloatingEnabled((prev) => {
       const next = !prev;
       const rec = getPerimeterSuggestion(area).recommended;
@@ -2348,7 +2344,6 @@ export function PriceCalculatorClient({
     }
   }, [corniceLength, corniceLightingLength, corniceLightingEnabled]);
 
-  // Авто-подстройка длины подсветки под длину карниза
   useEffect(() => {
     if (corniceLightingEnabled && corniceLength > 0 && corniceLightingLength !== corniceLength) {
       setCorniceLightingLength(corniceLength);
@@ -2973,53 +2968,25 @@ export function PriceCalculatorClient({
                 title={`Тип потолка`}
                 description="Базовая площадь считается отдельно. Теневой и парящий указывайте только на нужных участках — они не обязаны идти по всему периметру."
               >
-                {solutionScenario === "standard" ? (
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    {[
-                      { slug: "matte", label: "Матовый" },
-                      { slug: "satin", label: "Сатин" },
-                      { slug: "glossy", label: "Глянцевый" },
-                    ].map((opt) => {
-                      const isActive = ceilingFinish === opt.slug;
-                      return (
-                        <div
-                          key={opt.slug}
-                          className={["rounded-2xl border p-3 text-left transition-all", isActive ? "border-slate-950 bg-slate-950 text-white shadow-lg" : "border-slate-200 bg-white text-slate-950 hover:border-slate-400"].join(" ")}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => { markInteracted(); setShadowEnabled(false); setFloatingEnabled(false); setCeilingFinish(opt.slug as "matte" | "satin" | "glossy"); }}
-                            className="w-full text-left"
-                          >
-                            <p className="text-sm font-semibold">{opt.label}</p>
-                            <p className={["mt-0.5 text-xs", isActive ? "text-white/75" : "text-slate-500"].join(" ")}>
-                              от {formatCurrency(selectedCeiling.baseRatePerSqm)} ₽ / м²
-                            </p>
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div
-                    className={["rounded-2xl border p-4 text-left transition-all mb-3",
-                      !shadowEnabled && !floatingEnabled
-                        ? "border-slate-950 bg-slate-950 text-white shadow-lg shadow-slate-950/10"
-                        : "border-slate-200 bg-white text-slate-950 hover:border-slate-400 hover:bg-slate-50"
-                    ].join(" ")}
+                {/* Simple ceiling option */}
+                <div
+                  className={["rounded-2xl border p-4 text-left transition-all mb-3",
+                    !shadowEnabled && !floatingEnabled
+                      ? "border-slate-950 bg-slate-950 text-white shadow-lg shadow-slate-950/10"
+                      : "border-slate-200 bg-white text-slate-950 hover:border-slate-400 hover:bg-slate-50"
+                  ].join(" ")}
+                >
+                  <button
+                    type="button"
+                    onClick={() => { markInteracted(); setShadowEnabled(false); setFloatingEnabled(false); }}
+                    className="w-full text-left"
                   >
-                    <button
-                      type="button"
-                      onClick={() => { markInteracted(); setShadowEnabled(false); setFloatingEnabled(false); setCeilingFinish(null); }}
-                      className="w-full text-left"
-                    >
-                      <p className="text-sm font-semibold">Простой потолок</p>
-                      <p className={["mt-1 text-xs", !shadowEnabled && !floatingEnabled ? "text-white/75" : "text-slate-500"].join(" ")}>
-                        от {formatCurrency(selectedCeiling.baseRatePerSqm)} ₽ / м²
-                      </p>
-                    </button>
-                  </div>
-                )}
+                    <p className="text-sm font-semibold">Простой потолок</p>
+                    <p className={["mt-1 text-xs", !shadowEnabled && !floatingEnabled ? "text-white/75" : "text-slate-500"].join(" ")}>
+                      от {formatCurrency(selectedCeiling.baseRatePerSqm)} ₽ / м²
+                    </p>
+                  </button>
+                </div>
 
                 {/* Shadow + Floating checkboxes */}
                 {showAdvancedCeilingTypeOptions ? (
