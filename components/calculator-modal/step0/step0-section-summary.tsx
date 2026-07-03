@@ -161,8 +161,11 @@ export function Step0SectionSummary() {
       <div className="rounded-[2rem] bg-slate-950 p-6 text-white shadow-xl shadow-slate-950/10 sm:p-8">
         <p className="text-sm text-white/70">Готовый расчёт</p>
         <p className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">
-          {formatCurrency(total)} ₽
+          {formatCurrency(Math.max(total, 18000))} ₽
         </p>
+        {total > 0 && total < 18000 ? (
+          <p className="mt-2 text-sm text-emerald-400">Минимальный заказ: {formatCurrency(18000)} ₽</p>
+        ) : null}
         <p className="mt-3 text-sm text-white/70">
           {SCENARIO_SUBTITLES[solutionScenario]}
           {effectiveRooms.length > 0
