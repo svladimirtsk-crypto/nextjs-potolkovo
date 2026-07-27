@@ -252,8 +252,8 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
         onKeyDownCapture={markStep0SessionInteracted}
         onChangeCapture={markStep0SessionInteracted}
       >
-        <div className="mb-3 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-900">
-          QUIZ V2 — один шаг = одна карточка (beta). <a href="?quiz=v1" className="underline">Вернуться к старой версии</a>
+        <div className="mb-3 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-xs text-slate-600">
+          <a href="?quiz=v1" className="underline">Вернуться к старой версии калькулятора</a>
         </div>
         <PriceCalculatorQuizV2
           preset={resolvedPreset}
