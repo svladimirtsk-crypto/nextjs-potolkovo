@@ -5,7 +5,7 @@ import type { ServiceCalculatorPreset } from "@/content/services";
 import type { SolutionScenario, CalculatorFooterAction, CalculatorFooterBackAction } from "@/lib/calculator-modal-types";
 import { useCeilingCalculatorEngine } from "@/lib/calculator-v2/use-ceiling-calculator-engine";
 import type { Step0Screen, ParamId } from "@/lib/step0-fsm";
-import { calcStep0Progress, getParamConfirmLabel, getEnabledParams as getEnabledParamsFsm } from "@/lib/step0-fsm";
+import { getParamConfirmLabel, getEnabledParams as getEnabledParamsFsm } from "@/lib/step0-fsm";
 
 import { ScenarioScreen } from "./screens/ScenarioScreen";
 import { CalcModeScreen } from "./screens/CalcModeScreen";
@@ -272,10 +272,6 @@ export function PriceCalculatorQuizV2({
           onPrimaryCta={onPrimaryCtaClick}
         />
       )}
-      <div className="mt-6 text-[11px] text-slate-400 border-t border-dashed pt-3">
-        QUIZ V2 · {screen.t} · rooms:{engine.roomsCount} · total:{engine.totalRub.toLocaleString("ru-RU")} ₽ · {engine.solutionScenario}
-        <br/>enabled: {enabledParams.join(", ")}
-      </div>
     </div>
   );
 }
