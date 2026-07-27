@@ -1,5 +1,6 @@
 import { homepage } from "@/content/homepage";
-import type { CalculatorLeadSnapshot, DerivedInputs } from "@/components/home/price-calculator-context";
+import type { CalculatorLeadSnapshot } from "@/components/home/price-calculator-context";
+import type { DerivedInputs } from "@/lib/calculator-modal-types";
 import { calcRecommendedTrackSpots } from "@/lib/lighting-formulas";
 
 const calculator = homepage.price.calculator;
