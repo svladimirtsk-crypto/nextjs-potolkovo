@@ -206,20 +206,36 @@ export function PriceCalculatorQuizV2({
   return (
     <div data-quiz-v2 data-active-screen={screen.t} className="step0-quiz-v2 max-w-3xl mx-auto">
       {screen.t === "scenario" && (
-        <ScenarioScreen
-          value={engine.solutionScenario}
-          onChoose={s => { engine.chooseScenario(s); goNext(); }}
-          onBack={initialSolutionScenario !== "standard" ? popScreen : undefined}
-        />
+        <>
+          {initialSolutionScenario !== "standard" && history.length > 1 && (
+            <div className="mb-3">
+              <button type="button" onClick={popScreen} className="text-sm text-slate-600 hover:text-slate-900">← Назад</button>
+            </div>
+          )}
+          <ScenarioScreen
+            value={engine.solutionScenario}
+            onChoose={s => { engine.chooseScenario(s); goNext(); }}
+          />
+        </>
       )}
       {screen.t === "calcMode" && (
-        <CalcModeScreen
-          value={engine.calculationScope}
-          onChoose={m => { engine.chooseCalcMode(m); goNext(); }}
-          onBack={initialSolutionScenario !== "standard" && history.length <= 1 ? undefined : goBack}
-          scenario={initialSolutionScenario !== "standard" ? initialSolutionScenario : undefined}
-          onChangeScenario={initialSolutionScenario !== "standard" ? () => pushScreen({ t: "scenario" }) : undefined}
-        />
+        <>
+          {initialSolutionScenario !== "standard" && (
+            <div className="mb-3 flex items-center gap-2 text-xs">
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700">
+                {initialSolutionScenario === "modern" ? "Современный" : initialSolutionScenario === "advanced" ? "Продвинутый" : "Стандартный"}
+              </span>
+              <button type="button" onClick={() => pushScreen({ t: "scenario" })} className="text-slate-500 underline-offset-2 hover:underline">
+                изменить
+              </button>
+            </div>
+          )}
+          <CalcModeScreen
+            value={engine.calculationScope}
+            onChoose={m => { engine.chooseCalcMode(m); goNext(); }}
+            onBack={initialSolutionScenario !== "standard" && history.length <= 1 ? undefined : goBack}
+          />
+        </>
       )}
       {screen.t === "roomPicker" && (
         <RoomPickerScreen
