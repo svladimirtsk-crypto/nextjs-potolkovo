@@ -46,7 +46,11 @@ export function PriceCalculatorQuizV2({
   const { lightingDraft } = useCalculatorModal();
 
   // --- FSM ---
-  const [history, setHistory] = useState<Step0Screen[]>([{ t: "scenario" }]);
+  // Auto-skip scenario screen when coming from service page with non-standard scenario
+  const startScreen: Step0Screen = initialSolutionScenario !== "standard"
+    ? { t: "calcMode" }
+    : { t: "scenario" };
+  const [history, setHistory] = useState<Step0Screen[]>([startScreen]);
   const screen = history[history.length - 1] ?? { t: "scenario" } as Step0Screen;
 
   const pushScreen = useCallback((s: Step0Screen) => setHistory(h => [...h, s]), []);
@@ -87,18 +91,11 @@ export function PriceCalculatorQuizV2({
     try { (engine as any).addRoom?.("Весь объект"); } catch {}
   }, [engine.calculationScope, engine.rooms.length]);
 
-  // prefill from lighting
+  // prefill from lighting — uses engine.applyPrefillFromLighting (respects touched flags)
   useEffect(() => {
     if (!prefillFromLighting) return;
     if (!prefillFromLightingTrigger) return;
-    const targetRoomId = engine.activeRoomId ?? engine.rooms[0]?.id;
-    if (!targetRoomId) return;
-    const points = Math.max(0, Math.round(Number(prefillFromLighting.pointSpotsQty ?? 0)));
-    const meters = Number(prefillFromLighting.trackProfileMeters ?? 0);
-    const patch: any = {};
-    if (points > 0) { patch.lightsEnabled = true; patch.lightsCount = points; }
-    if (meters > 0) { patch.trackLength = Math.min(50, Math.max(1, meters)); if (prefillFromLighting.preferredTrackType) patch.trackType = prefillFromLighting.preferredTrackType; else patch.trackType = "built-in"; }
-    if (Object.keys(patch).length) engine.updateRoom(targetRoomId, patch);
+    engine.applyPrefillFromLighting(null, prefillFromLighting);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefillFromLightingTrigger]);
 
@@ -197,7 +194,9 @@ export function PriceCalculatorQuizV2({
       }
     };
     onStep0FooterActionChange?.(action);
-    onStep0BackActionChange?.({ visible: screen.t !== "scenario", onClick: goBack });
+    // hide back on scenario screen, and on the initial auto-skipped calcMode (has "изменить" badge instead)
+    const showBack = screen.t !== "scenario" && !(screen.t === "calcMode" && history.length <= 1 && initialSolutionScenario !== "standard");
+    onStep0BackActionChange?.({ visible: showBack, onClick: goBack });
     return () => {
       onStep0FooterActionChange?.(null);
       onStep0BackActionChange?.({ visible: false });
@@ -207,10 +206,20 @@ export function PriceCalculatorQuizV2({
   return (
     <div data-quiz-v2 data-active-screen={screen.t} className="step0-quiz-v2 max-w-3xl mx-auto">
       {screen.t === "scenario" && (
-        <ScenarioScreen value={engine.solutionScenario} onChoose={s => { engine.chooseScenario(s); goNext(); }} />
+        <ScenarioScreen
+          value={engine.solutionScenario}
+          onChoose={s => { engine.chooseScenario(s); goNext(); }}
+          onBack={initialSolutionScenario !== "standard" ? popScreen : undefined}
+        />
       )}
       {screen.t === "calcMode" && (
-        <CalcModeScreen value={engine.calculationScope} onChoose={m => { engine.chooseCalcMode(m); goNext(); }} onBack={goBack} />
+        <CalcModeScreen
+          value={engine.calculationScope}
+          onChoose={m => { engine.chooseCalcMode(m); goNext(); }}
+          onBack={initialSolutionScenario !== "standard" && history.length <= 1 ? undefined : goBack}
+          scenario={initialSolutionScenario !== "standard" ? initialSolutionScenario : undefined}
+          onChangeScenario={initialSolutionScenario !== "standard" ? () => pushScreen({ t: "scenario" }) : undefined}
+        />
       )}
       {screen.t === "roomPicker" && (
         <RoomPickerScreen
