@@ -7,6 +7,7 @@ import type { ServiceCalculatorPreset, Phase2ServiceSlug } from "@/content/servi
 import type { SolutionScenario } from "@/lib/calculator-modal-types";
 import { resolveStep0SummaryActions } from "@/lib/calculator-flow";
 import { PriceCalculatorClient } from "@/components/home/price-calculator-client";
+import { PriceCalculatorQuizV2 } from "@/components/calculator-modal/step0/quiz-v2/PriceCalculatorQuizV2";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 
 import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
@@ -236,6 +237,51 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
   const calcKey = useMemo(() => {
     return JSON.stringify(resolvedPreset) + "-" + String(options?.source ?? "");
   }, [resolvedPreset, options?.source]);
+
+  // Feature-flag QUIZ V2
+  const quizV2Enabled =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("quiz") === "v2" ||
+        process.env.NEXT_PUBLIC_CALC_QUIZ_V2 === "1"
+      : process.env.NEXT_PUBLIC_CALC_QUIZ_V2 === "1";
+
+  if (quizV2Enabled) {
+    return (
+      <div
+        onClickCapture={markStep0SessionInteracted}
+        onKeyDownCapture={markStep0SessionInteracted}
+        onChangeCapture={markStep0SessionInteracted}
+      >
+        <div className="mb-3 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-900">
+          QUIZ V2 — один шаг = одна карточка (beta). <a href="?quiz=v1" className="underline">Вернуться к старой версии</a>
+        </div>
+        <PriceCalculatorQuizV2
+          preset={resolvedPreset}
+          initialSolutionScenario={initialSolutionScenario}
+          prefillFromLighting={prefillMetrics.hasAny ? {
+            trackProfileMeters: prefillMetrics.trackProfileMeters,
+            pointSpotsQty: prefillMetrics.pointSpotsQty,
+            preferredTrackType: prefillMetrics.preferredTrackType,
+          } : null}
+          prefillFromLightingTrigger={prefillTrigger}
+          onStep0ProgressChange={setStep0Progress}
+          onIsStep0SummaryReadyChange={setIsStep0SummaryReady}
+          onStep0FooterActionChange={setStep0FooterAction}
+          onStep0BackActionChange={setStep0BackAction}
+          onPrimaryCtaClick={() => {
+            const scenario = snapshot?.solutionScenario ?? initialSolutionScenario;
+            const hasLighting = Boolean(
+              lightingDraft &&
+                lightingDraft.mode !== "none" &&
+                (lightingDraft.items?.length ?? 0) > 0
+            );
+            const actions = resolveStep0SummaryActions({ scenario, hasLighting });
+            goToStep(actions.primary.destination);
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div
