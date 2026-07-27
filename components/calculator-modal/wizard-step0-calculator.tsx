@@ -268,6 +268,16 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
           onIsStep0SummaryReadyChange={setIsStep0SummaryReady}
           onStep0FooterActionChange={setStep0FooterAction}
           onStep0BackActionChange={setStep0BackAction}
+          summaryPrimaryLabel={(() => {
+            const scenario = snapshot?.solutionScenario ?? initialSolutionScenario;
+            const hasLighting = Boolean(lightingDraft && lightingDraft.mode !== "none" && (lightingDraft.items?.length ?? 0) > 0);
+            return resolveStep0SummaryActions({ scenario, hasLighting }).primary.label;
+          })()}
+          summarySecondaryLabel={(() => {
+            const scenario = snapshot?.solutionScenario ?? initialSolutionScenario;
+            const hasLighting = Boolean(lightingDraft && lightingDraft.mode !== "none" && (lightingDraft.items?.length ?? 0) > 0);
+            return resolveStep0SummaryActions({ scenario, hasLighting }).secondary?.label;
+          })()}
           onPrimaryCtaClick={() => {
             const scenario = snapshot?.solutionScenario ?? initialSolutionScenario;
             const hasLighting = Boolean(
@@ -277,6 +287,16 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
             );
             const actions = resolveStep0SummaryActions({ scenario, hasLighting });
             goToStep(actions.primary.destination);
+          }}
+          onSecondaryCtaClick={() => {
+            const scenario = snapshot?.solutionScenario ?? initialSolutionScenario;
+            const hasLighting = Boolean(
+              lightingDraft &&
+                lightingDraft.mode !== "none" &&
+                (lightingDraft.items?.length ?? 0) > 0
+            );
+            const actions = resolveStep0SummaryActions({ scenario, hasLighting });
+            if (actions.secondary) goToStep(actions.secondary.destination);
           }}
         />
       </div>
