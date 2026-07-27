@@ -23,6 +23,9 @@ type Props = {
   onStep0FooterActionChange?: (a: CalculatorFooterAction | null) => void;
   onStep0BackActionChange?: (a: CalculatorFooterBackAction) => void;
   onPrimaryCtaClick?: () => void;
+  onSecondaryCtaClick?: () => void;
+  summaryPrimaryLabel?: string;
+  summarySecondaryLabel?: string;
   prefillFromLighting?: {
     trackProfileMeters: number;
     pointSpotsQty: number;
@@ -39,6 +42,9 @@ export function PriceCalculatorQuizV2({
   onStep0FooterActionChange,
   onStep0BackActionChange,
   onPrimaryCtaClick,
+  onSecondaryCtaClick,
+  summaryPrimaryLabel,
+  summarySecondaryLabel,
   prefillFromLighting = null,
   prefillFromLightingTrigger = 0,
 }: Props) {
@@ -270,6 +276,9 @@ export function PriceCalculatorQuizV2({
           onEditRoom={roomId => pushScreen({ t: "roomEdit", roomId })}
           onAddRoom={() => pushScreen({ t: "roomPicker", mode: "add" })}
           onPrimaryCta={onPrimaryCtaClick}
+          onSecondaryCta={onSecondaryCtaClick}
+          primaryLabel={summaryPrimaryLabel}
+          secondaryLabel={summarySecondaryLabel}
         />
       )}
     </div>
