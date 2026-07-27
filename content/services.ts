@@ -532,6 +532,8 @@ export const servicePageContent: Record<
         areaDefault: 24,
         corniceType: "none",
         trackType: "none",
+        lightLinesEnabled: true,
+        lightLinesLengthDefault: 4,
         lightsEnabled: false,
         introNote:
           "Для световых линий точная стоимость рассчитывается после схемы расположения и замера. Калькулятор ниже помогает прикинуть бюджет проекта в целом.",
