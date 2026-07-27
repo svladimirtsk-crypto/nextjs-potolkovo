@@ -238,14 +238,14 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
     return JSON.stringify(resolvedPreset) + "-" + String(options?.source ?? "");
   }, [resolvedPreset, options?.source]);
 
-  // Feature-flag QUIZ V2
-  const quizV2Enabled =
+  // V2 включена по умолчанию. Отключить: ?quiz=v1 в URL или NEXT_PUBLIC_CALC_QUIZ_V2=0
+  const quizV2Disabled =
     typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search).get("quiz") === "v2" ||
-        process.env.NEXT_PUBLIC_CALC_QUIZ_V2 === "1"
-      : process.env.NEXT_PUBLIC_CALC_QUIZ_V2 === "1";
+      ? new URLSearchParams(window.location.search).get("quiz") === "v1" ||
+        process.env.NEXT_PUBLIC_CALC_QUIZ_V2 === "0"
+      : process.env.NEXT_PUBLIC_CALC_QUIZ_V2 === "0";
 
-  if (quizV2Enabled) {
+  if (!quizV2Disabled) {
     return (
       <div
         onClickCapture={markStep0SessionInteracted}
