@@ -10,6 +10,8 @@ import {
   applyLightingOnlyDiscount,
   applyLightingWithCeilingDiscount,
 } from "@/lib/lighting-formulas";
+import { normalizeFeedCatalogProducts } from "@/lib/feed2-snapshot-normalize";
+import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
 import { detectSocket } from "@/lib/feed2-products";
 import { isRemovedColibriVendorCode } from "@/lib/catalog-ui-config";
 
@@ -34,10 +36,17 @@ function toNumber(value: unknown): number {
 }
 
 function getProducts(): FeedCatalogProduct[] {
-  const catalog = snapshotData as unknown as SnapshotCatalogShape;
-  const products = Array.isArray(catalog.products) ? catalog.products : [];
-  return products.filter((p) => toNumber(p.priceRub) > 0 && p.available !== false);
+  // T-014: единая нормализация + оверрайды, как во всём каталоге
+  const catalog = snapshotData as unknown as { products?: unknown[] };
+  return normalizeFeedCatalogProducts(catalog.products ?? [])
+    .map((p) => applyVendorOverrides(p))
+    .filter((p) => toNumber(p.priceRub) > 0 && p.available !== false);
 }
+
+/** T-014: ввод питания COLIBRI обязателен в каждом комплекте. */
+const COLIBRI_POWER_FEED_VENDOR_CODE = "0У-00001343";
+/** T-014: прямой соединитель COLIBRI для стыков профилей. */
+const COLIBRI_STRAIGHT_CONNECTOR_VENDOR_CODE = "0У-00001344";
 
 function findByVendorCode(products: FeedCatalogProduct[], vendorCode: string): FeedCatalogProduct | null {
   const code = toText(vendorCode);
@@ -111,6 +120,9 @@ function buildKitKitchen(products: FeedCatalogProduct[]): KitCard | null {
 
   if (!profile2000 || !profile1000 || !f1335 || !f1338 || !cornerJoin || !cornerConn) return null;
 
+  const powerFeed = findByVendorCode(products, COLIBRI_POWER_FEED_VENDOR_CODE);
+  if (!powerFeed) return null;
+
   const items: LightingItem[] = [
     itemFromProduct(profile2000, 1),
     itemFromProduct(profile1000, 1),
@@ -118,6 +130,7 @@ function buildKitKitchen(products: FeedCatalogProduct[]): KitCard | null {
     itemFromProduct(f1338, 3),
     itemFromProduct(cornerJoin, 1),
     itemFromProduct(cornerConn, 1),
+    itemFromProduct(powerFeed, 1),
   ];
 
   const imageSrc = toText(f1335.coverImage) || "/svc-tracksale.jpeg";
@@ -143,6 +156,15 @@ function buildKitLiving(products: FeedCatalogProduct[]): KitCard | null {
 
   if (!profile2000 || !profile1000 || !f1335 || !f1339 || !f1336 || !cornerJoin || !cornerConn) return null;
 
+  const powerFeed = findByVendorCode(products, COLIBRI_POWER_FEED_VENDOR_CODE);
+  const straightConnector = findByVendorCode(products, COLIBRI_STRAIGHT_CONNECTOR_VENDOR_CODE);
+  if (!powerFeed || !straightConnector) return null;
+
+  const profilePieces = 4 + 2;
+  const corners = 4;
+  // Стыки, которые не закрыты угловыми коннекторами
+  const straightJoints = Math.max(0, profilePieces - corners - 1);
+
   const items: LightingItem[] = [
     itemFromProduct(profile2000, 4),
     itemFromProduct(profile1000, 2),
@@ -151,6 +173,8 @@ function buildKitLiving(products: FeedCatalogProduct[]): KitCard | null {
     itemFromProduct(f1336, 2),
     itemFromProduct(cornerJoin, 4),
     itemFromProduct(cornerConn, 4),
+    itemFromProduct(powerFeed, 1),
+    ...(straightJoints > 0 ? [itemFromProduct(straightConnector, straightJoints)] : []),
   ];
 
   const imageSrc = toText(f1339.coverImage) || "/svc-tracksale.jpeg";
@@ -195,6 +219,16 @@ function calcTotals(items: LightingItem[]) {
   const lightingOnlyBenefitRub = Math.max(0, Math.round(totalRub - lightingOnlyRub));
   const withCeilingBenefitRub = Math.max(0, Math.round(totalRub - withCeilingRub));
   return { totalRub, lightingOnlyRub, withCeilingRub, lightingOnlyBenefitRub, withCeilingBenefitRub };
+}
+
+/** T-014: минимальная цена комплекта «с потолком» — источник ценового якоря страницы. */
+export function getKitsPriceAnchorRub(): number | null {
+  const products = getProducts();
+  const kits = [buildKitKitchen(products), buildKitLiving(products), buildKitHallway(products)].filter(
+    (kit): kit is KitCard => kit !== null
+  );
+  if (kits.length === 0) return null;
+  return Math.min(...kits.map((kit) => calcTotals(kit.items).withCeilingRub));
 }
 
 export function LightKitShowcase() {

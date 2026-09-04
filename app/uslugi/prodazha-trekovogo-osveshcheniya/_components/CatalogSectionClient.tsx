@@ -19,6 +19,7 @@ import { trackLightingCartCheckout, trackSmartInterestSelected } from "@/lib/ana
 
 import {
   LIGHTING_ONLY_DISCOUNT_PERCENT,
+  LIGHTING_WITH_CEILING_DISCOUNT_PERCENT,
   applyLightingOnlyDiscount,
   applyLightingWithCeilingDiscount,
   calcLightingDiscountAmount,
@@ -38,6 +39,7 @@ import {
   type PointSubtypeId,
   type TrackGroupId,
   type TrackSystemId,
+  LAMP_SOCKETS,
   type LampSocket,
 } from "@/lib/catalog-ui-config";
 
@@ -190,8 +192,8 @@ function ProductCard({
   onInc: () => void;
 }) {
   const regular = toNumber(product.priceRub);
-  const lightingOnly = getDiscountedPrice(regular, 10);
-  const withCeiling = getDiscountedPrice(regular, 25);
+  const lightingOnly = getDiscountedPrice(regular, LIGHTING_ONLY_DISCOUNT_PERCENT);
+  const withCeiling = getDiscountedPrice(regular, LIGHTING_WITH_CEILING_DISCOUNT_PERCENT);
   const lightingOnlyBenefit = benefitRub(regular, 10);
   const withCeilingBenefit = benefitRub(regular, 25);
   const systemBadge = product.system === "COLIBRI_220"
@@ -459,14 +461,15 @@ export function CatalogSectionClient({ data }: Props) {
       .filter((p) => p.kind === "LAMP" && p.available !== false && toNumber(p.priceRub) > 0)
       .sort((a, b) => toNumber(a.priceRub) - toNumber(b.priceRub));
 
-    const gx53 = base.filter((p) => detectSocket(p) === "GX53");
-    const mr16 = base.filter((p) => detectSocket(p) === "MR16");
-
-    return { GX53: gx53, MR16: mr16 };
+    const bySocket: Record<LampSocket, FeedCatalogProduct[]> = { GX53: [], MR16: [], GU10: [] };
+    for (const socket of LAMP_SOCKETS) {
+      bySocket[socket] = base.filter((p) => detectSocket(p) === socket);
+    }
+    return bySocket;
   }, [products]);
 
   const lampRequiredBySocket = useMemo(() => {
-    const required: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
+    const required: Record<LampSocket, number> = { GX53: 0, MR16: 0, GU10: 0 };
     for (const entry of selectedEntries) {
       const socket = getRequiredLampSocket(entry.product);
       if (!socket) continue;
@@ -476,7 +479,7 @@ export function CatalogSectionClient({ data }: Props) {
   }, [selectedEntries]);
 
   const lampCurrentBySocket = useMemo(() => {
-    const current: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
+    const current: Record<LampSocket, number> = { GX53: 0, MR16: 0, GU10: 0 };
     for (const lamp of lampProductsBySocket.GX53) current.GX53 += toNumber(cartItems[toText(lamp.productId)]);
     for (const lamp of lampProductsBySocket.MR16) current.MR16 += toNumber(cartItems[toText(lamp.productId)]);
     return current;
@@ -486,7 +489,7 @@ export function CatalogSectionClient({ data }: Props) {
     const out: Array<{ socket: LampSocket; requiredQty: number; currentQty: number; cheapestLampId: string | null }> =
       [];
 
-    for (const socket of ["GX53", "MR16"] as LampSocket[]) {
+    for (const socket of LAMP_SOCKETS) {
       const required = toNumber(lampRequiredBySocket[socket]);
       if (required <= 0) continue;
 
@@ -603,6 +606,11 @@ export function CatalogSectionClient({ data }: Props) {
       initialLighting,
       source: "track-sale-page",
     });
+  };
+
+  // T-007: «Посмотреть» — открыть список выбранного в модалке
+  const openSelectedList = () => {
+    openInCalculator();
   };
 
   const openLightingOrder = () => {
@@ -853,7 +861,7 @@ export function CatalogSectionClient({ data }: Props) {
 
         {section === "lamps" ? (
           <div className="mt-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar sm:flex-wrap">
-            {(["GX53", "MR16"] as LampSocket[]).map((socket) => (
+            {(LAMP_SOCKETS).map((socket) => (
               <button
                 key={socket}
                 type="button"
@@ -885,7 +893,7 @@ export function CatalogSectionClient({ data }: Props) {
 
         {/* Selected cart */}
         {selectedEntries.length > 0 ? (
-          <div className="fixed bottom-4 left-1/2 z-40 hidden w-[min(1120px,calc(100vw-2rem))] -translate-x-1/2 rounded-[1.5rem] border border-slate-200 bg-white/95 p-4 shadow-[0_14px_42px_rgba(15,23,42,0.16)] backdrop-blur sm:block">
+          <div data-cart-bar data-count={selectedEntries.length} style={{ zIndex: "var(--z-cart, 45)" }} className="fixed bottom-4 left-1/2 hidden w-[min(1120px,calc(100vw-2rem))] -translate-x-1/2 rounded-[1.5rem] border border-slate-200 bg-white/95 p-4 shadow-[0_14px_42px_rgba(15,23,42,0.16)] backdrop-blur sm:block">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-slate-950">Корзина света: {selectedEntries.length} поз.</p>
@@ -925,7 +933,7 @@ export function CatalogSectionClient({ data }: Props) {
         ) : null}
 
         {selectedEntries.length > 0 ? (
-          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 shadow-[0_-8px_28px_rgba(15,23,42,0.12)] backdrop-blur sm:hidden" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}>
+          <div data-cart-bar data-count={selectedEntries.length} style={{ zIndex: "var(--z-cart, 45)", paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }} className="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white/95 p-3 shadow-[0_-8px_28px_rgba(15,23,42,0.12)] backdrop-blur sm:hidden">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-slate-950">Корзина: {selectedEntries.length} поз.</p>
@@ -937,15 +945,22 @@ export function CatalogSectionClient({ data }: Props) {
               <div className="grid shrink-0 gap-1.5">
                 <button
                   type="button"
-                  onClick={openLightingOrder}
-                  className="rounded-xl bg-slate-950 px-3 py-2 text-[11px] font-semibold text-white"
+                  onClick={openSelectedList}
+                  className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-700"
                 >
-                  Свет −10%
+                  Посмотреть
+                </button>
+                <button
+                  type="button"
+                  onClick={openLightingOrder}
+                  className="min-h-11 rounded-xl bg-slate-950 px-3 text-[11px] font-semibold text-white"
+                >
+                  Оформить · свет −10%
                 </button>
                 <button
                   type="button"
                   onClick={openWithCeiling}
-                  className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-[11px] font-semibold text-blue-700"
+                  className="min-h-11 rounded-xl border border-blue-200 bg-blue-50 px-3 text-[11px] font-semibold text-blue-700"
                 >
                   Потолок −25%
                 </button>

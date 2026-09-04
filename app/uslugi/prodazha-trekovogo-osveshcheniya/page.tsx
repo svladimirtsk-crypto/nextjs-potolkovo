@@ -5,6 +5,8 @@ import { getRequiredServicePageBySlug } from "@/content/services";
 import { buildFaqSchema } from "@/lib/seo-schema";
 import { ServicePageLayoutV2 } from "../_components/ServicePageLayoutV2";
 import { ServiceHero } from "../_components/ServiceHero";
+import { getKitsPriceAnchorRub } from "./_components/LightKitShowcase";
+import { formatRub } from "@/content/pricing";
 import { ServiceActionSection } from "../_components/ServiceActionSection";
 import { ServiceRelatedServices } from "../_components/ServiceRelatedServices";
 import { LightKitShowcase } from "./_components/LightKitShowcase";
@@ -29,12 +31,15 @@ export const metadata: Metadata = {
 };
 
 export default function ProdazhaTrekovogoOsveshcheniyaPage() {
+  const kitsAnchorRub = getKitsPriceAnchorRub();
+  const kitsPriceBadge = kitsAnchorRub ? `от ${formatRub(kitsAnchorRub)}` : undefined;
+
   return (
     <>
       <JsonLd data={buildFaqSchema(trackSaleFaqItems)} />
       <ServicePageLayoutV2
         service={service}
-        hero={<ServiceHero service={service} />}
+        hero={<ServiceHero service={service} priceBadgeOverride={kitsPriceBadge} />}
         proof={<LightKitShowcase />}
         price={
           <>

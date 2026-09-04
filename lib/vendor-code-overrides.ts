@@ -31,8 +31,6 @@ export const ART_TRACK_PROFILE_VENDOR_WHITELIST = [
   "0У-00001355",
   "0У-00001354",
   "0У-00001353",
-  "0У-00001341",
-  "0У-00001342",
 ] as const;
 
 const ART_PROFILE_VENDORS = new Set<string>(ART_TRACK_PROFILE_VENDOR_WHITELIST);
@@ -41,6 +39,13 @@ const COLIBRI_PROFILE_VENDORS = new Set<string>([
   "0У-00006089",
   "0У-00006090",
   "0У-00006986",
+  // T-011: КОЛИБРИ шинопровод 2 м — это профиль, а не OTHER
+  "0У-00001341",
+]);
+
+const COLIBRI_ACCESSORY_VENDORS = new Set<string>([
+  // T-011: угловой коннектор — аксессуар
+  "0У-00001342",
 ]);
 
 const CLARUS_PROFILE_VENDORS = new Set<string>(["0У-00006633", "0У-00006634"]);
@@ -66,11 +71,12 @@ const TRACK_PROFILE_PIECE_LENGTH_METERS: Record<string, number> = {
 
   // ART profiles
   "0У-00001353": 1,
+  "0У-00001341": 2,
   "0У-00001354": 1,
   "0У-00001355": 2,
   "0У-00001356": 2,
-  "0У-00001341": 3,
-  "0У-00001342": 3,
+  "0У-00006341": 3,
+  "0У-00006342": 3,
 };
 
 function toText(value: unknown): string {
@@ -106,6 +112,14 @@ export function applyVendorOverrides(product: FeedCatalogProduct): FeedCatalogPr
       ...next,
       system: "TRACK_220" as System,
       kind: "TRACK_FIXTURE" as Kind,
+    };
+  }
+
+  if (COLIBRI_ACCESSORY_VENDORS.has(vendorCode)) {
+    next = {
+      ...next,
+      system: "COLIBRI_220" as System,
+      kind: "TRACK_ACCESSORY" as Kind,
     };
   }
 

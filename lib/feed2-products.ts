@@ -32,9 +32,9 @@ export function buildProductsIndex(products: FeedCatalogProduct[]): Map<string, 
   return new Map(products.map((product) => [product.productId, product]));
 }
 
-export function getDiscountedPrice(priceRub: number, discountPercent = 15): number {
+export function getDiscountedPrice(priceRub: number, discountPercent: number): number {
   const value = Number(priceRub ?? 0);
-  const discount = Number(discountPercent ?? 15);
+  const discount = Number(discountPercent ?? 0);
 
   if (!Number.isFinite(value) || value <= 0) return 0;
 
@@ -65,10 +65,23 @@ export function detectSmart(product: FeedCatalogProduct): boolean {
   );
 }
 
+/** T-013: нормализация написаний цоколей: mr-16→mr16, gu 10→gu10, gu5,3→gu5.3 */
+export function normalizeSocketText(raw: string): string {
+  return String(raw ?? "")
+    .toLowerCase()
+    .replace(/\s*[-–—]\s*/g, "")
+    .replace(/gu\s*10/g, "gu10")
+    .replace(/gu\s*5\s*[.,]\s*3/g, "gu5.3")
+    .replace(/gx\s*53/g, "gx53")
+    .replace(/mr\s*16/g, "mr16")
+    .replace(/\s+/g, " ");
+}
+
 export function detectSocket(product: FeedCatalogProduct): LampSocket | null {
-  const text = getText(product);
+  const text = normalizeSocketText(getText(product));
 
   if (text.includes("gx53")) return "GX53";
+  if (text.includes("gu10")) return "GU10";
   if (text.includes("mr16") || text.includes("gu5.3")) return "MR16";
 
   return null;

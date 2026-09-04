@@ -1,11 +1,14 @@
 // lib/lighting-formulas.ts
 import type { LightingItem } from "@/lib/calculator-modal-types";
 
-export const LIGHTING_ONLY_DISCOUNT_RATE = 0.10;
-export const LIGHTING_WITH_CEILING_DISCOUNT_RATE = 0.25;
+import { pricing } from "@/content/pricing";
 
-export const LIGHTING_ONLY_DISCOUNT_PERCENT = 10;
-export const LIGHTING_WITH_CEILING_DISCOUNT_PERCENT = 25;
+// T-020: проценты берутся только из content/pricing.ts
+export const LIGHTING_ONLY_DISCOUNT_PERCENT = pricing.lightingDiscount.lightingOnlyPct;
+export const LIGHTING_WITH_CEILING_DISCOUNT_PERCENT = pricing.lightingDiscount.withCeilingPct;
+
+export const LIGHTING_ONLY_DISCOUNT_RATE = LIGHTING_ONLY_DISCOUNT_PERCENT / 100;
+export const LIGHTING_WITH_CEILING_DISCOUNT_RATE = LIGHTING_WITH_CEILING_DISCOUNT_PERCENT / 100;
 
 // Backward-compatible alias: the main ceiling scenario now uses −25%.
 export const LIGHTING_DISCOUNT_RATE = LIGHTING_WITH_CEILING_DISCOUNT_RATE;

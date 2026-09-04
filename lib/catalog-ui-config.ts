@@ -1,8 +1,11 @@
 export type CatalogSectionId = "track-systems" | "point-fixtures" | "mounts-grilles" | "lamps";
 export type TrackSystemId = "COLIBRI_220" | "CLARUS_48" | "TRACK_220";
 export type TrackGroupId = "TRACK_FIXTURE" | "TRACK_PROFILE" | "TRACK_ACCESSORY";
-export type PointSubtypeId = "GX53" | "MR16" | "PANELS";
-export type LampSocket = "GX53" | "MR16";
+export type PointSubtypeId = "GX53" | "MR16" | "GU10" | "PANELS" | "OTHER";
+export type LampSocket = "GX53" | "MR16" | "GU10";
+
+/** T-013: единственный список цоколей для перебора. */
+export const LAMP_SOCKETS: LampSocket[] = ["GX53", "MR16", "GU10"];
 
 export const DEFAULT_CALCULATOR_AREA = 10;
 export const PROFILE_PERIMETER_AUTO_RATIO = 1;
@@ -28,8 +31,10 @@ export const TRACK_GROUPS: { id: TrackGroupId; label: string }[] = [
 
 export const POINT_SUBTYPES: { id: PointSubtypeId; label: string }[] = [
   { id: "GX53", label: "GX53" },
-  { id: "MR16", label: "MR16" },
+  { id: "MR16", label: "MR16 / GU5.3" },
+  { id: "GU10", label: "GU10" },
   { id: "PANELS", label: "Панели" },
+  { id: "OTHER", label: "Прочее" },
 ];
 
 export const REMOVED_COLIBRI_VENDOR_CODES = new Set(["0У-00002967", "0У-00001345"]);
@@ -39,7 +44,7 @@ export function isRemovedColibriVendorCode(vendorCode: unknown): boolean {
 }
 
 export const TRACK_PROFILE_WHITELIST: Record<TrackSystemId, string[]> = {
-  COLIBRI_220: ["0У-00006089", "0У-00006090", "0У-00006986"],
+  COLIBRI_220: ["0У-00006089", "0У-00006090", "0У-00006986", "0У-00001341"],
   CLARUS_48: ["0У-00006634", "0У-00006633"],
   TRACK_220: [
     "0У-00006342",
@@ -49,8 +54,6 @@ export const TRACK_PROFILE_WHITELIST: Record<TrackSystemId, string[]> = {
     "0У-00001355",
     "0У-00001354",
     "0У-00001353",
-    "0У-00001341",
-    "0У-00001342",
   ],
 };
 
@@ -74,8 +77,9 @@ export const ART_MR16_REQUIRED_VENDOR_CODES = new Set([
 export const ART_NO_LAMP_VENDOR_CODES = new Set(["0У-00006476", "0У-00006475", "0У-00006358"]);
 
 export const POINT_TO_MOUNT_VENDOR_CODE: Record<string, string> = {
-  "0У-00007177": "0У-00007121",
-  "0У-00007176": "0У-00007121",
+  // T-012: реальный SKU платформы под ZOOM (0У-00007121 в фиде отсутствует)
+  "0У-00007177": "0У-00005425",
+  "0У-00007176": "0У-00005425",
   "0У-00001551": "0У-00003286",
   "0У-00001552": "0У-00003286",
 };

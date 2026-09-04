@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 
 type ServiceHeroProps = {
+  /** T-014: вычисляемый ценовой якорь вместо статичного бейджа. */
+  priceBadgeOverride?: string;
   service: ServicePageContent;
 };
 
-export function ServiceHero({ service }: ServiceHeroProps) {
+export function ServiceHero({ service, priceBadgeOverride }: ServiceHeroProps) {
   const isTrackSalePage = service.slug === "prodazha-trekovogo-osveshcheniya";
   const primaryHref = isTrackSalePage ? "#price" : "#action";
 
@@ -58,7 +60,7 @@ export function ServiceHero({ service }: ServiceHeroProps) {
 
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <div className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white">
-                {service.hero.priceBadge}
+                {priceBadgeOverride ?? service.hero.priceBadge}
               </div>
 
               <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700">

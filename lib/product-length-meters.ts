@@ -13,29 +13,41 @@ function parseNumberLoose(raw: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * T-011: юникод-границы вместо \b (кириллица), для габаритов A*B*C берём максимум.
+ */
 function parseMetersFromText(raw: string): number | null {
   const s = toText(raw).toLowerCase().replace(/\s+/g, " ");
 
-  // mm
-  const mm = s.match(/(\d+(?:[.,]\d+)?)\s*(мм|mm)\b/);
-  if (mm) {
-    const v = Number(mm[1].replace(",", "."));
-    if (Number.isFinite(v) && v > 0) return v / 1000;
+  const collect = (re: RegExp, factor: number): number | null => {
+    const values: number[] = [];
+    for (const match of s.matchAll(re)) {
+      const v = Number(String(match[1]).replace(",", "."));
+      if (Number.isFinite(v) && v > 0) values.push(v * factor);
+    }
+    if (values.length === 0) return null;
+    // габариты вида 3000*34*19 мм — берём максимум
+    return Math.max(...values);
+  };
+
+  // «3000*34*19 мм» — единица стоит один раз после группы чисел
+  const dims = s.match(/(\d+(?:[.,]\d+)?)\s*[*х×x]\s*(\d+(?:[.,]\d+)?)(?:\s*[*х×x]\s*(\d+(?:[.,]\d+)?))?\s*(мм|mm)(?![\p{L}])/u);
+  if (dims) {
+    const nums = [dims[1], dims[2], dims[3]]
+      .filter(Boolean)
+      .map((n) => Number(String(n).replace(",", ".")))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    if (nums.length > 0) return Math.max(...nums) / 1000;
   }
 
-  // cm
-  const cm = s.match(/(\d+(?:[.,]\d+)?)\s*(см|cm)\b/);
-  if (cm) {
-    const v = Number(cm[1].replace(",", "."));
-    if (Number.isFinite(v) && v > 0) return v / 100;
-  }
+  const mm = collect(/(\d+(?:[.,]\d+)?)\s*(мм|mm)(?![\p{L}])/gu, 1 / 1000);
+  if (mm) return mm;
 
-  // m
-  const m = s.match(/(\d+(?:[.,]\d+)?)\s*(м|m)\b/);
-  if (m) {
-    const v = Number(m[1].replace(",", "."));
-    if (Number.isFinite(v) && v > 0) return v;
-  }
+  const cm = collect(/(\d+(?:[.,]\d+)?)\s*(см|cm)(?![\p{L}])/gu, 1 / 100);
+  if (cm) return cm;
+
+  const m = collect(/(\d+(?:[.,]\d+)?)\s*(м|m)(?![\p{L}])/gu, 1);
+  if (m) return m;
 
   return null;
 }
