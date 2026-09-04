@@ -93,7 +93,15 @@ export type CalculatorLeadSnapshot = {
   lightsTotal: number;
 
   total: number;
+  /** T-004: сумма до применения минимального заказа. */
+  totalRawRub?: number;
+  /** T-004: сработал минимальный заказ. */
+  minimumOrderApplied?: boolean;
+  /** @deprecated T-008: не использовать, считать через селекторы контекста модалки. */
   grandTotal?: number;
+  /** T-008: досчёт монтажа света, если он есть. */
+  extraInstallRub?: number;
+  extraInstallLines?: string[];
 
   derivedInputs: DerivedInputs;
 
@@ -173,13 +181,21 @@ export function getCalculatorSummaryLines(
           ? "Стандартный"
           : null;
 
+  // T-022: при нескольких помещениях ставка первой комнаты не описывает объект,
+  // поэтому «Полотно» и «Тип потолка» показываем по комнатам, а не одной строкой.
+  const isMultiRoom = (snapshot.roomBreakdown?.length ?? 0) > 1;
+
   const lines: string[] = [
     "Расчёт потолка:",
     ...(scenarioLabel ? [`Сценарий решения: ${scenarioLabel}`] : []),
     `Формат расчёта: ${snapshot.calculationScope === "object" ? "весь объект" : "отдельное помещение"}`,
     `Площадь: ${snapshot.area} м²`,
-    `Тип потолка: ${snapshot.ceilingTypeLabel}`,
-    `Полотно: ${snapshot.area} м² × ${formatCurrency(snapshot.ceilingBaseRate)} ₽ = ${formatCurrency(snapshot.ceilingBaseTotal)} ₽`,
+    ...(isMultiRoom
+      ? ["Тип потолка и полотно — по помещениям (см. ниже)"]
+      : [
+          `Тип потолка: ${snapshot.ceilingTypeLabel}`,
+          `Полотно: ${snapshot.area} м² × ${formatCurrency(snapshot.ceilingBaseRate)} ₽ = ${formatCurrency(snapshot.ceilingBaseTotal)} ₽`,
+        ]),
   ];
 
   if (snapshot.roomBreakdown?.length) {
@@ -321,11 +337,18 @@ export function getCalculatorSummaryLines(
   const baseTotal = toNumber(snapshot.total);
   lines.push(`Итого потолок / работы: ${formatCurrency(baseTotal)} ₽`);
 
-  const grand = toNumber(snapshot.grandTotal);
-  if (grand > baseTotal + 0.5) {
-    const extra = Math.max(0, grand - baseTotal);
-    lines.push(`Установка светильников: ${formatCurrency(extra)} ₽`);
-    lines.push(`Итого потолок с досчётом монтажа: ${formatCurrency(grand)} ₽`);
+  // T-008: печатаем досчёт монтажа только если он пришёл явно
+  const extraInstall = toNumber(snapshot.extraInstallRub);
+  if (extraInstall > 0.5) {
+    const detail = snapshot.extraInstallLines ?? [];
+    if (detail.length > 0) {
+      for (const line of detail) lines.push(line);
+    } else {
+      lines.push(`Досчёт монтажа света: ${formatCurrency(extraInstall)} ₽`);
+    }
+    lines.push(
+      `Итого потолок с досчётом монтажа: ${formatCurrency(baseTotal + extraInstall)} ₽`
+    );
   }
 
   return lines;

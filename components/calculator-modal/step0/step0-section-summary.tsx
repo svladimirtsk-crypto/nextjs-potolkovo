@@ -1,5 +1,7 @@
 "use client";
 
+import { applyMinimumOrder, MINIMUM_ORDER_COPY } from "@/content/pricing";
+
 import { useMemo, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -147,6 +149,8 @@ export function Step0SectionSummary() {
   const hasPrimaryDiscount = routing.primary.label.includes("−25%");
   const hasSecondaryDiscount = routing.secondary ? routing.secondary.label.includes("−25%") : false;
   const total = effectiveSnapshot?.total ?? 0;
+  // T-004: одна сумма — из общего расчёта минимального заказа
+  const totalsView = applyMinimumOrder(effectiveSnapshot?.totalRawRub ?? total);
 
   if (!isSummaryReady) return null;
 
@@ -160,10 +164,10 @@ export function Step0SectionSummary() {
       <div className="rounded-[2rem] bg-slate-950 p-6 text-white shadow-xl shadow-slate-950/10 sm:p-8">
         <p className="text-sm text-white/70">Готовый расчёт</p>
         <p className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">
-          {formatCurrency(Math.max(total, 18000))} ₽
+          {formatCurrency(totalsView.applied)} ₽
         </p>
-        {total > 0 && total < 18000 ? (
-          <p className="mt-2 text-sm text-emerald-400">Минимальный заказ: {formatCurrency(18000)} ₽</p>
+        {totalsView.minimumApplied ? (
+          <p className="mt-2 text-sm text-emerald-400">{MINIMUM_ORDER_COPY}</p>
         ) : null}
         <p className="mt-3 text-sm text-white/70">
           {SCENARIO_SUBTITLES[solutionScenario]}
