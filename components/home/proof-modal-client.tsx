@@ -142,7 +142,8 @@ export function ProofModalClient({
     openCalculator({
       preset,
       forcePreset: true,
-      source: "proof-" + item.slug,
+      // T-021: единый формат источника "<slug>:<placement>"
+      source: `${item.slug}:proof`,
     });
   };
 

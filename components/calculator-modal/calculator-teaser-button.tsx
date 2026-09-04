@@ -4,10 +4,12 @@ import type { ServiceCalculatorPreset } from "@/content/services";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
 import { useCalculatorModal } from "./calculator-modal-context";
+import { useCalculatorPageContext } from "./page-context";
 
 type CalculatorTeaserButtonProps = {
   preset?: ServiceCalculatorPreset;
-  source: string;
+  /** Если не задан — берётся из контекста страницы (T-021). */
+  source?: string;
   label?: string;
 };
 
@@ -28,13 +30,20 @@ export function CalculatorTeaserButton({
   label = "Рассчитать стоимость",
 }: CalculatorTeaserButtonProps) {
   const { openCalculator } = useCalculatorModal();
+  const page = useCalculatorPageContext();
+
+  // T-021: пресет и источник по умолчанию — из контекста страницы
+  const effectiveSource = source ?? page.sourceFor("teaser");
+  const effectivePreset = preset ?? page.preset ?? undefined;
+
+  if (page.presetDisabled && !preset) return null;
 
   return (
     <Button
       type="button"
       className="w-full justify-center py-6 text-base"
       onClick={() => {
-        const safeSource = String(source ?? "");
+        const safeSource = String(effectiveSource ?? "");
         const safeLabel = String(label ?? "");
 
         if (shouldOpenLightingFirst(safeLabel, safeSource)) {
@@ -49,7 +58,7 @@ export function CalculatorTeaserButton({
         }
 
         const resolvedPreset: ServiceCalculatorPreset =
-          preset ?? {
+          effectivePreset ?? {
             ceilingType: "standard",
             areaDefault: DEFAULT_CALCULATOR_AREA,
           };

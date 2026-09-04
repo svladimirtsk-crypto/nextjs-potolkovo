@@ -6,6 +6,7 @@ import { HomeHeader } from "@/components/home/home-header";
 import { HomeFooter } from "@/components/home/home-footer";
 import { MobileStickyCta } from "@/components/home/mobile-sticky-cta";
 import { buildBreadcrumbSchema, buildServiceSchema } from "@/lib/seo-schema";
+import { CalculatorPageContextProvider } from "@/components/calculator-modal/page-context";
 
 type ServicePageLayoutV2Props = {
   service: ServicePageContent;
@@ -38,7 +39,10 @@ export function ServicePageLayoutV2({
   ]);
 
   return (
-    <>
+    <CalculatorPageContextProvider
+      preset={service.price.calculatorPreset}
+      sourceSlug={service.slug}
+    >
       <JsonLd data={buildServiceSchema(service)} />
       <JsonLd data={breadcrumbSchema} />
 
@@ -67,6 +71,6 @@ export function ServicePageLayoutV2({
         <MobileStickyCta />
         <HomeFooter />
       </div>
-    </>
+    </CalculatorPageContextProvider>
   );
 }
