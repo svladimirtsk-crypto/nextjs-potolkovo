@@ -5,13 +5,15 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "check:bundle": "node scripts/check-bundle-budget.mjs",
     "start": "next start",
     "lint": "eslint",
     "test:flow": "node scripts/test-calculator-flow.mjs",
     "test": "vitest run",
     "test:e2e": "playwright test scripts/e2e-back-chain.test.ts",
     "validate:catalog": "node scripts/validate-catalog.mjs",
-    "prebuild": "node scripts/validate-catalog.mjs"
+    "prebuild": "node scripts/validate-catalog.mjs && node scripts/build-catalog-index.mjs",
+    "build:catalog-index": "node scripts/build-catalog-index.mjs"
   },
   "dependencies": {
     "next": "16.1.6",

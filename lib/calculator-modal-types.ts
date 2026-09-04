@@ -82,6 +82,8 @@ export type OpenCalculatorOptions = {
 
 export type CalculatorModalContextValue = {
   isOpen: boolean;
+  /** T-029: калькулятор открывали хотя бы раз — только тогда грузим его чанк. */
+  hasEverOpened: boolean;
   currentStep: WizardStep;
   options: OpenCalculatorOptions | null;
 

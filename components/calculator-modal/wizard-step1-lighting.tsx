@@ -8,7 +8,6 @@ import {
   trackLightingSystemSelected,
 } from "@/lib/analytics";
 
-import snapshotData from "@/data/eks-feed2-snapshot.json";
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
 import { trackLightingCartChanged } from "@/lib/analytics";
@@ -25,8 +24,9 @@ import {
   getDiscountedPrice,
   getRequiredLampSocket,
 } from "@/lib/feed2-products";
-import { normalizeFeedCatalogProducts, toNumber, toText } from "@/lib/feed2-snapshot-normalize";
+import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
 import { resolveInitialLightingStep, type WizardStep } from "@/lib/lighting/resolve-initial-step";
+import { useCatalogProducts } from "@/lib/lighting/use-catalog-products";
 
 import {
   CATALOG_SECTIONS,
@@ -47,7 +47,6 @@ import {
 
 import {
   ART_TRACK_PROFILE_VENDOR_WHITELIST,
-  applyVendorOverrides,
 } from "@/lib/vendor-code-overrides";
 import {
   calcTrackProfileMeters,
@@ -363,12 +362,9 @@ export function WizardStep1Lighting() {
   const [removedHint, setRemovedHint] = useState(false);
 
   /* ─── Products index ─── */
-  const products = useMemo(() => {
-    const raw = (snapshotData as { products?: unknown[] })?.products ?? [];
-    return normalizeFeedCatalogProducts(raw)
-      .map((product) => applyVendorOverrides(product))
-      .filter((product) => !REMOVED_COLIBRI_VENDOR_CODES.has(toText(product.vendorCode)));
-  }, []);
+  // T-029: каталог приезжает отдельным чанком, а не из фида в бандле.
+  const { products: catalogProductsFromIndex } = useCatalogProducts();
+  const products = catalogProductsFromIndex;
 
   const productsById = useMemo(() => buildProductsIndex(products), [products]);
 

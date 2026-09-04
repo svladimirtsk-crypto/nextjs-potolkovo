@@ -2,12 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import snapshotData from "@/data/eks-feed2-snapshot.json";
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import { homepage } from "@/content/homepage";
 
-import { normalizeFeedCatalogProducts, toNumber, toText } from "@/lib/feed2-snapshot-normalize";
-import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
+import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
+import { useCatalogProducts } from "@/lib/lighting/use-catalog-products";
 import { calcTrackProfileMeters } from "@/lib/product-length-meters";
 
 import { contacts } from "@/content/contacts";
@@ -175,10 +174,9 @@ export function WizardStep2Summary() {
     }));
   }, [lighting]);
 
-  const catalogProducts = useMemo(() => {
-    const rawProducts = (snapshotData as { products?: unknown[] })?.products ?? [];
-    return normalizeFeedCatalogProducts(rawProducts).map((product) => applyVendorOverrides(product));
-  }, []);
+  // T-029: каталог приезжает отдельным чанком, а не из фида в бандле.
+  const { products: catalogProductsFromIndex } = useCatalogProducts();
+  const catalogProducts = catalogProductsFromIndex;
 
   const byId = useMemo(() => {
     const map = new Map<string, FeedCatalogProduct>();

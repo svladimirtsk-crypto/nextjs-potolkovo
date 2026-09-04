@@ -131,6 +131,8 @@ const CalculatorModalContext = createContext<CalculatorModalContextValue | null>
 
 export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
+  // T-029: остаётся true после первого открытия, чтобы модалка не перемонтировалась.
+  const [hasEverOpened, setHasEverOpened] = useState(false);
   const [currentStep, setCurrentStep] = useState<WizardStep>(0);
   // T-023: ремаунт всех шагов при новом открытии
   const [sessionId, setSessionId] = useState(0);
@@ -265,6 +267,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
         };
       });
       setIsOpen(true);
+      setHasEverOpened(true);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [setSnapshot, snapshot]
@@ -432,6 +435,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
     () =>
       ({
         isOpen,
+        hasEverOpened,
         currentStep,
         options,
         sessionId,
@@ -485,6 +489,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       }) as CalculatorModalContextValue,
     [
       isOpen,
+      hasEverOpened,
       currentStep,
       options,
       sessionId,

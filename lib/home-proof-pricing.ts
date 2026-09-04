@@ -1,7 +1,5 @@
-import snapshotData from "@/data/eks-feed2-snapshot.json";
-import { normalizeFeedCatalogProducts, toText } from "@/lib/feed2-snapshot-normalize";
-import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
-import { inferPieceLengthMeters } from "@/lib/product-length-meters";
+import pricingInputs from "@/data/proof-pricing-inputs.json";
+import { toText } from "@/lib/feed2-snapshot-normalize";
 
 export type HomeCalculatorConfig = {
   areaMin: number;
@@ -98,20 +96,34 @@ export type ProofBudgetBreakdown = {
   totalRub: number;
 };
 
-const catalogProducts: FeedCatalogProduct[] = normalizeFeedCatalogProducts(
-  (snapshotData as { products?: unknown[] }).products ?? []
-);
+/**
+ * T-029: витринные кейсы главной больше не тянут весь фид (~940 КБ) в бандл —
+ * им хватает цен по артикулам и списка трековых профилей из
+ * `data/proof-pricing-inputs.json` (~11 КБ), который собирает prebuild.
+ */
+type ProofProfile = {
+  vendorCode: string;
+  name: string;
+  system: string;
+  priceRub: number;
+  pieceLengthMeters: number | null;
+};
+
+const proofInputs = pricingInputs as {
+  profiles: ProofProfile[];
+  prices: Record<string, number>;
+};
 
 function formatPriceLabel(value: number) {
   return `≈ ${Math.round(value).toLocaleString("ru-RU")} ₽`;
 }
 
-function getCatalogProductByVendorCode(vendorCode: string) {
-  return catalogProducts.find((product) => toText(product.vendorCode) === vendorCode) ?? null;
+function getPriceByVendorCode(vendorCode: string): number {
+  return proofInputs.prices[vendorCode] ?? 0;
 }
 
-function inferTrackProfileLengthMeters(product: FeedCatalogProduct) {
-  const inferred = inferPieceLengthMeters(product);
+function inferTrackProfileLengthMeters(product: ProofProfile) {
+  const inferred = product.pieceLengthMeters;
   if (inferred && inferred >= 0.5) return inferred;
 
   const rawName = toText(product.name);
@@ -127,14 +139,14 @@ function inferTrackProfileLengthMeters(product: FeedCatalogProduct) {
 }
 
 function getProfileProductsBySystem(system: "COLIBRI_220" | "CLARUS_48" | "TRACK_220") {
-  return catalogProducts
-    .filter((product) => product.kind === "TRACK_PROFILE" && product.system === system && product.priceRub > 0)
+  return proofInputs.profiles
+    .filter((product) => product.system === system && product.priceRub > 0)
     .map((product) => ({
       product,
       lengthMeters: inferTrackProfileLengthMeters(product),
     }))
     .filter(
-      (item): item is { product: FeedCatalogProduct; lengthMeters: number } =>
+      (item): item is { product: ProofProfile; lengthMeters: number } =>
         Boolean(item.lengthMeters && item.lengthMeters > 0)
     )
     .sort((a, b) => a.lengthMeters - b.lengthMeters || a.product.priceRub - b.product.priceRub);
@@ -204,11 +216,10 @@ export function buildProofBudgetBreakdown(
       ? getTrackProfileGoodsCost(input.lightingTrackProfileSystem, input.lightingTrackProfileMeters)
       : 0;
 
-  const fixturesRub = (input.lightingFixtures ?? []).reduce((sum, fixture) => {
-    const product = getCatalogProductByVendorCode(fixture.vendorCode);
-    if (!product) return sum;
-    return sum + product.priceRub * fixture.qty;
-  }, 0);
+  const fixturesRub = (input.lightingFixtures ?? []).reduce(
+    (sum, fixture) => sum + getPriceByVendorCode(fixture.vendorCode) * fixture.qty,
+    0
+  );
 
   const lightingRawRub = Math.round(trackProfileGoodsRub + fixturesRub);
   const lightingDiscountedRub = Math.round(lightingRawRub * 0.75);

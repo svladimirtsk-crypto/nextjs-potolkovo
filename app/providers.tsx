@@ -1,19 +1,11 @@
 "use client";
 
 import { type ReactNode, useEffect } from "react";
-import dynamic from "next/dynamic";
 
 import { PriceCalculatorProvider } from "@/components/home/price-calculator-context";
 import { CalculatorModalProvider } from "@/components/calculator-modal/calculator-modal-context";
 import { ConfirmDialogPortal } from "@/components/ui/confirm-dialog";
-
-const CalculatorModal = dynamic(
-  () =>
-    import("@/components/calculator-modal/calculator-modal").then(
-      (m) => m.CalculatorModal
-    ),
-  { ssr: false }
-);
+import { CalculatorModalGate } from "@/components/calculator-modal/calculator-modal-gate";
 
 export function Providers({ children }: { children: ReactNode }) {
     useEffect(() => {
@@ -56,7 +48,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <PriceCalculatorProvider>
       <CalculatorModalProvider>
         {children}
-        <CalculatorModal />
+        <CalculatorModalGate />
         <ConfirmDialogPortal />
       </CalculatorModalProvider>
     </PriceCalculatorProvider>

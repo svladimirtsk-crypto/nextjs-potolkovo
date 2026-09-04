@@ -14,9 +14,8 @@ import { caseHint } from "@/lib/calculator/presets";
 import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 
-import snapshotData from "@/data/eks-feed2-snapshot.json";
-import { normalizeFeedCatalogProducts, toNumber, toText } from "@/lib/feed2-snapshot-normalize";
-import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
+import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
+import { useCatalogProducts } from "@/lib/lighting/use-catalog-products";
 import { calcTrackProfileMeters } from "@/lib/product-length-meters";
 
 import { useCalculatorModal } from "./calculator-modal-context";
@@ -162,10 +161,9 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
     }
   }, [options]);
 
-  const feedProducts = useMemo(() => {
-    const rawProducts = (snapshotData as { products?: unknown[] })?.products ?? [];
-    return normalizeFeedCatalogProducts(rawProducts).map((product) => applyVendorOverrides(product));
-  }, []);
+  // T-029: каталог приезжает отдельным чанком, а не из фида в бандле.
+  const { products: catalogProductsFromIndex } = useCatalogProducts();
+  const feedProducts = catalogProductsFromIndex;
 
   const byProductId = useMemo(() => {
     const map = new Map<string, FeedCatalogProduct>();

@@ -2,11 +2,10 @@
 
 import { useMemo } from "react";
 
-import snapshotData from "@/data/eks-feed2-snapshot.json";
 import type { FeedCatalogParam, FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import { buildProductsIndex, detectSocket, getRequiredLampSocket } from "@/lib/feed2-products";
-import { REMOVED_COLIBRI_VENDOR_CODES, type LampSocket } from "@/lib/catalog-ui-config";
-import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
+import { type LampSocket } from "@/lib/catalog-ui-config";
+import { useCatalogProducts } from "@/lib/lighting/use-catalog-products";
 import { calcTrackProfileMeters } from "@/lib/product-length-meters";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 import { useCalculatorModal } from "./calculator-modal-context";
@@ -43,40 +42,6 @@ function toParams(input: unknown): FeedCatalogParam[] {
     .filter((item) => item.label.length > 0 && item.value.length > 0);
 }
 
-function normalizeProduct(raw: unknown): FeedCatalogProduct | null {
-  const p = raw as Record<string, unknown>;
-  const vendorCode = toText(p.vendorCode);
-  const offerId = toText(p.offerId);
-  const name = toText(p.name);
-  if (!name || (!vendorCode && !offerId)) return null;
-
-  const productIdRaw = toText(p.productId);
-  const productId = productIdRaw || `feed2-${vendorCode || offerId || name}`;
-  const images = Array.isArray(p.images)
-    ? p.images.map((item) => toText(item)).filter(Boolean)
-    : [];
-
-  return {
-    productId: toText(productId),
-    vendorCode,
-    offerId,
-    name,
-    url: toText(p.url),
-    categoryId: toText(p.categoryId),
-    categoryPath: toText(p.categoryPath),
-    images,
-    coverImage: toText(p.coverImage) || images[0] || "",
-    priceRub: toNumber(p.priceRub),
-    available: Boolean(p.available ?? true),
-    params: toParams(p.params),
-    keyAttributes: toParams(p.keyAttributes),
-    system: (toText(p.system) || "UNKNOWN") as FeedCatalogProduct["system"],
-    kind: (toText(p.kind) || "OTHER") as FeedCatalogProduct["kind"],
-    unit: (toText(p.unit) === "m" ? "m" : "pcs") as FeedCatalogProduct["unit"],
-    lengthMeters: toNumOrNull(p.lengthMeters),
-    pieceLengthMeters: toNumOrNull(p.pieceLengthMeters),
-  };
-}
 
 function isPanelProduct(product: FeedCatalogProduct): boolean {
   const text = `${toText(product.name)} ${toText(product.categoryPath)}`.toLowerCase();
@@ -118,14 +83,9 @@ export function LightingFooterProgress() {
   const { currentStep, lightingDraft, showCeilingInUi } = useCalculatorModal();
   const { snapshot } = usePriceCalculatorBridge();
 
-  const products = useMemo(() => {
-    const raw = (snapshotData as { products?: unknown[] })?.products ?? [];
-    return raw
-      .map(normalizeProduct)
-      .filter((item): item is FeedCatalogProduct => Boolean(item))
-      .map((product) => applyVendorOverrides(product))
-      .filter((product) => !REMOVED_COLIBRI_VENDOR_CODES.has(toText(product.vendorCode)));
-  }, []);
+  // T-029: каталог приезжает отдельным чанком, а не из фида в бандле.
+  const { products: catalogProductsFromIndex } = useCatalogProducts();
+  const products = catalogProductsFromIndex;
 
   const productsById = useMemo(() => buildProductsIndex(products), [products]);
 
