@@ -27,7 +27,7 @@ export function ServiceActionSection({ service }: ServiceActionSectionProps) {
             />
 
             <div className="mt-8 max-w-xl rounded-[2rem] border border-slate-200 bg-slate-50 p-6 shadow-[0_10px_28px_rgba(15,23,42,0.04)] sm:p-8">
-              <ActionForm />
+              <ActionForm source={service.slug} placement="service-page" />
             </div>
           </div>
 

@@ -22,6 +22,13 @@
 }
 
 @theme inline {
+  /* T-007: единая шкала слоёв */
+  --z-sticky: 40;
+  --z-cart: 45;
+  --z-modal: 120;
+  --z-modal-footer: 145;
+  --z-confirm: 200;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 

@@ -45,7 +45,7 @@ export function HomeAction() {
               ) : null}
 
               <div className={actionContent.formTitle ? "mt-6" : ""}>
-                <ActionForm />
+                <ActionForm source="home" placement="home" />
               </div>
             </div>
           </div>

@@ -31,7 +31,6 @@ export function RoomPickerScreen({ rooms, mode, onAdd, onSelect, onBack }:{
       </div>
       <div className="mt-4 flex justify-between text-sm">
         <button type="button" onClick={onBack} className="text-slate-600">← Назад</button>
-        <span className="text-xs text-slate-400">QUIZ V2 — RoomPicker {mode}</span>
       </div>
     </section>
   );

@@ -33,8 +33,13 @@ export function RangeField({ id, label, value, min, max, step, unit, onChange, q
   onChange:(v:number)=>void; quickValues?:number[];
 }) {
   const [manual,setManual]=useState(String(value));
-  const focused=useRef(false);
-  useEffect(()=>{ if(!focused.current) setManual(String(value)); },[value]);
+  const [isFocused,setIsFocused]=useState(false);
+  const [lastValue,setLastValue]=useState(value);
+  // Синхронизация без эффекта: подстраиваем локальный текст во время рендера.
+  if (!isFocused && lastValue !== value) {
+    setLastValue(value);
+    setManual(String(value));
+  }
   const normalize=(n:number)=>clamp(roundToStep(n,step),min,max);
   return (
     <div>
@@ -43,9 +48,9 @@ export function RangeField({ id, label, value, min, max, step, unit, onChange, q
         <div className="flex items-center gap-2">
           <button type="button" onClick={()=>onChange(normalize(value-step))} className="h-8 w-8 rounded-full border">−</button>
           <input id={id} value={manual}
-            onFocus={()=>{focused.current=true}}
+            onFocus={()=>setIsFocused(true)}
             onChange={e=>{setManual(e.target.value); const p=Number(e.target.value.replace(",",".")); if(Number.isFinite(p)) onChange(clamp(p,min,max));}}
-            onBlur={()=>{focused.current=false; setManual(String(value))}}
+            onBlur={()=>{setIsFocused(false); setManual(String(value));}}
             className="w-20 text-center rounded-full ring-1 ring-slate-200 px-2 py-1 text-sm font-semibold"
           />
           <span className="text-sm font-semibold">{unit}</span>

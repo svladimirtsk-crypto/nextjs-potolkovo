@@ -1,5 +1,6 @@
 import { homepage } from "@/content/homepage";
-import type { CalculatorLeadSnapshot } from "@/components/home/price-calculator-context";
+import { applyMinimumOrder } from "@/content/pricing";
+import type { CalculatorLeadSnapshot, CalculatorRoomBreakdown } from "@/components/home/price-calculator-context";
 import type { DerivedInputs } from "@/lib/calculator-modal-types";
 import { calcRecommendedTrackSpots } from "@/lib/lighting-formulas";
 
@@ -107,6 +108,42 @@ export function calcRoomSnapshotV2(room: V2RoomConfig): { total: number; snapsho
   return { total, snapshot };
 }
 
-export function calcRoomsTotal(rooms: V2RoomConfig[]): number {
-  return rooms.reduce((sum, r) => sum + calcRoomSnapshotV2(r).total, 0);
+/**
+ * T-022 · Полный состав комнаты для `roomBreakdown` / `LeadSnapshotV2.rooms`.
+ * Все длины и количества, а не только площадь и сумма.
+ */
+export function buildRoomBreakdown(room: V2RoomConfig): CalculatorRoomBreakdown {
+  const { total, snapshot } = calcRoomSnapshotV2(room);
+  return {
+    id: room.id,
+    label: room.label,
+    area: room.area,
+    totalRub: total,
+    ceilingTypeLabel: snapshot.ceilingTypeLabel,
+    shadowLength: room.shadowEnabled ? room.shadowLength : null,
+    floatingLength: room.floatingEnabled ? room.floatingLength : null,
+    lightLinesLength: room.lightLinesEnabled ? room.lightLinesLength : null,
+    corniceLabel: snapshot.corniceLabel,
+    corniceLength: snapshot.corniceLength,
+    corniceLightingLength: snapshot.corniceLightingLength ?? null,
+    trackLabel: snapshot.trackLabel,
+    trackLength: snapshot.trackLength,
+    lightsCount: room.lightsEnabled ? room.lightsCount : null,
+    chandeliersCount: room.chandeliersEnabled ? room.chandeliersCount : null,
+  };
+}
+
+export type RoomsTotal = {
+  /** Сумма по комнатам без учёта минимального заказа. */
+  raw: number;
+  /** Сумма к показу клиенту: max(raw, минимальный заказ). */
+  applied: number;
+  /** true — сработал минимальный заказ. */
+  minimumApplied: boolean;
+};
+
+/** T-004: одна сумма с учётом минимального заказа. */
+export function calcRoomsTotal(rooms: V2RoomConfig[]): RoomsTotal {
+  const raw = rooms.reduce((sum, r) => sum + calcRoomSnapshotV2(r).total, 0);
+  return applyMinimumOrder(raw);
 }

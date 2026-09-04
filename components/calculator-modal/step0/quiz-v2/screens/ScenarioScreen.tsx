@@ -30,7 +30,6 @@ export function ScenarioScreen({ value, onChoose }: { value: SolutionScenario; o
           );
         })}
       </div>
-      <p className="mt-3 text-xs text-slate-500">QUIZ V2 — Шаг 0.0 Сценарий (1 карточка)</p>
     </section>
   );
 }

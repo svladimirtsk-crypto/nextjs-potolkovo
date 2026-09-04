@@ -122,7 +122,7 @@ export function PriceStrip() {
         ) : (
           <>
             <p key={animKey} className="text-sm font-bold text-slate-950 animate-pulse-once">
-              {displayGrandTotal > 0 && displayGrandTotal < 18000 ? `Итого: ~${fmt(displayGrandTotal)} ₽ (мин. 18 000 ₽)` : displayGrandTotal > 0 ? `Итого: ~${fmt(displayGrandTotal)} ₽` : "Цена появится по мере выбора параметров"}
+              {displayGrandTotal > 0 ? `Итого: ~${fmt(displayGrandTotal)} ₽` : "Цена появится по мере выбора параметров"}
             </p>
             <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500">
               {mobileSubtitle}
@@ -160,9 +160,6 @@ export function PriceStrip() {
                 <span key={animKey} className="font-semibold inline-block animate-pulse-once">
                   Итого: ~{fmt(displayGrandTotal)} ₽
                 </span>
-                {displayGrandTotal > 0 && displayGrandTotal < 18000 ? (
-                  <span className="ml-1.5 inline-flex items-center rounded-full bg-emerald-100 px-1.5 text-[10px] font-semibold text-emerald-700">мин. 18 000 ₽</span>
-                ) : null}
               </>
             ) : (
               <span key={animKey} className="font-semibold inline-block animate-pulse-once">

@@ -174,7 +174,7 @@ export function LightingFooterProgress() {
   }, [cartEntries]);
 
   const lampRequiredBySocket = useMemo(() => {
-    const result: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
+    const result: Record<LampSocket, number> = { GX53: 0, MR16: 0, GU10: 0 };
     for (const entry of cartEntries) {
       if (entry.product.kind === "LAMP") continue;
       const socket = getRequiredLampSocket(entry.product);
@@ -184,11 +184,11 @@ export function LightingFooterProgress() {
   }, [cartEntries]);
 
   const lampCurrentBySocket = useMemo(() => {
-    const result: Record<LampSocket, number> = { GX53: 0, MR16: 0 };
+    const result: Record<LampSocket, number> = { GX53: 0, MR16: 0, GU10: 0 };
     for (const entry of cartEntries) {
       if (entry.product.kind !== "LAMP") continue;
       const socket = detectSocket(entry.product);
-      if (socket === "GX53" || socket === "MR16") result[socket] += entry.qty;
+      if (socket) result[socket] += entry.qty;
     }
     return result;
   }, [cartEntries]);

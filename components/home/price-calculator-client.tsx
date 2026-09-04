@@ -25,11 +25,12 @@ import { calcRecommendedTrackSpots } from "@/lib/lighting-formulas";
 import type { CalculatorFooterAction, CalculatorFooterBackAction, DerivedInputs, SolutionScenario } from "@/lib/calculator-modal-types";
 import { resolveStep0ConfirmLabel, resolveStep0SummaryActions } from "@/lib/calculator-flow";
 import { trackScenarioSelected, trackWizardBack } from "@/lib/analytics";
+import { pricing } from "@/content/pricing";
 
 const calculator = homepage.price.calculator;
 
 const CHANDELIERS_INSTALL_RATE_PER_UNIT = homepage.price.calculator.chandeliers?.ratePerUnit ?? 1000;
-const MINIMUM_TOTAL = 18000;
+const MINIMUM_TOTAL = pricing.minimumOrderRub;
 
 type CeilingType = (typeof calculator.ceilingTypes)[number]["slug"] | "shadow-floating";
 type CorniceType = (typeof calculator.cornices)[number]["slug"];

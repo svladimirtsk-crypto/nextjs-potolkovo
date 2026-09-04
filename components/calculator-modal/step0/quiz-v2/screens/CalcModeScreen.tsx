@@ -10,7 +10,7 @@ export function CalcModeScreen({ value, onChoose, onBack }: { value: Calculation
           {id:"room", title:"Одна комната", text:"Быстрый расчёт для кухни, спальни, гостиной, санузла или другой комнаты"},
           {id:"object", title:"Вся квартира или дом", text:"Если хотите прикинуть бюджет по объекту целиком одной суммой"},
         ].map(o=>(
-          <button key={o.id} type="button" onClick={()=>onChoose(o.id as any)}
+          <button key={o.id} type="button" onClick={()=>onChoose(o.id as CalculationScope)}
             className={`rounded-2xl border p-4 text-left ${value===o.id ? "border-slate-950 bg-slate-950 text-white" : "border-slate-200 bg-white hover:border-slate-400"}`}>
             <p className="text-sm font-semibold">{o.title}</p>
             <p className={`text-xs mt-1 ${value===o.id?"text-white/70":"text-slate-500"}`}>{o.text}</p>
@@ -19,7 +19,6 @@ export function CalcModeScreen({ value, onChoose, onBack }: { value: Calculation
       </div>
       <div className="mt-4 flex justify-between">
         <button type="button" onClick={onBack} className="text-sm text-slate-600">← Назад</button>
-        <span className="text-xs text-slate-400">QUIZ V2 — Шаг 0.1 Режим</span>
       </div>
     </section>
   );
