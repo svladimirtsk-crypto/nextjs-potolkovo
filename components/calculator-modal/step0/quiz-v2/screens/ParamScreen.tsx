@@ -1,9 +1,11 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ParamId } from "@/lib/step0-fsm";
 import type { CeilingEngine } from "@/lib/calculator-v2/use-ceiling-calculator-engine";
 import { SectionCard, OptionCard, RangeField } from "../ui";
 import { homepage } from "@/content/homepage";
+import { PREFILL_HINT } from "@/lib/calculator/presets";
+import { formatFrom, pricing } from "@/content/pricing";
 
 const calculator = homepage.price.calculator;
 
@@ -14,20 +16,52 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
   onConfirm: ()=>void; onBack: ()=>void;
 }) {
   const room = engine.rooms.find(r=>r.id===roomId) ?? engine.activeRoom;
+  // Локальное значение поля синхронизируется через key, а не через эффект.
   const [localLabel, setLocalLabel] = useState(room?.label ?? "");
-  useEffect(()=>{ setLocalLabel(room?.label ?? ""); }, [room?.label, roomId]);
 
   if (!room) {
     return <div className="p-4 text-rose-600">Комната {roomId} не найдена</div>;
   }
 
-  const update = (patch: any) => engine.updateRoom(room.id, patch);
+  const update = (patch: Parameters<CeilingEngine["updateRoom"]>[1]) => engine.updateRoom(room.id, patch);
+
+  // T-021: подпись под предзаполненным пресетом параметром
+  const prefillHint = engine.prefilled?.[param] ? (
+    <p className="mb-3 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">
+      {engine.presetNote ?? PREFILL_HINT}
+    </p>
+  ) : null;
+
+  // T-024: что уже учтено из набора, собранного в каталоге освещения
+  const kitHintText = ((): string | null => {
+    const kit = engine.pendingLightingPrefill;
+    if (!kit) return null;
+    const meters = Number(kit.trackProfileMeters ?? 0);
+    const spots = Number(kit.pointSpotsQty ?? 0);
+    const parts: string[] = [];
+    if ((param === "track" || param === "lights") && meters > 0) {
+      parts.push(`${Math.round(meters * 10) / 10} м.п. трека`);
+    }
+    if ((param === "lights" || param === "track") && spots > 0) {
+      parts.push(`${spots} спотов`);
+    }
+    if (!parts.length) return null;
+    return `Из вашего набора: ${parts.join(", ")} — учтено`;
+  })();
+
+  const kitHint = kitHintText ? (
+    <p className="mb-3 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-900">
+      {kitHintText}
+    </p>
+  ) : null;
 
   // AREA
   if (param === "area") {
     const isObjectMode = engine.calculationScope === "object";
     return (
       <SectionCard title="Площадь" description="Площадь считается отдельно, а профили и узлы — только по нужным участкам в метрах.">
+        {prefillHint}
+        {kitHint}
         {!isObjectMode && (
         <div className="mb-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
           <p className="text-sm font-medium text-slate-700">Название помещения</p>
@@ -65,11 +99,13 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
     const isSimple = !room.shadowEnabled && !room.floatingEnabled;
     return (
       <SectionCard title="Тип потолка" description="Базовая площадь считается отдельно. Теневой и парящий указывайте только на нужных участках.">
+        {prefillHint}
+        {kitHint}
         <div className="space-y-3">
           <OptionCard
             active={isSimple}
             title="Простой потолок"
-            meta={`от ${formatCurrency(1000)} ₽ / м²`}
+            meta={formatFrom(pricing.ceiling.standard, "м²")}
             onClick={()=>update({ ceilingType:"standard", shadowEnabled:false, floatingEnabled:false })}
           />
           {engine.solutionScenario !== "standard" && (
@@ -77,20 +113,27 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
               <OptionCard
                 active={room.shadowEnabled}
                 title="Теневой потолок"
-                meta={`${formatCurrency(800)} ₽ / м² + ${formatCurrency(950)} ₽ / м.п.`}
+                meta={`${formatCurrency(pricing.ceiling.shadowBase)} ₽ / м² + ${formatCurrency(pricing.ceiling.shadowProfilePerM)} ₽ / м.п.`}
                 onClick={()=>update({ shadowEnabled: !room.shadowEnabled })}
               />
               <OptionCard
                 active={room.floatingEnabled}
                 title="Парящий потолок"
-                meta={`${formatCurrency(800)} ₽ / м² + ${formatCurrency(2500)} ₽ / м.п.`}
+                meta={`${formatCurrency(pricing.ceiling.floatingBase)} ₽ / м² + ${formatCurrency(pricing.ceiling.floatingProfilePerM)} ₽ / м.п.`}
                 onClick={()=>update({ floatingEnabled: !room.floatingEnabled })}
               />
             </>
           )}
           {engine.solutionScenario === "standard" && (
-            <button type="button" className="w-full text-left text-sm text-slate-600 underline"
-              onClick={()=>{ /* в V2 modern опции открываются через сценарий, здесь заглушка */ }}>
+            <button
+              type="button"
+              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-left text-sm font-medium text-slate-700 hover:border-slate-400"
+              onClick={() => {
+                // T-005: включаем современный сценарий, площадь не теряется
+                engine.chooseScenario("modern");
+                update({ ceilingType: "shadow", shadowEnabled: true, shadowLength: room.shadowLength || Math.max(4, Math.round(Math.sqrt(room.area) * 4)) });
+              }}
+            >
               Показать теневой и парящий профиль →
             </button>
           )}
@@ -108,8 +151,10 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
     const corniceOpts = calculator.cornices;
     return (
       <SectionCard title="Карнизы">
+        {prefillHint}
+        {kitHint}
         <div className="grid gap-3 sm:grid-cols-2">
-          {corniceOpts.map((o:any)=>(
+          {corniceOpts.map((o)=>(
             <OptionCard
               key={o.slug}
               active={room.corniceType===o.slug}
@@ -201,8 +246,10 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
     const trackOpts = calculator.tracks;
     return (
       <SectionCard title="Трековое освещение">
+        {prefillHint}
+        {kitHint}
         <div className="grid gap-3 sm:grid-cols-2">
-          {trackOpts.map((o:any)=>(
+          {trackOpts.map((o)=>(
             <OptionCard key={o.slug} active={room.trackType===o.slug} title={o.label} meta={o.ratePerMeter>0?`от ${formatCurrency(o.ratePerMeter)} ₽ / м.п.`:"Без доп. расчёта"} onClick={()=>update({trackType:o.slug})} />
           ))}
         </div>
@@ -223,9 +270,11 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
   if (param === "chandeliers") {
     return (
       <SectionCard title="Установка люстр">
+        {prefillHint}
+        {kitHint}
         <div className="grid gap-3 sm:grid-cols-2">
           <OptionCard active={!room.chandeliersEnabled} title="Не нужно" meta="Без поштучного расчёта" onClick={()=>update({chandeliersEnabled:false})} />
-          <OptionCard active={room.chandeliersEnabled} title="Добавить установку" meta={`${formatCurrency(1000)} ₽ / шт`} onClick={()=>update({chandeliersEnabled:true})} />
+          <OptionCard active={room.chandeliersEnabled} title="Добавить установку" meta={`${formatCurrency(pricing.chandelierInstall)} ₽ / шт.`} onClick={()=>update({chandeliersEnabled:true})} />
         </div>
         {room.chandeliersEnabled && (
           <div className="mt-4">
@@ -244,6 +293,8 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
   if (param === "lights") {
     return (
       <SectionCard title="Точечные светильники">
+        {prefillHint}
+        {kitHint}
         <div className="grid gap-3 sm:grid-cols-2">
           <OptionCard active={!room.lightsEnabled} title="Без светильников" meta="Без поштучного расчёта" onClick={()=>update({lightsEnabled:false})} />
           <OptionCard active={room.lightsEnabled} title="Добавить светильники" meta={`от ${formatCurrency(calculator.lights.ratePerUnit)} ₽ / шт`} onClick={()=>update({lightsEnabled:true})} />
@@ -261,13 +312,27 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
     );
   }
 
-  // FALLBACK generic
+  // FALLBACK generic: экран недоступного параметра — автопереход дальше.
+  return <UnavailableParamScreen onConfirm={onConfirm} onBack={onBack} />;
+}
+
+/** T-003: вместо отладочного дампа — карточка + автоматический переход. */
+function UnavailableParamScreen({ onConfirm, onBack }: { onConfirm: () => void; onBack: () => void }) {
+  const navigatedRef = useRef(false);
+
+  useEffect(() => {
+    if (navigatedRef.current) return;
+    navigatedRef.current = true;
+    // единственный допустимый эффект — навигация
+    const id = window.setTimeout(onConfirm, 0);
+    return () => window.clearTimeout(id);
+  }, [onConfirm]);
+
   return (
-    <SectionCard title={param} description={`QUIZ V2 — параметр ${param} (в разработке)`}>
-      <pre className="text-xs bg-slate-50 p-3 rounded-xl overflow-auto">{JSON.stringify(room, null, 2)}</pre>
+    <SectionCard title="Этот параметр пока недоступен" description="Переходим к следующему шагу.">
       <div className="mt-4 flex justify-between">
         <button type="button" onClick={onBack} className="text-sm text-slate-600">← Назад</button>
-        <button type="button" onClick={onConfirm} className="rounded-2xl bg-slate-950 px-5 py-2 text-sm font-semibold text-white">Подтвердить →</button>
+        <button type="button" onClick={onConfirm} className="rounded-2xl bg-slate-950 px-5 py-2 text-sm font-semibold text-white">Продолжить →</button>
       </div>
     </SectionCard>
   );

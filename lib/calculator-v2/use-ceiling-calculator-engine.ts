@@ -8,7 +8,10 @@ import { useCallback, useMemo, useState, useRef, useEffect } from "react";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 import type { SolutionScenario } from "@/lib/calculator-modal-types";
 import type { ParamId } from "@/lib/step0-fsm";
-import { calcRoomsTotal, calcRoomSnapshotV2 } from "./room-snapshot";
+import { buildRoomBreakdown, calcRoomsTotal, calcRoomSnapshotV2, type V2RoomConfig } from "./room-snapshot";
+import { applyMinimumOrder, pricing } from "@/content/pricing";
+import { PREFILL_HINT, presetToRoom } from "@/lib/calculator/presets";
+import type { ServiceCalculatorPreset } from "@/content/services";
 
 // Типы — копируем из price-calculator-client.tsx (упрощённо для V2 старта)
 export type CeilingType = "standard" | "shadow" | "floating" | "shadow-floating";
@@ -39,6 +42,46 @@ export type RoomConfig = {
   lightsEnabled: boolean;
   lightsCount: number;
 };
+
+/** T-024: метрики набора, пришедшего из каталога освещения (lighting-first). */
+export type LightingPrefill = {
+  trackProfileMeters?: number;
+  pointSpotsQty?: number;
+  preferredTrackType?: TrackType | null;
+};
+
+/** Патч комнаты по набору света; не трогает параметры, которые клиент уже правил. */
+function buildLightingPatch(
+  prefill: LightingPrefill,
+  touched: { lights: boolean; trackLength: boolean; trackType: boolean }
+): Partial<RoomConfig> {
+  const patch: Partial<RoomConfig> = {};
+
+  const points = Math.max(0, Math.round(Number(prefill.pointSpotsQty ?? 0)));
+  if (!touched.lights) {
+    if (points > 0) {
+      patch.lightsEnabled = true;
+      patch.lightsCount = points;
+    } else {
+      patch.lightsEnabled = false;
+    }
+  }
+
+  const meters = Number(prefill.trackProfileMeters ?? 0);
+  if (meters > 0 && !touched.trackLength) {
+    patch.trackLength = Math.min(50, Math.max(1, meters));
+  }
+  if (prefill.preferredTrackType && !touched.trackType) {
+    patch.trackType = prefill.preferredTrackType;
+  } else if (meters > 0 && !touched.trackType) {
+    patch.trackType = "built-in";
+  }
+
+  return patch;
+}
+
+/** Экспорт для unit-тестов T-024 (в UI используется внутри движка). */
+export const buildLightingPatchForTest = buildLightingPatch;
 
 const DEFAULT_AREA = 10;
 
@@ -78,6 +121,14 @@ export function useCeilingCalculatorEngine(initialScenario: SolutionScenario = "
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const roomSeq = useRef(1);
 
+  // T-021: параметры, предзаполненные пресетом страницы/кейса
+  const [prefilled, setPrefilled] = useState<Record<string, boolean>>({});
+  const [presetNote, setPresetNote] = useState<string | null>(null);
+
+  // T-024: набор из lighting-first ждёт комнату, к которой его применить
+  const [pendingLightingPrefill, setPendingLightingPrefill] =
+    useState<LightingPrefill | null>(null);
+
   // touched flags to protect prefill
   const [touched, setTouched] = useState({
     trackType: false,
@@ -106,21 +157,74 @@ export function useCeilingCalculatorEngine(initialScenario: SolutionScenario = "
     if (mode === "object") {
       // object-scope = одна виртуальная комната
       const objId = "object-1";
-      setRooms(prev => prev.length ? prev : [{ ...newRoom(objId, "Весь объект"), area: 30 }]);
+      const patch = pendingLightingPrefill
+        ? buildLightingPatch(pendingLightingPrefill, touched)
+        : {};
+      setRooms(prev =>
+        prev.length ? prev : [{ ...newRoom(objId, "Весь объект"), area: 30, ...patch }]
+      );
       setActiveRoomId(objId);
     } else {
       // room mode – очищаем, ждем выбора комнаты
       // не трогаем если уже есть комнаты
     }
-  }, []);
+  }, [pendingLightingPrefill, touched]);
+
+  /**
+   * T-021: старт сессии из пресета страницы услуги или кейса главной.
+   * Значения помечаются `prefilled` — квиз показывает экран с выбранным значением
+   * и подписью, но не считает параметр подтверждённым.
+   */
+  const initFromPreset = useCallback(
+    (preset: ServiceCalculatorPreset | null | undefined, note?: string | null) => {
+      const resolved = presetToRoom(preset);
+      if (resolved.disabled) return;
+
+      const id = `room-${roomSeq.current++}`;
+      const base = newRoom(id, resolved.roomLabel);
+
+      setSolutionScenario(resolved.scenario);
+      setCalculationScope(resolved.scope);
+      setRooms([{ ...base, ...resolved.room }]);
+      setActiveRoomId(id);
+      setPrefilled(
+        resolved.prefilled.reduce<Record<string, boolean>>((acc, param) => {
+          acc[param] = true;
+          return acc;
+        }, {})
+      );
+      setPresetNote(note ?? resolved.introNote ?? (preset ? PREFILL_HINT : null));
+      setTouched({ trackType: false, trackLength: false, lights: false, chandeliers: false });
+    },
+    []
+  );
+
+  /** T-023: восстановление сохранённого черновика сессии. */
+  const restoreFromDraft = useCallback(
+    (draft: { scenario: SolutionScenario; scope: "room" | "object"; rooms: RoomConfig[] }) => {
+      if (!draft.rooms.length) return;
+      setSolutionScenario(draft.scenario);
+      setCalculationScope(draft.scope);
+      setRooms(draft.rooms);
+      setActiveRoomId(draft.rooms[0]?.id ?? null);
+      roomSeq.current = draft.rooms.length + 1;
+      setPrefilled({});
+      setPresetNote(null);
+    },
+    []
+  );
 
   const addRoom = useCallback((label: string) => {
     const id = `room-${roomSeq.current++}`;
-    const room = newRoom(id, label);
+    const base = newRoom(id, label);
+    // T-024: набор из lighting-first применяем к только что созданной комнате
+    const room = pendingLightingPrefill
+      ? { ...base, ...buildLightingPatch(pendingLightingPrefill, touched) }
+      : base;
     setRooms(prev => [...prev, room]);
     setActiveRoomId(id);
     return id;
-  }, []);
+  }, [pendingLightingPrefill, touched]);
 
   const updateRoom = useCallback((roomId: string, patch: Partial<RoomConfig>) => {
     // auto-mark touched
@@ -145,48 +249,40 @@ export function useCeilingCalculatorEngine(initialScenario: SolutionScenario = "
     setActiveRoomId(roomId);
   }, []);
 
-  // prefill from lighting – respects touched flags
-  const applyPrefillFromLighting = useCallback((targetRoomId: string | null, prefill: {
-    trackProfileMeters?: number;
-    pointSpotsQty?: number;
-    preferredTrackType?: TrackType | null;
-  }) => {
-    const rid = targetRoomId ?? activeRoomId ?? rooms[0]?.id;
-    if (!rid) return;
-    setRooms(prev => prev.map(r => {
-      if (r.id !== rid) return r;
-      const patch: Partial<RoomConfig> = {};
-      const points = Math.max(0, Math.round(Number(prefill.pointSpotsQty ?? 0)));
-      if (!touched.lights) {
-        if (points > 0) { patch.lightsEnabled = true; patch.lightsCount = points; }
-        else { patch.lightsEnabled = false; }
+  // T-024: prefill из lighting-first. Если комнаты ещё нет — запоминаем набор
+  // и применяем его позже, при addRoom / chooseCalcMode.
+  const applyPrefillFromLighting = useCallback(
+    (targetRoomId: string | null, prefill: LightingPrefill) => {
+      const rid = targetRoomId ?? activeRoomId ?? rooms[0]?.id;
+      if (!rid) {
+        setPendingLightingPrefill(prefill);
+        return;
       }
-      const meters = Number(prefill.trackProfileMeters ?? 0);
-      if (meters > 0 && !touched.trackLength) {
-        patch.trackLength = Math.min(50, Math.max(1, meters));
-      }
-      if (prefill.preferredTrackType && !touched.trackType) {
-        patch.trackType = prefill.preferredTrackType;
-      } else if (meters > 0 && !touched.trackType) {
-        patch.trackType = "built-in";
-      }
-      return Object.keys(patch).length ? { ...r, ...patch } : r;
-    }));
-  }, [activeRoomId, rooms, touched.lights, touched.trackLength, touched.trackType]);
+      setPendingLightingPrefill(prefill);
+      const patch = buildLightingPatch(prefill, touched);
+      if (!Object.keys(patch).length) return;
+      setRooms(prev => prev.map(r => (r.id === rid ? { ...r, ...patch } : r)));
+    },
+    [activeRoomId, rooms, touched]
+  );
 
   // reset touched on room change / new session
   const resetTouched = useCallback(() => {
     setTouched({ trackType: false, trackLength: false, lights: false, chandeliers: false });
   }, []);
   const totalArea = useMemo(() => rooms.reduce((s, r) => s + r.area, 0), [rooms]);
-  const totalRub = useMemo(() => {
-    if (rooms.length === 0) return 0;
+  // T-004: единый источник итоговой суммы Шага 0 (с минимальным заказом)
+  const roomsTotal = useMemo(() => {
+    if (rooms.length === 0) return { raw: 0, applied: 0, minimumApplied: false };
     try {
-      return calcRoomsTotal(rooms as any);
+      return calcRoomsTotal(rooms as unknown as V2RoomConfig[]);
     } catch {
-      return totalArea * 1000;
+      return applyMinimumOrder(totalArea * pricing.ceiling.standard);
     }
   }, [rooms, totalArea]);
+
+  const totalRub = roomsTotal.applied;
+  const minimumApplied = roomsTotal.minimumApplied;
 
   // push to bridge snapshot so Step1/Step2 see totals
   useEffect(() => {
@@ -194,27 +290,25 @@ export function useCeilingCalculatorEngine(initialScenario: SolutionScenario = "
     // build aggregate snapshot (simplified)
     const firstRoom = rooms[0];
     try {
-      const { snapshot: s } = calcRoomSnapshotV2(firstRoom as any);
+      const { snapshot: s } = calcRoomSnapshotV2(firstRoom as unknown as V2RoomConfig);
       // aggregate totals
-      const aggTotal = calcRoomsTotal(rooms as any);
+      const aggTotal = calcRoomsTotal(rooms as unknown as V2RoomConfig[]);
       setSnapshot(prev => ({
         ...(prev ?? s),
         ...s,
         area: totalArea,
-        total: aggTotal,
-        roomBreakdown: rooms.map(r => {
-          const { total } = calcRoomSnapshotV2(r as any);
-          return {
-            id: r.id,
-            label: r.label,
-            area: r.area,
-            totalRub: total,
-            ceilingTypeLabel: r.shadowEnabled ? "Теневой" : r.floatingEnabled ? "Парящий" : "Простой потолок",
-          };
-        }),
+        total: aggTotal.applied,
+        totalRawRub: aggTotal.raw,
+        minimumOrderApplied: aggTotal.minimumApplied,
+        // T-008: устаревшее поле больше не используется
+        grandTotal: undefined,
+        // T-022: полный состав каждой комнаты (все длины/количества/суммы)
+        roomBreakdown: rooms.map(r => buildRoomBreakdown(r as unknown as V2RoomConfig)),
+        solutionScenario,
+        calculationScope: calculationScope ?? "room",
       }));
     } catch {}
-  }, [rooms, totalArea, setSnapshot]);
+  }, [rooms, totalArea, setSnapshot, solutionScenario, calculationScope]);
 
   // мост в старый snapshot — чтобы не ломать WizardStep1/2
   // Пишем обратно в bridge только итоговые агрегаты
@@ -230,6 +324,8 @@ export function useCeilingCalculatorEngine(initialScenario: SolutionScenario = "
     activeRoom,
     totalArea,
     totalRub,
+    totalRawRub: roomsTotal.raw,
+    minimumApplied,
     // derived flags
     hasRooms: rooms.length > 0,
     roomsCount: rooms.length,
@@ -238,7 +334,12 @@ export function useCeilingCalculatorEngine(initialScenario: SolutionScenario = "
     markTouched,
     resetTouched,
     applyPrefillFromLighting,
+    pendingLightingPrefill,
     // actions
+    prefilled,
+    presetNote,
+    initFromPreset,
+    restoreFromDraft,
     chooseScenario,
     chooseCalcMode,
     addRoom,
