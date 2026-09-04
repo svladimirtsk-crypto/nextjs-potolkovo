@@ -103,7 +103,10 @@ export type CalculatorModalContextValue = {
   goToStep: (step: WizardStep) => void;
 
   lightingDraft: LightingSnapshot | null;
-  setLightingDraft: (draft: LightingSnapshot | null) => void;
+  /** Принимает значение или функциональный апдейтер (как `setState`). */
+  setLightingDraft: (
+    draft: LightingSnapshot | null | ((prev: LightingSnapshot | null) => LightingSnapshot | null)
+  ) => void;
 
   /** snapshot.total (потолок, как посчитал Step0)
    *  В lighting-first может быть не показан в UI (см. showCeilingInUi), но в snapshot он может существовать. */

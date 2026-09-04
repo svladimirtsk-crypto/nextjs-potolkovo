@@ -9,7 +9,6 @@ import {
 } from "@/lib/analytics";
 
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
-import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
 import { trackLightingCartChanged } from "@/lib/analytics";
 import {
   LIGHTING_ONLY_DISCOUNT_PERCENT,
@@ -27,6 +26,11 @@ import {
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
 import { resolveInitialLightingStep, type WizardStep } from "@/lib/lighting/resolve-initial-step";
 import { useCatalogProducts } from "@/lib/lighting/use-catalog-products";
+import { useLightingCart } from "@/lib/lighting/use-lighting-cart";
+import {
+  clearIncompatibleSystem as clearIncompatibleSystem_,
+  isTrackSystemId,
+} from "@/lib/lighting/kit-rules";
 
 import {
   CATALOG_SECTIONS,
@@ -103,9 +107,6 @@ function matchesPointSubtype(p: FeedCatalogProduct, sub: PointSubtypeId): boolea
   return d === sub;
 }
 
-function isTrackSystemId(value: unknown): value is TrackSystemId {
-  return value === "COLIBRI_220" || value === "CLARUS_48" || value === "TRACK_220";
-}
 
 function pickAttrs(p: FeedCatalogProduct): { label: string; value: string }[] {
   const a = p.keyAttributes?.length ? p.keyAttributes : p.params;
@@ -315,39 +316,56 @@ function ImageQuickPreview({
 export function WizardStep1Lighting() {
   const { snapshot } = usePriceCalculatorBridge();
   const {
-    lightingDraft, setLightingDraft, options,
+    lightingDraft, options,
     step1CatalogView, setStep1CatalogView,
     setStep1FooterAction,
-    goToStep, showCeilingInUi, currentStep,
+    goToStep, showCeilingInUi,
     lightingDiscountMode, lightingEffectiveTotal, lightingRegularTotal,
   } = useCalculatorModal();
   const hasCeilingContext = Boolean(showCeilingInUi || toNumber(snapshot?.total) > 0 || (snapshot?.roomBreakdown?.length ?? 0) > 0);
 
-  const [activeTab, setActiveTab] = useState<Tab>("recommendations");
-  const [catalogView, setCatalogView] = useState<CatalogView>("browse");
+  /**
+   * T-031: вкладка и режим каталога больше не синхронизируются эффектами.
+   * Базовое значение выводится из `options` и `step1CatalogView` (общий контекст),
+   * а ручной выбор пользователя хранится как override и сбрасывается, когда
+   * меняется сам базис — то есть при новом открытии или переходе шага.
+   */
+  const baseTab = useMemo<Tab>(() => {
+    if (step1CatalogView) return "catalog";
+    if (options?.initialLightingTab === "catalog") return "catalog";
+    if (options?.initialLightingTab === "recommendations") return "recommendations";
+    return options?.entryMode === "lighting-first" ? "catalog" : "recommendations";
+  }, [options?.entryMode, options?.initialLightingTab, step1CatalogView]);
 
-  /* ─── Apply initial UI options once ─── */
-  const appliedInitialUiRef = useRef<string | null>(null);
-  useEffect(() => {
-    const key = JSON.stringify({
-      em: options?.entryMode,
-      is: options?.initialStep,
-      lt: options?.initialLightingTab,
-      lv: options?.initialLightingView,
-      s: options?.source,
-    });
-    if (appliedInitialUiRef.current === key) return;
-    appliedInitialUiRef.current = key;
-    const shouldCat = options?.entryMode === "lighting-first";
-    const t: Tab = options?.initialLightingTab === "catalog" ? "catalog"
-      : options?.initialLightingTab === "recommendations" ? "recommendations"
-      : shouldCat ? "catalog" : "recommendations";
-    const v: CatalogView = options?.initialLightingView === "selected" ? "selected" : "browse";
-    setActiveTab(t);
-    setCatalogView(v);
-    if (t === "catalog") setStep1CatalogView(v);
-    else setStep1CatalogView(null);
-  }, [options, setStep1CatalogView]);
+  const baseCatalogView = useMemo<CatalogView>(() => {
+    if (step1CatalogView) return step1CatalogView;
+    return options?.initialLightingView === "selected" ? "selected" : "browse";
+  }, [options?.initialLightingView, step1CatalogView]);
+
+  const [tabOverride, setTabOverride] = useState<{ base: string; tab: Tab; view: CatalogView } | null>(null);
+  const baseKey = `${baseTab}|${baseCatalogView}`;
+  const override = tabOverride?.base === baseKey ? tabOverride : null;
+
+  const activeTab = override?.tab ?? baseTab;
+  const catalogView = override?.view ?? baseCatalogView;
+
+  const setActiveTab = useCallback(
+    (tab: Tab) => setTabOverride((prev) => ({
+      base: baseKey,
+      tab,
+      view: prev?.base === baseKey ? prev.view : baseCatalogView,
+    })),
+    [baseCatalogView, baseKey]
+  );
+
+  const setCatalogView = useCallback(
+    (view: CatalogView) => setTabOverride((prev) => ({
+      base: baseKey,
+      tab: prev?.base === baseKey ? prev.tab : baseTab,
+      view,
+    })),
+    [baseKey, baseTab]
+  );
 
   /* ─── Catalog filters ─── */
   const [section, setSection] = useState<CatalogSectionId>("track-systems");
@@ -357,9 +375,7 @@ export function WizardStep1Lighting() {
   const [lampSocket, setLampSocket] = useState<LampSocket>("GX53");
   const [query, setQuery] = useState("");
 
-  /* ─── Cart state ─── */
-  const [cartItems, setCartItems] = useState<CartItems>({});
-  const [removedHint, setRemovedHint] = useState(false);
+  /* ─── Cart state (T-031: общая корзина со страницей каталога) ─── */
 
   /* ─── Products index ─── */
   // T-029: каталог приезжает отдельным чанком, а не из фида в бандле.
@@ -374,92 +390,48 @@ export function WizardStep1Lighting() {
     return m;
   }, [products]);
 
-  /* ─── KEY FIX: Rehydrate + sync in single effect ─── */
-  const syncReadyRef = useRef(false);
-  const skipNextEmptySyncRef = useRef(false);
+  /**
+   * T-031: единственный источник корзины — `lightingDraft` через общий хук.
+   * Локального состояния и эффектов рехидратации/синхронизации больше нет:
+   * позиции, добавленные на странице каталога, здесь уже на месте.
+   */
+  const resolveProduct = useCallback(
+    (productId: string) => {
+      const direct = productsById.get(productId);
+      if (direct) return direct;
+      // Черновик мог прийти со страницы каталога, где ключом был артикул.
+      const byVendor = productIdByVendorCode.get(productId);
+      return byVendor ? productsById.get(byVendor) : undefined;
+    },
+    [productIdByVendorCode, productsById]
+  );
+  const lightingCart = useLightingCart(resolveProduct);
+  const cartItems = lightingCart.cart;
+  // Стабильная ссылка — иначе каждый рендер пересоздаёт все зависимые колбэки.
+  const setCartItems = lightingCart.update;
 
-  // On first mount: try to restore cart from lightingDraft BEFORE any draft→clear can fire
-  useEffect(() => {
-    if (syncReadyRef.current) return;
-
-    // Try rehydration from existing draft
-    const draft = lightingDraft;
-    if (draft && draft.mode === "catalog" && draft.items?.length) {
-      const next: CartItems = {};
-      let removedAny = false;
-      for (const item of draft.items) {
-        const sku = toText(item.sku);
-        const byP = productsById.get(sku);
-        const byV = productIdByVendorCode.get(sku);
-        const id = byP ? sku : toText(byV ?? "");
-        if (!id) { removedAny = true; continue; }
-        const p = productsById.get(id);
-        if (!p || REMOVED_COLIBRI_VENDOR_CODES.has(toText(p.vendorCode))) { removedAny = true; continue; }
-        next[id] = toNumber(item.qty);
-      }
-      if (Object.keys(next).length > 0) {
-        skipNextEmptySyncRef.current = true;
-        setCartItems(next);
-        if (removedAny) setRemovedHint(true);
-      }
-    }
-
-    syncReadyRef.current = true;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productsById, productIdByVendorCode]);
-
-  // Also handle options.initialLighting (lighting-first entry)
-  const prevInitialRef = useRef<LightingSnapshot | null | undefined>(undefined);
-  useEffect(() => {
+  /**
+   * T-031: входящий `options.initialLighting` больше не переливается в корзину
+   * эффектом — провайдер уже кладёт его в `lightingDraft` при открытии.
+   * Здесь остаётся только вывести подсказку про снятые с продажи позиции.
+   */
+  const removedHint = useMemo(() => {
     const inc = options?.initialLighting;
-    if (inc === undefined || inc === prevInitialRef.current) return;
-    prevInitialRef.current = inc;
-    if (!inc || inc.mode !== "catalog" || !inc.items?.length) return;
-    const next: CartItems = {};
-    let removedAny = false;
-    for (const item of inc.items) {
-      const sku = toText(item.sku);
-      const byP = productsById.get(sku);
-      const byV = productIdByVendorCode.get(sku);
-      const id = byP ? sku : toText(byV ?? "");
-      if (!id) { removedAny = true; continue; }
-      const p = productsById.get(id);
-      if (!p || REMOVED_COLIBRI_VENDOR_CODES.has(toText(p.vendorCode))) { removedAny = true; continue; }
-      next[id] = toNumber(item.qty);
-    }
-    if (Object.keys(next).length > 0) skipNextEmptySyncRef.current = true;
-    setCartItems(next);
-    setRemovedHint(removedAny);
-    setActiveTab("catalog");
-    setCatalogView(options?.initialLightingView === "selected" ? "selected" : "browse");
-  }, [options?.initialLighting, options?.initialLightingView, productsById, productIdByVendorCode]);
-
-  useEffect(() => {
-    if (!step1CatalogView) return;
-    setActiveTab("catalog");
-    setCatalogView(step1CatalogView);
-  }, [step1CatalogView]);
-
-  const prevCurrentStepRef = useRef(currentStep);
-  useEffect(() => {
-    const prev = prevCurrentStepRef.current;
-    prevCurrentStepRef.current = currentStep;
-
-    if (prev === 0 && currentStep === 1) {
-      setActiveTab("recommendations");
-      setCatalogView("browse");
-      setStep1CatalogView(null);
-    }
-  }, [currentStep, setStep1CatalogView]);
+    if (!inc || inc.mode !== "catalog") return false;
+    return (inc.items ?? []).some((item) => {
+      const product = resolveProduct(toText(item.sku));
+      return !product || REMOVED_COLIBRI_VENDOR_CODES.has(toText(product.vendorCode));
+    });
+  }, [options?.initialLighting, resolveProduct]);
 
   /* ─── Derived cart data ─── */
   const cartEntries = useMemo(() =>
     Object.entries(cartItems)
       .filter(([, q]) => q > 0)
-      .map(([id, qty]) => ({ productId: id, product: productsById.get(id), qty }))
+      .map(([id, qty]) => ({ productId: id, product: resolveProduct(id), qty }))
       .filter((e): e is { productId: string; product: FeedCatalogProduct; qty: number } => Boolean(e.product))
       .filter((e) => !REMOVED_COLIBRI_VENDOR_CODES.has(toText(e.product.vendorCode))),
-    [cartItems, productsById]);
+    [cartItems, resolveProduct]);
 
   const selectedTrackMeters = useMemo(() => {
     let m = 0; for (const e of cartEntries) { if (e.product.kind === "TRACK_PROFILE") m += calcTrackProfileMeters(e.product, e.qty); } return m;
@@ -475,8 +447,21 @@ export function WizardStep1Lighting() {
 
   // T-010: шаги подбора, включая состояние "нет данных с Шага 0"
   type WStep = WizardStep;
-  const [wStep, setWStep] = useState<WStep>("none");
-  const [wSystem, setWSystem] = useState<TrackSystemId | null>(null);
+  /**
+   * T-031: шаг подбора и выбранная система выводятся из резолвера, а ручной
+   * выбор живёт как override поверх него. Раньше это делали три эффекта с
+   * `setState`, из-за чего экран мог «прыгать» лишним рендером.
+   */
+  const [wOverride, setWOverride] = useState<{ step: WStep; system: TrackSystemId | null } | null>(null);
+  const setWStep = useCallback(
+    (step: WStep) => setWOverride((prev) => ({ step, system: prev?.system ?? null })),
+    []
+  );
+  const setWSystem = useCallback(
+    (system: TrackSystemId | null) =>
+      setWOverride((prev) => ({ step: prev?.step ?? "none", system })),
+    []
+  );
   const [wPointTab, setWPointTab] = useState<PointSubtypeId>("GX53");
 
   /* ─── Recommendations ─── */
@@ -633,18 +618,6 @@ export function WizardStep1Lighting() {
 
   const showOrphanTrackWarning = isLightingFirst && orphanTrackEntries.length > 0;
 
-  // T-025: показ экрана мастера освещения
-  const lastWStepRef = useRef<string>("");
-  useEffect(() => {
-    if (lastWStepRef.current === wStep) return;
-    lastWStepRef.current = wStep;
-    trackLightingStepView({
-      wstep: wStep,
-      requiredTrackM: requiredTrackMeters,
-      requiredPoints: requiredPointQty,
-    });
-  }, [wStep, requiredTrackMeters, requiredPointQty]);
-
   // T-025: выбранная система трека
   const lastSystemRef = useRef<string>("");
   useEffect(() => {
@@ -707,51 +680,19 @@ export function WizardStep1Lighting() {
     missingMounts,
     productIdByVendorCode,
     productsById,
+    setCartItems,
   ]);
 
-  /* ─── Cart → lightingDraft sync (ONLY after rehydration is ready) ─── */
-  useEffect(() => {
-    if (!syncReadyRef.current) return; // Don't clear draft before rehydration!
-    if (cartEntries.length === 0) {
-      if (skipNextEmptySyncRef.current) {
-        skipNextEmptySyncRef.current = false;
-        return;
+  // T-031: единственная реализация — в lib/lighting/kit-rules.ts
+  const clearIncompatibleSystem = useCallback(
+    (next: CartItems, targetSystem: string) => {
+      const cleaned = clearIncompatibleSystem_(next, targetSystem, resolveProduct);
+      for (const key of Object.keys(next)) {
+        if (!(key in cleaned)) delete next[key];
       }
-      setLightingDraft({ mode: "none", userCustomizedLighting: false });
-      return;
-    }
-    skipNextEmptySyncRef.current = false;
-    const items: LightingItem[] = cartEntries.map((e) => ({ sku: toText(e.productId), name: toText(e.product.name), qty: e.qty, priceRub: toNumber(e.product.priceRub) }));
-    const totalRub = items.reduce((s, i) => s + i.qty * i.priceRub, 0);
-    setLightingDraft({
-      mode: "catalog",
-      items,
-      totalRub,
-      discountedTotalRub: applyLightingOnlyDiscount(totalRub),
-      standaloneDiscountedTotalRub: applyLightingOnlyDiscount(totalRub),
-      withCeilingDiscountedTotalRub: applyLightingWithCeilingDiscount(totalRub),
-      userCustomizedLighting: true,
-      derivedInputsSnapshot: snapshot?.derivedInputs,
-    });
-  }, [cartEntries, setLightingDraft, snapshot?.derivedInputs]);
-
-  const clearIncompatibleSystem = useCallback((next: CartItems, targetSystem: string) => {
-    if (!isTrackSystemId(targetSystem)) return;
-    const clarusPsuVendorCodes = new Set<string>(CLARUS_PSU_VENDOR_CODES);
-
-    for (const key of Object.keys(next)) {
-      const p = productsById.get(key);
-      if (!p) continue;
-
-      const isTrackProduct =
-        p.kind === "TRACK_PROFILE" || p.kind === "TRACK_FIXTURE" || p.kind === "TRACK_ACCESSORY";
-      const isClarusPsu = clarusPsuVendorCodes.has(toText(p.vendorCode));
-
-      if ((isTrackProduct && p.system !== targetSystem) || (isClarusPsu && targetSystem !== "CLARUS_48")) {
-        delete next[key];
-      }
-    }
-  }, [productsById]);
+    },
+    [resolveProduct]
+  );
 
   /* ─── setProductQty ─── */
   const setProductQty = useCallback((product: FeedCatalogProduct, nextQtyRaw: number) => {
@@ -781,7 +722,7 @@ export function WizardStep1Lighting() {
       }
       return n;
     });
-  }, [cartItems, options?.source, clearIncompatibleSystem]);
+  }, [cartItems, options?.source, clearIncompatibleSystem, setCartItems]);
 
   const clearTrackProductsForSystem = useCallback((system: TrackSystemId | null) => {
     const clarusPsuVendorCodes = new Set<string>(CLARUS_PSU_VENDOR_CODES);
@@ -812,7 +753,7 @@ export function WizardStep1Lighting() {
 
       return changed ? next : prev;
     });
-  }, [productsById]);
+  }, [productsById, setCartItems]);
 
   const setTrackProfileQty = useCallback((product: FeedCatalogProduct, nextQtyRaw: number) => {
     const system = isTrackSystemId(product.system) ? product.system : null;
@@ -857,14 +798,14 @@ export function WizardStep1Lighting() {
 
       return next;
     });
-  }, [cartItems, options?.source, productsById]);
+  }, [cartItems, options?.source, productsById, setCartItems, setWSystem]);
 
   const addMountOneToOne = useCallback((fv: string) => {
     const mv = POINT_TO_MOUNT_VENDOR_CODE[toText(fv)]; if (!mv) return;
     const mid = productIdByVendorCode.get(mv); if (!mid) return;
     const rq = toNumber(mountRequiredByVendor[mv]); if (rq <= 0) return;
     setCartItems((prev) => ({ ...prev, [mid]: rq }));
-  }, [mountRequiredByVendor, productIdByVendorCode]);
+  }, [mountRequiredByVendor, productIdByVendorCode, setCartItems]);
 
   const addCheapestLamps = useCallback((socket: LampSocket) => {
     const rq = toNumber(lampRequiredBySocket[socket]); if (rq <= 0) return;
@@ -872,7 +813,7 @@ export function WizardStep1Lighting() {
     const cheapest = lampOptionsBySocket[socket][0]; if (!cheapest) return;
     const id = toText(cheapest.productId); if (!id) return;
     setCartItems((prev) => ({ ...prev, [id]: toNumber(prev[id]) + miss }));
-  }, [lampRequiredBySocket, lampCurrentBySocket, lampOptionsBySocket]);
+  }, [lampRequiredBySocket, lampCurrentBySocket, lampOptionsBySocket, setCartItems]);
 
   const setClarusPsu = useCallback((pid: string) => {
     setCartItems((prev) => {
@@ -880,24 +821,22 @@ export function WizardStep1Lighting() {
       for (const v of CLARUS_PSU_VENDOR_CODES) { const id = productIdByVendorCode.get(v); if (id && id !== pid) delete n[id]; }
       n[pid] = Math.max(1, toNumber(n[pid])); return n;
     });
-  }, [productIdByVendorCode]);
+  }, [productIdByVendorCode, setCartItems]);
 
   /* ─── Navigation helpers ─── */
   const setCatalogViewAndSync = useCallback((view: CatalogView) => {
     setCatalogView(view);
     setStep1CatalogView(view);
-  }, [setStep1CatalogView]);
+  }, [setStep1CatalogView, setCatalogView]);
 
   /* ─── Selected view ─── */
   const selectedViewItems = useMemo(() =>
     cartEntries.map((e) => ({ product: e.product, item: { sku: toText(e.productId), name: toText(e.product.name), qty: e.qty, priceRub: toNumber(e.product.priceRub) } })),
     [cartEntries]);
 
-  useEffect(() => {
-    if (catalogView === "selected" && selectedViewItems.length === 0) {
-      setCatalogViewAndSync("browse");
-    }
-  }, [catalogView, selectedViewItems.length, setCatalogViewAndSync]);
+  // Пустое «Выбранное» показывать нечем — молча показываем каталог.
+  const shownCatalogView: CatalogView =
+    catalogView === "selected" && selectedViewItems.length === 0 ? "browse" : catalogView;
 
   const selectedTotals = useMemo(() => {
     const regular = selectedViewItems.reduce((sum, x) => sum + x.item.qty * x.item.priceRub, 0);
@@ -930,25 +869,25 @@ export function WizardStep1Lighting() {
      ═══════════════════════════════════════════════════ */
   const rootRef = useRef<HTMLDivElement | null>(null);
 
+  // T-010: стартовый экран пересчитывается резолвером, пока пользователь не тронул подбор.
+  const wizardTouchedRef = useRef(false);
+  const markWizardTouched = useCallback(() => {
+    wizardTouchedRef.current = true;
+  }, []);
+
   const chooseWizardSystem = useCallback((system: TrackSystemId) => {
     wizardTouchedRef.current = true;
     setWSystem(system);
     clearTrackProductsForSystem(system);
     setWStep("trackProfile");
-  }, [clearTrackProductsForSystem]);
+  }, [clearTrackProductsForSystem, setWStep, setWSystem]);
 
   const chooseNoTrackFlow = useCallback(() => {
     wizardTouchedRef.current = true;
     setWSystem(null);
     clearTrackProductsForSystem(null);
     setWStep(requiredPointQty > 0 ? "points" : "done");
-  }, [clearTrackProductsForSystem, requiredPointQty]);
-
-  // T-010: стартовый экран пересчитывается резолвером, пока пользователь не тронул подбор.
-  const wizardTouchedRef = useRef(false);
-  const markWizardTouched = useCallback(() => {
-    wizardTouchedRef.current = true;
-  }, []);
+  }, [clearTrackProductsForSystem, requiredPointQty, setWStep, setWSystem]);
 
   const resolvedInitialStep = useMemo(
     () =>
@@ -968,28 +907,19 @@ export function WizardStep1Lighting() {
     [cartEntries, missingLamps.length, requiredPointQty, requiredTrackMeters]
   );
 
-  useEffect(() => {
-    if (wizardTouchedRef.current) return;
-
-    const draftHasItems = lightingDraft?.mode === "catalog" && (lightingDraft.items?.length ?? 0) > 0;
-    if (draftHasItems && cartEntries.length === 0) return;
-
+  // Система, вычитанная из корзины: чем пользователь уже начал комплектоваться.
+  const cartTrackSystem = useMemo<TrackSystemId | null>(() => {
     const trackEntry = cartEntries.find(
       (e) => e.product.kind === "TRACK_PROFILE" || e.product.kind === "TRACK_FIXTURE"
     );
     const system = trackEntry?.product.system;
-    setWSystem(
-      system === "COLIBRI_220" || system === "CLARUS_48" || system === "TRACK_220" ? system : null
-    );
-    setWStep(resolvedInitialStep);
-  }, [cartEntries, lightingDraft, resolvedInitialStep]);
+    return isTrackSystemId(system ?? "") ? (system as TrackSystemId) : null;
+  }, [cartEntries]);
 
-  // Трек исчез на Шаге 0 — сбрасываем систему и шаг через тот же резолвер.
-  useEffect(() => {
-    if (requiredTrackMeters > 0) return;
-    setWSystem(null);
-    if (!wizardTouchedRef.current) setWStep(resolvedInitialStep);
-  }, [requiredTrackMeters, resolvedInitialStep]);
+  // Итоговые шаг и система: override пользователя поверх резолвера.
+  const wStep: WStep = wOverride?.step ?? resolvedInitialStep;
+  const wSystem: TrackSystemId | null =
+    requiredTrackMeters > 0 ? (wOverride ? wOverride.system : cartTrackSystem) : null;
 
   // При смене внутреннего шага/таба пользователь всегда видит начало следующего действия.
   const didMountScrollRef = useRef(false);
@@ -1001,7 +931,7 @@ export function WizardStep1Lighting() {
 
     const parent = getScrollParent(rootRef.current);
     parent?.scrollTo({ top: 0, behavior: "smooth" });
-  }, [activeTab, catalogView, wStep]);
+  }, [activeTab, shownCatalogView, wStep]);
 
   useEffect(() => {
     if (!zoomImage) return;
@@ -1031,7 +961,8 @@ export function WizardStep1Lighting() {
       e.product.kind === "TRACK_PROFILE" || e.product.kind === "TRACK_FIXTURE" || e.product.kind === "TRACK_ACCESSORY"
     );
 
-    return isTrackSystemId(trackEntry?.product.system) ? trackEntry.product.system : null;
+    const system = trackEntry?.product.system ?? "";
+    return isTrackSystemId(system) ? system : null;
   }, [cartEntries, wSystem]);
 
 
@@ -1123,7 +1054,7 @@ export function WizardStep1Lighting() {
       return;
     }
     setWStep("done");
-  }, [lampCurrentTotal, lampRequiredTotal, requiredPointQty, requiredTrackMeters, selectedPointQty, selectedTrackMeters, selectedTrackSystem, wTrackFixtures.length]);
+  }, [lampCurrentTotal, lampRequiredTotal, requiredPointQty, requiredTrackMeters, selectedPointQty, selectedTrackMeters, selectedTrackSystem, wTrackFixtures.length, setWStep]);
 
   const goAfterTrackFixtures = useCallback(() => {
     if (requiredPointQty > 0 && selectedPointQty < requiredPointQty) {
@@ -1135,7 +1066,7 @@ export function WizardStep1Lighting() {
       return;
     }
     setWStep("done");
-  }, [lampCurrentTotal, lampRequiredTotal, requiredPointQty, selectedPointQty]);
+  }, [lampCurrentTotal, lampRequiredTotal, requiredPointQty, selectedPointQty, setWStep]);
 
   const goAfterPoints = useCallback(() => {
     if (lampRequiredTotal > 0 && lampCurrentTotal < lampRequiredTotal) {
@@ -1143,7 +1074,7 @@ export function WizardStep1Lighting() {
       return;
     }
     setWStep("done");
-  }, [lampCurrentTotal, lampRequiredTotal]);
+  }, [lampCurrentTotal, lampRequiredTotal, setWStep]);
 
   const goBackFromLamps = useCallback(() => {
     if (requiredPointQty > 0) {
@@ -1159,7 +1090,7 @@ export function WizardStep1Lighting() {
       return;
     }
     setWStep("system");
-  }, [requiredPointQty, requiredTrackMeters, selectedTrackSystem]);
+  }, [requiredPointQty, requiredTrackMeters, selectedTrackSystem, setWStep]);
 
 
   const trackComplete = requiredTrackMeters <= 0 || selectedTrackMeters >= requiredTrackMeters;
@@ -1185,17 +1116,23 @@ export function WizardStep1Lighting() {
     setActiveTab("recommendations");
     setCatalogViewAndSync("browse");
     setWStep(missingAction.step);
-  }, [missingAction, setCatalogViewAndSync]);
+  }, [missingAction, setCatalogViewAndSync, setActiveTab, setWStep]);
 
+  // «Готово» с незакрытыми требованиями — показываем недостающий шаг, а не тупик.
+  // T-025: показ экрана мастера освещения (после того, как шаг посчитан).
+  const lastWStepRef = useRef<string>("");
   useEffect(() => {
-    if (wStep !== "done") return;
-    if (requiredSelectionComplete) return;
-    if (!missingAction) return;
+    if (lastWStepRef.current === wStep) return;
+    lastWStepRef.current = wStep;
+    trackLightingStepView({
+      wstep: wStep,
+      requiredTrackM: requiredTrackMeters,
+      requiredPoints: requiredPointQty,
+    });
+  }, [wStep, requiredTrackMeters, requiredPointQty]);
 
-    setActiveTab("recommendations");
-    setCatalogViewAndSync("browse");
-    setWStep(missingAction.step);
-  }, [missingAction, requiredSelectionComplete, setCatalogViewAndSync, wStep]);
+  const shownWStep: WStep =
+    wStep === "done" && !requiredSelectionComplete && missingAction ? missingAction.step : wStep;
 
   useEffect(() => {
     if (activeTab !== "recommendations") {
@@ -1207,12 +1144,12 @@ export function WizardStep1Lighting() {
       return () => setStep1FooterAction(null);
     }
 
-    if (wStep === "none") {
+    if (shownWStep === "none") {
       setStep1FooterAction({ label: "К итогу →", onClick: () => goToStep(2) });
       return () => setStep1FooterAction(null);
     }
 
-    if (wStep === "system") {
+    if (shownWStep === "system") {
       if (wizardSystemOptions.length > 0) {
         setStep1FooterAction({
           label: "Выберите систему",
@@ -1226,24 +1163,24 @@ export function WizardStep1Lighting() {
           onClick: () => goToStep(2),
         });
       }
-    } else if (wStep === "trackProfile") {
+    } else if (shownWStep === "trackProfile") {
       setStep1FooterAction({
         label: "Подтвердить профиль →",
         disabled: requiredTrackMeters > 0 && (!selectedTrackSystem || !trackComplete),
         onClick: goAfterTrackProfile,
       });
-    } else if (wStep === "trackFixtures") {
+    } else if (shownWStep === "trackFixtures") {
       setStep1FooterAction({
         label: "Подтвердить светильники →",
         onClick: goAfterTrackFixtures,
       });
-    } else if (wStep === "points") {
+    } else if (shownWStep === "points") {
       setStep1FooterAction({
         label: "Подтвердить точки →",
         disabled: !pointsComplete,
         onClick: goAfterPoints,
       });
-    } else if (wStep === "lamps") {
+    } else if (shownWStep === "lamps") {
       setStep1FooterAction({
         label: "Подтвердить лампы →",
         disabled: !lampsComplete,
@@ -1272,15 +1209,16 @@ export function WizardStep1Lighting() {
     requiredTrackMeters,
     selectedTrackSystem,
     setStep1FooterAction,
+    setWStep,
     trackComplete,
-    wStep,
+    shownWStep,
     wizardSystemOptions.length,
   ]);
 
   /* ─── Scoped catalog products ─── */
   const scopedProducts = useMemo(() => {
     let scoped: FeedCatalogProduct[] = [];
-    if (catalogView === "selected") { scoped = selectedViewItems.map((i) => i.product); }
+    if (shownCatalogView === "selected") { scoped = selectedViewItems.map((i) => i.product); }
     else if (section === "track-systems") {
       if (trackGroup === "TRACK_PROFILE") {
         const base = TRACK_PROFILE_WHITELIST[trackSystem] ?? [];
@@ -1296,7 +1234,7 @@ export function WizardStep1Lighting() {
       const h = `${toText(p.name)} ${toText(p.vendorCode)} ${toText(p.categoryPath)} ${pickAttrs(p).map((a) => `${a.label} ${a.value}`).join(" ")}`.toLowerCase();
       return h.includes(q);
     });
-  }, [catalogView, lampSocket, pointSubtype, products, query, section, selectedViewItems, trackGroup, trackSystem]);
+  }, [shownCatalogView, lampSocket, pointSubtype, products, query, section, selectedViewItems, trackGroup, trackSystem]);
 
   // T-025: поиск по каталогу (дебаунс 800 мс внутри обёртки)
   useEffect(() => {
@@ -1317,8 +1255,8 @@ export function WizardStep1Lighting() {
       {/* ─── Tabs ─── */}
       <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar max-sm:-mx-5 max-sm:px-5">
         <TabBtn active={activeTab === "recommendations"} onClick={() => setActiveTab("recommendations")}>Подбор</TabBtn>
-        <TabBtn active={activeTab === "catalog" && catalogView === "browse"} onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}>Каталог</TabBtn>
-        <TabBtn active={activeTab === "catalog" && catalogView === "selected"} onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("selected"); }}>
+        <TabBtn active={activeTab === "catalog" && shownCatalogView === "browse"} onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}>Каталог</TabBtn>
+        <TabBtn active={activeTab === "catalog" && shownCatalogView === "selected"} onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("selected"); }}>
           Выбранное ({selectedViewItems.length})
         </TabBtn>
       </div>
@@ -1336,7 +1274,7 @@ export function WizardStep1Lighting() {
         <div key="rec-tab" className="animate-fade-in space-y-4">
 
           {/* ─── STEP: Track System ─── */}
-          {wStep === "none" && (
+          {shownWStep === "none" && (
             <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
               <p className="font-semibold text-slate-950">Освещение можно подобрать вручную</p>
               <p className="mt-1 leading-5">
@@ -1362,7 +1300,7 @@ export function WizardStep1Lighting() {
             </div>
           )}
 
-          {wStep === "system" && (
+          {shownWStep === "system" && (
             wizardSystemOptions.length > 0 ? (
               <div className="space-y-3">
                 <div className="rounded-2xl bg-slate-950 p-4 text-white">
@@ -1451,7 +1389,7 @@ export function WizardStep1Lighting() {
           )}
 
           {/* ─── STEP: Track Profiles ─── */}
-          {wStep === "trackProfile" && (
+          {shownWStep === "trackProfile" && (
             <div className="space-y-3">
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
                 <p className="text-sm font-semibold text-emerald-950">
@@ -1492,7 +1430,7 @@ export function WizardStep1Lighting() {
           )}
 
           {/* ─── STEP: Track Fixtures (spots for track) ─── */}
-          {wStep === "trackFixtures" && (
+          {shownWStep === "trackFixtures" && (
             <div className="space-y-3">
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
                 <p className="text-sm font-semibold text-emerald-950">Светильники для трека: {selectedTrackSystem ? systemLabel(selectedTrackSystem) : ""}</p>
@@ -1526,7 +1464,7 @@ export function WizardStep1Lighting() {
           )}
 
           {/* ─── STEP: Point Fixtures ─── */}
-          {wStep === "points" && (
+          {shownWStep === "points" && (
             <div className="space-y-3">
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
                 <p className="text-sm font-semibold text-emerald-950">Точечные светильники</p>
@@ -1576,7 +1514,7 @@ export function WizardStep1Lighting() {
           )}
 
           {/* ─── STEP: Lamps ─── */}
-          {wStep === "lamps" && (
+          {shownWStep === "lamps" && (
             <div className="space-y-3">
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3">
                 <p className="text-sm font-semibold text-amber-950">Лампы к светильникам</p>
@@ -1663,7 +1601,7 @@ export function WizardStep1Lighting() {
           )}
 
           {/* ─── STEP: Done ─── */}
-          {wStep === "done" && requiredSelectionComplete && (
+          {shownWStep === "done" && requiredSelectionComplete && (
             <div className="space-y-3">
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
                 <p className="text-sm font-semibold text-emerald-950">✓ Комплект собран</p>
@@ -1715,7 +1653,7 @@ export function WizardStep1Lighting() {
             </div>
           )}
 
-          {wStep === "done" && !requiredSelectionComplete && missingAction ? (
+          {shownWStep === "done" && !requiredSelectionComplete && missingAction ? (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
               <p className="font-semibold">Нужно ещё уточнить комплект</p>
               <p className="mt-1 text-amber-900/80">
@@ -1731,7 +1669,7 @@ export function WizardStep1Lighting() {
             </div>
           ) : null}
 
-          {hasRecommendations && wStep !== "done" ? (
+          {hasRecommendations && shownWStep !== "done" ? (
             <div className="text-center max-sm:hidden">
               <button type="button" onClick={() => setActiveTab("catalog")}
                 className="text-sm font-medium text-slate-500 underline decoration-slate-300 underline-offset-4 hover:text-slate-800">
@@ -1785,7 +1723,7 @@ export function WizardStep1Lighting() {
             </div>
           ) : null}
 
-          {catalogView === "selected" && accessorySuggestions.length > 0 ? (
+          {shownCatalogView === "selected" && accessorySuggestions.length > 0 ? (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
               <p className="text-sm font-semibold text-amber-950">Комплектующие</p>
               <p className="mt-1 text-xs text-amber-900">
@@ -1806,7 +1744,7 @@ export function WizardStep1Lighting() {
             </div>
           ) : null}
 
-          {catalogView === "selected" ? (
+          {shownCatalogView === "selected" ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               {selectedViewItems.length === 0 ? (
                 <p className="text-sm text-slate-600">Пока ничего не выбрано.</p>

@@ -160,9 +160,12 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
 
   const { snapshot, setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
 
-  const setLightingDraft = useCallback((draft: LightingSnapshot | null) => {
-    setLightingDraftState(draft);
-  }, []);
+  const setLightingDraft = useCallback(
+    (draft: LightingSnapshot | null | ((prev: LightingSnapshot | null) => LightingSnapshot | null)) => {
+      setLightingDraftState(draft);
+    },
+    []
+  );
 
   const markStep0SessionInteracted = useCallback(() => {
     setStep0SessionInteracted(true);
@@ -308,6 +311,9 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
           });
         }
       }
+
+      // T-031: переход 0 → 1 всегда открывает Шаг 1 с начала подбора.
+      if (currentStep === 0 && step === 1) setStep1CatalogView(null);
 
       setCurrentStep(step);
     },

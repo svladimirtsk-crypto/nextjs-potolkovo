@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 import {
@@ -16,6 +16,7 @@ import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-type
 import type { FeedCatalogProduct, FeedCatalogResult } from "@/lib/eks-feed2-catalog";
 
 import { trackLightingCartCheckout, trackSmartInterestSelected } from "@/lib/analytics";
+import { useLightingCart } from "@/lib/lighting/use-lighting-cart";
 
 import {
   LIGHTING_ONLY_DISCOUNT_PERCENT,
@@ -358,7 +359,25 @@ export function CatalogSectionClient({ data }: Props) {
   const [smartOnly, setSmartOnly] = useState(false);
 
   const [query, setQuery] = useState("");
-  const [cartItems, setCartItems] = useState<CartItems>({});
+  /**
+   * T-031: корзина общая с модалкой (`lightingDraft`), локального состояния нет —
+   * счётчики страницы и калькулятора всегда совпадают, комплект не теряется.
+   */
+  const resolveProduct = useCallback(
+    (productId: string) => byProductId.get(productId),
+    [byProductId]
+  );
+  const lightingCart = useLightingCart(resolveProduct);
+  const cartItems = lightingCart.cart;
+
+  /** Совместимость со старым кодом: принимает как объект, так и updater. */
+  const setCartItems = useCallback(
+    (updater: CartItems | ((prev: CartItems) => CartItems)) => {
+      const next = typeof updater === "function" ? updater(lightingCart.cart) : updater;
+      lightingCart.replaceCart(next);
+    },
+    [lightingCart]
+  );
   const [visibleCount, setVisibleCount] = useState(24);
 
   const selectedEntries = useMemo(() => {
