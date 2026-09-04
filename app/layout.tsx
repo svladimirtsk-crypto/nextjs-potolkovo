@@ -47,19 +47,6 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
       >
-        <Script id="strip-internal-hash" strategy="beforeInteractive">
-          {`
-            (function () {
-              try {
-                var h = window.location.hash;
-                if (h === "#action" || h === "#price") {
-                  history.replaceState(null, "", window.location.pathname + window.location.search);
-                  window.scrollTo(0, 0);
-                }
-              } catch (e) {}
-            })();
-          `}
-        </Script>
 
         <Script id="yandex-metrika" strategy="afterInteractive">
           {`
