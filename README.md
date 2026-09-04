@@ -81,3 +81,35 @@ npm run build           # 18 статических страниц
 
 Параметры визита (`ym(id, "params", …)`): `calc_total` и `calc_scenario` — при каждой сводке
 Шага 0; `lead_total` — при успешной отправке заявки.
+
+## Приём заявок — `/api/lead` (T-027)
+
+Все формы сайта отправляют JSON на `POST /api/lead`. Прямых обращений к Web3Forms
+из браузера больше нет: клиентский ключ `NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY` удалён,
+используется серверный `WEB3FORMS_ACCESS_KEY`.
+
+Конвейер запроса: honeypot → rate-limit (5 запросов / 10 мин на IP) → zod-валидация
+(`lib/lead/schema.ts`) → дедуп по телефону за 10 минут → запись → доставка в Telegram
+(основной канал) и Web3Forms (дубль). Неуспешная доставка **не роняет** ответ: заявка
+уже сохранена, а канал помечается `failed` и повторяется кроном.
+
+Ответ: `{ ok: true, leadId: "K7F3Q", callbackWindow: "сегодня до 21:00" | "завтра с 9:00" }`.
+Окно перезвона считается по времени сервера в зоне Europe/Moscow и рабочим часам 9:00–21:00.
+
+| Переменная | Назначение |
+|---|---|
+| `LEAD_API_ENABLED` | `0` — вернуть 503 и не принимать заявки |
+| `TELEGRAM_LEADS_ENABLED` | `0` — не отправлять в Telegram (Web3Forms продолжит работать) |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | доставка в Telegram |
+| `WEB3FORMS_ACCESS_KEY` | серверный ключ дубля на почту |
+| `CRON_SECRET` | доступ к `POST /api/lead/retry` (заголовок `Authorization: Bearer …`) |
+| `DATABASE_URL` | строка подключения; схема — `db/schema.sql` |
+
+Повторная доставка: `curl -X POST -H "Authorization: Bearer $CRON_SECRET" https://<host>/api/lead/retry`
+— берёт до 20 упавших доставок, максимум 5 попыток на каждую.
+
+**Хранилище.** Схема таблиц `leads` и `lead_deliveries` описана в `db/schema.sql`
+(Приложение Б ТЗ). ORM в проект пока не добавлена, поэтому `lib/lead/store.ts` содержит
+интерфейс `LeadStore` и in-memory реализацию: заявки живут в памяти процесса и
+обслуживают дедуп с ретраями. Для продакшена нужно реализовать `LeadStore` поверх
+SQL из `db/schema.sql` — вызывающий код (`route.ts`) при этом не меняется.

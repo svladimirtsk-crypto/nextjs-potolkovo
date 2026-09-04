@@ -20,6 +20,11 @@ export type LightingLeadBlock = {
   mode: string;
   items: Array<{
     sku: string;
+    vendorCode?: string;
+    system?: string;
+    kind?: string;
+    unit?: string;
+    auto?: boolean;
     name: string;
     qty: number;
     priceRub: number;
@@ -79,6 +84,11 @@ export function buildLightingLeadBlock(
       qty,
       priceRub,
       totalRub: qty * priceRub,
+      ...(item.vendorCode ? { vendorCode: item.vendorCode } : {}),
+      ...(item.system ? { system: item.system } : {}),
+      ...(item.kind ? { kind: item.kind } : {}),
+      ...(item.unit ? { unit: item.unit } : {}),
+      ...(item.auto ? { auto: true } : {}),
     };
   });
   if (items.length === 0 && num(lighting.totalRub) <= 0) return null;

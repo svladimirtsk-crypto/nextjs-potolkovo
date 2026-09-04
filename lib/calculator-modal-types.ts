@@ -10,6 +10,13 @@ export type LightingItem = {
   name: string;
   qty: number;
   priceRub: number;
+  /** T-027: поля для письма/заявки — артикул поставщика и происхождение позиции. */
+  vendorCode?: string;
+  system?: string;
+  kind?: string;
+  unit?: string;
+  /** Позиция добавлена автокомплектацией, а не выбрана вручную. */
+  auto?: boolean;
 };
 
 export type DerivedInputs = {

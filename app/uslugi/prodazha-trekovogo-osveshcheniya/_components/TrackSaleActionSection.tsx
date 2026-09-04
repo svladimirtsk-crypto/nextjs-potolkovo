@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { Heading } from "@/components/ui/heading";
 import { Section } from "@/components/ui/section";
-import { TrackSaleActionForm } from "./TrackSaleActionForm";
+import { ActionForm } from "@/components/home/action-form";
 
 type TrackSaleActionSectionProps = {
   service: ServicePageContent;
@@ -22,7 +22,8 @@ export function TrackSaleActionSection({ service }: TrackSaleActionSectionProps)
           />
 
           <div className="mt-10">
-            <TrackSaleActionForm />
+            {/* T-027: единая форма вместо удалённой TrackSaleActionForm */}
+            <ActionForm source={service.slug} placement="service-page" />
           </div>
 
           <div className="mt-8 border-t border-slate-200 pt-8">

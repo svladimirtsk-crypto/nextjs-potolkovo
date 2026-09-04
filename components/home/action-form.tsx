@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState, type FormEvent } from "react";
 
 import { contacts } from "@/content/contacts";
+import { buildLeadSnapshotV2 } from "@/lib/calculator/types";
 import { legal } from "@/content/legal";
 import { getKitDisplayName } from "@/lib/calculator-modal-types";
 import {
@@ -156,6 +157,31 @@ export function ActionForm({
   const effectiveLeadKind: LeadKind =
     leadKind ?? (hasRooms ? "calculator" : hasLighting ? "lighting-only" : "direct");
 
+  // T-027: снапшот лида в формате LeadSnapshotV2
+  const leadSnapshot = useMemo(
+    () =>
+      hasInteracted && snapshot
+        ? buildLeadSnapshotV2({
+            snapshot,
+            // ActionForm живёт и вне модалки, поэтому суммы берём из снапшота
+            ceilingEffectiveTotal:
+              toNumber(snapshot.total) + Math.max(0, toNumber(snapshot.extraInstallRub)),
+            lightingRegularTotal: toNumber(snapshot.lighting?.totalRub),
+            lightingEffectiveTotal: toNumber(
+              snapshot.lighting?.discountedTotalRub ?? snapshot.lighting?.totalRub
+            ),
+            source: effectiveSource,
+            entry: placement === "modal" ? "ceiling-first" : "direct",
+          })
+        : undefined,
+    [hasInteracted, snapshot, effectiveSource, placement]
+  );
+
+  const [leadResult, setLeadResult] = useState<{
+    leadId: string | null;
+    callbackWindow: string;
+  } | null>(null);
+
   const ceilingLines = useMemo(
     () => (hasInteracted ? getCalculatorSummaryLines(snapshot) : []),
     [hasInteracted, snapshot]
@@ -224,85 +250,6 @@ export function ActionForm({
       return;
     }
 
-    const accessKey = process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY;
-    if (!accessKey) {
-      trackFormSubmitError({
-        kind: "config",
-        formPlacement: metrikaPlacement,
-        source: effectiveSource,
-      });
-
-      setStatus("error");
-      setMessage(`Форма временно недоступна — позвоните ${contacts.phoneDisplay} или напишите в Telegram.`);
-      return;
-    }
-
-    // ===== Lighting numbers =====
-    const lightingMode: string = String(snapshot?.lighting?.mode ?? "none");
-    const lightingKitDisplay: string = String(snapshot?.lighting ? getKitDisplayName(snapshot.lighting) : "");
-    const lightingItemsCount = Number(snapshot?.lighting?.items?.length ?? 0);
-    const lightingTotalRub = toNumber(snapshot?.lighting?.totalRub ?? 0);
-
-    const discountMode = String(snapshot?.lightingDiscountMode ?? snapshot?.lighting?.discountMode ?? "none");
-    const fallbackLightingDiscountedRub =
-      discountMode === "with-ceiling"
-        ? applyLightingWithCeilingDiscount(lightingTotalRub)
-        : discountMode === "lighting-only"
-          ? applyLightingOnlyDiscount(lightingTotalRub)
-          : lightingTotalRub;
-
-    const lightingDiscountedRub = toNumber(
-      snapshot?.lighting?.discountedTotalRub ?? fallbackLightingDiscountedRub
-    );
-
-    const discountApplied = Boolean(snapshot?.lightingDiscountApplied);
-    const discountPercentApplied = Number(snapshot?.lightingDiscountPercentApplied ?? snapshot?.lighting?.discountPercentApplied ?? 0);
-    const lightingDiscountAmountRub = Math.max(0, lightingTotalRub - lightingDiscountedRub);
-
-    // Effective: what customer actually pays for lighting (with or without discount)
-    const lightingEffectiveRub = discountApplied ? lightingDiscountedRub : lightingTotalRub;
-    const orderIntent =
-      discountMode === "with-ceiling"
-        ? "lighting_with_ceiling"
-        : discountMode === "lighting-only"
-          ? "lighting_only"
-          : lightingItemsCount > 0
-            ? "lighting"
-            : "ceiling_only";
-
-    // ===== Ceiling / works numbers (Step0) =====
-    const area = toNumber(snapshot?.area ?? 0);
-    const ceilingTypeLabel = String(snapshot?.ceilingTypeLabel ?? "");
-
-    const ceilingWorksTotalRub = toNumber(snapshot?.total ?? 0);
-    // T-008: досчёт монтажа берём из явного поля snapshot
-    const ceilingExtraInstallRub = Math.max(0, toNumber(snapshot?.extraInstallRub ?? 0));
-    const ceilingWorksGrandTotalRub = ceilingWorksTotalRub + ceilingExtraInstallRub;
-
-    // Люстры (новый шаг Step0)
-    const chandeliersEnabled = Boolean(snapshot?.chandeliersEnabled);
-    const chandeliersCount = toNumber(snapshot?.chandeliersCount ?? 0);
-    const chandeliersTotalRub = toNumber(snapshot?.chandeliersTotal ?? 0);
-
-    // точечные (монтаж из Step0)
-    const spotInstallEnabled = Boolean(snapshot?.lightsEnabled);
-    const spotInstallCount = toNumber(snapshot?.lightsCount ?? 0);
-    const spotInstallTotalRub = toNumber(snapshot?.lightsTotal ?? 0);
-
-    // трек (монтаж из Step0)
-    const trackInstallEnabled = Boolean(snapshot?.trackLabel);
-    const trackInstallMeters = toNumber(snapshot?.trackLength ?? 0);
-    const trackInstallTotalRub = toNumber(snapshot?.trackTotal ?? 0);
-
-    // ===== Order estimate =====
-    const effectiveCeilingRub =
-      ceilingWorksGrandTotalRub > 0 ? ceilingWorksGrandTotalRub : ceilingWorksTotalRub;
-
-    // Итого = потолок (с досчётом если есть) + свет (по effective цене, а не всегда скидочной)
-    const orderEstimatedGrandRub =
-      Math.max(0, effectiveCeilingRub) + Math.max(0, lightingEffectiveRub);
-
-    // ===== attribution from sessionStorage =====
     const attribution: Record<string, string> = {};
     if (typeof window !== "undefined") {
       const keys = [
@@ -320,98 +267,58 @@ export function ActionForm({
         const v = sessionStorage.getItem(key);
         if (v && v.trim()) attribution[key] = v.trim();
       }
-
       const firstLanding = sessionStorage.getItem("first_landing");
       if (firstLanding && firstLanding.trim()) attribution["first_landing"] = firstLanding.trim();
-
       const firstReferrer = sessionStorage.getItem("first_referrer");
       if (firstReferrer && firstReferrer.trim()) attribution["first_referrer"] = firstReferrer.trim();
     }
 
-    const formData = new FormData();
+    // T-027: интент заказа определяем по составу расчёта
+    const lightingItemsCount = Number(snapshot?.lighting?.items?.length ?? 0);
+    const discountMode = String(
+      snapshot?.lightingDiscountMode ?? snapshot?.lighting?.discountMode ?? "none"
+    );
+    const orderIntent: "ceiling_only" | "lighting_with_ceiling" | "lighting_only" | "advanced" =
+      discountMode === "with-ceiling"
+        ? "lighting_with_ceiling"
+        : discountMode === "lighting-only" || (lightingItemsCount > 0 && !hasRooms)
+          ? "lighting_only"
+          : "ceiling_only";
 
-    const appendIfPresent = (key: string, value: string | undefined) => {
-      const v = String(value ?? "").trim();
-      if (v) formData.append(key, v);
+    const orderEstimatedGrandRub = leadSnapshot?.totals.grand ?? 0;
+
+    // T-027: единый payload для /api/lead (zod-схема lib/lead/schema.ts)
+    const leadPayload = {
+      name: trimmedName,
+      phone: normalizedPhone,
+      address: trimmedAddress || undefined,
+      consent: true as const,
+      botcheck: "" as const,
+      source: effectiveSource,
+      placement,
+      pagePath: typeof window !== "undefined" ? window.location.pathname : "",
+      serviceSlug: placement === "service-page" ? effectiveSource : undefined,
+      leadKind: effectiveLeadKind,
+      orderIntent,
+      attribution,
+      snapshot: leadSnapshot,
+      totals: leadSnapshot?.totals,
     };
-
-    formData.append("access_key", String(accessKey));
-    formData.append("subject", "Новая заявка с сайта ПОТОЛКОВО");
-    formData.append("from_name", "ПОТОЛКОВО Сайт");
-    formData.append("name", trimmedName);
-    formData.append("phone", normalizedPhone);
-    formData.append("address", trimmedAddress);
-
-    formData.append(
-      "message",
-      buildLeadMessage(ceilingLines, lightingLines, trimmedAddress, effectiveSource)
-    );
-
-    // anti-spam
-    formData.append("botcheck", "");
-    formData.append("company", "");
-
-    // extra fields
-    formData.append("calculator_source", calculatorSource);
-    formData.append("source", effectiveSource);
-    formData.append("placement", placement);
-    formData.append("lead_kind", effectiveLeadKind);
-    formData.append("service_slug", placement === "service-page" ? effectiveSource : "");
-    formData.append(
-      "page_path",
-      typeof window !== "undefined" ? window.location.pathname : ""
-    );
-    for (const [key, value] of Object.entries(attribution)) appendIfPresent(key, value);
-
-    formData.append("calculator_has_interacted", String(Boolean(hasInteracted)));
-
-    formData.append("lighting_mode", lightingMode);
-    formData.append("lighting_kit", lightingKitDisplay);
-    formData.append("lighting_items_count", String(lightingItemsCount));
-    formData.append("lighting_total_rub", String(lightingTotalRub));
-    formData.append("lighting_discounted_total_rub", String(lightingDiscountedRub));
-    formData.append("lighting_discount_applied", String(discountApplied));
-    formData.append("lighting_discount_percent_applied", String(discountPercentApplied));
-    formData.append("lighting_discount_mode", discountMode);
-    formData.append("lighting_discount_amount_rub", String(lightingDiscountAmountRub));
-    formData.append("order_intent", orderIntent);
-
-    formData.append("ceiling_area_m2", String(area));
-    formData.append("ceiling_type_label", ceilingTypeLabel);
-
-    formData.append("ceiling_works_total_rub", String(ceilingWorksTotalRub));
-    formData.append("ceiling_works_grand_total_rub", String(ceilingWorksGrandTotalRub));
-    formData.append("ceiling_extra_install_rub", String(ceilingExtraInstallRub));
-
-    formData.append("install_chandeliers_enabled", String(chandeliersEnabled));
-    formData.append("install_chandeliers_count", String(chandeliersCount));
-    formData.append("install_chandeliers_total_rub", String(chandeliersTotalRub));
-
-    formData.append("install_spots_enabled", String(spotInstallEnabled));
-    formData.append("install_spots_count", String(spotInstallCount));
-    formData.append("install_spots_total_rub", String(spotInstallTotalRub));
-
-    formData.append("install_track_enabled", String(trackInstallEnabled));
-    formData.append("install_track_meters", String(trackInstallMeters));
-    formData.append("install_track_total_rub", String(trackInstallTotalRub));
-
-    formData.append("order_estimated_grand_total_rub", String(orderEstimatedGrandRub));
-
-    // legacy
-    formData.append("lighting_total", String(lightingTotalRub));
-    formData.append("lighting_discounted_total", String(lightingDiscountedRub));
 
     setIsPending(true);
 
     try {
-      const response = await fetch("https://api.web3forms.com/submit", {
+      const response = await fetch("/api/lead", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(leadPayload),
       });
 
-      const result = await response.json().catch(() => null);
+      const result = (await response.json().catch(() => null)) as
+        | { ok?: boolean; leadId?: string | null; callbackWindow?: string }
+        | null;
 
-      if (!response.ok || !result?.success) {
+      if (!response.ok || !result?.ok) {
         trackFormSubmitError({
           kind: "provider",
           formPlacement: metrikaPlacement,
@@ -419,11 +326,10 @@ export function ActionForm({
         });
         trackLeadError({ kind: response.status === 429 ? "ratelimit" : "server", placement });
 
-        const errorText: string = String(
-          result?.message ?? result?.error ?? `HTTP ${response.status}`
-        );
         setStatus("error");
-        setMessage(`Ошибка отправки в Web3Forms: ${errorText}`);
+        setMessage(
+          `Не получилось отправить — позвоните ${contacts.phoneDisplay} или напишите в Telegram.`
+        );
         return;
       }
 
@@ -445,8 +351,16 @@ export function ActionForm({
       // P0.8: callback для WizardStep2Summary
       onSuccess?.();
 
+      setLeadResult({
+        leadId: result?.leadId ?? null,
+        callbackWindow: String(result?.callbackWindow ?? ""),
+      });
       setStatus("success");
-      setMessage(COPY.successMessage);
+      setMessage(
+        result?.callbackWindow
+          ? `Заявка принята. Перезвоню ${result.callbackWindow}.`
+          : COPY.successMessage
+      );
 
       setName("");
       setPhone("");
