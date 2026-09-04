@@ -5,7 +5,9 @@ import type { ServiceCalculatorPreset } from "@/content/services";
 import type { SolutionScenario, CalculatorFooterAction, CalculatorFooterBackAction } from "@/lib/calculator-modal-types";
 import { useCeilingCalculatorEngine } from "@/lib/calculator-v2/use-ceiling-calculator-engine";
 import type { Step0Screen, ParamId } from "@/lib/step0-fsm";
-import { getParamConfirmLabel, getEnabledParams as getEnabledParamsFsm } from "@/lib/step0-fsm";
+import { getEnabledParams as getEnabledParamsFsm } from "@/lib/step0-fsm";
+import { calcProgress } from "@/lib/calculator/fsm";
+import { selectBackVisible, selectFooterAction } from "@/lib/calculator/selectors";
 
 import { ScenarioScreen } from "./screens/ScenarioScreen";
 import { CalcModeScreen } from "./screens/CalcModeScreen";
@@ -276,47 +278,66 @@ export function PriceCalculatorQuizV2({
     });
   }, [isSummary, engine.totalRub, engine.roomsCount, engine.solutionScenario, engine.minimumApplied]);
 
-  // progress
+  // T-030: прогресс — чистый селектор с фиксированным знаменателем.
+  const progress = useMemo(
+    () => calcProgress(screen, { scenario: engine.solutionScenario, enabledParams }),
+    [screen, engine.solutionScenario, enabledParams]
+  );
+
   useEffect(() => {
-    const roomKey = screen.t === "param" ? screen.roomId : engine.activeRoomId ?? "object";
-    const confirmed = confirmedMap[roomKey] ?? {};
-    const done = enabledParams.filter(p => confirmed[p]).length + (screen.t === "summary" ? enabledParams.length : 0) + (["calcMode","roomPicker","roomEdit"].includes(screen.t) ? 2 : screen.t==="param" ? 2 : screen.t==="scenario" ? 0 : 1);
-    const total = enabledParams.length + 3; // scenario + calcMode + summary
-    onStep0ProgressChange?.({ done: Math.min(done, total), total });
+    onStep0ProgressChange?.(progress);
     onIsStep0SummaryReadyChange?.(isSummary);
-  }, [screen, enabledParams, confirmedMap, engine.activeRoomId, isSummary, onStep0ProgressChange, onIsStep0SummaryReadyChange]);
+  }, [progress, isSummary, onStep0ProgressChange, onIsStep0SummaryReadyChange]);
 
-  // footer
+  /**
+   * T-030: подпись кнопки и видимость «назад» считают селекторы, а эффект лишь
+   * публикует готовый результат в контекст модалки — никакой логики в эффекте.
+   */
+  const footerSpec = useMemo(
+    () => selectFooterAction(screen, { scope: engine.calculationScope }),
+    [screen, engine.calculationScope]
+  );
+  const backVisible = useMemo(
+    () =>
+      selectBackVisible(screen, {
+        historyLength: history.length,
+        scenarioPreselected: initialSolutionScenario !== "standard",
+      }),
+    [screen, history.length, initialSolutionScenario]
+  );
+
   useEffect(() => {
-    if (isSummary) {
-      onStep0FooterActionChange?.(null);
-      onStep0BackActionChange?.({ visible: true, onClick: goBack });
-      return;
-    }
-    let label = "Подтвердить →";
-    let disabled = false;
-    if (screen.t === "scenario") { label = "Выберите вариант выше"; disabled = false; }
-    else if (screen.t === "calcMode") { label = engine.calculationScope ? "Продолжить →" : "Выберите режим выше"; disabled = !engine.calculationScope; }
-    else if (screen.t === "roomPicker") { label = "Выберите помещение выше"; disabled = true; }
-    else if (screen.t === "param") { label = getParamConfirmLabel(screen.param); disabled = false; }
-    else if (screen.t === "roomEdit") { label = "Готово →"; disabled = false; }
+    const action: CalculatorFooterAction | null = footerSpec
+      ? {
+          label: footerSpec.label,
+          disabled: footerSpec.disabled,
+          onClick: () => {
+            if (screen.t === "roomEdit") {
+              pushScreen({ t: "summary" });
+              return;
+            }
+            goNext();
+          },
+        }
+      : null;
 
-    const action: CalculatorFooterAction = {
-      label, disabled,
-      onClick: () => {
-        if (screen.t === "roomEdit") { pushScreen({ t: "summary" }); return; }
-        goNext();
-      }
-    };
     onStep0FooterActionChange?.(action);
-    // hide back on scenario screen, and on the initial auto-skipped calcMode (has "изменить" badge instead)
-    const showBack = screen.t !== "scenario" && !(screen.t === "calcMode" && history.length <= 1 && initialSolutionScenario !== "standard");
-    onStep0BackActionChange?.({ visible: showBack, onClick: goBack });
+    onStep0BackActionChange?.({ visible: backVisible, onClick: goBack });
+
     return () => {
       onStep0FooterActionChange?.(null);
       onStep0BackActionChange?.({ visible: false });
     };
-  }, [screen, engine.calculationScope, goNext, goBack, isSummary, onStep0FooterActionChange, onStep0BackActionChange, pushScreen]);
+  }, [
+    footerSpec,
+    backVisible,
+    screen,
+    goNext,
+    goBack,
+    pushScreen,
+    onStep0FooterActionChange,
+    onStep0BackActionChange,
+  ]);
 
   if (draft && !draftDecided) {
     return (

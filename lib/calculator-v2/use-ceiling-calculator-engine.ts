@@ -4,14 +4,19 @@
 
 "use client";
 
-import { useCallback, useMemo, useState, useRef, useEffect } from "react";
+import { useCallback, useMemo, useReducer, useState, useEffect } from "react";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 import type { SolutionScenario } from "@/lib/calculator-modal-types";
-import type { ParamId } from "@/lib/step0-fsm";
 import { buildRoomBreakdown, calcRoomsTotal, calcRoomSnapshotV2, type V2RoomConfig } from "./room-snapshot";
 import { applyMinimumOrder, pricing } from "@/content/pricing";
 import { PREFILL_HINT, presetToRoom } from "@/lib/calculator/presets";
 import type { ServiceCalculatorPreset } from "@/content/services";
+import {
+  calculatorReducer,
+  createInitialState,
+  selectActiveRoom,
+  type CalculationScope as ReducerScope,
+} from "@/lib/calculator/reducer";
 
 // Типы — копируем из price-calculator-client.tsx (упрощённо для V2 старта)
 export type CeilingType = "standard" | "shadow" | "floating" | "shadow-floating";
@@ -114,60 +119,49 @@ function newRoom(id: string, label: string): RoomConfig {
 export function useCeilingCalculatorEngine(initialScenario: SolutionScenario = "standard") {
   const { snapshot, setSnapshot } = usePriceCalculatorBridge();
 
-  // --- V2 state (пока минимальный, будет расширяться переносом из PriceCalculatorClient) ---
-  const [solutionScenario, setSolutionScenario] = useState<SolutionScenario>(initialScenario);
-  const [calculationScope, setCalculationScope] = useState<CalculationScope | null>(null);
-  const [rooms, setRooms] = useState<RoomConfig[]>([]);
-  const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
-  const roomSeq = useRef(1);
+  /**
+   * T-030: состояние Шага 0 живёт в редьюсере (`lib/calculator/reducer.ts`).
+   * Движок остаётся тонким хуком: он собирает объекты комнат и диспатчит
+   * действия, а вся логика переходов — чистая и покрыта тестами.
+   */
+  const [state, dispatch] = useReducer(calculatorReducer, initialScenario, (scenario) =>
+    createInitialState(scenario)
+  );
 
-  // T-021: параметры, предзаполненные пресетом страницы/кейса
-  const [prefilled, setPrefilled] = useState<Record<string, boolean>>({});
-  const [presetNote, setPresetNote] = useState<string | null>(null);
+  const solutionScenario = state.scenario;
+  const calculationScope = state.scope;
+  const rooms = state.rooms;
+  const activeRoomId = state.activeRoomId;
+  const prefilled = state.prefilled;
+  const presetNote = state.presetNote;
+  const touched = state.touched;
 
   // T-024: набор из lighting-first ждёт комнату, к которой его применить
   const [pendingLightingPrefill, setPendingLightingPrefill] =
     useState<LightingPrefill | null>(null);
 
-  // touched flags to protect prefill
-  const [touched, setTouched] = useState({
-    trackType: false,
-    trackLength: false,
-    lights: false,
-    chandeliers: false,
-  });
-
   const markTouched = useCallback((key: keyof typeof touched) => {
-    setTouched(prev => prev[key] ? prev : { ...prev, [key]: true });
+    dispatch({ type: "touched/mark", key });
   }, []);
 
   // derived
-  const activeRoom = useMemo(
-    () => rooms.find(r => r.id === activeRoomId) ?? null,
-    [rooms, activeRoomId]
-  );
+  const activeRoom = useMemo(() => selectActiveRoom(state), [state]);
 
   // actions
-  const chooseScenario = useCallback((s: SolutionScenario) => {
-    setSolutionScenario(s);
+  const chooseScenario = useCallback((scenario: SolutionScenario) => {
+    dispatch({ type: "scenario/choose", scenario });
   }, []);
 
   const chooseCalcMode = useCallback((mode: CalculationScope) => {
-    setCalculationScope(mode);
-    if (mode === "object") {
-      // object-scope = одна виртуальная комната
-      const objId = "object-1";
-      const patch = pendingLightingPrefill
-        ? buildLightingPatch(pendingLightingPrefill, touched)
-        : {};
-      setRooms(prev =>
-        prev.length ? prev : [{ ...newRoom(objId, "Весь объект"), area: 30, ...patch }]
-      );
-      setActiveRoomId(objId);
-    } else {
-      // room mode – очищаем, ждем выбора комнаты
-      // не трогаем если уже есть комнаты
-    }
+    const patch = pendingLightingPrefill
+      ? buildLightingPatch(pendingLightingPrefill, touched)
+      : {};
+    dispatch({
+      type: "scope/choose",
+      scope: mode as ReducerScope,
+      // Для «всего объекта» редьюсер создаст единственную комнату сам.
+      room: mode === "object" ? { ...newRoom("object-1", "Весь объект"), area: 30, ...patch } : undefined,
+    });
   }, [pendingLightingPrefill, touched]);
 
   /**
@@ -180,21 +174,17 @@ export function useCeilingCalculatorEngine(initialScenario: SolutionScenario = "
       const resolved = presetToRoom(preset);
       if (resolved.disabled) return;
 
-      const id = `room-${roomSeq.current++}`;
+      const id = "room-1";
       const base = newRoom(id, resolved.roomLabel);
 
-      setSolutionScenario(resolved.scenario);
-      setCalculationScope(resolved.scope);
-      setRooms([{ ...base, ...resolved.room }]);
-      setActiveRoomId(id);
-      setPrefilled(
-        resolved.prefilled.reduce<Record<string, boolean>>((acc, param) => {
-          acc[param] = true;
-          return acc;
-        }, {})
-      );
-      setPresetNote(note ?? resolved.introNote ?? (preset ? PREFILL_HINT : null));
-      setTouched({ trackType: false, trackLength: false, lights: false, chandeliers: false });
+      dispatch({
+        type: "preset/apply",
+        rooms: [{ ...base, ...resolved.room }],
+        scenario: resolved.scenario,
+        scope: resolved.scope,
+        prefilled: resolved.prefilled,
+        note: note ?? resolved.introNote ?? (preset ? PREFILL_HINT : null),
+      });
     },
     []
   );
@@ -203,50 +193,38 @@ export function useCeilingCalculatorEngine(initialScenario: SolutionScenario = "
   const restoreFromDraft = useCallback(
     (draft: { scenario: SolutionScenario; scope: "room" | "object"; rooms: RoomConfig[] }) => {
       if (!draft.rooms.length) return;
-      setSolutionScenario(draft.scenario);
-      setCalculationScope(draft.scope);
-      setRooms(draft.rooms);
-      setActiveRoomId(draft.rooms[0]?.id ?? null);
-      roomSeq.current = draft.rooms.length + 1;
-      setPrefilled({});
-      setPresetNote(null);
+      dispatch({
+        type: "rooms/replace",
+        rooms: draft.rooms,
+        scenario: draft.scenario,
+        scope: draft.scope,
+      });
     },
     []
   );
 
   const addRoom = useCallback((label: string) => {
-    const id = `room-${roomSeq.current++}`;
+    const id = `room-${state.roomSeq}`;
     const base = newRoom(id, label);
     // T-024: набор из lighting-first применяем к только что созданной комнате
     const room = pendingLightingPrefill
       ? { ...base, ...buildLightingPatch(pendingLightingPrefill, touched) }
       : base;
-    setRooms(prev => [...prev, room]);
-    setActiveRoomId(id);
+    dispatch({ type: "room/add", room });
     return id;
-  }, [pendingLightingPrefill, touched]);
+  }, [pendingLightingPrefill, touched, state.roomSeq]);
 
+  // touched-флаги проставляет сам редьюсер по составу патча.
   const updateRoom = useCallback((roomId: string, patch: Partial<RoomConfig>) => {
-    // auto-mark touched
-    setTouched(prev => {
-      let changed = false;
-      const next = { ...prev };
-      if (patch.trackType !== undefined && !prev.trackType) { next.trackType = true; changed = true; }
-      if (patch.trackLength !== undefined && !prev.trackLength) { next.trackLength = true; changed = true; }
-      if ((patch.lightsEnabled !== undefined || patch.lightsCount !== undefined) && !prev.lights) { next.lights = true; changed = true; }
-      if ((patch.chandeliersEnabled !== undefined || patch.chandeliersCount !== undefined) && !prev.chandeliers) { next.chandeliers = true; changed = true; }
-      return changed ? next : prev;
-    });
-    setRooms(prev => prev.map(r => r.id === roomId ? { ...r, ...patch } : r));
+    dispatch({ type: "room/update", roomId, patch });
   }, []);
 
   const removeRoom = useCallback((roomId: string) => {
-    setRooms(prev => prev.filter(r => r.id !== roomId));
-    setActiveRoomId(prev => prev === roomId ? null : prev);
+    dispatch({ type: "room/remove", roomId });
   }, []);
 
   const switchRoom = useCallback((roomId: string) => {
-    setActiveRoomId(roomId);
+    dispatch({ type: "room/switch", roomId });
   }, []);
 
   // T-024: prefill из lighting-first. Если комнаты ещё нет — запоминаем набор
@@ -261,14 +239,14 @@ export function useCeilingCalculatorEngine(initialScenario: SolutionScenario = "
       setPendingLightingPrefill(prefill);
       const patch = buildLightingPatch(prefill, touched);
       if (!Object.keys(patch).length) return;
-      setRooms(prev => prev.map(r => (r.id === rid ? { ...r, ...patch } : r)));
+      dispatch({ type: "room/update", roomId: rid, patch });
     },
     [activeRoomId, rooms, touched]
   );
 
   // reset touched on room change / new session
   const resetTouched = useCallback(() => {
-    setTouched({ trackType: false, trackLength: false, lights: false, chandeliers: false });
+    dispatch({ type: "touched/reset" });
   }, []);
   const totalArea = useMemo(() => rooms.reduce((s, r) => s + r.area, 0), [rooms]);
   // T-004: единый источник итоговой суммы Шага 0 (с минимальным заказом)

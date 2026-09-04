@@ -8,6 +8,7 @@ import { type LampSocket } from "@/lib/catalog-ui-config";
 import { useCatalogProducts } from "@/lib/lighting/use-catalog-products";
 import { calcTrackProfileMeters } from "@/lib/product-length-meters";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
+import { selectRequirementsFromBreakdown } from "@/lib/calculator/selectors";
 import { useCalculatorModal } from "./calculator-modal-context";
 
 function toText(value: unknown): string {
@@ -153,9 +154,16 @@ export function LightingFooterProgress() {
     return result;
   }, [cartEntries]);
 
-  const requiredTrackMeters = showCeilingInUi ? toNumber(snapshot?.derivedInputs?.trackLengthMeters) : 0;
-  const requiredTrackFixtureQty = requiredTrackMeters > 0 ? toNumber(snapshot?.derivedInputs?.recommendedTrackSpotsQty) : 0;
-  const requiredPointQty = showCeilingInUi ? toNumber(snapshot?.derivedInputs?.pointSpotsQty) : 0;
+  // T-030: требования — из общего селектора, а не из россыпи derivedInputs.
+  const requirements = useMemo(
+    () => selectRequirementsFromBreakdown(snapshot?.roomBreakdown),
+    [snapshot?.roomBreakdown]
+  );
+
+  const requiredTrackMeters = showCeilingInUi ? requirements.trackMeters : 0;
+  // Трековые светильники — ориентир-диапазон; в прогрессе показываем нижнюю границу.
+  const requiredTrackFixtureQty = requiredTrackMeters > 0 ? requirements.trackFixtures.min : 0;
+  const requiredPointQty = showCeilingInUi ? requirements.points : 0;
   const requiredLampQty = (Object.keys(lampRequiredBySocket) as LampSocket[]).reduce(
     (sum, socket) => sum + lampRequiredBySocket[socket],
     0

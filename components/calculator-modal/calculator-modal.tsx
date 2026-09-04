@@ -47,13 +47,7 @@ function ProgressBar({
   goToStep,
 }: ProgressBarProps) {
   return (
-    <div
-      className="flex items-center gap-3 max-sm:gap-2"
-      role="progressbar"
-      aria-valuenow={currentStep + 1}
-      aria-valuemin={1}
-      aria-valuemax={3}
-    >
+    <nav className="flex items-center gap-3 max-sm:gap-2" aria-label="Шаги калькулятора">
       {[0, 1, 2].map((i) => {
         const isCurrent = i === currentStep;
         const isPast = i < currentStep;
@@ -70,6 +64,7 @@ function ProgressBar({
             onClick={() => canVisit && goToStep(i as WizardStep)}
             disabled={!canVisit && !isCurrent}
             aria-label={`Шаг ${i + 1}: ${isSkipped ? `${stepLabels[i]} пропущен` : stepLabels[i]}`}
+            aria-current={isCurrent ? "step" : undefined}
             className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-all max-sm:px-2.5 max-sm:py-1 max-sm:text-[11px] ${
               isCurrent
                 ? "bg-slate-950 text-white"
@@ -95,7 +90,7 @@ function ProgressBar({
           </button>
         );
       })}
-    </div>
+    </nav>
   );
 }
 
@@ -408,41 +403,33 @@ export function CalculatorModal() {
               <h2 id="calc-modal-title" className="text-lg font-semibold text-slate-950 max-sm:text-base">
                 {stepTitle}
               </h2>
-              {/* Квиз-флоу: под title показываем прогресс «X из Y шагов» для Step 0 (только desktop).
-                  На mobile показываем компактный dots-индикатор. Для Step 1/2 — только ProgressBar. */}
+              {/* T-030: один индикатор внутри Шага 0 — тонкая полоска «вопрос N из M»
+                  с фиксированным M. Дублирующие точки на мобильном удалены. */}
               {currentStep === 0 && step0Progress ? (
-                <>
-                  <div className="mt-2 hidden text-xs text-slate-600 sm:flex sm:items-center sm:gap-2">
-                    <span className="font-semibold text-slate-950">
-                      Шаг {step0Progress.done} из {step0Progress.total}
-                    </span>
-                    <div className="relative h-1.5 w-32 overflow-hidden rounded-full bg-slate-200">
-                      <div
-                        className="h-full rounded-full bg-slate-950 transition-all duration-300 ease-out"
-                        style={{
-                          width: `${
-                            step0Progress.total > 0
-                              ? Math.round((step0Progress.done / step0Progress.total) * 100)
-                              : 0
-                          }%`,
-                        }}
-                        aria-hidden="true"
-                      />
-                    </div>
+                <div className="mt-2 flex items-center gap-2 text-xs text-slate-600">
+                  <span className="font-semibold text-slate-950">
+                    Шаг {step0Progress.done} из {step0Progress.total}
+                  </span>
+                  <div
+                    className="relative h-1.5 w-32 overflow-hidden rounded-full bg-slate-200 max-sm:w-20"
+                    role="progressbar"
+                    aria-valuenow={step0Progress.done}
+                    aria-valuemin={0}
+                    aria-valuemax={step0Progress.total}
+                  >
+                    <div
+                      className="h-full rounded-full bg-slate-950 transition-all duration-300 ease-out"
+                      style={{
+                        width: `${
+                          step0Progress.total > 0
+                            ? Math.round((step0Progress.done / step0Progress.total) * 100)
+                            : 0
+                        }%`,
+                      }}
+                      aria-hidden="true"
+                    />
                   </div>
-                  {/* Dots-индикатор на mobile */}
-                  <div className="mt-2 flex items-center gap-1.5 sm:hidden" aria-label={`Прогресс: ${step0Progress.done} из ${step0Progress.total}`}>
-                    {Array.from({ length: step0Progress.total }).map((_, i) => (
-                      <span
-                        key={i}
-                        className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${
-                          i < step0Progress.done ? "bg-slate-950" : "bg-slate-300"
-                        }`}
-                        aria-hidden="true"
-                      />
-                    ))}
-                  </div>
-                </>
+                </div>
               ) : null}
               {/* P0.6: progress bar instead of text */}
               <div className="mt-2 max-sm:mt-1.5">
