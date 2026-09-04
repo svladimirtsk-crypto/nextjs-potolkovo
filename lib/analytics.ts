@@ -4,22 +4,45 @@ type YmParams = Record<string, string | number | boolean>;
 
 declare global {
   interface Window {
-    ym?: (counterId: number, action: string, goalName?: string, params?: YmParams) => void;
+    ym?: (
+      counterId: number,
+      action: string,
+      goalNameOrParams?: string | YmParams,
+      params?: YmParams
+    ) => void;
   }
 }
 
 const YM_COUNTER = 107200362;
 
-function ymReachGoal(goal: string, params?: YmParams) {
+/**
+ * T-025 · Единственная точка отправки целей в Метрику.
+ * Экспортирована, чтобы юнит-тесты могли проверить контракт событий.
+ */
+export function ymReachGoal(goal: string, params?: YmParams) {
   if (typeof window === "undefined") return;
   if (typeof window.ym !== "function") return;
   window.ym(YM_COUNTER, "reachGoal", goal, params);
 }
 
+/** T-025 · Параметры визита (`calc_total`, `calc_scenario`, `lead_total`). */
+export function ymVisitParams(params: YmParams) {
+  if (typeof window === "undefined") return;
+  if (typeof window.ym !== "function") return;
+  window.ym(YM_COUNTER, "params", params);
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
-export function trackCalculatorOpen(source: string) {
-  ymReachGoal("calculator_open", { source });
+export function trackCalculatorOpen(
+  source: string,
+  extra?: { entryMode?: string | null; hasDraft?: boolean }
+) {
+  ymReachGoal("calculator_open", {
+    source,
+    ...(extra?.entryMode ? { entry_mode: extra.entryMode } : {}),
+    ...(typeof extra?.hasDraft === "boolean" ? { has_draft: extra.hasDraft ? 1 : 0 } : {}),
+  });
 }
 
 export function trackWizardStepView(step: 0 | 1 | 2, source?: string) {
@@ -187,4 +210,173 @@ export function trackFormSubmitError(params: {
     form: params.formPlacement,
     ...(params.source ? { source: params.source } : {}),
   });
+}
+
+// ── T-025 · Приложение В: экраны квиза, Шаг 1, закрытие, лид ──────────────────
+
+export type QuizScenario = "standard" | "modern" | "advanced";
+
+export function trackQuizScreenView(params: {
+  screen: string;
+  param?: string | null;
+  index?: number;
+  total?: number;
+  scenario: QuizScenario;
+}) {
+  ymReachGoal("quiz_screen_view", {
+    screen: params.screen,
+    ...(params.param ? { param: params.param } : {}),
+    ...(typeof params.index === "number" ? { index: params.index } : {}),
+    ...(typeof params.total === "number" ? { total: params.total } : {}),
+    scenario: params.scenario,
+  });
+}
+
+export function trackQuizParamConfirm(params: {
+  param: string;
+  value: string | number | boolean;
+  roomIndex: number;
+}) {
+  ymReachGoal("quiz_param_confirm", {
+    param: params.param,
+    value: params.value,
+    room_index: params.roomIndex,
+  });
+}
+
+export function trackQuizBack(params: { from: string }) {
+  ymReachGoal("quiz_back", { from: params.from });
+}
+
+export function trackQuizSummary(params: {
+  total: number;
+  rooms: number;
+  scenario: QuizScenario;
+  minimumApplied: boolean;
+}) {
+  ymReachGoal("quiz_summary", {
+    total: params.total,
+    rooms: params.rooms,
+    scenario: params.scenario,
+    minimum_applied: params.minimumApplied ? 1 : 0,
+  });
+  // параметр визита обновляем при каждой сводке
+  ymVisitParams({ calc_total: params.total, calc_scenario: params.scenario });
+}
+
+export function trackLightingStepView(params: {
+  wstep: string;
+  requiredTrackM: number;
+  requiredPoints: number;
+}) {
+  ymReachGoal("lighting_step_view", {
+    wstep: params.wstep,
+    required_track_m: params.requiredTrackM,
+    required_points: params.requiredPoints,
+  });
+}
+
+export function trackLightingSystemSelected(params: { system: string }) {
+  ymReachGoal("lighting_system_selected", { system: params.system });
+}
+
+export function trackLightingSkip(params: { from: string }) {
+  ymReachGoal("lighting_skip", { from: params.from });
+}
+
+export function trackLightingKitComplete(params: {
+  items: number;
+  total: number;
+  autoItems: number;
+  system: string;
+}) {
+  ymReachGoal("lighting_kit_complete", {
+    items: params.items,
+    total: params.total,
+    auto_items: params.autoItems,
+    system: params.system,
+  });
+}
+
+export function trackLightingConflict(params: {
+  from: string;
+  to: string;
+  removedTotal: number;
+  confirmed: boolean;
+}) {
+  ymReachGoal("lighting_conflict", {
+    from: params.from,
+    to: params.to,
+    removed_total: params.removedTotal,
+    confirmed: params.confirmed ? 1 : 0,
+  });
+}
+
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+
+/** Поиск по каталогу — с дебаунсом 800 мс, чтобы не слать цель на каждую букву. */
+export function trackLightingSearch(params: { q: string; section: string; results: number }) {
+  if (typeof window === "undefined") return;
+  if (searchTimeout) clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    ymReachGoal("lighting_search", {
+      q: params.q.slice(0, 64),
+      section: params.section,
+      results: params.results,
+    });
+  }, 800);
+}
+
+export function trackCalculatorClose(params: {
+  step: number;
+  screen: string;
+  hasData: boolean;
+  leadSent: boolean;
+}) {
+  ymReachGoal("calculator_close", {
+    step: params.step,
+    screen: params.screen,
+    has_data: params.hasData ? 1 : 0,
+    lead_sent: params.leadSent ? 1 : 0,
+  });
+}
+
+export function trackLeadRescueShown(params: { total: number }) {
+  ymReachGoal("lead_rescue_shown", { total: params.total });
+}
+
+export function trackLeadRescueAccepted(params: { total: number }) {
+  ymReachGoal("lead_rescue_accepted", { total: params.total });
+}
+
+export function trackLeadSubmit(params: {
+  placement: string;
+  leadKind: string;
+  orderIntent: string;
+  grandTotal: number;
+  rooms: number;
+  lightingItems: number;
+  source: string;
+  pagePath: string;
+  leadId?: string | number | null;
+}) {
+  ymReachGoal("lead_submit", {
+    placement: params.placement,
+    lead_kind: params.leadKind,
+    order_intent: params.orderIntent,
+    grand_total: params.grandTotal,
+    rooms: params.rooms,
+    lighting_items: params.lightingItems,
+    source: params.source,
+    page_path: params.pagePath,
+    ...(params.leadId ? { lead_id: String(params.leadId) } : {}),
+  });
+  ymVisitParams({ lead_total: params.grandTotal });
+}
+
+export function trackLeadError(params: {
+  kind: "validation" | "network" | "server" | "ratelimit";
+  placement: string;
+}) {
+  ymReachGoal("lead_error", { kind: params.kind, placement: params.placement });
 }
