@@ -137,3 +137,88 @@ export function resolveInitialLightingView({
 }: Pick<ResolveInitialModalOptionsInput, "entryMode" | "initialLightingView">): CatalogViewMode | undefined {
   return initialLightingView ?? (entryMode === "lighting-first" ? "browse" : undefined);
 }
+
+/* ------------------------------------------------------------------ *
+ * T-028 · Копирайт Шага 2 по интенту заказа (таблица 6.3 ТЗ).
+ * Единственный источник заголовков/кнопок/чипов формы — и модалка,
+ * и страничные формы читают его отсюда, чтобы тексты не расходились.
+ * ------------------------------------------------------------------ */
+
+export type Step2Intent =
+  | "ceiling_only"
+  | "lighting_with_ceiling"
+  | "lighting_only"
+  | "advanced"
+  | "direct";
+
+export type Step2Copy = {
+  /** Заголовок над формой. Для `direct` — пусто: заголовок берётся из секции страницы. */
+  formTitle: string;
+  /** Подпись под заголовком. */
+  formSubtitle: string;
+  /** Надпись на кнопке отправки. */
+  submitLabel: string;
+  /** Чипы-гарантии над формой. */
+  chips: readonly string[];
+  /**
+   * Блок «Что дальше». `{callbackWindow}` подставляется на месте вывода —
+   * окно перезвона приходит с сервера в ответе /api/lead.
+   */
+  nextSteps: readonly string[];
+  /** Для комплектов света спрашиваем способ получения и удобное время. */
+  showFulfilment: boolean;
+};
+
+const CEILING_STEP2_COPY: Step2Copy = {
+  formTitle: "Записаться на бесплатный замер",
+  formSubtitle: "Оставьте имя и телефон — перезвоню, уточню детали и предложу решение.",
+  submitLabel: "Записаться на замер",
+  chips: ["Договор", "Гарантия 2 года", "Монтаж за 1 день", "Уборка после"],
+  nextSteps: [
+    "Перезвоню {callbackWindow}",
+    "Бесплатный замер, фиксирую смету",
+    "Договор, монтаж за 1 день",
+  ],
+  showFulfilment: false,
+};
+
+const STEP2_COPY: Record<Step2Intent, Step2Copy> = {
+  ceiling_only: CEILING_STEP2_COPY,
+  lighting_with_ceiling: CEILING_STEP2_COPY,
+  lighting_only: {
+    formTitle: "Получить счёт на комплект",
+    formSubtitle: "Проверю наличие и совместимость позиций, пришлю счёт.",
+    submitLabel: "Получить счёт",
+    chips: ["Проверю совместимость", "Наличие и цена перед счётом", "Гарантия производителя"],
+    nextSteps: [
+      "Перезвоню {callbackWindow}",
+      "Проверю наличие и пришлю счёт",
+      "Самовывоз или доставка",
+    ],
+    showFulfilment: true,
+  },
+  advanced: {
+    formTitle: "Обсудить проект",
+    formSubtitle: "Разберём сценарии света и составим смету до монтажа.",
+    submitLabel: "Обсудить проект",
+    chips: ["Схема света", "Смета до монтажа", "Личное ведение"],
+    nextSteps: ["Перезвоню {callbackWindow}", "Обсудим сценарии света", "Замер и смета"],
+    showFulfilment: false,
+  },
+  direct: {
+    ...CEILING_STEP2_COPY,
+    // Заголовок и подзаголовок задаёт секция страницы — форма их не дублирует.
+    formTitle: "",
+    formSubtitle: "",
+  },
+};
+
+export function resolveStep2Copy(intent: Step2Intent): Step2Copy {
+  return STEP2_COPY[intent] ?? CEILING_STEP2_COPY;
+}
+
+/** Подставляет окно перезвона в шаги «Что дальше». */
+export function fillCallbackWindow(steps: readonly string[], callbackWindow: string): string[] {
+  const fallback = callbackWindow.trim() || "в ближайшее время";
+  return steps.map((step) => step.replace("{callbackWindow}", fallback));
+}

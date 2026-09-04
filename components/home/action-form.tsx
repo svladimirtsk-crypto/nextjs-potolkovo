@@ -4,6 +4,7 @@ import { useMemo, useRef, useState, type FormEvent } from "react";
 
 import { contacts } from "@/content/contacts";
 import { buildLeadSnapshotV2 } from "@/lib/calculator/types";
+import { fillCallbackWindow, resolveStep2Copy, type Step2Intent } from "@/lib/calculator-flow";
 import { legal } from "@/content/legal";
 import { getKitDisplayName } from "@/lib/calculator-modal-types";
 import {
@@ -133,16 +134,19 @@ type ActionFormProps = {
   source: string;
   placement: ActionFormPlacement;
   leadKind?: LeadKind;
+  /** T-028: интент заказа задаёт копирайт формы (таблица 6.3 ТЗ). */
+  intent?: Step2Intent;
   /** В модальном итоге подробный состав уже показан выше — в форме оставляем только компактное подтверждение. */
   compactCalculationSummary?: boolean;
-  /** P0.8: callback after successful submit */
-  onSuccess?: () => void;
+  /** P0.8: callback after successful submit. T-028: отдаёт номер заявки и окно перезвона. */
+  onSuccess?: (result: { leadId: string | null; callbackWindow: string }) => void;
 };
 
 export function ActionForm({
   source,
   placement,
   leadKind,
+  intent,
   compactCalculationSummary = false,
   onSuccess,
 }: ActionFormProps) {
@@ -181,6 +185,24 @@ export function ActionForm({
     leadId: string | null;
     callbackWindow: string;
   } | null>(null);
+
+  // T-028: интент либо приходит сверху, либо выводится из состава расчёта.
+  const resolvedIntent: Step2Intent =
+    intent ??
+    (placement === "modal"
+      ? snapshot?.lightingDiscountMode === "lighting-only"
+        ? "lighting_only"
+        : snapshot?.lightingDiscountMode === "with-ceiling"
+          ? "lighting_with_ceiling"
+          : "ceiling_only"
+      : "direct");
+  const copy = resolveStep2Copy(resolvedIntent);
+
+  /** Только для комплектов света: как получить и когда удобно. */
+  const [fulfilment, setFulfilment] = useState<"pickup" | "delivery">("pickup");
+  const [preferredTime, setPreferredTime] = useState<"today" | "tomorrow_morning" | "telegram">(
+    "today"
+  );
 
   const ceilingLines = useMemo(
     () => (hasInteracted ? getCalculatorSummaryLines(snapshot) : []),
@@ -292,6 +314,7 @@ export function ActionForm({
       name: trimmedName,
       phone: normalizedPhone,
       address: trimmedAddress || undefined,
+      preferredTime: copy.showFulfilment ? preferredTime : undefined,
       consent: true as const,
       botcheck: "" as const,
       source: effectiveSource,
@@ -300,7 +323,7 @@ export function ActionForm({
       serviceSlug: placement === "service-page" ? effectiveSource : undefined,
       leadKind: effectiveLeadKind,
       orderIntent,
-      attribution,
+      attribution: copy.showFulfilment ? { ...attribution, fulfilment } : attribution,
       snapshot: leadSnapshot,
       totals: leadSnapshot?.totals,
     };
@@ -349,7 +372,10 @@ export function ActionForm({
       });
 
       // P0.8: callback для WizardStep2Summary
-      onSuccess?.();
+      onSuccess?.({
+        leadId: result?.leadId ?? null,
+        callbackWindow: String(result?.callbackWindow ?? ""),
+      });
 
       setLeadResult({
         leadId: result?.leadId ?? null,
@@ -393,10 +419,84 @@ export function ActionForm({
       }}
       className="space-y-4"
     >
+      {/* T-028: экран успеха — номер заявки, окно перезвона, телефон и Telegram. */}
       {status === "success" ? (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
-          <p className="font-semibold">{COPY.successTitle}</p>
+        <div
+          className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"
+          aria-live="polite"
+        >
+          <p className="font-semibold">
+            {leadResult?.leadId ? `Заявка №${leadResult.leadId} принята` : COPY.successTitle}
+          </p>
           <p className="mt-2 whitespace-pre-line">{message}</p>
+          <p className="mt-3 flex flex-wrap items-center gap-2">
+            <a href={contacts.phoneHref} className="font-semibold underline underline-offset-2">
+              {contacts.phoneDisplay}
+            </a>
+            <span aria-hidden="true">·</span>
+            <a
+              href={contacts.telegramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-blue-700 underline underline-offset-2"
+            >
+              Написать в Telegram
+            </a>
+          </p>
+        </div>
+      ) : null}
+
+      {/* T-028: для комплектов света уточняем способ получения и удобное время. */}
+      {copy.showFulfilment ? (
+        <div className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2">
+          <fieldset>
+            <legend className="text-sm font-semibold text-slate-950">Получение</legend>
+            <div className="mt-2 space-y-2">
+              {(
+                [
+                  ["pickup", "Самовывоз"],
+                  ["delivery", "Доставка"],
+                ] as const
+              ).map(([value, label]) => (
+                <label key={value} className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="radio"
+                    name="fulfilment"
+                    value={value}
+                    checked={fulfilment === value}
+                    onChange={() => setFulfilment(value)}
+                    className="h-4 w-4"
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend className="text-sm font-semibold text-slate-950">Когда удобно</legend>
+            <div className="mt-2 space-y-2">
+              {(
+                [
+                  ["today", "Сегодня"],
+                  ["tomorrow_morning", "Завтра утром"],
+                  ["telegram", "Лучше напишите в Telegram"],
+                ] as const
+              ).map(([value, label]) => (
+                <label key={value} className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="radio"
+                    name="preferredTime"
+                    value={value}
+                    checked={preferredTime === value}
+                    onChange={() => setPreferredTime(value)}
+                    className="h-4 w-4"
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
         </div>
       ) : null}
 
@@ -409,7 +509,7 @@ export function ActionForm({
       {(ceilingLines.length > 0 || lightingLines.length > 0) ? (
         compactCalculationSummary ? (
           <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-950">
-            Расчёт будет приложен к заявке: {calculationLinesCount} {calculationLinesLabel}
+            К заявке приложу этот расчёт
           </div>
         ) : (
           <details className="rounded-2xl border border-slate-200 bg-slate-50">
@@ -515,7 +615,7 @@ export function ActionForm({
             {COPY.submitButtonLabelPending}
           </span>
         ) : (
-          COPY.submitButtonLabel
+          copy.submitLabel || COPY.submitButtonLabel
         )}
       </Button>
 

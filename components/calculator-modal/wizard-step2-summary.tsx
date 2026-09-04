@@ -11,6 +11,7 @@ import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
 import { calcTrackProfileMeters } from "@/lib/product-length-meters";
 
 import { contacts } from "@/content/contacts";
+import { fillCallbackWindow, resolveStep2Copy, type Step2Intent } from "@/lib/calculator-flow";
 import { trackMessengerClick } from "@/lib/analytics";
 
 import { ActionForm } from "@/components/home/action-form";
@@ -133,14 +134,18 @@ export function WizardStep2Summary() {
     (resolvedShowCeilingInUi ? resolvedCeilingTotal : 0) + resolvedLightingEffectiveTotal;
 
   const lightingAppliedPercent = lightingDiscountPercent(lightingDiscountMode ?? "none");
-  const orderIntent =
+  const orderIntent: Step2Intent =
     lightingDiscountMode === "with-ceiling"
       ? "lighting_with_ceiling"
       : lightingDiscountMode === "lighting-only"
         ? "lighting_only"
-        : resolvedLightingEffectiveTotal > 0
-          ? "lighting"
-          : "ceiling_only";
+        : "ceiling_only";
+  // T-028: весь копирайт Шага 2 — из одной таблицы (раздел 6.3 ТЗ).
+  const step2Copy = resolveStep2Copy(orderIntent);
+
+  // T-028: номер заявки и окно перезвона приходят из ответа /api/lead.
+  const [leadPublicCode, setLeadPublicCode] = useState<string | null>(null);
+  const [callbackWindow, setCallbackWindow] = useState("в ближайшее время");
   const lightingAppliedBenefit = Math.max(
     0,
     resolvedLightingRegularTotal - resolvedLightingEffectiveTotal
@@ -489,7 +494,7 @@ export function WizardStep2Summary() {
 
       {/* What's included */}
       <div className="flex flex-wrap gap-2">
-        {["Договор", "Гарантия 2 года", "Монтаж за 1 день", "Уборка после"].map((item) => (
+        {step2Copy.chips.map((item) => (
           <span
             key={item}
             className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700"
@@ -503,18 +508,14 @@ export function WizardStep2Summary() {
       <div className="rounded-2xl border border-slate-200 bg-white p-4">
         <p className="text-sm font-semibold text-slate-950">Что происходит дальше</p>
         <div className="mt-3 space-y-2">
-          <div className="flex items-start gap-2.5 text-sm text-slate-600">
-            <span className="mt-0.5 h-5 w-5 shrink-0 rounded-full bg-slate-950 text-xs font-semibold text-white flex items-center justify-center">1</span>
-            <span>Перезвоню, уточню детали и предложу вариант</span>
-          </div>
-          <div className="flex items-start gap-2.5 text-sm text-slate-600">
-            <span className="mt-0.5 h-5 w-5 shrink-0 rounded-full bg-slate-950 text-xs font-semibold text-white flex items-center justify-center">2</span>
-            <span>Бесплатный замер — зафиксирую точную стоимость</span>
-          </div>
-          <div className="flex items-start gap-2.5 text-sm text-slate-600">
-            <span className="mt-0.5 h-5 w-5 shrink-0 rounded-full bg-slate-950 text-xs font-semibold text-white flex items-center justify-center">3</span>
-            <span>Договор, монтаж за 1 день, гарантия 2 года</span>
-          </div>
+          {fillCallbackWindow(step2Copy.nextSteps, callbackWindow).map((step, idx) => (
+            <div key={step} className="flex items-start gap-2.5 text-sm text-slate-600">
+              <span className="mt-0.5 h-5 w-5 shrink-0 rounded-full bg-slate-950 text-xs font-semibold text-white flex items-center justify-center">
+                {idx + 1}
+              </span>
+              <span>{step}</span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -523,8 +524,24 @@ export function WizardStep2Summary() {
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white text-2xl font-bold">
             ✓
           </div>
-          <p className="text-lg font-semibold text-emerald-950">Спасибо!</p>
-          <p className="mt-1 text-sm text-emerald-800">Перезвоню в ближайшее время</p>
+          <p className="text-lg font-semibold text-emerald-950">
+            {leadPublicCode ? `Заявка №${leadPublicCode} принята` : "Спасибо!"}
+          </p>
+          <p className="mt-1 text-sm text-emerald-800">Перезвоню {callbackWindow}.</p>
+          <p className="mt-2 text-sm text-emerald-900">
+            <a href={contacts.phoneHref} className="font-semibold underline underline-offset-2">
+              {contacts.phoneDisplay}
+            </a>{" "}
+            ·{" "}
+            <a
+              href={contacts.telegramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold underline underline-offset-2"
+            >
+              Написать в Telegram
+            </a>
+          </p>
           <button
             type="button"
             onClick={closeCalculator}
@@ -537,16 +554,17 @@ export function WizardStep2Summary() {
         <>
           {/* Form */}
           <div id="modal-action-form" className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-base font-semibold text-slate-950">Записаться на бесплатный замер</p>
-            <p className="mt-2 text-sm text-slate-600">
-              Оставьте имя и телефон — перезвоню, уточню детали и предложу решение.
-            </p>
+            <p className="text-base font-semibold text-slate-950">{step2Copy.formTitle}</p>
+            <p className="mt-2 text-sm text-slate-600">{step2Copy.formSubtitle}</p>
             <div className="mt-4">
               <ActionForm
                 source={String(options?.source ?? "modal")}
                 placement="modal"
+                intent={orderIntent}
                 compactCalculationSummary
-                onSuccess={() => {
+                onSuccess={(result) => {
+                  setLeadPublicCode(result.leadId);
+                  if (result.callbackWindow) setCallbackWindow(result.callbackWindow);
                   markLeadSubmitted();
                   setShowResult(true);
                   clearCalcDraft();

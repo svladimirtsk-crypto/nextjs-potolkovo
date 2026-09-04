@@ -35,10 +35,17 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
 type ProgressBarProps = {
   currentStep: WizardStep;
   hasLightingSelected: boolean;
+  /** T-028: Шаг 0 мог быть пропущен (вход «сначала свет») — тогда показываем «Потолок —». */
+  hasCeilingCompleted: boolean;
   goToStep: (step: WizardStep) => void;
 };
 
-function ProgressBar({ currentStep, hasLightingSelected, goToStep }: ProgressBarProps) {
+function ProgressBar({
+  currentStep,
+  hasLightingSelected,
+  hasCeilingCompleted,
+  goToStep,
+}: ProgressBarProps) {
   return (
     <div
       className="flex items-center gap-3 max-sm:gap-2"
@@ -53,18 +60,20 @@ function ProgressBar({ currentStep, hasLightingSelected, goToStep }: ProgressBar
         const canVisit = i < currentStep;
         const stepLabels = ["Потолок", "Свет", "Итог"];
         const isSkippedLighting = i === 1 && isPast && !hasLightingSelected;
-        const visualDone = isPast && !isSkippedLighting;
+        const isSkippedCeiling = i === 0 && isPast && !hasCeilingCompleted;
+        const isSkipped = isSkippedLighting || isSkippedCeiling;
+        const visualDone = isPast && !isSkipped;
 
         return (
           <button
             key={i}
             onClick={() => canVisit && goToStep(i as WizardStep)}
             disabled={!canVisit && !isCurrent}
-            aria-label={`Шаг ${i + 1}: ${isSkippedLighting ? "Свет пропущен" : stepLabels[i]}`}
+            aria-label={`Шаг ${i + 1}: ${isSkipped ? `${stepLabels[i]} пропущен` : stepLabels[i]}`}
             className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-all max-sm:px-2.5 max-sm:py-1 max-sm:text-[11px] ${
               isCurrent
                 ? "bg-slate-950 text-white"
-                : isSkippedLighting
+                : isSkipped
                   ? "bg-slate-100 text-slate-500 cursor-pointer hover:bg-slate-200"
                   : isPast
                     ? "bg-slate-200 text-slate-700 cursor-pointer hover:bg-slate-300"
@@ -75,14 +84,14 @@ function ProgressBar({ currentStep, hasLightingSelected, goToStep }: ProgressBar
               className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold max-sm:h-4 max-sm:w-4 max-sm:text-[9px] ${
                 visualDone
                   ? "bg-slate-950 text-white"
-                  : isSkippedLighting
+                  : isSkipped
                     ? "bg-slate-200 text-slate-500"
                     : ""
               }`}
             >
-              {visualDone ? "✓" : isSkippedLighting ? "—" : i + 1}
+              {visualDone ? "✓" : isSkipped ? "—" : i + 1}
             </span>
-            <span className="hidden sm:inline">{isSkippedLighting ? "Свет —" : stepLabels[i]}</span>
+            <span className="hidden sm:inline">{isSkipped ? `${stepLabels[i]} —` : stepLabels[i]}</span>
           </button>
         );
       })}
@@ -440,6 +449,7 @@ export function CalculatorModal() {
                 <ProgressBar
                   currentStep={currentStep}
                   hasLightingSelected={hasLightingSelected}
+                  hasCeilingCompleted={Number(snapshot?.total ?? 0) > 0}
                   goToStep={goToStep}
                 />
               </div>
