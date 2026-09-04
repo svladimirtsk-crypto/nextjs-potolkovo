@@ -9,9 +9,21 @@ type ConfirmDialogOptions = {
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: "danger" | "warning" | "info";
+  /**
+   * T-026 · rescue-режим: в диалоге появляется поле телефона.
+   * Результат тогда — введённый номер (или `false`, если клиент просто закрыл).
+   */
+  phoneField?: {
+    label: string;
+    placeholder?: string;
+    hint?: string;
+  };
 };
 
-type ConfirmResolver = (value: boolean) => void;
+/** `true`/`false` для обычного confirm; строка с телефоном — для rescue. */
+export type ConfirmDialogResult = boolean | string;
+
+type ConfirmResolver = (value: ConfirmDialogResult) => void;
 
 let activeResolver: ConfirmResolver | null = null;
 let activeOptions: ConfirmDialogOptions | null = null;
@@ -35,15 +47,15 @@ type DialogState = {
  *     message: "Ваш расчёт не сохранится.",
  *   });
  */
-export function showConfirmDialog(options: ConfirmDialogOptions): Promise<boolean> {
-  return new Promise<boolean>((resolve) => {
+export function showConfirmDialog(options: ConfirmDialogOptions): Promise<ConfirmDialogResult> {
+  return new Promise<ConfirmDialogResult>((resolve) => {
     activeResolver = resolve;
     activeOptions = options;
     setDialogState?.({ open: true, options });
   });
 }
 
-function closeDialog(result: boolean) {
+function closeDialog(result: ConfirmDialogResult) {
   setDialogState?.({ open: false, options: activeOptions ?? { title: "", message: "" } });
   activeResolver?.(result);
   activeResolver = null;
@@ -55,6 +67,7 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
     "a[href]",
     "button:not([disabled])",
     "input:not([disabled])",
+    "textarea:not([disabled])",
     'button:not([tabindex="-1"])',
   ].join(", ");
   return Array.from(container.querySelectorAll<HTMLElement>(selector));
@@ -63,6 +76,8 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
 export function ConfirmDialogPortal() {
   const [state, setState] = useState<DialogState>({ open: false, options: { title: "", message: "" } });
   const [mounted, setMounted] = useState(false);
+  // T-026: телефон для rescue-оффера
+  const [phone, setPhone] = useState("");
   const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -175,21 +190,57 @@ export function ConfirmDialogPortal() {
                 >
                   {state.options.message}
                 </p>
+
+                {state.options.phoneField ? (
+                  <div className="mt-4">
+                    <label
+                      htmlFor="confirm-dialog-phone"
+                      className="text-sm font-medium text-slate-700"
+                    >
+                      {state.options.phoneField.label}
+                    </label>
+                    <input
+                      id="confirm-dialog-phone"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder={state.options.phoneField.placeholder ?? "+7 900 000-00-00"}
+                      className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+                    />
+                    {state.options.phoneField.hint ? (
+                      <p className="mt-2 text-xs text-slate-500">{state.options.phoneField.hint}</p>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             </div>
 
             <div className="mt-6 flex items-center justify-end gap-3">
               <button
                 type="button"
-                onClick={() => closeDialog(false)}
+                onClick={() => {
+                  setPhone("");
+                  closeDialog(false);
+                }}
                 className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
               >
                 {state.options.cancelLabel ?? "Отмена"}
               </button>
               <button
                 type="button"
-                onClick={() => closeDialog(true)}
-                className={`h-10 rounded-xl px-4 text-sm font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 ${colors.confirmBg}`}
+                disabled={Boolean(state.options.phoneField) && phone.trim().length < 6}
+                onClick={() => {
+                  if (state.options.phoneField) {
+                    const value = phone.trim();
+                    setPhone("");
+                    closeDialog(value);
+                    return;
+                  }
+                  closeDialog(true);
+                }}
+                className={`h-10 rounded-xl px-4 text-sm font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${colors.confirmBg}`}
               >
                 {state.options.confirmLabel ?? "Подтвердить"}
               </button>

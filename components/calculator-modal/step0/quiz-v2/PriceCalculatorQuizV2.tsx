@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ServiceCalculatorPreset } from "@/content/services";
 import type { SolutionScenario, CalculatorFooterAction, CalculatorFooterBackAction } from "@/lib/calculator-modal-types";
 import { useCeilingCalculatorEngine } from "@/lib/calculator-v2/use-ceiling-calculator-engine";
@@ -13,6 +13,20 @@ import { RoomPickerScreen } from "./screens/RoomPickerScreen";
 import { ParamScreen } from "./screens/ParamScreen";
 import { RoomEditScreen } from "./screens/RoomEditScreen";
 import { SummaryScreen } from "./screens/SummaryScreen";
+import {
+  trackQuizBack,
+  trackQuizParamConfirm,
+  trackQuizScreenView,
+  trackQuizSummary,
+} from "@/lib/analytics";
+import { resolveStep0SummaryActions } from "@/lib/calculator-flow";
+import {
+  clearCalcDraft,
+  describeCalcDraft,
+  readCalcDraft,
+  saveCalcDraft,
+  type CalcDraft,
+} from "@/lib/calculator/draft";
 import { useCalculatorModal } from "../../calculator-modal-context";
 
 type Props = {
@@ -49,7 +63,13 @@ export function PriceCalculatorQuizV2({
   prefillFromLightingTrigger = 0,
 }: Props) {
   const engine = useCeilingCalculatorEngine(initialSolutionScenario);
-  const { lightingDraft } = useCalculatorModal();
+  const { lightingDraft, goToStep } = useCalculatorModal();
+
+  // T-022: сводочные CTA считаем от текущего сценария движка,
+  // а не от сценария, «застрявшего» в bridge-снапшоте.
+  const hasLightingInCart = Boolean(
+    lightingDraft && lightingDraft.mode !== "none" && (lightingDraft.items?.length ?? 0) > 0
+  );
 
   // --- FSM ---
   // Auto-skip scenario screen when coming from service page with non-standard scenario
@@ -88,13 +108,58 @@ export function PriceCalculatorQuizV2({
     });
   }, [engine.solutionScenario, showModern, currentRoom?.shadowEnabled, currentRoom?.floatingEnabled]);
 
+  // T-023: черновик прошлого расчёта — предлагаем продолжить
+  const [draft, setDraft] = useState<CalcDraft | null>(null);
+  const [draftDecided, setDraftDecided] = useState(false);
+  const draftCheckedRef = useRef(false);
+  useEffect(() => {
+    if (draftCheckedRef.current) return;
+    draftCheckedRef.current = true;
+    if (preset) return; // пресет страницы важнее черновика
+    const saved = readCalcDraft();
+    if (saved) setDraft(saved);
+    else setDraftDecided(true);
+  }, [preset]);
+
+  // T-023: сохраняем черновик при изменениях расчёта
+  useEffect(() => {
+    if (engine.rooms.length === 0) return;
+    saveCalcDraft({
+      scenario: engine.solutionScenario,
+      scope: engine.calculationScope ?? "room",
+      rooms: engine.rooms as unknown as CalcDraft["rooms"],
+      cart: lightingDraft,
+      totalArea: engine.totalArea,
+      totalRub: engine.totalRub,
+    });
+  }, [
+    engine.rooms,
+    engine.solutionScenario,
+    engine.calculationScope,
+    engine.totalArea,
+    engine.totalRub,
+    lightingDraft,
+  ]);
+
+  // T-021: применяем пресет страницы один раз при старте сессии
+  const presetAppliedRef = useRef(false);
+  useEffect(() => {
+    if (presetAppliedRef.current) return;
+    if (!preset) return;
+    presetAppliedRef.current = true;
+    engine.initFromPreset(preset);
+    // Пресет уже задал сценарий и комнату — начинаем сразу с параметров
+    setHistory([{ t: "calcMode" }]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preset]);
+
   // object-scope auto room — engine.chooseCalcMode already creates "object-1"
   // keep as safety net only if rooms empty after mode switch
   useEffect(() => {
     if (engine.calculationScope !== "object") return;
     if (engine.rooms.length > 0) return;
     // fallback: engine should have created room in chooseCalcMode, if not — do it here
-    try { (engine as any).addRoom?.("Весь объект"); } catch {}
+    try { engine.addRoom("Весь объект"); } catch {}
   }, [engine.calculationScope, engine.rooms.length]);
 
   // prefill from lighting — uses engine.applyPrefillFromLighting (respects touched flags)
@@ -110,8 +175,19 @@ export function PriceCalculatorQuizV2({
     // mark confirmed if param screen
     if (screen.t === "param") {
       markConfirmed(screen.roomId, screen.param, true);
+      // T-025
+      trackQuizParamConfirm({
+        param: screen.param,
+        value: String(engine.rooms.find(r => r.id === screen.roomId)?.area ?? ""),
+        roomIndex: Math.max(0, engine.rooms.findIndex(r => r.id === screen.roomId)),
+      });
     } else if (fromParam && fromRoomId) {
       markConfirmed(fromRoomId, fromParam, true);
+      trackQuizParamConfirm({
+        param: fromParam,
+        value: "",
+        roomIndex: Math.max(0, engine.rooms.findIndex(r => r.id === fromRoomId)),
+      });
     }
 
     if (screen.t === "scenario") {
@@ -160,12 +236,45 @@ export function PriceCalculatorQuizV2({
       if (curr.t === "param") {
         markConfirmed(curr.roomId, curr.param, false);
       }
+      trackQuizBack({ from: curr.t }); // T-025
       popScreen();
       return;
     }
   }, [history, popScreen, markConfirmed]);
 
+  // T-025: экран квиза при каждом push/pop
+  const lastTrackedScreenRef = useRef<string>("");
+  useEffect(() => {
+    const key = JSON.stringify(screen);
+    if (lastTrackedScreenRef.current === key) return;
+    lastTrackedScreenRef.current = key;
+    trackQuizScreenView({
+      screen: screen.t,
+      param: screen.t === "param" ? screen.param : null,
+      index: history.length,
+      total: enabledParams.length,
+      scenario: engine.solutionScenario,
+    });
+  }, [screen, history.length, enabledParams.length, engine.solutionScenario]);
+
   const isSummary = screen.t === "summary";
+
+  // T-025: сводка Шага 0 + параметр визита calc_total
+  const summaryTrackedRef = useRef(false);
+  useEffect(() => {
+    if (!isSummary) {
+      summaryTrackedRef.current = false;
+      return;
+    }
+    if (summaryTrackedRef.current) return;
+    summaryTrackedRef.current = true;
+    trackQuizSummary({
+      total: engine.totalRub,
+      rooms: engine.roomsCount,
+      scenario: engine.solutionScenario,
+      minimumApplied: engine.minimumApplied,
+    });
+  }, [isSummary, engine.totalRub, engine.roomsCount, engine.solutionScenario, engine.minimumApplied]);
 
   // progress
   useEffect(() => {
@@ -208,6 +317,49 @@ export function PriceCalculatorQuizV2({
       onStep0BackActionChange?.({ visible: false });
     };
   }, [screen, engine.calculationScope, goNext, goBack, isSummary, onStep0FooterActionChange, onStep0BackActionChange, pushScreen]);
+
+  if (draft && !draftDecided) {
+    return (
+      <div data-quiz-v2 data-active-screen="draft" className="step0-quiz-v2 max-w-3xl mx-auto">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+          <p className="text-base font-semibold text-slate-950">
+            Продолжить прошлый расчёт ({describeCalcDraft(draft)})?
+          </p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Мы сохранили параметры, которые вы уже указали в этой вкладке.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                engine.restoreFromDraft({
+                  scenario: draft.scenario,
+                  scope: draft.scope,
+                  rooms: draft.rooms as unknown as Parameters<typeof engine.restoreFromDraft>[0]["rooms"],
+                });
+                setHistory([{ t: "summary" }]);
+                setDraftDecided(true);
+              }}
+              className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white hover:bg-slate-800"
+            >
+              Продолжить
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                clearCalcDraft();
+                setDraft(null);
+                setDraftDecided(true);
+              }}
+              className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Начать заново
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div data-quiz-v2 data-active-screen={screen.t} className="step0-quiz-v2 max-w-3xl mx-auto">
@@ -270,17 +422,33 @@ export function PriceCalculatorQuizV2({
           onDelete={() => { engine.removeRoom(screen.roomId); popScreen(); }}
         />
       )}
-      {screen.t === "summary" && (
-        <SummaryScreen
-          engine={engine}
-          onEditRoom={roomId => pushScreen({ t: "roomEdit", roomId })}
-          onAddRoom={() => pushScreen({ t: "roomPicker", mode: "add" })}
-          onPrimaryCta={onPrimaryCtaClick}
-          onSecondaryCta={onSecondaryCtaClick}
-          primaryLabel={summaryPrimaryLabel}
-          secondaryLabel={summarySecondaryLabel}
-        />
-      )}
+      {screen.t === "summary" && (() => {
+        const routing = resolveStep0SummaryActions({
+          scenario: engine.solutionScenario,
+          hasLighting: hasLightingInCart,
+        });
+        return (
+          <SummaryScreen
+            engine={engine}
+            onEditRoom={roomId => pushScreen({ t: "roomEdit", roomId })}
+            onAddRoom={() => pushScreen({ t: "roomPicker", mode: "add" })}
+            onPrimaryCta={() => {
+              onPrimaryCtaClick?.();
+              goToStep(routing.primary.destination);
+            }}
+            onSecondaryCta={
+              routing.secondary
+                ? () => {
+                    onSecondaryCtaClick?.();
+                    goToStep(routing.secondary!.destination);
+                  }
+                : undefined
+            }
+            primaryLabel={summaryPrimaryLabel ?? routing.primary.label}
+            secondaryLabel={summarySecondaryLabel ?? routing.secondary?.label}
+          />
+        );
+      })()}
     </div>
   );
 }

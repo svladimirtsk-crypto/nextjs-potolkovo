@@ -78,6 +78,17 @@ export type CalculatorModalContextValue = {
   currentStep: WizardStep;
   options: OpenCalculatorOptions | null;
 
+  /** T-023: инкремент при каждом `openCalculator` — ключ ремаунта шагов. */
+  sessionId: number;
+
+  /** T-023: время отправки заявки в этой сессии; после неё confirm при закрытии не показываем. */
+  leadSubmittedAt: number | null;
+  markLeadSubmitted: () => void;
+
+  /** T-023: экран «заявка отправлена» живёт в контексте и сбрасывается открытием. */
+  showResult: boolean;
+  setShowResult: (value: boolean) => void;
+
   openCalculator: (options?: OpenCalculatorOptions) => void;
   closeCalculator: () => void;
   goToStep: (step: WizardStep) => void;
@@ -88,6 +99,9 @@ export type CalculatorModalContextValue = {
   /** snapshot.total (потолок, как посчитал Step0)
    *  В lighting-first может быть не показан в UI (см. showCeilingInUi), но в snapshot он может существовать. */
   ceilingTotal: number;
+
+  /** T-008: потолок с досчётом монтажа света (единственный источник для стики/формы). */
+  ceilingEffectiveTotal: number;
 
   /** Свет без скидки (по корзине/lightingDraft). */
   lightingRegularTotal: number;

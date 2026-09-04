@@ -40,6 +40,7 @@ import {
   usePriceCalculatorBridge,
 } from "@/components/home/price-calculator-context";
 import { trackCalculatorOpen, trackWizardStepView } from "@/lib/analytics";
+import { readCalcDraft } from "@/lib/calculator/draft";
 
 function toNumber(value: unknown): number {
   const n = Number(value ?? 0);
@@ -131,6 +132,10 @@ const CalculatorModalContext = createContext<CalculatorModalContextValue | null>
 export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState<WizardStep>(0);
+  // T-023: ремаунт всех шагов при новом открытии
+  const [sessionId, setSessionId] = useState(0);
+  const [leadSubmittedAt, setLeadSubmittedAt] = useState<number | null>(null);
+  const [showResult, setShowResult] = useState(false);
   const [options, setOptions] = useState<OpenCalculatorOptions | null>(null);
 
   const [lightingDraft, setLightingDraftState] = useState<LightingSnapshot | null>(null);
@@ -161,7 +166,9 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
     setStep0SessionInteracted(true);
     // строго: любое изменение Step0 сбрасывает "инженерное подтверждение"
     setStep0AreaConfirmed(false);
-  }, []);
+    // T-008: устаревший grandTotal больше не хранится в snapshot
+    setSnapshot((prev) => (prev && prev.grandTotal !== undefined ? { ...prev, grandTotal: undefined } : prev));
+  }, [setSnapshot]);
 
   const setStep0FooterAction = useCallback((action: CalculatorFooterAction | null) => {
     setStep0FooterActionState(action);
@@ -205,7 +212,10 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       };
 
       const effectiveSource = String(resolvedOpts.source ?? "unknown");
-      trackCalculatorOpen(effectiveSource);
+      trackCalculatorOpen(effectiveSource, {
+        entryMode: resolvedOpts.entryMode ?? null,
+        hasDraft: Boolean(readCalcDraft()),
+      });
       trackWizardStepView((resolvedOpts.initialStep ?? 0) as 0 | 1 | 2, effectiveSource);
 
       // P1.10: захват UTM при открытии
@@ -225,6 +235,9 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       }
 
       // reset flags on each open
+      setSessionId((prev) => prev + 1);
+      setLeadSubmittedAt(null);
+      setShowResult(false);
       setStep0SessionInteracted(false);
       setStep0AreaConfirmed(false);
       setStep0Progress(null);
@@ -259,6 +272,10 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
 
   const closeCalculator = useCallback(() => {
     setIsOpen(false);
+  }, []);
+
+  const markLeadSubmitted = useCallback(() => {
+    setLeadSubmittedAt(Date.now());
   }, []);
 
   const goToStep = useCallback(
@@ -358,10 +375,9 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
     // строго: grandTotal (с досчётом монтажа) учитываем только если Step0 подтверждён
     if (!step0AreaConfirmed) return total;
 
-    const grand = toNumber(snapshot?.grandTotal);
-    if (Number.isFinite(grand) && grand >= total) return grand;
-
-    return total;
+    // T-008: досчёт монтажа берём из явного поля, а не из устаревшего grandTotal
+    const extraInstall = toNumber(snapshot?.extraInstallRub);
+    return total + Math.max(0, extraInstall);
   }, [showCeilingInUi, snapshot, step0AreaConfirmed]);
 
   const grandTotal = useMemo(() => {
@@ -418,6 +434,11 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
         isOpen,
         currentStep,
         options,
+        sessionId,
+        leadSubmittedAt,
+        markLeadSubmitted,
+        showResult,
+        setShowResult,
         openCalculator,
         closeCalculator,
         goToStep,
@@ -426,6 +447,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
         setLightingDraft,
 
         ceilingTotal,
+        ceilingEffectiveTotal,
 
         // legacy поле (оставляем совместимость)
         lightingDiscountedTotal,
@@ -465,12 +487,17 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       isOpen,
       currentStep,
       options,
+      sessionId,
+      leadSubmittedAt,
+      markLeadSubmitted,
+      showResult,
       openCalculator,
       closeCalculator,
       goToStep,
       lightingDraft,
       setLightingDraft,
       ceilingTotal,
+      ceilingEffectiveTotal,
       lightingDiscountedTotal,
       lightingRegularTotal,
       lightingStandaloneTotal,

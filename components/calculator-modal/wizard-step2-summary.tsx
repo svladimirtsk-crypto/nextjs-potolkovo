@@ -18,9 +18,12 @@ import {
   getCalculatorSummaryLines,
   usePriceCalculatorBridge,
 } from "@/components/home/price-calculator-context";
+import { clearCalcDraft } from "@/lib/calculator/draft";
+import { buildTelegramDeepLink } from "@/lib/lead/telegram-link";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 
 import { getKitDisplayName } from "@/lib/calculator-modal-types";
+import { lightingDiscountPercent, pricing } from "@/content/pricing";
 
 type CatalogLightingItem = {
   sku: string;
@@ -112,6 +115,9 @@ export function WizardStep2Summary() {
     lightingWithCeilingTotal,
     ceilingTotal,
     grandTotal,
+    showResult,
+    setShowResult,
+    markLeadSubmitted,
   } = useCalculatorModal();
 
   const resolvedShowCeilingInUi =
@@ -126,8 +132,7 @@ export function WizardStep2Summary() {
     toNumber(grandTotal) ||
     (resolvedShowCeilingInUi ? resolvedCeilingTotal : 0) + resolvedLightingEffectiveTotal;
 
-  const lightingAppliedPercent =
-    lightingDiscountMode === "with-ceiling" ? 25 : lightingDiscountMode === "lighting-only" ? 10 : 0;
+  const lightingAppliedPercent = lightingDiscountPercent(lightingDiscountMode ?? "none");
   const orderIntent =
     lightingDiscountMode === "with-ceiling"
       ? "lighting_with_ceiling"
@@ -144,7 +149,7 @@ export function WizardStep2Summary() {
     0,
     resolvedLightingRegularTotal - resolvedLightingWithCeilingTotal
   );
-  const [showResult, setShowResult] = useState(false);
+  // T-023: showResult и факт отправки живут в контексте модалки
 
   const { snapshot, setSnapshot } = usePriceCalculatorBridge();
   const lighting = snapshot?.lighting ?? lightingDraft ?? null;
@@ -230,46 +235,51 @@ export function WizardStep2Summary() {
 
   const canReconcileInstall = step0AreaConfirmed;
 
-  const trackRates = homepage.price.calculator.tracks;
-  const builtInRate = trackRates.find((t) => t.slug === "built-in")?.ratePerMeter ?? 0;
-  const surfaceRate = trackRates.find((t) => t.slug === "surface")?.ratePerMeter ?? 0;
-  const resolvedTrackRate = effectiveTrackMountType === "surface" ? surfaceRate : builtInRate;
+  const resolvedTrackRate =
+    effectiveTrackMountType === "surface" ? pricing.track.surfacePerM : pricing.track.builtInPerM;
 
-  const spotInstallRate = homepage.price.calculator.lights.ratePerUnit;
+  const spotInstallRate = pricing.spotInstall;
 
-  const includedTrackInstall = toNumber(snapshot?.trackTotal);
-  const includedSpotInstall = toNumber(snapshot?.lightsTotal);
+  // T-009: сравниваем натуральные величины (метры/точки), а не суммы — без удвоения
+  const includedTrackMeters = toNumber(snapshot?.derivedInputs?.trackLengthMeters);
+  const includedSpotQty = toNumber(snapshot?.derivedInputs?.pointSpotsQty);
 
   const desiredTrackInstallMeters = selectedTrackMeters > 0 ? selectedTrackMeters : 0;
   const desiredSpotInstallQty = selectedPointQty > 0 ? selectedPointQty : 0;
 
-  const desiredTrackInstallCost =
-    desiredTrackInstallMeters > 0 ? desiredTrackInstallMeters * resolvedTrackRate : 0;
-  const desiredSpotInstallCost =
-    desiredSpotInstallQty > 0 ? desiredSpotInstallQty * spotInstallRate : 0;
+  const extraTrackMeters = Math.max(0, desiredTrackInstallMeters - includedTrackMeters);
+  const extraSpotQty = Math.max(0, desiredSpotInstallQty - includedSpotQty);
 
-  const extraTrackInstall =
-    desiredTrackInstallMeters > 0
-      ? Math.max(0, desiredTrackInstallCost - includedTrackInstall)
-      : 0;
-  const extraSpotInstall =
-    desiredSpotInstallQty > 0 ? Math.max(0, desiredSpotInstallCost - includedSpotInstall) : 0;
+  const extraTrackInstall = extraTrackMeters * resolvedTrackRate;
+  const extraSpotInstall = extraSpotQty * spotInstallRate;
 
   const extraInstallTotal = extraTrackInstall + extraSpotInstall;
 
+  const extraInstallLines = useMemo(() => {
+    const out: string[] = [];
+    if (extraSpotQty > 0) out.push(`Монтаж ещё ${extraSpotQty} точек · ${fmt(extraSpotInstall)} ₽`);
+    if (extraTrackMeters > 0) out.push(`Монтаж ещё ${extraTrackMeters} м трека · ${fmt(extraTrackInstall)} ₽`);
+    return out;
+  }, [extraSpotQty, extraSpotInstall, extraTrackMeters, extraTrackInstall]);
+
+  // T-008/T-009: пишем явный досчёт монтажа вместо устаревшего grandTotal
   useEffect(() => {
     if (!canReconcileInstall) return;
 
     setSnapshot((prev) => {
       if (!prev) return prev;
-      const base = toNumber(prev.total);
-      const nextGrand = base + extraInstallTotal;
-      // Guard: don't mutate if value unchanged (prevents infinite re-renders)
-      const prevGrand = toNumber(prev.grandTotal);
-      if (Math.abs(prevGrand - nextGrand) < 0.5) return prev;
-      return { ...prev, grandTotal: nextGrand };
+      const prevExtra = toNumber(prev.extraInstallRub);
+      const sameLines =
+        (prev.extraInstallLines ?? []).join("|") === extraInstallLines.join("|");
+      if (Math.abs(prevExtra - extraInstallTotal) < 0.5 && sameLines) return prev;
+      return {
+        ...prev,
+        grandTotal: undefined,
+        extraInstallRub: extraInstallTotal,
+        extraInstallLines,
+      };
     });
-  }, [canReconcileInstall, extraInstallTotal, setSnapshot]);
+  }, [canReconcileInstall, extraInstallTotal, extraInstallLines, setSnapshot]);
 
   const handleEditLighting = () => {
     setStep1CatalogView("selected");
@@ -285,7 +295,15 @@ export function WizardStep2Summary() {
         <p className="text-sm text-white/70">Ориентировочный итог</p>
         <p className="mt-2 text-4xl font-bold tracking-tight">~{fmt(resolvedGrandTotal)} ₽</p>
         <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-xs text-white/60">
-          {resolvedShowCeilingInUi ? <span>Потолок {fmt(resolvedCeilingTotal)} ₽</span> : null}
+          {resolvedShowCeilingInUi ? <span>Потолок и работы {fmt(resolvedCeilingTotal)} ₽</span> : null}
+          {resolvedShowCeilingInUi && (includedSpotQty > 0 || includedTrackMeters > 0) ? (
+            <span>
+              Монтаж света: {includedSpotQty} точек, {includedTrackMeters} м трека — уже в потолке
+            </span>
+          ) : null}
+          {extraInstallLines.map((line) => (
+            <span key={line}>+ {line}</span>
+          ))}
           {resolvedShowCeilingInUi && resolvedLightingEffectiveTotal > 0 ? <span>+</span> : null}
           {resolvedLightingEffectiveTotal > 0 ? (
             <span>
@@ -352,12 +370,7 @@ export function WizardStep2Summary() {
               Изменить комнаты
             </button>
           </div>
-          <div className="mt-4 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-sm font-medium text-slate-600">Общий ориентир по объекту</span>
-              <span className="text-lg font-semibold text-slate-950">{fmt(resolvedGrandTotal)} ₽</span>
-            </div>
-          </div>
+          {/* T-022: дублирующий «Общий ориентир» убран — итог показан выше один раз */}
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {roomBreakdown.map((room, index) => (
               <div key={`${room.id}-${index}`} className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
@@ -522,33 +535,37 @@ export function WizardStep2Summary() {
         </div>
       ) : (
         <>
-          {/* WhatsApp/Telegram before form */}
+          {/* Form */}
+          <div id="modal-action-form" className="rounded-2xl border border-slate-200 bg-white p-4">
+            <p className="text-base font-semibold text-slate-950">Записаться на бесплатный замер</p>
+            <p className="mt-2 text-sm text-slate-600">
+              Оставьте имя и телефон — перезвоню, уточню детали и предложу решение.
+            </p>
+            <div className="mt-4">
+              <ActionForm
+                source={String(options?.source ?? "modal")}
+                placement="modal"
+                compactCalculationSummary
+                onSuccess={() => {
+                  markLeadSubmitted();
+                  setShowResult(true);
+                  clearCalcDraft();
+                }}
+              />
+            </div>
+          </div>
+
+          {/* T-026: мессенджеры ПОСЛЕ формы, с готовым текстом расчёта (Приложение Г).
+              TODO(владелец): WhatsApp вернём, когда подтвердится рабочий аккаунт. */}
           <div className="flex flex-wrap items-center justify-center gap-3 text-sm">
-            <span className="text-slate-500">Хотите быстрее? Напишите</span>
+            <span className="text-slate-500">Не хотите звонка? Напишите в Telegram</span>
             <a
-              href={`https://wa.me/${contacts.phoneDisplay.replace(/\D/g, "")}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => {
-                try {
-                  trackMessengerClick({
-                    messenger: "whatsapp",
-                    placement: "modal_summary",
-                    source: String(options?.source ?? ""),
-                    orderIntent,
-                    grandTotal: resolvedGrandTotal,
-                  });
-                } catch (e) {
-                  console.error(e);
-                }
-              }}
-              className="flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 font-medium text-emerald-700 transition-colors hover:bg-emerald-100"
-            >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.832-1.438A9.955 9.955 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18a8 8 0 01-4.243-1.214L4 20l1.214-3.757A8 8 0 1112 20z"/></svg>
-              WhatsApp
-            </a>
-            <a
-              href={contacts.telegramUrl}
+              href={buildTelegramDeepLink({
+                rooms: roomBreakdown,
+                totalArea: toNumber(snapshot?.area),
+                lightingTotalRub: resolvedLightingEffectiveTotal,
+                grandTotalRub: resolvedGrandTotal,
+              })}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => {
@@ -564,26 +581,11 @@ export function WizardStep2Summary() {
                   console.error(e);
                 }
               }}
-              className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 font-medium text-blue-600 transition-colors hover:bg-blue-100"
+              className="flex min-h-11 items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 font-medium text-blue-600 transition-colors hover:bg-blue-100"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0a12 12 0 00-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 01.171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
-              Telegram
+              Telegram с расчётом
             </a>
-          </div>
-
-          {/* Form */}
-          <div id="modal-action-form" className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-base font-semibold text-slate-950">Записаться на бесплатный замер</p>
-            <p className="mt-2 text-sm text-slate-600">
-              Оставьте имя и телефон — перезвоню, уточню детали и предложу решение.
-            </p>
-            <div className="mt-4">
-              <ActionForm
-                source={String(options?.source ?? "")}
-                compactCalculationSummary
-                onSuccess={() => setShowResult(true)}
-              />
-            </div>
           </div>
         </>
       )}

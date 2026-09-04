@@ -2,12 +2,15 @@
 
 import { useMemo, useRef, useState, type FormEvent } from "react";
 
+import { contacts } from "@/content/contacts";
 import { legal } from "@/content/legal";
 import { getKitDisplayName } from "@/lib/calculator-modal-types";
 import {
   trackFormOpened,
   trackFormSubmitError,
   trackFormSubmitSuccess,
+  trackLeadError,
+  trackLeadSubmit,
   trackPhoneValidated,
 } from "@/lib/analytics";
 import {
@@ -64,6 +67,24 @@ function normalizePhone(value: string): string {
   return value.trim();
 }
 
+/** T-015: маска +7 (___) ___-__-__ без внешних зависимостей. */
+function formatPhoneInput(value: string): string {
+  let digits = value.replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits[0] === "8") digits = `7${digits.slice(1)}`;
+  if (digits[0] !== "7") digits = `7${digits}`;
+  digits = digits.slice(0, 11);
+
+  const rest = digits.slice(1);
+  let out = "+7";
+  if (rest.length > 0) out += ` (${rest.slice(0, 3)}`;
+  if (rest.length >= 3) out += ") ";
+  if (rest.length > 3) out += rest.slice(3, 6);
+  if (rest.length > 6) out += `-${rest.slice(6, 8)}`;
+  if (rest.length > 8) out += `-${rest.slice(8, 10)}`;
+  return out;
+}
+
 function isValidPhone(value: string): boolean {
   return /^\+\d{10,15}$/.test(value);
 }
@@ -104,18 +125,36 @@ function buildLeadMessage(
   return parts.join("\n");
 }
 
+export type ActionFormPlacement = "home" | "service-page" | "modal";
+export type LeadKind = "direct" | "calculator" | "lighting-only";
+
 type ActionFormProps = {
-  source?: string;
+  source: string;
+  placement: ActionFormPlacement;
+  leadKind?: LeadKind;
   /** В модальном итоге подробный состав уже показан выше — в форме оставляем только компактное подтверждение. */
   compactCalculationSummary?: boolean;
   /** P0.8: callback after successful submit */
   onSuccess?: () => void;
 };
 
-export function ActionForm({ source, compactCalculationSummary = false, onSuccess }: ActionFormProps) {
+export function ActionForm({
+  source,
+  placement,
+  leadKind,
+  compactCalculationSummary = false,
+  onSuccess,
+}: ActionFormProps) {
   const { snapshot, hasInteracted } = usePriceCalculatorBridge();
 
-  const effectiveSource: string = String(snapshot?.leadSource ?? source ?? "");
+  // T-002: приоритет пропса над snapshot.leadSource
+  const effectiveSource: string = String(source || snapshot?.leadSource || "");
+  const calculatorSource: string = String(snapshot?.leadSource ?? "");
+
+  const hasRooms = toNumber(snapshot?.area ?? 0) > 0;
+  const hasLighting = Number(snapshot?.lighting?.items?.length ?? 0) > 0;
+  const effectiveLeadKind: LeadKind =
+    leadKind ?? (hasRooms ? "calculator" : hasLighting ? "lighting-only" : "direct");
 
   const ceilingLines = useMemo(
     () => (hasInteracted ? getCalculatorSummaryLines(snapshot) : []),
@@ -131,11 +170,9 @@ export function ActionForm({ source, compactCalculationSummary = false, onSucces
   const openedOnceRef = useRef(false);
   const phoneValidatedOnceRef = useRef(false);
 
-  const getPlacement = (): "modal" | "page" => {
-    const el = formRef.current;
-    if (!el) return "page";
-    return el.closest("#modal-action-form") ? "modal" : "page";
-  };
+  // Метрика различает только modal/page
+  const getPlacement = (): "modal" | "page" =>
+    placement === "modal" ? "modal" : "page";
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -153,7 +190,7 @@ export function ActionForm({ source, compactCalculationSummary = false, onSucces
     setMessage("");
     setFieldErrors({});
 
-    const placement = getPlacement();
+    const metrikaPlacement = getPlacement();
 
     const trimmedName = name.trim();
     const trimmedAddress = address.trim();
@@ -162,40 +199,28 @@ export function ActionForm({ source, compactCalculationSummary = false, onSucces
     const topArea = toNumber(snapshot?.area ?? 0);
     const topLightingTotalRub = toNumber(snapshot?.lighting?.totalRub ?? 0);
 
-    // Empty lead check: area is 0 and lighting total is 0
-    if (topArea <= 0 && topLightingTotalRub <= 0) {
-      trackFormSubmitError({
-        kind: "validation",
-        formPlacement: placement,
-        source: effectiveSource,
-      });
-
-      setStatus("error");
-      setMessage("Нельзя отправить пустую заявку. Пожалуйста, укажите площадь потолка или выберите товары в каталоге освещения.");
-      return;
-    }
-
     const nextErrors: FieldErrors = {};
 
-    if (!trimmedName) nextErrors.name = "Укажите имя.";
+    if (!trimmedName) nextErrors.name = "Как к вам обращаться?";
     else if (trimmedName.length > 80) nextErrors.name = "Слишком длинное имя.";
 
     if (!normalizedPhone || !isValidPhone(normalizedPhone)) {
-      nextErrors.phone = "Укажите корректный телефон (например, +79051234567).";
+      nextErrors.phone = "Проверьте номер: нужно 10 цифр после +7.";
     }
 
-    if (trimmedAddress.length > 160) nextErrors.address = "Слишком длинный адрес или район.";
+    if (trimmedAddress.length > 160) nextErrors.address = "Слишком длинный адрес — сократите до 160 символов.";
 
     if (Object.keys(nextErrors).length > 0) {
       trackFormSubmitError({
         kind: "validation",
-        formPlacement: placement,
+        formPlacement: metrikaPlacement,
         source: effectiveSource,
       });
+      trackLeadError({ kind: "validation", placement });
 
       setFieldErrors(nextErrors);
       setStatus("error");
-      setMessage("Пожалуйста, заполните имя и телефон корректно.");
+      setMessage("Проверьте имя и телефон — без них не смогу перезвонить.");
       return;
     }
 
@@ -203,12 +228,12 @@ export function ActionForm({ source, compactCalculationSummary = false, onSucces
     if (!accessKey) {
       trackFormSubmitError({
         kind: "config",
-        formPlacement: placement,
+        formPlacement: metrikaPlacement,
         source: effectiveSource,
       });
 
       setStatus("error");
-      setMessage("На клиенте не настроен NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY.");
+      setMessage(`Форма временно недоступна — позвоните ${contacts.phoneDisplay} или напишите в Telegram.`);
       return;
     }
 
@@ -250,12 +275,9 @@ export function ActionForm({ source, compactCalculationSummary = false, onSucces
     const ceilingTypeLabel = String(snapshot?.ceilingTypeLabel ?? "");
 
     const ceilingWorksTotalRub = toNumber(snapshot?.total ?? 0);
-    const ceilingWorksGrandTotalRub = toNumber(snapshot?.grandTotal ?? 0);
-
-    const ceilingExtraInstallRub =
-      ceilingWorksGrandTotalRub > ceilingWorksTotalRub + 0.5
-        ? Math.max(0, ceilingWorksGrandTotalRub - ceilingWorksTotalRub)
-        : 0;
+    // T-008: досчёт монтажа берём из явного поля snapshot
+    const ceilingExtraInstallRub = Math.max(0, toNumber(snapshot?.extraInstallRub ?? 0));
+    const ceilingWorksGrandTotalRub = ceilingWorksTotalRub + ceilingExtraInstallRub;
 
     // Люстры (новый шаг Step0)
     const chandeliersEnabled = Boolean(snapshot?.chandeliersEnabled);
@@ -330,7 +352,15 @@ export function ActionForm({ source, compactCalculationSummary = false, onSucces
     formData.append("company", "");
 
     // extra fields
-    formData.append("calculator_source", effectiveSource);
+    formData.append("calculator_source", calculatorSource);
+    formData.append("source", effectiveSource);
+    formData.append("placement", placement);
+    formData.append("lead_kind", effectiveLeadKind);
+    formData.append("service_slug", placement === "service-page" ? effectiveSource : "");
+    formData.append(
+      "page_path",
+      typeof window !== "undefined" ? window.location.pathname : ""
+    );
     for (const [key, value] of Object.entries(attribution)) appendIfPresent(key, value);
 
     formData.append("calculator_has_interacted", String(Boolean(hasInteracted)));
@@ -384,9 +414,10 @@ export function ActionForm({ source, compactCalculationSummary = false, onSucces
       if (!response.ok || !result?.success) {
         trackFormSubmitError({
           kind: "provider",
-          formPlacement: placement,
+          formPlacement: metrikaPlacement,
           source: effectiveSource,
         });
+        trackLeadError({ kind: response.status === 429 ? "ratelimit" : "server", placement });
 
         const errorText: string = String(
           result?.message ?? result?.error ?? `HTTP ${response.status}`
@@ -397,6 +428,19 @@ export function ActionForm({ source, compactCalculationSummary = false, onSucces
       }
 
       trackFormSubmitSuccess(effectiveSource);
+
+      // T-025: единая цель лида + параметр визита lead_total
+      trackLeadSubmit({
+        placement,
+        leadKind: effectiveLeadKind,
+        orderIntent,
+        grandTotal: orderEstimatedGrandRub,
+        rooms: Number(snapshot?.roomBreakdown?.length ?? 0),
+        lightingItems: lightingItemsCount,
+        source: effectiveSource,
+        pagePath: typeof window !== "undefined" ? window.location.pathname : "",
+        leadId: result?.leadId ?? null,
+      });
 
       // P0.8: callback для WizardStep2Summary
       onSuccess?.();
@@ -411,9 +455,10 @@ export function ActionForm({ source, compactCalculationSummary = false, onSucces
     } catch {
       trackFormSubmitError({
         kind: "network",
-        formPlacement: placement,
+        formPlacement: metrikaPlacement,
         source: effectiveSource,
       });
+      trackLeadError({ kind: "network", placement });
 
       setStatus("error");
       setMessage(COPY.errorMessage);
@@ -481,11 +526,28 @@ export function ActionForm({ source, compactCalculationSummary = false, onSucces
         )
       ) : null}
 
+      {placement === "modal" && !hasRooms && !hasLighting ? (
+        <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          Расчёт не приложится — это нормально, уточню по телефону.
+        </p>
+      ) : null}
+
+      <input
+        type="text"
+        name="botcheck"
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        className="hidden"
+        defaultValue=""
+      />
+
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <Input
             label="Имя"
             name="name"
+            autoComplete="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -496,8 +558,11 @@ export function ActionForm({ source, compactCalculationSummary = false, onSucces
           <Input
             label="Телефон"
             name="phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => setPhone(formatPhoneInput(e.target.value))}
             onBlur={() => {
               if (phoneValidatedOnceRef.current) return;
 
@@ -517,6 +582,7 @@ export function ActionForm({ source, compactCalculationSummary = false, onSucces
         <Input
           label="Район или метро (необязательно)"
           name="address"
+          autoComplete="address-level2"
           value={address}
           onChange={(e) => setAddress(e.target.value)}
         />

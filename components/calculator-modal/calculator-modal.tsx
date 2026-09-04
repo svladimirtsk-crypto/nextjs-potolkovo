@@ -14,6 +14,11 @@ import { WizardStep2Summary } from "./wizard-step2-summary";
 
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 import { showConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  trackCalculatorClose,
+  trackLeadRescueAccepted,
+  trackLeadRescueShown,
+} from "@/lib/analytics";
 
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
   const selector = [
@@ -98,6 +103,10 @@ export function CalculatorModal() {
     step0BackAction,
     step0Progress,
     isStep0SummaryReady,
+    sessionId,
+    leadSubmittedAt,
+    markLeadSubmitted,
+    grandTotal,
   } = useCalculatorModal();
   const { snapshot } = usePriceCalculatorBridge();
 
@@ -194,27 +203,75 @@ export function CalculatorModal() {
     return false;
   }, [snapshot, lightingDraft]);
 
+  /** T-026: короткая заявка «спасения» — только телефон и текущий расчёт. */
+  const submitRescueLead = async (phone: string) => {
+      try {
+        await fetch("/api/lead", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            phone,
+            consent: true,
+            source: String(options?.source ?? "modal"),
+            placement: "rescue",
+            leadKind: "rescue",
+            pagePath: typeof window !== "undefined" ? window.location.pathname : "",
+            grandTotal,
+          }),
+        });
+        markLeadSubmitted();
+      } catch {
+        // rescue не должен мешать закрытию модалки
+      }
+  };
+
   const requestClose = useCallback(async () => {
     const now = Date.now();
     if (now - lastConfirmTimeRef.current < 300) {
       return; // Skip if we recently closed a confirm dialog to prevent double execution
     }
 
-    // P0.7: confirm dialog if there's data (теперь кастомный, не блокирующий поток)
-    if (hasAnyData && typeof window !== "undefined") {
+    // T-023/T-026: после отправленной заявки ничего не спрашиваем — расчёт уже у мастера
+    if (hasAnyData && !leadSubmittedAt && typeof window !== "undefined") {
       lastConfirmTimeRef.current = now;
-      const confirmed = await showConfirmDialog({
-        title: "Закрыть калькулятор?",
-        message: "Ваш расчёт не сохранится.",
-        confirmLabel: "Закрыть",
-        cancelLabel: "Отмена",
-        variant: "warning",
+
+      // T-026: rescue-оффер — предлагаем сохранить расчёт и прислать его на телефон
+      trackLeadRescueShown({ total: grandTotal });
+      const result = await showConfirmDialog({
+        title: "Сохранить расчёт и получить его на телефон?",
+        message:
+          "Пришлю расчёт и отвечу на вопросы. Если не нужно — просто закройте, ничего не отправится.",
+        confirmLabel: "Отправить",
+        cancelLabel: "Просто закрыть",
+        variant: "info",
+        phoneField: {
+          label: "Телефон",
+          hint: "Перезвоню в удобное время, спама не будет.",
+        },
       });
-      lastConfirmTimeRef.current = Date.now(); // update after confirm resolves
-      if (!confirmed) return;
+      lastConfirmTimeRef.current = Date.now();
+
+      if (typeof result === "string" && result.trim()) {
+        trackLeadRescueAccepted({ total: grandTotal });
+        void submitRescueLead(result.trim());
+      }
     }
+    // T-025: закрытие калькулятора
+    trackCalculatorClose({
+      step: currentStep,
+      screen:
+        typeof document !== "undefined"
+          ? String(
+              document.querySelector("[data-quiz-v2]")?.getAttribute("data-active-screen") ?? "unknown"
+            )
+          : "unknown",
+      hasData: hasAnyData,
+      leadSent: Boolean(leadSubmittedAt),
+    });
+
     closeCalculator();
-  }, [closeCalculator, hasAnyData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [closeCalculator, hasAnyData, leadSubmittedAt, currentStep, grandTotal]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -412,22 +469,22 @@ export function CalculatorModal() {
               aria-hidden={currentStep !== 0}
               className={currentStep === 0 ? "animate-fade-slide-in" : "hidden"}
             >
-              <WizardStep0Calculator preset={options?.preset} />
+              {/* T-023: key={sessionId} — новая сессия монтирует чистый шаг */}
+              <WizardStep0Calculator key={`step0-${sessionId}`} preset={options?.preset} />
             </div>
             <div
               key="step1"
               aria-hidden={currentStep !== 1}
               className={currentStep === 1 ? "animate-fade-slide-in" : "hidden"}
             >
-              <WizardStep1Lighting />
+              <WizardStep1Lighting key={`step1-${sessionId}`} />
             </div>
-            <div
-              key="step2"
-              aria-hidden={currentStep !== 2}
-              className={currentStep === 2 ? "animate-fade-slide-in" : "hidden"}
-            >
-              <WizardStep2Summary />
-            </div>
+            {/* T-023: Шаг 2 монтируется только когда он активен */}
+            {currentStep === 2 ? (
+              <div key="step2" className="animate-fade-slide-in">
+                <WizardStep2Summary key={`step2-${sessionId}`} />
+              </div>
+            ) : null}
           </div>
 
           {/* Footer */}

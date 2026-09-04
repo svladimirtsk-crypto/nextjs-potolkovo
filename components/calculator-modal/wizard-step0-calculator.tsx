@@ -10,6 +10,7 @@ import { PriceCalculatorClient } from "@/components/home/price-calculator-client
 import { PriceCalculatorQuizV2 } from "@/components/calculator-modal/step0/quiz-v2/PriceCalculatorQuizV2";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 
+import { caseHint } from "@/lib/calculator/presets";
 import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 
@@ -133,9 +134,13 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
   const [prefillTrigger, setPrefillTrigger] = useState(0);
   const [introHidden, setIntroHidden] = useState(false);
 
-  const proofSourceSlug = options?.source?.startsWith("proof-")
-    ? options.source.replace(/^proof-/, "")
-    : null;
+  // T-021: источник теперь "<slug>:<placement>"; старый формат "proof-<slug>" поддерживаем
+  const rawSource = String(options?.source ?? "");
+  const proofSourceSlug = rawSource.endsWith(":proof")
+    ? rawSource.slice(0, -":proof".length)
+    : rawSource.startsWith("proof-")
+      ? rawSource.replace(/^proof-/, "")
+      : null;
   const proofContext: ProofContextItem | null = proofSourceSlug
     ? ((homepage.proof.items.find((proofItem) => proofItem.slug === proofSourceSlug) as ProofContextItem | undefined) ?? null)
     : null;
@@ -252,9 +257,6 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
         onKeyDownCapture={markStep0SessionInteracted}
         onChangeCapture={markStep0SessionInteracted}
       >
-        <div className="mb-3 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-xs text-slate-600">
-          <a href="?quiz=v1" className="underline">Вернуться к старой версии калькулятора</a>
-        </div>
         <PriceCalculatorQuizV2
           preset={resolvedPreset}
           initialSolutionScenario={initialSolutionScenario}
@@ -268,36 +270,7 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
           onIsStep0SummaryReadyChange={setIsStep0SummaryReady}
           onStep0FooterActionChange={setStep0FooterAction}
           onStep0BackActionChange={setStep0BackAction}
-          summaryPrimaryLabel={(() => {
-            const scenario = snapshot?.solutionScenario ?? initialSolutionScenario;
-            const hasLighting = Boolean(lightingDraft && lightingDraft.mode !== "none" && (lightingDraft.items?.length ?? 0) > 0);
-            return resolveStep0SummaryActions({ scenario, hasLighting }).primary.label;
-          })()}
-          summarySecondaryLabel={(() => {
-            const scenario = snapshot?.solutionScenario ?? initialSolutionScenario;
-            const hasLighting = Boolean(lightingDraft && lightingDraft.mode !== "none" && (lightingDraft.items?.length ?? 0) > 0);
-            return resolveStep0SummaryActions({ scenario, hasLighting }).secondary?.label;
-          })()}
-          onPrimaryCtaClick={() => {
-            const scenario = snapshot?.solutionScenario ?? initialSolutionScenario;
-            const hasLighting = Boolean(
-              lightingDraft &&
-                lightingDraft.mode !== "none" &&
-                (lightingDraft.items?.length ?? 0) > 0
-            );
-            const actions = resolveStep0SummaryActions({ scenario, hasLighting });
-            goToStep(actions.primary.destination);
-          }}
-          onSecondaryCtaClick={() => {
-            const scenario = snapshot?.solutionScenario ?? initialSolutionScenario;
-            const hasLighting = Boolean(
-              lightingDraft &&
-                lightingDraft.mode !== "none" &&
-                (lightingDraft.items?.length ?? 0) > 0
-            );
-            const actions = resolveStep0SummaryActions({ scenario, hasLighting });
-            if (actions.secondary) goToStep(actions.secondary.destination);
-          }}
+          /* T-022: подписи и переходы сводки считает сам квиз от engine.solutionScenario */
         />
       </div>
     );
@@ -332,7 +305,7 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
               ? "Теперь добавьте параметры потолка, чтобы увидеть общий бюджет. Площадь считается отдельно, а трек, карнизы и профили — только по фактическим метрам."
               : (proofContext?.actionPreset?.introNote ?? (
                 <>
-                  Мы подставили стартовые параметры по кейсу «{proofContext?.title}». Проверьте площадь и уточните только нужные участки профилей и узлов.
+                  {caseHint(String(proofContext?.title ?? ""))}. Проверьте площадь и уточните только нужные участки профилей и узлов.
                 </>
               ))}
           </p>
