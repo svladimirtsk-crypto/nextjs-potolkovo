@@ -3,10 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
-import {
-  type CalculatorLeadSnapshot,
-  usePriceCalculatorBridge,
-} from "@/components/home/price-calculator-context";
+import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
+import type { CalculatorLeadSnapshot } from "@/lib/calculator/snapshot-types";
 import {
   isMountsOrGrilles,
   isPanelProduct,

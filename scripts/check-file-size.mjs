@@ -25,7 +25,7 @@ const ROOTS = ["components", "app"];
  */
 const LEGACY_BUDGET = {
   "components/calculator-modal/wizard-step1-lighting.tsx": 1938,
-  "app/uslugi/prodazha-trekovogo-osveshcheniya/_components/CatalogSectionClient.tsx": 1326,
+  "app/uslugi/prodazha-trekovogo-osveshcheniya/_components/CatalogSectionClient.tsx": 1324,
   "components/home/action-form.tsx": 661,
   "components/calculator-modal/wizard-step2-summary.tsx": 616,
 };

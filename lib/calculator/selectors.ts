@@ -10,7 +10,7 @@ import { pricing } from "@/content/pricing";
 import { calcRoomsTotal, type V2RoomConfig } from "@/lib/calculator-v2/room-snapshot";
 import { getParamConfirmLabel, type Step0Screen } from "./fsm";
 import { calcRecommendedTrackSpots } from "@/lib/lighting-formulas";
-import type { CalculatorRoomBreakdown } from "@/components/home/price-calculator-context";
+import type { CalculatorRoomBreakdown } from "@/lib/calculator/snapshot-types";
 
 /** Комната в терминах стора; структурно совпадает с V2RoomConfig. */
 export type SelectorRoom = V2RoomConfig;

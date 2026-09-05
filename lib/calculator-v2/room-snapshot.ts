@@ -1,6 +1,6 @@
 import { homepage } from "@/content/homepage";
 import { applyMinimumOrder } from "@/content/pricing";
-import type { CalculatorLeadSnapshot, CalculatorRoomBreakdown } from "@/components/home/price-calculator-context";
+import type { CalculatorLeadSnapshot, CalculatorRoomBreakdown } from "@/lib/calculator/snapshot-types";
 import type { DerivedInputs } from "@/lib/calculator-modal-types";
 import { calcRecommendedTrackSpots } from "@/lib/lighting-formulas";
 

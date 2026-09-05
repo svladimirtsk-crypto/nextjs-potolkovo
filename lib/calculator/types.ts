@@ -5,7 +5,7 @@
  * Собирается из состояния движка Шага 0 и корзины освещения Шага 1 —
  * без пересчёта цен: суммы приходят уже посчитанными.
  */
-import type { CalculatorLeadSnapshot, CalculatorRoomBreakdown } from "@/components/home/price-calculator-context";
+import type { CalculatorLeadSnapshot, CalculatorRoomBreakdown } from "@/lib/calculator/snapshot-types";
 import type { LightingDiscountMode, LightingSnapshot, SolutionScenario } from "@/lib/calculator-modal-types";
 
 export type CalculationScope = "room" | "object";

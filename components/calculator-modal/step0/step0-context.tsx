@@ -5,7 +5,7 @@ import { createContext, useContext, type ReactNode } from "react";
 import type {
   CalculatorLeadSnapshot,
   CalculatorRoomBreakdown,
-} from "@/components/home/price-calculator-context";
+} from "@/lib/calculator/snapshot-types";
 import type { SolutionScenario, WizardStep } from "@/lib/calculator-modal-types";
 
 /**

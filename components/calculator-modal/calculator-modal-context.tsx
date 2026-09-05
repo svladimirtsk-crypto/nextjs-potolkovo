@@ -35,10 +35,8 @@ import {
   calcLightingDiscountAmount,
 } from "@/lib/lighting-formulas";
 import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
-import {
-  type CalculatorLeadSnapshot,
-  usePriceCalculatorBridge,
-} from "@/components/home/price-calculator-context";
+import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
+import type { CalculatorLeadSnapshot } from "@/lib/calculator/snapshot-types";
 import { trackCalculatorOpen, trackWizardStepView } from "@/lib/analytics";
 import { readCalcDraft } from "@/lib/calculator/draft";
 

@@ -3,7 +3,7 @@
  *
  * Текст ≤ 300 символов; если `leadId` нет — без номера расчёта.
  */
-import type { CalculatorRoomBreakdown } from "@/components/home/price-calculator-context";
+import type { CalculatorRoomBreakdown } from "@/lib/calculator/snapshot-types";
 
 export const TELEGRAM_USERNAME = "potolkovo_msk";
 
