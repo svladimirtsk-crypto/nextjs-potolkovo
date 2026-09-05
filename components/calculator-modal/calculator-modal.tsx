@@ -388,6 +388,8 @@ export function CalculatorModal() {
         <div
           ref={panelRef}
           role="dialog"
+          data-testid="calculator-modal"
+          data-open={isOpen ? "true" : "false"}
           aria-modal={isOpen ? "true" : undefined}
           aria-labelledby="calc-modal-title"
           // Fullscreen calculator wizard on all viewports

@@ -18,6 +18,8 @@ type CommonProps = {
   className?: string;
   variant?: ButtonVariant;
   size?: ButtonSize;
+  /** Стабильный хук для e2e — не завязываться на тексты и классы (T-091). */
+  "data-testid"?: string;
 };
 
 type ButtonAsButtonProps = CommonProps & {
@@ -115,14 +117,19 @@ export function Button(props: ButtonProps) {
       };
 
       return (
-        <a href={props.href} className={baseClassName} onClick={handleHashClick}>
+        <a
+          href={props.href}
+          className={baseClassName}
+          data-testid={props["data-testid"]}
+          onClick={handleHashClick}
+        >
           {props.children}
         </a>
       );
     }
 
     return (
-      <Link href={props.href} className={baseClassName}>
+      <Link href={props.href} className={baseClassName} data-testid={props["data-testid"]}>
         {props.children}
       </Link>
     );
@@ -132,6 +139,7 @@ export function Button(props: ButtonProps) {
     <button
       type={props.type ?? "button"}
       className={baseClassName}
+      data-testid={props["data-testid"]}
       onClick={props.onClick}
       disabled={props.disabled}
     >

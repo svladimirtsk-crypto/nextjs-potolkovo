@@ -574,6 +574,7 @@ export function ActionForm({
           <Input
             label="Имя"
             name="name"
+            data-testid="lead-name"
             autoComplete="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -585,6 +586,7 @@ export function ActionForm({
           <Input
             label="Телефон"
             name="phone"
+            data-testid="lead-phone"
             type="tel"
             inputMode="tel"
             autoComplete="tel"
@@ -618,7 +620,7 @@ export function ActionForm({
       </div>
 
       {/* P2.18: loading state on submit button */}
-      <Button type="submit" className="w-full" disabled={isPending || !consentGiven}>
+      <Button type="submit" className="w-full" data-testid="lead-submit" disabled={isPending || !consentGiven}>
         {isPending ? (
           <span className="flex items-center justify-center gap-2">
             <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -640,6 +642,7 @@ export function ActionForm({
       <label className="flex items-start gap-2.5 text-xs leading-5 text-slate-600">
         <input
           type="checkbox"
+          data-testid="lead-consent"
           checked={consentGiven}
           onChange={(event) => setConsentGiven(event.target.checked)}
           className="mt-0.5 h-4 w-4 shrink-0 accent-slate-950"
