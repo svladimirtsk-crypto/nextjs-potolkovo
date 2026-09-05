@@ -86,6 +86,8 @@ import {
 } from "@/lib/lighting/orphan-track";
 import {
   AutoProfilePlanCard,
+  LampsScreen,
+  RecommendedKitCard,
   KitCompletionCard,
   KitDoneScreen,
   ManualPickScreen,
@@ -141,9 +143,8 @@ import {
   OrphanTrackNotice,
   ProductCard,
   TabBtn,
-  ThinProgress,
 } from "@/components/lighting/CatalogPieces";
-import { ProductGrid, ProductPickerScreen, WizardFooter } from "@/components/lighting/ProductPickerScreen";
+import { ProductPickerScreen, WizardFooter } from "@/components/lighting/ProductPickerScreen";
 import { resolveStep1FooterAction } from "@/lib/lighting/step1-footer-action";
 
 
@@ -1256,26 +1257,15 @@ export function WizardStep1Lighting() {
               ) : null}
 
               {kitCompletion.recommended.length > 0 ? (
-                <div className="rounded-2xl border border-slate-300 bg-white p-4">
-                  <p className="text-sm font-semibold text-slate-950">Может пригодиться</p>
-                  <ul className="mt-2 space-y-2">
-                    {kitCompletion.recommended.map((item) => (
-                      <li key={toText(item.product.productId)} className="text-xs text-slate-700">
-                        <span className="font-semibold">
-                          {toText(item.product.name)} × {item.qty}
-                        </span>
-                        <span className="block text-slate-600">{item.reason}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <button
-                    type="button"
-                    onClick={() => applyKitCompletion(kitCompletion.recommended)}
-                    className="mt-3 min-h-11 w-full rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-900 hover:border-slate-500"
-                  >
-                    Добавить всё
-                  </button>
-                </div>
+                <RecommendedKitCard
+                  items={kitCompletion.recommended.map((item) => ({
+                    productId: toText(item.product.productId),
+                    name: toText(item.product.name),
+                    qty: item.qty,
+                    reason: item.reason,
+                  }))}
+                  onAddAll={() => applyKitCompletion(kitCompletion.recommended)}
+                />
               ) : null}
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -1397,61 +1387,20 @@ export function WizardStep1Lighting() {
 
           {/* ─── STEP: Lamps ─── */}
           {shownWStep === "lamps" && (
-            <div className="space-y-3">
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3">
-                <p className="text-sm font-semibold text-amber-950">Лампы к светильникам</p>
-              </div>
-
-              {lampSocketsToShow.length === 0 ? (
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
-                  Для выбранных светильников отдельные лампы не требуются.
-                </div>
-              ) : null}
-
-              {lampSocketsToShow.map((socket) => {
-                const required = toNumber(lampRequiredBySocket[socket]);
-                const current = toNumber(lampCurrentBySocket[socket]);
-                const missing = Math.max(0, required - current);
-
-                return (
-                  <div key={socket} className="space-y-2">
-                    <div className="rounded-2xl border border-slate-200 bg-white p-3">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-slate-950">Лампы {socket}</p>
-                          <p className="text-xs text-slate-600">Нужно {fmt(required)} шт., выбрано {fmt(current)} шт.</p>
-                        </div>
-                        {missing > 0 ? (
-                          <button
-                            type="button"
-                            onClick={() => addCheapestLamps(socket)}
-                            className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
-                          >
-                            +{fmt(missing)} шт. доступных
-                          </button>
-                        ) : (
-                          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">Готово</span>
-                        )}
-                      </div>
-                      <div className="mt-2">
-                        <ThinProgress current={current} required={required} unit="шт." />
-                      </div>
-                    </div>
-
-                    <ProductGrid
-                      products={wLampProducts[socket] ?? []}
-                      cartItems={cartItems}
-                      onQtyChange={setProductQty}
-                      onZoom={setZoomImage}
-                      discountPercent={cardDiscountPercent}
-                      emptyText="Подходящие лампы сейчас не найдены в каталоге. Я уточню вариант при звонке."
-                    />
-                  </div>
-                );
-              })}
-
-              <WizardFooter onBack={goBackFromLamps} onNext={goAfterLamps} nextDisabled={!lampsComplete} />
-            </div>
+            <LampsScreen
+              sockets={lampSocketsToShow}
+              requiredBySocket={lampRequiredBySocket}
+              currentBySocket={lampCurrentBySocket}
+              productsBySocket={wLampProducts}
+              cartItems={cartItems}
+              discountPercent={cardDiscountPercent}
+              onAddCheapest={addCheapestLamps}
+              onQtyChange={setProductQty}
+              onZoom={setZoomImage}
+              footer={
+                <WizardFooter onBack={goBackFromLamps} onNext={goAfterLamps} nextDisabled={!lampsComplete} />
+              }
+            />
           )}
 
           {/* ─── STEP: Done ─── */}

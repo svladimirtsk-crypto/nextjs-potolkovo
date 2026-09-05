@@ -1,6 +1,12 @@
 "use client";
 
-import type { TrackSystemId } from "@/lib/catalog-ui-config";
+import type { ReactNode } from "react";
+
+import { ThinProgress } from "@/components/lighting/CatalogPieces";
+import { ProductGrid } from "@/components/lighting/ProductPickerScreen";
+import type { LampSocket, TrackSystemId } from "@/lib/catalog-ui-config";
+import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
+import { toNumber } from "@/lib/feed2-snapshot-normalize";
 
 /**
  * N-051 · Экраны Шага 1, вынесенные из `wizard-step1-lighting.tsx`.
@@ -368,6 +374,136 @@ export function KitCompletionCard({
           Блок питания подберём при звонке — идти к итогу без него
         </label>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * Необязательные дополнения к комплекту.
+ *
+ * Отличается от {@link KitCompletionCard} не только цветом: эти позиции ничего
+ * не блокируют, поэтому подаются нейтрально и без чекбоксов-исключений.
+ */
+export function RecommendedKitCard({
+  items,
+  onAddAll,
+}: {
+  items: Array<{ productId: string; name: string; qty: number; reason: string }>;
+  onAddAll: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-300 bg-white p-4">
+      <p className="text-sm font-semibold text-slate-950">Может пригодиться</p>
+      <ul className="mt-2 space-y-2">
+        {items.map((item) => (
+          <li key={item.productId} className="text-xs text-slate-700">
+            <span className="font-semibold">
+              {item.name} × {item.qty}
+            </span>
+            <span className="block text-slate-600">{item.reason}</span>
+          </li>
+        ))}
+      </ul>
+      <button
+        type="button"
+        onClick={onAddAll}
+        className="mt-3 min-h-11 w-full rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-900 hover:border-slate-500"
+      >
+        Добавить всё
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Экран «Лампы» — по одной сетке на цоколь.
+ *
+ * Лампы считаются отдельно от светильников: один цоколь может требовать больше
+ * ламп, чем куплено корпусов, поэтому у каждой группы свой прогресс и своя
+ * кнопка «добить недостающие самыми доступными».
+ */
+export function LampsScreen({
+  sockets,
+  requiredBySocket,
+  currentBySocket,
+  productsBySocket,
+  cartItems,
+  discountPercent,
+  onAddCheapest,
+  onQtyChange,
+  onZoom,
+  footer,
+}: {
+  sockets: readonly LampSocket[];
+  requiredBySocket: Partial<Record<LampSocket, number>>;
+  currentBySocket: Partial<Record<LampSocket, number>>;
+  productsBySocket: Partial<Record<LampSocket, readonly FeedCatalogProduct[]>>;
+  cartItems: Record<string, number>;
+  discountPercent: number;
+  onAddCheapest: (socket: LampSocket) => void;
+  onQtyChange: (product: FeedCatalogProduct, qty: number) => void;
+  onZoom: (image: { src: string; alt: string }) => void;
+  footer: ReactNode;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3">
+        <p className="text-sm font-semibold text-amber-950">Лампы к светильникам</p>
+      </div>
+
+      {sockets.length === 0 ? (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+          Для выбранных светильников отдельные лампы не требуются.
+        </div>
+      ) : null}
+
+      {sockets.map((socket) => {
+        const required = toNumber(requiredBySocket[socket]);
+        const current = toNumber(currentBySocket[socket]);
+        const missing = Math.max(0, required - current);
+
+        return (
+          <div key={socket} className="space-y-2">
+            <div className="rounded-2xl border border-slate-200 bg-white p-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-950">Лампы {socket}</p>
+                  <p className="text-xs text-slate-600">
+                    Нужно {fmtRub(required)} шт., выбрано {fmtRub(current)} шт.
+                  </p>
+                </div>
+                {missing > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => onAddCheapest(socket)}
+                    className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                  >
+                    +{fmtRub(missing)} шт. доступных
+                  </button>
+                ) : (
+                  <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                    Готово
+                  </span>
+                )}
+              </div>
+              <div className="mt-2">
+                <ThinProgress current={current} required={required} unit="шт." />
+              </div>
+            </div>
+
+            <ProductGrid
+              products={productsBySocket[socket] ?? []}
+              cartItems={cartItems}
+              onQtyChange={onQtyChange}
+              onZoom={onZoom}
+              discountPercent={discountPercent}
+              emptyText="Подходящие лампы сейчас не найдены в каталоге. Я уточню вариант при звонке."
+            />
+          </div>
+        );
+      })}
+
+      {footer}
     </div>
   );
 }
