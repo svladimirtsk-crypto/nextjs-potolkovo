@@ -393,12 +393,20 @@ export function CalculatorModal() {
           aria-modal={isOpen ? "true" : undefined}
           aria-labelledby="calc-modal-title"
           // Fullscreen calculator wizard on all viewports
-          className={`calculator-modal-panel fixed inset-0 flex h-[100dvh] max-h-[100dvh] w-screen max-w-none flex-col overflow-hidden rounded-none bg-white shadow-none ${transitionClass} ${
+          /*
+           * N-010 · На мобильном модалка остаётся полноэкранной, а на desktop
+           * становится окном 1200×92dvh с двумя колонками: слева мастер,
+           * справа липкая сводка. Раньше панель растягивалась на всю ширину
+           * экрана, и на 1440 px контент болтался в пустоте (F-01, F-02).
+           */
+          className={`calculator-modal-panel fixed inset-0 flex h-[100dvh] max-h-[100dvh] w-screen max-w-none flex-col overflow-hidden rounded-none bg-white shadow-none lg:static lg:h-[92dvh] lg:max-h-[92dvh] lg:w-full lg:max-w-[1200px] lg:flex-row lg:rounded-3xl lg:shadow-2xl ${transitionClass} ${
             modalActive
               ? "translate-y-0 opacity-100 pointer-events-auto"
               : "translate-y-0 opacity-0 pointer-events-none"
           }`}
         >
+          {/* N-010 · Левая колонка: шапка + прокручиваемый контент + футер. */}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           {/* Header */}
           <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4 max-sm:px-4 max-sm:py-3">
             <div className="min-w-0 flex-1">
@@ -456,7 +464,7 @@ export function CalculatorModal() {
 
           {/* P2.14: Sticky PriceStrip */}
           {currentStep !== 2 ? (
-            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-5 py-3 max-sm:px-4 max-sm:py-2">
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-5 py-3 max-sm:px-4 max-sm:py-2 lg:hidden">
               <PriceStrip />
             </div>
           ) : null}
@@ -572,6 +580,21 @@ export function CalculatorModal() {
               )}
             </div>
           </div>
+          </div>
+
+          {/*
+           * N-010 · Правая колонка (desktop): липкая сводка.
+           * Держит сумму и прогресс подбора всегда на виду — на мобильном её
+           * роль выполняют строка цены сверху и прогресс в футере.
+           */}
+          <aside className="hidden w-[360px] shrink-0 flex-col gap-4 overflow-y-auto border-l border-slate-200 bg-slate-50 px-5 py-5 lg:flex">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-950">Сводка</h3>
+              <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
+                <PriceStrip />
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
     </div>,
