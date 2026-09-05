@@ -84,6 +84,11 @@ import {
   decideOrphanTrackAction,
   selectOrphanTrackEntries,
 } from "@/lib/lighting/orphan-track";
+import {
+  KitDoneScreen,
+  ManualPickScreen,
+  TrackSystemScreen,
+} from "@/components/lighting/Step1Screens";
 import { ProductImage } from "@/components/feed2/ProductImage";
 import { useCalculatorModal } from "./calculator-modal-context";
 import { useCalculatorStore } from "@/lib/calculator/store";
@@ -368,6 +373,16 @@ export function WizardStep1Lighting() {
 
   const hasClarusInCart = useMemo(() => hasClarusInCartFn(cartEntries), [cartEntries]);
   const clarusPsuQty = useMemo(() => calcClarusPsuQty(cartEntries), [cartEntries]);
+
+  /** Варианты БП для CLARUS; пусто — если блок уже выбран или CLARUS нет. */
+  const clarusPsuOptions = useMemo(() => {
+    if (!hasClarusInCart || clarusPsuQty >= 1) return [];
+    return CLARUS_PSU_VENDOR_CODES.map((vendorCode) => {
+      const productId = productIdByVendorCode.get(vendorCode);
+      const product = productId ? productsById.get(productId) : undefined;
+      return productId && product ? { productId, name: toText(product.name) } : null;
+    }).filter((option): option is { productId: string; name: string } => option !== null);
+  }, [hasClarusInCart, clarusPsuQty, productIdByVendorCode, productsById]);
 
   /* ─── T-024: трек выключен, но в корзине есть трековые позиции ───
    * Раньше эффект молча вычищал корзину. Если набор собран в каталоге
@@ -1175,116 +1190,28 @@ export function WizardStep1Lighting() {
 
           {/* ─── STEP: Track System ─── */}
           {shownWStep === "none" && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
-              <p className="font-semibold text-slate-950">Освещение можно подобрать вручную</p>
-              <p className="mt-1 leading-5">
-                На шаге потолка не задан трек или количество точечных светильников.
-                Откройте каталог, если хотите добавить свет, или сразу переходите к итогу.
-              </p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => { markWizardTouched(); setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}
-                  className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
-                >
-                  Открыть каталог
-                </button>
-                <button
-                  type="button"
-                  onClick={() => goToStep(2)}
-                  className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  К итогу →
-                </button>
-              </div>
-            </div>
+            <ManualPickScreen
+              onOpenCatalog={() => { markWizardTouched(); setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}
+              onSkipToSummary={() => goToStep(2)}
+            />
           )}
 
           {shownWStep === "system" && (
             wizardSystemOptions.length > 0 ? (
-              <div className="space-y-3">
-                <div className="rounded-2xl bg-slate-950 p-4 text-white">
-                  <p className="text-sm font-semibold">Сначала выберите систему трека</p>
-                  <p className="mt-1 text-xs text-white/70">
-                    {trackMountType === "built-in"
-                      ? "Для встроенного трека подойдут COLIBRI или CLARUS."
-                      : trackMountType === "surface"
-                        ? "Для накладного трека используем ART 220V."
-                        : "Система определит подходящие профили и светильники."}
-                  </p>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {wizardSystemOptions.map((system) => {
-                    const isRecommended = system === "COLIBRI_220" && trackMountType === "built-in";
-                    return (
-                      <button
-                        key={system}
-                        type="button"
-                        onClick={() => chooseWizardSystem(system)}
-                        className={[
-                          "rounded-2xl border-2 p-4 text-left transition-colors",
-                          isRecommended
-                            ? "border-blue-400 bg-blue-50 hover:border-blue-600"
-                            : "border-slate-200 bg-white hover:border-slate-400",
-                        ].join(" ")}
-                      >
-                        <p className={isRecommended ? "text-sm font-semibold text-blue-900" : "text-sm font-semibold text-slate-950"}>
-                          {systemLabel(system)}
-                        </p>
-                        <p className={isRecommended ? "mt-1 text-xs text-blue-700" : "mt-1 text-xs text-slate-500"}>
-                          {system === "COLIBRI_220"
-                            ? "220V · проще в подборе"
-                            : system === "CLARUS_48"
-                              ? "48V · нужен блок питания"
-                              : "Накладной · 220V"}
-                          {isRecommended ? " · рекомендуется" : ""}
-                        </p>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {requiredPointQty > 0 ? (
-                  <button type="button" onClick={chooseNoTrackFlow}
-                    className="w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3 text-sm text-slate-600 hover:bg-slate-100">
-                    Без трека — только точечные →
-                  </button>
-                ) : null}
-
-                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
-                  <p className="font-medium text-slate-700">У меня уже есть освещение</p>
-                  <p className="mt-1">Если всё куплено — можно пропустить подбор.</p>
-                  <button type="button" onClick={() => goToStep(2)}
-                    className="mt-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
-                    Пропустить, к итогу →
-                  </button>
-                </div>
-              </div>
+              <TrackSystemScreen
+                systems={wizardSystemOptions}
+                trackMountType={trackMountType}
+                systemLabel={systemLabel}
+                showNoTrackOption={requiredPointQty > 0}
+                onChoose={chooseWizardSystem}
+                onNoTrack={chooseNoTrackFlow}
+                onSkipToSummary={() => goToStep(2)}
+              />
             ) : (
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
-                <p className="font-semibold text-slate-950">Освещение можно подобрать вручную</p>
-                <p className="mt-1 leading-5">
-                  На шаге потолка не задан трек или количество точечных светильников.
-                  Откройте каталог, если хотите добавить свет, или сразу переходите к итогу.
-                </p>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}
-                    className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
-                  >
-                    Открыть каталог
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => goToStep(2)}
-                    className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                  >
-                    К итогу →
-                  </button>
-                </div>
-              </div>
+              <ManualPickScreen
+                onOpenCatalog={() => { markWizardTouched(); setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}
+                onSkipToSummary={() => goToStep(2)}
+              />
             )
           )}
 
@@ -1563,55 +1490,17 @@ export function WizardStep1Lighting() {
 
           {/* ─── STEP: Done ─── */}
           {shownWStep === "done" && requiredSelectionComplete && (
-            <div className="space-y-3">
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                <p className="text-sm font-semibold text-emerald-950">✓ Комплект собран</p>
-                <p className="mt-1 text-xs text-emerald-800">
-                  {lightingDraft?.items?.length ?? 0} поз.
-                  {lightingRegularTotal > 0 ? (
-                    lightingRegularTotal > lightingEffectiveTotal ? (
-                      <>
-                        {" · "}<span className="line-through text-emerald-700/50">{fmt(lightingRegularTotal)} ₽</span>{" "}
-                        <span className="font-semibold">{fmt(lightingEffectiveTotal)} ₽</span>
-                      </>
-                    ) : (
-                      <> · {fmt(lightingRegularTotal)} ₽</>
-                    )
-                  ) : ""}
-                </p>
-              </div>
-
-              {missingMounts.map((item) => (
-                <div key={`${item.fixtureVendorCode}-${item.mountVendorCode}`}
-                  className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-                  <p className="font-semibold">Не хватает закладных</p>
-                  <p className="mt-1 text-amber-900/80">Для <span className="font-semibold">{item.fixtureName}</span> нужна <span className="font-semibold">{item.mountName}</span>.</p>
-                  <button type="button" onClick={() => addMountOneToOne(item.fixtureVendorCode)}
-                    className="mt-2 rounded-xl bg-amber-700 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-800">Добавить 1:1</button>
-                </div>
-              ))}
-
-              {hasClarusInCart && clarusPsuQty < 1 && (
-                <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-950">
-                  <p className="font-semibold">Для CLARUS обязателен блок питания.</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {CLARUS_PSU_VENDOR_CODES.map((v) => {
-                      const id = productIdByVendorCode.get(v); if (!id) return null;
-                      const p = productsById.get(id); if (!p) return null;
-                      return <button key={v} type="button" onClick={() => setClarusPsu(id)}
-                        className="rounded-xl bg-rose-700 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-800">{toText(p.name)}</button>;
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <button type="button" onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}
-                  className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Изменить в каталоге</button>
-                <button type="button" onClick={() => goToStep(2)}
-                  className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800">К итогу →</button>
-              </div>
-            </div>
+            <KitDoneScreen
+              itemsCount={lightingDraft?.items?.length ?? 0}
+              regularTotal={lightingRegularTotal}
+              effectiveTotal={lightingEffectiveTotal}
+              missingMounts={missingMounts}
+              clarusPsuOptions={clarusPsuOptions}
+              onAddMount={addMountOneToOne}
+              onPickClarusPsu={setClarusPsu}
+              onEditInCatalog={() => { setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}
+              onGoToSummary={() => goToStep(2)}
+            />
           )}
 
           {shownWStep === "done" && !requiredSelectionComplete && missingAction ? (
