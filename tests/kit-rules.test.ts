@@ -14,7 +14,13 @@ import {
   profilesForMeters,
   type Cart,
 } from "@/lib/lighting/kit-rules";
-import { COLIBRI_PROFILES } from "@/lib/lighting-kits";
+// T-060: прайс-лист переехал из lib/lighting-kits.ts в фикстуру теста —
+// в проде цены профилей приходят из каталога.
+const COLIBRI_PROFILES = [
+  { sku: "eks-colibri-profile-220v-1000", lengthMm: 1000 as const, priceRub: 3900 },
+  { sku: "eks-colibri-profile-220v-2000", lengthMm: 2000 as const, priceRub: 7400 },
+  { sku: "eks-colibri-profile-220v-3000", lengthMm: 3000 as const, priceRub: 10500 },
+];
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 
 /** Минимальный товар фида — только поля, которые читают правила. */

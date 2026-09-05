@@ -174,30 +174,6 @@ export function getBackFallback(
 }
 
 // Прогресс для хедера модалки
-export function calcStep0Progress(
-  screen: Step0Screen,
-  ctx: Step0FlowContext
-): { done: number; total: number } | null {
-  const totalBase =
-    1 + // scenario
-    ctx.enabledParams.length +
-    1; // summary
-
-  let done = 0;
-  switch (screen.t) {
-    case "scenario": done = 0; break;
-    case "roomPicker": done = 1; break;
-    case "param": {
-      const idx = ctx.enabledParams.indexOf(screen.param);
-      done = 2 + Math.max(0, idx);
-      // + подтверждённые до него
-      break;
-    }
-    case "roomEdit": done = 2 + ctx.enabledParams.length; break;
-    case "summary": done = totalBase - 1; break;
-  }
-  return { done, total: totalBase };
-}
 
 // Лейблы для футера
 export function getParamConfirmLabel(param: ParamId): string {

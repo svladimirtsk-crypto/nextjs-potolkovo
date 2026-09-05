@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { getAvailabilityLabel } from "@/content/availability";
 
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
-import { homepage } from "@/content/homepage";
 
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
 import { useCatalogProducts } from "@/lib/lighting/use-catalog-products";
@@ -23,7 +22,7 @@ import { clearCalcDraft } from "@/lib/calculator/draft";
 import { buildTelegramDeepLink } from "@/lib/lead/telegram-link";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 
-import { getKitDisplayName } from "@/lib/calculator-modal-types";
+import { getLightingKitLabel } from "@/lib/calculator-modal-types";
 import { lightingDiscountPercent, pricing } from "@/content/pricing";
 
 type CatalogLightingItem = {
@@ -164,7 +163,7 @@ export function WizardStep2Summary() {
 
   const ceilingSummaryLines = useMemo(() => getCalculatorSummaryLines(snapshot), [snapshot]);
 
-  const kitDisplayName = useMemo(() => getKitDisplayName(lighting), [lighting]);
+  const kitDisplayName = useMemo(() => getLightingKitLabel(lighting), [lighting]);
 
   const lightingItems: CatalogLightingItem[] = useMemo(() => {
     const items = lighting?.mode === "catalog" ? (lighting.items ?? []) : [];

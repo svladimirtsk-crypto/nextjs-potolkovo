@@ -81,27 +81,7 @@ export function trackKitClicked(params: {
   });
 }
 
-export function trackWizardBack(params: {
-  step: number;
-  fromSummary: boolean;
-  source?: string;
-}) {
-  ymReachGoal("wizard_back", {
-    step: params.step,
-    from_summary: params.fromSummary ? 1 : 0,
-    ...(params.source ? { source: params.source } : {}),
-  });
-}
 
-export function trackScenarioSelected(params: {
-  scenario: "standard" | "modern" | "advanced";
-  source?: string;
-}) {
-  ymReachGoal("scenario_selected", {
-    scenario: params.scenario,
-    ...(params.source ? { source: params.source } : {}),
-  });
-}
 
 export function trackSmartInterestSelected(params: {
   placement: "modal" | "catalog";

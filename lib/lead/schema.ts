@@ -123,5 +123,4 @@ export const LeadPayloadSchema = z.object({
 });
 
 export type LeadPayload = z.infer<typeof LeadPayloadSchema>;
-export type LeadTotalsPayload = z.infer<typeof TotalsSchema>;
 export type LightingLeadItem = z.infer<typeof LightingLeadItemSchema>;

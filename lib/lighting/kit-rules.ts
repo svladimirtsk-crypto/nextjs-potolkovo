@@ -8,7 +8,6 @@
 import { CLARUS_PSU_VENDOR_CODES } from "@/lib/catalog-ui-config";
 import type { FeedCatalogKind, FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
-import { calcProfilesForTrackMeters, type ProfileEntry, type ProfilePiece } from "@/lib/lighting-kits";
 import { inferPieceLengthMeters } from "@/lib/product-length-meters";
 
 export type TrackSystemId = "COLIBRI_220" | "CLARUS_48" | "TRACK_220";
@@ -132,18 +131,65 @@ export function clearIncompatibleSystem(
  * T-032 · Автосборка профиля
  * ------------------------------------------------------------------ */
 
-export type { ProfileEntry, ProfilePiece };
+/** Типовая длина куска профиля. */
+export type ProfileLength = 1000 | 2000 | 3000;
+
+export type ProfileEntry = {
+  sku: string;
+  lengthMm: ProfileLength;
+  priceRub: number | null;
+};
+
+export type ProfilePiece = ProfileEntry & {
+  qty: number;
+  name: string;
+};
 
 /**
  * Подбирает набор профилей под нужную длину трека: сначала длинные куски,
- * остаток добивается самым коротким. Перенос `calcProfilesForTrackLength`
- * в общие правила — теперь это единственная точка автосборки.
+ * остаток добивается самым коротким.
+ *
+ * T-060: алгоритм переехал сюда из `lib/lighting-kits.ts` — тот модуль нёс
+ * захардкоженные прайсы COLIBRI/CLARUS, разъезжавшиеся с фидом, и удалён.
+ * Цены теперь всегда приходят из каталога вместе с `ProfileEntry`.
  */
 export function profilesForMeters(
   meters: number,
   profiles: readonly ProfileEntry[]
 ): ProfilePiece[] {
-  return calcProfilesForTrackMeters(meters, profiles);
+  const trackLengthMm = Math.round(meters * 1000);
+  if (trackLengthMm <= 0 || profiles.length === 0) return [];
+
+  const sorted = [...profiles].sort((a, b) => b.lengthMm - a.lengthMm);
+  const result = new Map<string, ProfilePiece>();
+  let remaining = trackLengthMm;
+
+  for (const profile of sorted) {
+    if (remaining <= 0) break;
+    const count = Math.floor(remaining / profile.lengthMm);
+    if (count > 0) {
+      result.set(profile.sku, {
+        ...profile,
+        qty: count,
+        name: `Профиль ${profile.lengthMm} мм`,
+      });
+      remaining -= count * profile.lengthMm;
+    }
+  }
+
+  // Хвост короче самого мелкого куска всё равно требует ещё одного профиля.
+  if (remaining > 0) {
+    const smallest = sorted[sorted.length - 1];
+    const existing = result.get(smallest.sku);
+    result.set(
+      smallest.sku,
+      existing
+        ? { ...existing, qty: existing.qty + 1 }
+        : { ...smallest, qty: 1, name: `Профиль ${smallest.lengthMm} мм` }
+    );
+  }
+
+  return Array.from(result.values());
 }
 
 /** Подобранный кусок профиля из реального каталога. */

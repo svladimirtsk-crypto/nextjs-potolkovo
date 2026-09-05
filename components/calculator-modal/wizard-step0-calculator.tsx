@@ -3,12 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { homepage } from "@/content/homepage";
-import type { ServiceCalculatorPreset, Phase2ServiceSlug } from "@/content/services";
+import type { ServiceCalculatorPreset } from "@/content/services";
 import type { SolutionScenario } from "@/lib/calculator-modal-types";
-import { resolveStep0SummaryActions } from "@/lib/calculator-flow";
-import { PriceCalculatorClient } from "@/components/home/price-calculator-client";
 import { PriceCalculatorQuizV2 } from "@/components/calculator-modal/step0/quiz-v2/PriceCalculatorQuizV2";
-import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 
 import { caseHint } from "@/lib/calculator/presets";
 import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
@@ -92,13 +89,11 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
     options,
     lightingDraft,
     step0SessionInteracted,
-    goToStep,
     setStep0Progress,
     setIsStep0SummaryReady,
     setStep0FooterAction,
     setStep0BackAction,
   } = useCalculatorModal();
-  const { snapshot } = usePriceCalculatorBridge();
 
   const forcePreset = Boolean(options?.forcePreset);
   const resolvedPreset: ServiceCalculatorPreset = useMemo(
@@ -237,42 +232,6 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
     return () => cancelAnimationFrame(frame);
   }, [prefillMetrics.hasAny, step0SessionInteracted]);
 
-  const calcKey = useMemo(() => {
-    return JSON.stringify(resolvedPreset) + "-" + String(options?.source ?? "");
-  }, [resolvedPreset, options?.source]);
-
-  // V2 включена по умолчанию. Отключить: ?quiz=v1 в URL или NEXT_PUBLIC_CALC_QUIZ_V2=0
-  const quizV2Disabled =
-    typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search).get("quiz") === "v1" ||
-        process.env.NEXT_PUBLIC_CALC_QUIZ_V2 === "0"
-      : process.env.NEXT_PUBLIC_CALC_QUIZ_V2 === "0";
-
-  if (!quizV2Disabled) {
-    return (
-      <div
-        onClickCapture={markStep0SessionInteracted}
-        onKeyDownCapture={markStep0SessionInteracted}
-        onChangeCapture={markStep0SessionInteracted}
-      >
-        <PriceCalculatorQuizV2
-          preset={resolvedPreset}
-          initialSolutionScenario={initialSolutionScenario}
-          prefillFromLighting={prefillMetrics.hasAny ? {
-            trackProfileMeters: prefillMetrics.trackProfileMeters,
-            pointSpotsQty: prefillMetrics.pointSpotsQty,
-            preferredTrackType: prefillMetrics.preferredTrackType,
-          } : null}
-          prefillFromLightingTrigger={prefillTrigger}
-          onStep0ProgressChange={setStep0Progress}
-          onIsStep0SummaryReadyChange={setIsStep0SummaryReady}
-          onStep0FooterActionChange={setStep0FooterAction}
-          onStep0BackActionChange={setStep0BackAction}
-          /* T-022: подписи и переходы сводки считает сам квиз от engine.solutionScenario */
-        />
-      </div>
-    );
-  }
 
   return (
     <div
@@ -310,12 +269,9 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
         </div>
       ) : null}
 
-
-      <PriceCalculatorClient
-        key={calcKey}
+      <PriceCalculatorQuizV2
         preset={resolvedPreset}
-        compactSections
-        showMobileStickyBar={false}
+        initialSolutionScenario={initialSolutionScenario}
         prefillFromLighting={
           prefillMetrics.hasAny
             ? {
@@ -326,21 +282,11 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
             : null
         }
         prefillFromLightingTrigger={prefillTrigger}
-        onPrimaryCtaClick={() => {
-          const scenario = snapshot?.solutionScenario ?? initialSolutionScenario;
-          const hasLighting = Boolean(
-            lightingDraft &&
-              lightingDraft.mode !== "none" &&
-              (lightingDraft.items?.length ?? 0) > 0
-          );
-          const actions = resolveStep0SummaryActions({ scenario, hasLighting });
-          goToStep(actions.primary.destination);
-        }}
-        initialSolutionScenario={initialSolutionScenario}
         onStep0ProgressChange={setStep0Progress}
         onIsStep0SummaryReadyChange={setIsStep0SummaryReady}
         onStep0FooterActionChange={setStep0FooterAction}
         onStep0BackActionChange={setStep0BackAction}
+        /* T-022: подписи и переходы сводки считает сам квиз от engine.solutionScenario */
       />
     </div>
   );

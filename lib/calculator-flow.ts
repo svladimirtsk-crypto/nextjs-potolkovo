@@ -21,9 +21,6 @@ export const STEP0_CONFIRM_LABELS = {
 
 export type Step0ConfirmStepId = keyof typeof STEP0_CONFIRM_LABELS;
 
-export function resolveStep0ConfirmLabel(step: Step0ConfirmStepId): string {
-  return STEP0_CONFIRM_LABELS[step];
-}
 
 export type Step0SummaryAction = {
   label: string;

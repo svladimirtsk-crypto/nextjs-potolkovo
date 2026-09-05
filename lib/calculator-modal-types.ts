@@ -1,6 +1,10 @@
 import type { ServiceCalculatorPreset } from "@/content/services";
 
-export type LightingMode = "kit" | "catalog" | "none";
+/**
+ * T-060: режим "kit" удалён. Готовые комплекты приходят как "catalog" с
+ * заполненным `kitBaseName` — отдельная ветка кода была мёртвой.
+ */
+export type LightingMode = "catalog" | "none";
 export type CatalogViewMode = "selected" | "browse";
 export type LightingDiscountMode = "none" | "lighting-only" | "with-ceiling";
 export type SolutionScenario = "standard" | "modern" | "advanced";
@@ -34,10 +38,8 @@ export type DerivedInputs = {
 export type LightingSnapshot = {
   mode: LightingMode;
 
-  kitId?: string;
   kitBaseName?: string;
   scaledSpotsQty?: number;
-  kitName?: string;
 
   items?: LightingItem[];
   totalRub?: number;
@@ -175,18 +177,15 @@ export type CalculatorModalContextValue = {
   setStep1FooterAction: (action: Step1FooterAction | null) => void;
 };
 
-export function getKitDisplayName(
+/**
+ * Название готового комплекта для сводки, если освещение набрано из него.
+ * Источник истины — `kitBaseName`: комплекты приходят как `mode: "catalog"`.
+ */
+export function getLightingKitLabel(
   lighting: LightingSnapshot | null | undefined
 ): string | null {
-  if (!lighting) return null;
+  if (!lighting?.kitBaseName) return null;
 
-  // ВАЖНО: kits сейчас приходят как mode:"catalog", но с kitBaseName.
-  // Поэтому kitBaseName — это наш "источник истины" для отображения имени комплекта.
-  if (lighting.kitBaseName) {
-    const qty = lighting.scaledSpotsQty;
-    return qty != null ? `${lighting.kitBaseName} · ${qty} шт.` : lighting.kitBaseName;
-  }
-
-  if (lighting.mode === "kit") return lighting.kitName ?? null;
-  return null;
+  const qty = lighting.scaledSpotsQty;
+  return qty != null ? `${lighting.kitBaseName} · ${qty} шт.` : lighting.kitBaseName;
 }

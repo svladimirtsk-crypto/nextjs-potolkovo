@@ -28,21 +28,6 @@ function fmtM(value: number): string {
   return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 }).format(value);
 }
 
-function toNumOrNull(value: unknown): number | null {
-  const n = Number(value ?? NaN);
-  return Number.isFinite(n) ? n : null;
-}
-
-function toParams(input: unknown): FeedCatalogParam[] {
-  if (!Array.isArray(input)) return [];
-  return input
-    .map((item) => {
-      const x = item as { label?: unknown; value?: unknown };
-      return { label: toText(x?.label), value: toText(x?.value) };
-    })
-    .filter((item) => item.label.length > 0 && item.value.length > 0);
-}
-
 
 function isPanelProduct(product: FeedCatalogProduct): boolean {
   const text = `${toText(product.name)} ${toText(product.categoryPath)}`.toLowerCase();

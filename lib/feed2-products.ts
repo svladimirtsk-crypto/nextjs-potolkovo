@@ -52,18 +52,6 @@ export function computeBenefit(priceRub: number, discounted: number): number {
   return Math.max(0, Math.round(full - disc));
 }
 
-export function detectSmart(product: FeedCatalogProduct): boolean {
-  const text = getText(product);
-
-  return (
-    text.includes("smart") ||
-    text.includes("умн") ||
-    text.includes("wifi") ||
-    text.includes("zigbee") ||
-    text.includes("bluetooth") ||
-    text.includes("tuya")
-  );
-}
 
 /** T-013: нормализация написаний цоколей: mr-16→mr16, gu 10→gu10, gu5,3→gu5.3 */
 export function normalizeSocketText(raw: string): string {
@@ -122,12 +110,3 @@ export function normalizeKind(kind: FeedCatalogKind): UiCatalogKind {
   return "OTHER";
 }
 
-export function classifyProduct(product: FeedCatalogProduct): {
-  system: UiCatalogSystem;
-  kind: UiCatalogKind;
-} {
-  return {
-    system: normalizeSystem(product.system),
-    kind: normalizeKind(product.kind),
-  };
-}

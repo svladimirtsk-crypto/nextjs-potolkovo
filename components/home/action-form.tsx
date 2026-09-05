@@ -4,10 +4,9 @@ import { useMemo, useRef, useState, type FormEvent } from "react";
 
 import { contacts } from "@/content/contacts";
 import { buildLeadSnapshotV2 } from "@/lib/calculator/types";
-import { fillCallbackWindow, resolveStep2Copy, type Step2Intent } from "@/lib/calculator-flow";
+import { resolveStep2Copy, type Step2Intent } from "@/lib/calculator-flow";
 import { legal } from "@/content/legal";
 import { getAvailabilityLabel } from "@/content/availability";
-import { getKitDisplayName } from "@/lib/calculator-modal-types";
 import {
   trackFormOpened,
   trackFormSubmitError,
@@ -17,8 +16,6 @@ import {
   trackPhoneValidated,
 } from "@/lib/analytics";
 import {
-  applyLightingOnlyDiscount,
-  applyLightingWithCeilingDiscount,
 } from "@/lib/lighting-formulas";
 
 import {

@@ -11,7 +11,7 @@ import {
 } from "react";
 
 import {
-  getKitDisplayName,
+  getLightingKitLabel,
   type DerivedInputs,
   type LightingDiscountMode,
   type LightingSnapshot,
@@ -154,9 +154,6 @@ export function usePriceCalculatorBridge() {
   return context;
 }
 
-export function serializeCalculatorSnapshot(snapshot: CalculatorLeadSnapshot | null) {
-  return snapshot ? JSON.stringify(snapshot) : "";
-}
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("ru-RU").format(Math.round(value));
@@ -384,7 +381,7 @@ export function getLightingSummaryLines(
         : "Тип заявки: освещение";
   lines.push(orderType);
 
-  const displayName = getKitDisplayName(lighting);
+  const displayName = getLightingKitLabel(lighting);
   lines.push(displayName ? `Освещение - ${displayName}:` : "Освещение (из каталога):");
 
   for (const item of lighting.items ?? []) {

@@ -20,8 +20,6 @@ import type { LightingItem } from "@/lib/calculator-modal-types";
 
 import { LightKitCtaButton } from "./LightKitCtaButton";
 
-type SnapshotCatalogShape = { products?: FeedCatalogProduct[] };
-
 function fmtRub(n: number) {
   return new Intl.NumberFormat("ru-RU").format(Math.round(n));
 }
