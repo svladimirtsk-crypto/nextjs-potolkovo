@@ -69,7 +69,7 @@ import {
 } from "@/lib/lighting/product-predicates";
 import { ProductImage } from "@/components/feed2/ProductImage";
 import { useCalculatorModal } from "./calculator-modal-context";
-import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
+import { useCalculatorStore } from "@/lib/calculator/store";
 
 /* ─── helpers ─── */
 
@@ -125,7 +125,7 @@ import { resolveStep1FooterAction } from "@/lib/lighting/step1-footer-action";
 /* ─── MAIN COMPONENT ─── */
 
 export function WizardStep1Lighting() {
-  const { snapshot } = usePriceCalculatorBridge();
+  const { snapshot } = useCalculatorStore();
   const {
     lightingDraft, options,
     step1CatalogView, setStep1CatalogView,

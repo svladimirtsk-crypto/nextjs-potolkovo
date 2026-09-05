@@ -2,7 +2,7 @@
 
 import { type ReactNode, useEffect } from "react";
 
-import { PriceCalculatorProvider } from "@/components/home/price-calculator-context";
+import { CalculatorStoreProvider } from "@/lib/calculator/store";
 import { CalculatorModalProvider } from "@/components/calculator-modal/calculator-modal-context";
 import { ConfirmDialogPortal } from "@/components/ui/confirm-dialog";
 import { CalculatorModalGate } from "@/components/calculator-modal/calculator-modal-gate";
@@ -45,12 +45,12 @@ export function Providers({ children }: { children: ReactNode }) {
     }
   }, []);
   return (
-    <PriceCalculatorProvider>
+    <CalculatorStoreProvider>
       <CalculatorModalProvider>
         {children}
         <CalculatorModalGate />
         <ConfirmDialogPortal />
       </CalculatorModalProvider>
-    </PriceCalculatorProvider>
+    </CalculatorStoreProvider>
   );
 }

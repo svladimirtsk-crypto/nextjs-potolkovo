@@ -14,7 +14,7 @@ import { fillCallbackWindow, resolveStep2Copy, type Step2Intent } from "@/lib/ca
 import { trackMessengerClick } from "@/lib/analytics";
 
 import { ActionForm } from "@/components/home/action-form";
-import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
+import { useCalculatorStore } from "@/lib/calculator/store";
 import { getCalculatorSummaryLines } from "@/lib/calculator/summary-lines";
 import { mergeInstallExtraIntoSnapshot } from "@/lib/calculator/snapshot-merge";
 import { clearCalcDraft } from "@/lib/calculator/draft";
@@ -155,7 +155,7 @@ export function WizardStep2Summary() {
   );
   // T-023: showResult и факт отправки живут в контексте модалки
 
-  const { snapshot, setSnapshot } = usePriceCalculatorBridge();
+  const { snapshot, setSnapshot } = useCalculatorStore();
   const lighting = snapshot?.lighting ?? lightingDraft ?? null;
   const roomBreakdown = snapshot?.roomBreakdown ?? [];
   const hasRoomBreakdown = roomBreakdown.length > 0;

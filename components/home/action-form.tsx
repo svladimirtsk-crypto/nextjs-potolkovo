@@ -18,7 +18,7 @@ import {
 import {
 } from "@/lib/lighting-formulas";
 
-import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
+import { useCalculatorStore } from "@/lib/calculator/store";
 import {
   getCalculatorSummaryLines,
   getLightingSummaryLines,
@@ -148,7 +148,7 @@ export function ActionForm({
   compactCalculationSummary = false,
   onSuccess,
 }: ActionFormProps) {
-  const { snapshot, hasInteracted } = usePriceCalculatorBridge();
+  const { snapshot, hasInteracted } = useCalculatorStore();
 
   // T-002: приоритет пропса над snapshot.leadSource
   const effectiveSource: string = String(source || snapshot?.leadSource || "");

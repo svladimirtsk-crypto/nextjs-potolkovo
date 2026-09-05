@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
+import { useCalculatorStore } from "@/lib/calculator/store";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 import { useCalculatorPageContext } from "@/components/calculator-modal/page-context";
 import { buildTelegramDeepLink } from "@/lib/lead/telegram-link";
@@ -17,7 +17,7 @@ function formatCurrency(value: number) {
 }
 
 export function MobileStickyCta() {
-  const { snapshot, hasInteracted }        = usePriceCalculatorBridge();
+  const { snapshot, hasInteracted }        = useCalculatorStore();
   const {
     openCalculator,
     closeCalculator,

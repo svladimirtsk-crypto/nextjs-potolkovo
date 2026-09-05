@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { interceptLeadApi } from "./helpers";
+import { interceptLeadApi, submitLeadForm } from "./helpers";
 
 /**
  * T-091 · Сценарий 5 — мобильный checkout со страницы света.
@@ -38,6 +38,44 @@ test.describe("Страница света (мобильная)", () => {
 
     const visibleBars = page.locator("[data-cart-bar]:visible");
     await expect(visibleBars).toHaveCount(1);
+  });
+});
+
+/**
+ * N-050 · Заявка со страницы света должна нести состав корзины.
+ *
+ * Найдено при проверке N-050 (баг предсуществующий, воспроизводится и до
+ * рефакторинга): бар корзины показывает «1 поз. · 2 772 ₽», диалог выбора
+ * «Только оборудование −10 %» открывается, форма отправляется — но в теле
+ * POST /api/lead нет ни `snapshot`, ни `totals`. Мастер получает заявку без
+ * товаров и без суммы: собранный клиентом комплект теряется.
+ *
+ * Причина: на этом пути ActionForm рендерится без снапшота (hasInteracted
+ * остаётся false, корзина живёт в отдельном сторе страницы и в стор
+ * калькулятора не попадает). Чинится вместе с переводом корзины страницы на
+ * единый стор — отдельной задачей, чтобы не смешивать с рефакторингом.
+ */
+test.describe("Страница света · состав заявки", () => {
+  test.skip(({ viewport }) => (viewport?.width ?? 0) > 640, "только мобильный проект");
+
+  test.fixme("сценарий 5b: заявка несёт позиции корзины и сумму", async ({ page }) => {
+    const leads = await interceptLeadApi(page);
+
+    await page.goto("/uslugi/prodazha-trekovogo-osveshcheniya#price");
+    await page.getByRole("button", { name: "+", exact: true }).first().click();
+
+    const cartBar = page.locator("[data-cart-bar]").last();
+    await cartBar.getByRole("button", { name: "Оформить" }).click();
+
+    const dialog = page.getByLabel("Как оформляем комплект?");
+    await dialog.getByRole("button", { name: /Только оборудование/ }).click();
+
+    const modal = page.locator('[data-testid="calculator-modal"][data-open="true"]');
+    await submitLeadForm(page, { scope: modal });
+
+    const body = leads.at(-1);
+    expect(body?.snapshot?.lighting?.items?.length ?? 0).toBeGreaterThan(0);
+    expect(body?.snapshot?.totals?.lightingEffective ?? 0).toBeGreaterThan(0);
   });
 });
 

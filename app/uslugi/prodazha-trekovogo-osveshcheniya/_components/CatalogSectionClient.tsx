@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
-import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
+import { useCalculatorStore } from "@/lib/calculator/store";
 import type { CalculatorLeadSnapshot } from "@/lib/calculator/snapshot-types";
 import {
   isMountsOrGrilles,
@@ -320,7 +320,7 @@ export function CatalogSectionClient({ data }: Props) {
   }, [data.updatedAt]);
 
   const { openCalculator } = useCalculatorModal();
-  const { setSnapshot } = usePriceCalculatorBridge();
+  const { setSnapshot } = useCalculatorStore();
 
   const products = useMemo(() => {
     return (data.products ?? [])

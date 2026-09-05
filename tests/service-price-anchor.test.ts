@@ -96,10 +96,9 @@ describe("N-002 · тексты и H1", () => {
 describe("N-002 · проценты скидок только из прайса", () => {
   const files = [
     "components/calculator-modal/price-strip.tsx",
-    "components/home/price-calculator-context.tsx",
     "components/lighting/LightingCartDrawer.tsx",
-    // N-050: строки сводки уехали из price-calculator-context.tsx сюда,
-    // запрет на литералы процентов должен был переехать вместе с ними.
+    // N-050: строки сводки уехали из price-calculator-context.tsx сюда
+    // (сам файл удалён), запрет на литералы процентов переехал вместе с ними.
     "lib/calculator/summary-lines.ts",
   ];
 

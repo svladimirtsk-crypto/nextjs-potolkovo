@@ -7,7 +7,7 @@ import { buildProductsIndex, detectSocket, getRequiredLampSocket } from "@/lib/f
 import { type LampSocket } from "@/lib/catalog-ui-config";
 import { useCatalogProducts } from "@/lib/lighting/use-catalog-products";
 import { calcTrackProfileMeters } from "@/lib/product-length-meters";
-import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
+import { useCalculatorStore } from "@/lib/calculator/store";
 import { selectRequirementsFromBreakdown } from "@/lib/calculator/selectors";
 import { useCalculatorModal } from "./calculator-modal-context";
 
@@ -67,7 +67,7 @@ function MiniBar({ current, required, unit }: { current: number; required: numbe
 
 export function LightingFooterProgress() {
   const { currentStep, lightingDraft, showCeilingInUi } = useCalculatorModal();
-  const { snapshot } = usePriceCalculatorBridge();
+  const { snapshot } = useCalculatorStore();
 
   // T-029: каталог приезжает отдельным чанком, а не из фида в бандле.
   const { products: catalogProductsFromIndex } = useCatalogProducts();

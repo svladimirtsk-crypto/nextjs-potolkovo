@@ -5,7 +5,7 @@
 "use client";
 
 import { useCallback, useMemo, useReducer, useState, useEffect } from "react";
-import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
+import { useCalculatorStore } from "@/lib/calculator/store";
 import type { SolutionScenario } from "@/lib/calculator-modal-types";
 import { buildRoomBreakdown, calcRoomsTotal, calcRoomSnapshotV2, type V2RoomConfig } from "./room-snapshot";
 import { applyMinimumOrder, pricing } from "@/content/pricing";
@@ -119,7 +119,7 @@ function newRoom(id: string, label: string): RoomConfig {
 }
 
 export function useCeilingCalculatorEngine(initialScenario: SolutionScenario = "standard") {
-  const { snapshot, setSnapshot } = usePriceCalculatorBridge();
+  const { snapshot, setSnapshot } = useCalculatorStore();
 
   /**
    * T-030: состояние Шага 0 живёт в редьюсере (`lib/calculator/reducer.ts`).

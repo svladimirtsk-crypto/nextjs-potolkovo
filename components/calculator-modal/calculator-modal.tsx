@@ -12,7 +12,7 @@ import { WizardStep0Calculator } from "./wizard-step0-calculator";
 import { WizardStep1Lighting } from "./wizard-step1-lighting";
 import { WizardStep2Summary } from "./wizard-step2-summary";
 
-import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
+import { useCalculatorStore } from "@/lib/calculator/store";
 import { showConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   trackCalculatorClose,
@@ -130,7 +130,7 @@ export function CalculatorModal() {
     markLeadSubmitted,
     grandTotal,
   } = useCalculatorModal();
-  const { snapshot } = usePriceCalculatorBridge();
+  const { snapshot } = useCalculatorStore();
 
   const panelRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);

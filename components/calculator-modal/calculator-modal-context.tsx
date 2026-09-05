@@ -35,7 +35,7 @@ import {
   calcLightingDiscountAmount,
 } from "@/lib/lighting-formulas";
 import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
-import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
+import { useCalculatorStore } from "@/lib/calculator/store";
 import type { CalculatorLeadSnapshot } from "@/lib/calculator/snapshot-types";
 import { mergeLightingIntoSnapshot } from "@/lib/calculator/snapshot-merge";
 import { trackCalculatorOpen, trackWizardStepView } from "@/lib/analytics";
@@ -157,7 +157,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   const [step0BackAction, setStep0BackActionState] = useState<CalculatorFooterBackAction>({ visible: false });
   const [step1FooterAction, setStep1FooterActionState] = useState<Step1FooterAction | null>(null);
 
-  const { snapshot, setSnapshot, setHasInteracted } = usePriceCalculatorBridge();
+  const { snapshot, setSnapshot, setHasInteracted } = useCalculatorStore();
 
   const setLightingDraft = useCallback(
     (draft: LightingSnapshot | null | ((prev: LightingSnapshot | null) => LightingSnapshot | null)) => {
