@@ -16,7 +16,6 @@ import type {
   OpenCalculatorOptions,
   WizardStep,
   Step1FooterAction,
-  LightingDiscountMode,
   CalculatorFooterAction,
   CalculatorFooterBackAction,
 } from "@/lib/calculator-modal-types";
@@ -24,16 +23,16 @@ import {
   resolveInitialLightingTab,
   resolveInitialLightingView,
   resolveInitialWizardStep,
-  resolveLightingDiscountMode,
 } from "@/lib/calculator-flow";
 
 import {
-  LIGHTING_ONLY_DISCOUNT_PERCENT,
-  LIGHTING_WITH_CEILING_DISCOUNT_PERCENT,
-  applyLightingOnlyDiscount,
-  applyLightingWithCeilingDiscount,
-  calcLightingDiscountAmount,
-} from "@/lib/lighting-formulas";
+  calcCeilingEffectiveTotal,
+  calcLightingTotals,
+  isCeilingSnapshotReady,
+  shouldShowCeiling,
+  toNumber,
+} from "@/lib/calculator/pricing";
+import { LIGHTING_WITH_CEILING_DISCOUNT_PERCENT } from "@/lib/lighting-formulas";
 import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
 import { useCalculatorStore } from "@/lib/calculator/store";
 import type { CalculatorLeadSnapshot } from "@/lib/calculator/snapshot-types";
@@ -41,30 +40,8 @@ import { mergeLightingIntoSnapshot } from "@/lib/calculator/snapshot-merge";
 import { trackCalculatorOpen, trackWizardStepView } from "@/lib/analytics";
 import { readCalcDraft } from "@/lib/calculator/draft";
 
-function toNumber(value: unknown): number {
-  const n = Number(value ?? 0);
-  return Number.isFinite(n) ? n : 0;
-}
 
-function isCeilingSnapshotReady(
-  snapshot: CalculatorLeadSnapshot | null | undefined
-): boolean {
-  if (!snapshot) return false;
-  const area = Number(snapshot.area);
-  const total = Number(snapshot.total);
-  if (!Number.isFinite(area) || area <= 0) return false;
-  if (!Number.isFinite(total) || total < 0) return false;
-  return true;
-}
 
-function calcLightingRegularTotal(draft: LightingSnapshot | null): number {
-  if (!draft) return 0;
-
-  if (Number.isFinite(draft.totalRub)) return toNumber(draft.totalRub);
-
-  const items = draft.mode === "catalog" ? (draft.items ?? []) : [];
-  return items.reduce((sum, it) => sum + toNumber(it.qty) * toNumber(it.priceRub), 0);
-}
 
 function createLightingOnlySnapshot(): CalculatorLeadSnapshot {
   return {
@@ -321,76 +298,49 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
 
   const ceilingTotal = toNumber(snapshot?.total);
 
-  const lightingRegularTotal = useMemo(
-    () => calcLightingRegularTotal(lightingDraft),
-    [lightingDraft]
+  /**
+   * N-050: все денежные вычисления — чистые функции из
+   * `lib/calculator/pricing.ts`. Контекст только подставляет входные данные.
+   */
+  const lightingTotals = useMemo(
+    () =>
+      calcLightingTotals({
+        lightingDraft,
+        discountEligibleWithCeiling: lightingDiscountEligible,
+        entryMode: options?.entryMode,
+      }),
+    [lightingDraft, lightingDiscountEligible, options?.entryMode]
   );
 
-  const lightingStandaloneTotal = useMemo(() => {
-    if (!lightingDraft || lightingRegularTotal <= 0) return 0;
-    return applyLightingOnlyDiscount(lightingRegularTotal);
-  }, [lightingDraft, lightingRegularTotal]);
-
-  const lightingWithCeilingTotal = useMemo(() => {
-    if (!lightingDraft || lightingRegularTotal <= 0) return 0;
-    return applyLightingWithCeilingDiscount(lightingRegularTotal);
-  }, [lightingDraft, lightingRegularTotal]);
+  const {
+    regularTotal: lightingRegularTotal,
+    standaloneTotal: lightingStandaloneTotal,
+    withCeilingTotal: lightingWithCeilingTotal,
+    effectiveTotal: lightingEffectiveTotal,
+    discountMode: lightingDiscountMode,
+    discountPercentApplied: lightingDiscountPercentApplied,
+    discountAmount: lightingDiscountAmount,
+  } = lightingTotals;
 
   // legacy field: total with ceiling discount (−25%)
   const lightingDiscountedTotal = lightingWithCeilingTotal;
 
-  const lightingDiscountMode = useMemo<LightingDiscountMode>(() => {
-    const hasLighting = Boolean(
-      lightingDraft &&
-        lightingDraft.mode !== "none" &&
-        ((lightingDraft.items?.length ?? 0) > 0 || lightingRegularTotal > 0)
-    );
-    return resolveLightingDiscountMode({
-      hasLighting,
-      regularTotal: lightingRegularTotal,
-      discountEligibleWithCeiling: lightingDiscountEligible,
-      entryMode: options?.entryMode,
-    });
-  }, [lightingDiscountEligible, lightingDraft, lightingRegularTotal, options?.entryMode]);
+  const showCeilingInUi = useMemo(
+    () =>
+      shouldShowCeiling({
+        entryMode: options?.entryMode,
+        currentStep,
+        step0SessionInteracted,
+      }),
+    [currentStep, options?.entryMode, step0SessionInteracted]
+  );
 
-  const lightingEffectiveTotal = useMemo(() => {
-    if (lightingDiscountMode === "with-ceiling") return lightingWithCeilingTotal;
-    if (lightingDiscountMode === "lighting-only") return lightingStandaloneTotal;
-    return lightingRegularTotal;
-  }, [lightingDiscountMode, lightingRegularTotal, lightingStandaloneTotal, lightingWithCeilingTotal]);
+  const ceilingEffectiveTotal = useMemo(
+    () => calcCeilingEffectiveTotal({ snapshot, showCeilingInUi, step0AreaConfirmed }),
+    [showCeilingInUi, snapshot, step0AreaConfirmed]
+  );
 
-  const lightingDiscountPercentApplied = useMemo(() => {
-    if (lightingDiscountMode === "with-ceiling") return LIGHTING_WITH_CEILING_DISCOUNT_PERCENT;
-    if (lightingDiscountMode === "lighting-only") return LIGHTING_ONLY_DISCOUNT_PERCENT;
-    return 0;
-  }, [lightingDiscountMode]);
-
-  const lightingDiscountAmount = useMemo(() => {
-    return calcLightingDiscountAmount(lightingRegularTotal, lightingEffectiveTotal);
-  }, [lightingEffectiveTotal, lightingRegularTotal]);
-
-  const showCeilingInUi = useMemo(() => {
-    const isLightingFirst = options?.entryMode === "lighting-first";
-    if (!isLightingFirst) return true;
-    return currentStep === 0 || step0SessionInteracted;
-  }, [currentStep, options?.entryMode, step0SessionInteracted]);
-
-  const ceilingEffectiveTotal = useMemo(() => {
-    if (!showCeilingInUi) return 0;
-
-    const total = toNumber(snapshot?.total);
-
-    // строго: grandTotal (с досчётом монтажа) учитываем только если Step0 подтверждён
-    if (!step0AreaConfirmed) return total;
-
-    // T-008: досчёт монтажа берём из явного поля, а не из устаревшего grandTotal
-    const extraInstall = toNumber(snapshot?.extraInstallRub);
-    return total + Math.max(0, extraInstall);
-  }, [showCeilingInUi, snapshot, step0AreaConfirmed]);
-
-  const grandTotal = useMemo(() => {
-    return ceilingEffectiveTotal + lightingEffectiveTotal;
-  }, [ceilingEffectiveTotal, lightingEffectiveTotal]);
+  const grandTotal = ceilingEffectiveTotal + lightingEffectiveTotal;
 
   /**
    * N-050: слияние вынесено в чистую mergeLightingIntoSnapshot.

@@ -74,6 +74,9 @@ export type Step1FooterAction = {
   onClick: () => void;
 };
 
+/** Как клиент вошёл в калькулятор: обычный путь или «сначала свет». */
+export type CalculatorEntryMode = "default" | "lighting-first";
+
 export type OpenCalculatorOptions = {
   preset?: ServiceCalculatorPreset;
   forcePreset?: boolean;
@@ -83,7 +86,7 @@ export type OpenCalculatorOptions = {
   initialLightingTab?: "recommendations" | "catalog";
   initialLightingView?: CatalogViewMode;
 
-  entryMode?: "default" | "lighting-first";
+  entryMode?: CalculatorEntryMode;
   source?: string;
 };
 
