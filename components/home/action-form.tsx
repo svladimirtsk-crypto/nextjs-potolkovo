@@ -18,6 +18,7 @@ import {
 import {
 } from "@/lib/lighting-formulas";
 
+import { calcLeadCeilingTotal } from "@/lib/calculator/pricing";
 import { useCalculatorStore } from "@/lib/calculator/store";
 import {
   getCalculatorSummaryLines,
@@ -152,7 +153,6 @@ export function ActionForm({
 
   // T-002: приоритет пропса над snapshot.leadSource
   const effectiveSource: string = String(source || snapshot?.leadSource || "");
-  const calculatorSource: string = String(snapshot?.leadSource ?? "");
 
   const hasRooms = toNumber(snapshot?.area ?? 0) > 0;
   const hasLighting = Number(snapshot?.lighting?.items?.length ?? 0) > 0;
@@ -165,9 +165,9 @@ export function ActionForm({
       hasInteracted && snapshot
         ? buildLeadSnapshotV2({
             snapshot,
-            // ActionForm живёт и вне модалки, поэтому суммы берём из снапшота
-            ceilingEffectiveTotal:
-              toNumber(snapshot.total) + Math.max(0, toNumber(snapshot.extraInstallRub)),
+            // ActionForm живёт и вне модалки, поэтому суммы берём из снапшота.
+            // N-050: при заказе «только свет» потолок в сумму не входит.
+            ceilingEffectiveTotal: calcLeadCeilingTotal({ snapshot }),
             lightingRegularTotal: toNumber(snapshot.lighting?.totalRub),
             lightingEffectiveTotal: toNumber(
               snapshot.lighting?.discountedTotalRub ?? snapshot.lighting?.totalRub
@@ -244,9 +244,6 @@ export function ActionForm({
     const trimmedName = name.trim();
     const trimmedAddress = address.trim();
     const normalizedPhone = normalizePhone(phone);
-
-    const topArea = toNumber(snapshot?.area ?? 0);
-    const topLightingTotalRub = toNumber(snapshot?.lighting?.totalRub ?? 0);
 
     const nextErrors: FieldErrors = {};
 

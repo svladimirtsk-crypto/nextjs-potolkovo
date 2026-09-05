@@ -42,23 +42,20 @@ test.describe("Страница света (мобильная)", () => {
 });
 
 /**
- * N-050 · Заявка со страницы света должна нести состав корзины.
+ * N-050 · Заявка со страницы света несёт состав корзины.
  *
- * Найдено при проверке N-050 (баг предсуществующий, воспроизводится и до
- * рефакторинга): бар корзины показывает «1 поз. · 2 772 ₽», диалог выбора
- * «Только оборудование −10 %» открывается, форма отправляется — но в теле
- * POST /api/lead нет ни `snapshot`, ни `totals`. Мастер получает заявку без
- * товаров и без суммы: собранный клиентом комплект теряется.
+ * Был баг: бар корзины показывал «1 поз. · 2 772 ₽», диалог выбора работал,
+ * форма отправлялась — но в теле POST /api/lead не было ни `snapshot`, ни
+ * `totals`. Мастер получал имя и телефон без товаров и суммы.
  *
- * Причина: на этом пути ActionForm рендерится без снапшота (hasInteracted
- * остаётся false, корзина живёт в отдельном сторе страницы и в стор
- * калькулятора не попадает). Чинится вместе с переводом корзины страницы на
- * единый стор — отдельной задачей, чтобы не смешивать с рефакторингом.
+ * Причина: флаг `hasInteracted` ставился только при переходе Шага 0 → 1/2, а
+ * этот путь Шаг 0 минует. Без флага ActionForm не прикладывала снапшот.
+ * Теперь открытие с готовым набором света тоже считается взаимодействием.
  */
 test.describe("Страница света · состав заявки", () => {
   test.skip(({ viewport }) => (viewport?.width ?? 0) > 640, "только мобильный проект");
 
-  test.fixme("сценарий 5b: заявка несёт позиции корзины и сумму", async ({ page }) => {
+  test("сценарий 5b: заявка несёт позиции корзины и сумму", async ({ page }) => {
     const leads = await interceptLeadApi(page);
 
     await page.goto("/uslugi/prodazha-trekovogo-osveshcheniya#price");
@@ -73,9 +70,20 @@ test.describe("Страница света · состав заявки", () => 
     const modal = page.locator('[data-testid="calculator-modal"][data-open="true"]');
     await submitLeadForm(page, { scope: modal });
 
-    const body = leads.at(-1);
-    expect(body?.snapshot?.lighting?.items?.length ?? 0).toBeGreaterThan(0);
-    expect(body?.snapshot?.totals?.lightingEffective ?? 0).toBeGreaterThan(0);
+    const snapshot = leads.at(-1)?.snapshot as
+      | { lighting?: { items?: unknown[]; effectiveTotalRub?: number }; totals?: Record<string, number> }
+      | undefined;
+
+    expect(snapshot?.lighting?.items?.length ?? 0).toBeGreaterThan(0);
+    expect(snapshot?.totals?.lightingEffective ?? 0).toBeGreaterThan(0);
+
+    /**
+     * Заказ «только оборудование» — потолка в нём нет. Дефолтная комната из
+     * стора не должна попадать в сумму: набор на 2 772 ₽ превращался в счёт
+     * на 20 772 ₽, и клиент увидел бы в письме чужие деньги.
+     */
+    expect(snapshot?.totals?.grand).toBe(snapshot?.totals?.lightingEffective);
+    expect(snapshot?.totals?.discountPct).toBe(10);
   });
 });
 

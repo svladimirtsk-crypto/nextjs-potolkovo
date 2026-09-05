@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   calcCeilingEffectiveTotal,
+  calcLeadCeilingTotal,
   calcLightingRegularTotal,
   calcLightingTotals,
   isCeilingSnapshotReady,
@@ -179,5 +180,39 @@ describe("N-050 · готовность снапшота потолка", () => 
 
   it("отсутствующий снапшот — не готов", () => {
     expect(isCeilingSnapshotReady(null)).toBe(false);
+  });
+});
+
+describe("N-050 · потолок в заявке", () => {
+  it("заказ «только свет» не тащит потолок в сумму", () => {
+    // Регресс: в сторе лежит дефолтная комната, и её 10 000 ₽ превращали
+    // набор света на 2 772 ₽ в счёт на 20 772 ₽.
+    const snapshot = {
+      total: 10000,
+      extraInstallRub: 0,
+      lightingDiscountMode: "lighting-only",
+    } as unknown as CalculatorLeadSnapshot;
+    expect(calcLeadCeilingTotal({ snapshot })).toBe(0);
+  });
+
+  it("режим читается и из вложенного блока освещения", () => {
+    const snapshot = {
+      total: 10000,
+      lighting: { discountMode: "lighting-only" },
+    } as unknown as CalculatorLeadSnapshot;
+    expect(calcLeadCeilingTotal({ snapshot })).toBe(0);
+  });
+
+  it("обычный заказ с потолком считает его вместе с монтажом", () => {
+    const snapshot = {
+      total: 25500,
+      extraInstallRub: 5000,
+      lightingDiscountMode: "with-ceiling",
+    } as unknown as CalculatorLeadSnapshot;
+    expect(calcLeadCeilingTotal({ snapshot })).toBe(30500);
+  });
+
+  it("пустой снапшот — ноль", () => {
+    expect(calcLeadCeilingTotal({ snapshot: null })).toBe(0);
   });
 });

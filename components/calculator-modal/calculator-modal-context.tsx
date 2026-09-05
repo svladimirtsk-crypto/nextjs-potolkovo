@@ -36,7 +36,7 @@ import { LIGHTING_WITH_CEILING_DISCOUNT_PERCENT } from "@/lib/lighting-formulas"
 import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
 import { useCalculatorStore } from "@/lib/calculator/store";
 import type { CalculatorLeadSnapshot } from "@/lib/calculator/snapshot-types";
-import { mergeLightingIntoSnapshot } from "@/lib/calculator/snapshot-merge";
+import { hasLightingItems, mergeLightingIntoSnapshot } from "@/lib/calculator/snapshot-merge";
 import { trackCalculatorOpen, trackWizardStepView } from "@/lib/analytics";
 import { readCalcDraft } from "@/lib/calculator/draft";
 
@@ -207,6 +207,14 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
 
       if (resolvedOpts.initialLighting) {
         setLightingDraftState(resolvedOpts.initialLighting);
+
+        /**
+         * N-050: клиент собрал набор до калькулятора (страница света, готовый
+         * комплект) — это уже взаимодействие. Без этого флага ActionForm не
+         * прикладывала снапшот к заявке, и мастер получал имя с телефоном без
+         * состава корзины и без суммы: собранный комплект терялся.
+         */
+        if (hasLightingItems(resolvedOpts.initialLighting)) setHasInteracted(true);
       } else if (snapshot?.lighting && snapshot.lighting.mode !== "none") {
         setLightingDraftState(snapshot.lighting);
       } else if (lightingDraft && lightingDraft.mode !== "none") {

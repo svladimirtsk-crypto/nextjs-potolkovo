@@ -152,3 +152,26 @@ export function isCeilingSnapshotReady(
   if (!Number.isFinite(total) || total < 0) return false;
   return true;
 }
+
+/**
+ * N-050 · Потолок в заявке.
+ *
+ * Клиент, выбравший «Только оборудование −10 %», потолок не заказывал. Но в
+ * сторе к этому моменту уже лежит комната по умолчанию (её создаёт движок при
+ * монтировании), и её сумма — с поднятием до минимального заказа — попадала в
+ * заявку: набор света на 2 772 ₽ превращался в счёт на 20 772 ₽.
+ *
+ * Признак «потолка нет» — режим скидки `lighting-only`: он выставляется именно
+ * тогда, когда клиент явно отказался от потолка.
+ */
+export function calcLeadCeilingTotal(input: {
+  snapshot: CalculatorLeadSnapshot | null | undefined;
+}): number {
+  const { snapshot } = input;
+  if (!snapshot) return 0;
+
+  const discountMode = snapshot.lightingDiscountMode ?? snapshot.lighting?.discountMode;
+  if (discountMode === "lighting-only") return 0;
+
+  return toNumber(snapshot.total) + Math.max(0, toNumber(snapshot.extraInstallRub));
+}
