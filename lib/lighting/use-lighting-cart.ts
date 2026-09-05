@@ -54,6 +54,12 @@ export type LightingCartApi = {
   update: (updater: Cart | ((prev: Cart) => Cart)) => void;
   /** Добавляет готовый комплект одним действием (карточка LightKitShowcase). */
   applyKit: (items: Array<{ product: FeedCatalogProduct; qty: number }>) => void;
+  /**
+   * Тот же комплект, но заданный позициями черновика (sku + qty).
+   * Нужен карточкам готовых наборов, которые оперируют `LightingItem`,
+   * а не товарами фида.
+   */
+  applyKitItems: (items: readonly LightingItem[]) => void;
   /** Проверка конфликта систем перед добавлением; null — конфликта нет. */
   checkConflict: (product: FeedCatalogProduct) => CartConflict | null;
   /** Удаляет позиции чужой системы. */
@@ -223,6 +229,23 @@ export function useLightingCart(
     [update]
   );
 
+  const applyKitItems = useCallback(
+    (items: readonly LightingItem[]) => {
+      update((prev) => {
+        const next = { ...prev };
+        for (const item of items) {
+          const sku = toText(item.sku);
+          const qty = toNumber(item.qty);
+          if (!sku || qty <= 0) continue;
+          // Комплект задаёт количество целиком, а не прибавляет к текущему.
+          next[sku] = qty;
+        }
+        return next;
+      });
+    },
+    [update]
+  );
+
   const checkConflict = useCallback(
     (product: FeedCatalogProduct) => conflicts(cart, product, resolveProduct),
     [cart, resolveProduct]
@@ -249,6 +272,7 @@ export function useLightingCart(
     replaceCart,
     update,
     applyKit,
+    applyKitItems,
     checkConflict,
     dropIncompatible,
   };

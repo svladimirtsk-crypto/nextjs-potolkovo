@@ -9,8 +9,12 @@ import {
   calcLightingDiscountAmount,
 } from "@/lib/lighting-formulas";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
+import { useCatalogProducts } from "@/lib/lighting/use-catalog-products";
+import { useLightingCart } from "@/lib/lighting/use-lighting-cart";
 import { REMOVED_COLIBRI_VENDOR_CODES } from "@/lib/catalog-ui-config";
 import { trackKitClicked } from "@/lib/analytics";
+import { useCallback, useMemo } from "react";
+import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 
 type LightKitCtaButtonProps = {
   title: string;
@@ -37,6 +41,25 @@ function shouldDropRemovedItem(item: LightingItem): boolean {
 
 export function LightKitCtaButton({ title, items, source }: LightKitCtaButtonProps) {
   const { openCalculator } = useCalculatorModal();
+
+  /**
+   * T-031: комплект кладётся в ту же корзину, что и каталог страницы,
+   * поэтому счётчики страницы и модалки всегда совпадают.
+   */
+  const { products } = useCatalogProducts();
+  const bySku = useMemo(() => {
+    const map = new Map<string, FeedCatalogProduct>();
+    for (const product of products) {
+      const id = toText(product.productId);
+      const vendor = toText(product.vendorCode);
+      if (id) map.set(id, product);
+      if (vendor) map.set(vendor, product);
+    }
+    return map;
+  }, [products]);
+
+  const resolveProduct = useCallback((sku: string) => bySku.get(sku), [bySku]);
+  const lightingCart = useLightingCart(resolveProduct);
 
   const buildLighting = (): LightingSnapshot | null => {
     const filteredItems = items.filter((item) => !shouldDropRemovedItem(item));
@@ -72,6 +95,8 @@ export function LightKitCtaButton({ title, items, source }: LightKitCtaButtonPro
     const lighting = buildLighting();
     if (!lighting) return;
 
+    lightingCart.applyKitItems(lighting.items ?? []);
+
     openCalculator({
       initialStep: 2,
       initialLightingTab: "catalog",
@@ -85,6 +110,8 @@ export function LightKitCtaButton({ title, items, source }: LightKitCtaButtonPro
   const openWithCeiling = () => {
     const lighting = buildLighting();
     if (!lighting) return;
+
+    lightingCart.applyKitItems(lighting.items ?? []);
 
     openCalculator({
       initialStep: 0,

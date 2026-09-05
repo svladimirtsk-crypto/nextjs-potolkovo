@@ -17,6 +17,9 @@ import type { FeedCatalogProduct, FeedCatalogResult } from "@/lib/eks-feed2-cata
 
 import { trackLightingCartCheckout, trackSmartInterestSelected } from "@/lib/analytics";
 import { useLightingCart } from "@/lib/lighting/use-lighting-cart";
+import { clearIncompatibleSystem } from "@/lib/lighting/kit-rules";
+import { showConfirmDialog } from "@/components/ui/confirm-dialog";
+import { LightingCartDrawer } from "@/components/lighting/LightingCartDrawer";
 
 import {
   LIGHTING_ONLY_DISCOUNT_PERCENT,
@@ -379,6 +382,7 @@ export function CatalogSectionClient({ data }: Props) {
     [lightingCart]
   );
   const [visibleCount, setVisibleCount] = useState(24);
+  const [cartOpen, setCartOpen] = useState(false);
 
   const selectedEntries = useMemo(() => {
     return Object.entries(cartItems)
@@ -578,6 +582,40 @@ export function CatalogSectionClient({ data }: Props) {
     });
   };
 
+  /**
+   * T-031: добавление позиции с проверкой совместимости систем.
+   * При конфликте спрашиваем подтверждение; отказ не меняет корзину.
+   */
+  const incrementProduct = useCallback(
+    async (product: FeedCatalogProduct, nextQtyRaw: number) => {
+      const id = toText(product.productId);
+      const nextQty = normalizeQty(nextQtyRaw, product.unit);
+      if (nextQty <= 0) return;
+
+      const conflict = lightingCart.checkConflict(product);
+      if (conflict) {
+        const confirmed = await showConfirmDialog({
+          title: "Разные системы трека",
+          message: conflict.message,
+          confirmLabel: "Заменить",
+          cancelLabel: "Оставить как есть",
+          variant: "warning",
+        });
+        // Отказ — корзина остаётся нетронутой.
+        if (confirmed !== true) return;
+
+        lightingCart.update((prev) => ({
+          ...clearIncompatibleSystem(prev, conflict.targetSystem, resolveProduct),
+          [id]: nextQty,
+        }));
+        return;
+      }
+
+      lightingCart.update((prev) => ({ ...prev, [id]: nextQty }));
+    },
+    [lightingCart, resolveProduct]
+  );
+
   const openInCalculator = () => {
     const items: LightingItem[] = selectedEntries.map((entry) => productToLightingItem(entry.product, entry.qty));
 
@@ -627,9 +665,10 @@ export function CatalogSectionClient({ data }: Props) {
     });
   };
 
-  // T-007: «Посмотреть» — открыть список выбранного в модалке
+  // T-031: «Посмотреть» открывает мини-корзину прямо на странице,
+  // без ухода в калькулятор.
   const openSelectedList = () => {
-    openInCalculator();
+    setCartOpen(true);
   };
 
   const openLightingOrder = () => {
@@ -927,10 +966,10 @@ export function CatalogSectionClient({ data }: Props) {
               <div className="grid shrink-0 gap-2 sm:grid-cols-3">
                 <button
                   type="button"
-                  onClick={openInCalculator}
+                  onClick={openSelectedList}
                   className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
                 >
-                  В калькулятор →
+                  Посмотреть
                 </button>
                 <button
                   type="button"
@@ -1009,13 +1048,7 @@ export function CatalogSectionClient({ data }: Props) {
                     return next;
                   })
                 }
-                onInc={() =>
-                  setCartItems((prev) => {
-                    const next = { ...prev };
-                    next[id] = normalizeQty(qty + step, product.unit);
-                    return next;
-                  })
-                }
+                onInc={() => void incrementProduct(product, qty + step)}
               />
             );
           })}
@@ -1116,6 +1149,21 @@ export function CatalogSectionClient({ data }: Props) {
             ))}
           </div>
         ) : null}
+
+        <LightingCartDrawer
+          open={cartOpen}
+          onClose={() => setCartOpen(false)}
+          entries={lightingCart.entries}
+          totalRub={lightingCart.totalRub}
+          discountedTotalRub={lightingCart.discountedTotalRub}
+          withCeilingTotalRub={lightingCart.withCeilingTotalRub}
+          onSetQty={(entry, qty) => lightingCart.setQty(entry.product, qty)}
+          onRemove={(productId) => lightingCart.remove(productId)}
+          onCheckout={() => {
+            setCartOpen(false);
+            openLightingOrder();
+          }}
+        />
 
         {!data.ok ? (
           <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-950">
