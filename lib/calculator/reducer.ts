@@ -2,14 +2,14 @@
  * T-030 · Редьюсер квиза Шага 0.
  *
  * Первый этап переноса состояния из россыпи `useState` в движке
- * (`use-ceiling-calculator-engine.ts`) и в `PriceCalculatorQuizV2` в один
+ * (`use-calculator-engine.ts`) и в `PriceCalculatorQuizV2` в один
  * предсказуемый переход. Здесь живёт только состояние — все производные
  * величины считают `selectors.ts`, а переходы экранов — `fsm.ts`.
  *
  * Редьюсер чистый и не зависит от React: его целиком покрывают unit-тесты.
  */
 import type { SolutionScenario } from "@/lib/calculator-modal-types";
-import type { RoomConfig } from "@/lib/calculator-v2/use-ceiling-calculator-engine";
+import type { RoomConfig } from "@/lib/calculator/use-calculator-engine";
 import type { ParamId, Step0Screen } from "./fsm";
 
 export type CalculationScope = "room" | "object";

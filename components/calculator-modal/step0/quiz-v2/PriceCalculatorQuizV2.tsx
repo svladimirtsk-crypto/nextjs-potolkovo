@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ServiceCalculatorPreset } from "@/content/services";
 import type { SolutionScenario, CalculatorFooterAction, CalculatorFooterBackAction } from "@/lib/calculator-modal-types";
-import { useCeilingCalculatorEngine } from "@/lib/calculator-v2/use-ceiling-calculator-engine";
+import { useCeilingCalculatorEngine } from "@/lib/calculator/use-calculator-engine";
 import type { Step0Screen, ParamId } from "@/lib/step0-fsm";
 import { getEnabledParams as getEnabledParamsFsm } from "@/lib/step0-fsm";
 import { calcProgress } from "@/lib/calculator/fsm";

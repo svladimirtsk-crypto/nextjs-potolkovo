@@ -1,5 +1,5 @@
 "use client";
-import type { CeilingEngine } from "@/lib/calculator-v2/use-ceiling-calculator-engine";
+import type { CeilingEngine } from "@/lib/calculator/use-calculator-engine";
 import type { ParamId } from "@/lib/step0-fsm";
 import {
   ceilingLabel,
@@ -7,7 +7,7 @@ import {
   describeRoom,
   formatRoomLine,
   trackLabel,
-} from "@/lib/calculator-v2/labels";
+} from "@/lib/calculator/labels";
 export function RoomEditScreen({ roomId, engine, onEditParam, onBack, onDelete }:{
   roomId: string; engine: CeilingEngine;
   onEditParam: (p: ParamId)=>void; onBack: ()=>void; onDelete?: ()=>void;

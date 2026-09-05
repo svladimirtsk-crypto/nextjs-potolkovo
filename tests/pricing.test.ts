@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { applyMinimumOrder, formatFrom, pricing } from "@/content/pricing";
 import { homepage } from "@/content/homepage";
-import { calcRoomsTotal, type V2RoomConfig } from "@/lib/calculator-v2/room-snapshot";
-import { describeRoom, formatRoomLine, scenarioLabel } from "@/lib/calculator-v2/labels";
+import { calcRoomsTotal, type V2RoomConfig } from "@/lib/calculator/room-snapshot";
+import { describeRoom, formatRoomLine, scenarioLabel } from "@/lib/calculator/labels";
 
 function room(patch: Partial<V2RoomConfig> = {}): V2RoomConfig {
   return {

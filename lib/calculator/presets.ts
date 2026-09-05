@@ -7,7 +7,7 @@ import type { SolutionScenario } from "@/lib/calculator-modal-types";
 import type {
   CalculationScope,
   RoomConfig,
-} from "@/lib/calculator-v2/use-ceiling-calculator-engine";
+} from "@/lib/calculator/use-calculator-engine";
 import { pricing } from "@/content/pricing";
 
 /** Параметры комнаты, которые может задать пресет. */

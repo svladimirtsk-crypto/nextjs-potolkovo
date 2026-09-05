@@ -7,7 +7,7 @@
  * читает результат отсюда — так все места показывают одну и ту же сумму.
  */
 import { pricing } from "@/content/pricing";
-import { calcRoomsTotal, type V2RoomConfig } from "@/lib/calculator-v2/room-snapshot";
+import { calcRoomsTotal, type V2RoomConfig } from "@/lib/calculator/room-snapshot";
 import { getParamConfirmLabel, type Step0Screen } from "./fsm";
 import { calcRecommendedTrackSpots } from "@/lib/lighting-formulas";
 import type { CalculatorRoomBreakdown } from "@/lib/calculator/snapshot-types";

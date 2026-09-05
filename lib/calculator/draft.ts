@@ -6,7 +6,7 @@
  * структуры старые черновики просто игнорируются.
  */
 import type { LightingSnapshot, SolutionScenario } from "@/lib/calculator-modal-types";
-import type { V2RoomConfig } from "@/lib/calculator-v2/room-snapshot";
+import type { V2RoomConfig } from "@/lib/calculator/room-snapshot";
 
 export const CALC_DRAFT_STORAGE_KEY = "potolkovo:calc-draft:v2";
 

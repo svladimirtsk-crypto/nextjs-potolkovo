@@ -9,7 +9,7 @@ import {
   selectScreen,
   type CalculatorState,
 } from "@/lib/calculator/reducer";
-import type { RoomConfig } from "@/lib/calculator-v2/use-ceiling-calculator-engine";
+import type { RoomConfig } from "@/lib/calculator/use-calculator-engine";
 
 function makeRoom(id: string, patch: Partial<RoomConfig> = {}): RoomConfig {
   return {

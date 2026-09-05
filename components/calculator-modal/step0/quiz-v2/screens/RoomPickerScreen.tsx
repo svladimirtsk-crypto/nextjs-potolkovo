@@ -1,5 +1,5 @@
 "use client";
-import type { RoomConfig } from "@/lib/calculator-v2/use-ceiling-calculator-engine";
+import type { RoomConfig } from "@/lib/calculator/use-calculator-engine";
 const ROOM_TYPES = ["Кухня","Гостиная","Спальня","Детская","Кабинет","Санузел","Коридор","Прихожая","Другое"];
 export function RoomPickerScreen({ rooms, mode, onAdd, onSelect, onBack }:{
   rooms: RoomConfig[]; mode: "first"|"add";

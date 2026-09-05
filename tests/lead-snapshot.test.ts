@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildRoomBreakdown, type V2RoomConfig } from "@/lib/calculator-v2/room-snapshot";
+import { buildRoomBreakdown, type V2RoomConfig } from "@/lib/calculator/room-snapshot";
 import { buildLeadSnapshotV2 } from "@/lib/calculator/types";
 import type { CalculatorLeadSnapshot } from "@/lib/calculator/snapshot-types";
 

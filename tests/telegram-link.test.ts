@@ -5,7 +5,7 @@ import {
   buildTelegramDeepLink,
   buildTelegramSummaryText,
 } from "@/lib/lead/telegram-link";
-import { buildRoomBreakdown, type V2RoomConfig } from "@/lib/calculator-v2/room-snapshot";
+import { buildRoomBreakdown, type V2RoomConfig } from "@/lib/calculator/room-snapshot";
 
 function room(patch: Partial<V2RoomConfig> = {}): V2RoomConfig {
   return {

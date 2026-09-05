@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildLightingPatchForTest as buildLightingPatch } from "@/lib/calculator-v2/use-ceiling-calculator-engine";
+import { buildLightingPatchForTest as buildLightingPatch } from "@/lib/calculator/use-calculator-engine";
 
 const untouched = { lights: false, trackLength: false, trackType: false };
 

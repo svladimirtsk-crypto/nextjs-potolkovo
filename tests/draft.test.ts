@@ -8,7 +8,7 @@ import {
   readCalcDraft,
   saveCalcDraft,
 } from "@/lib/calculator/draft";
-import type { V2RoomConfig } from "@/lib/calculator-v2/room-snapshot";
+import type { V2RoomConfig } from "@/lib/calculator/room-snapshot";
 
 function makeStorage(): Storage {
   const map = new Map<string, string>();

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { ParamId } from "@/lib/step0-fsm";
-import type { CeilingEngine } from "@/lib/calculator-v2/use-ceiling-calculator-engine";
+import type { CeilingEngine } from "@/lib/calculator/use-calculator-engine";
 import { SectionCard, OptionCard, RangeField } from "../ui";
 import { homepage } from "@/content/homepage";
 import { PREFILL_HINT, defaultPerimeterMeters } from "@/lib/calculator/presets";

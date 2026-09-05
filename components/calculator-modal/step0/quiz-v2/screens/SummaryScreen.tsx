@@ -1,7 +1,7 @@
 "use client";
-import type { CeilingEngine } from "@/lib/calculator-v2/use-ceiling-calculator-engine";
-import { pluralizeRooms, scenarioLabel } from "@/lib/calculator-v2/labels";
-import { buildRoomBreakdown, type V2RoomConfig } from "@/lib/calculator-v2/room-snapshot";
+import type { CeilingEngine } from "@/lib/calculator/use-calculator-engine";
+import { pluralizeRooms, scenarioLabel } from "@/lib/calculator/labels";
+import { buildRoomBreakdown, type V2RoomConfig } from "@/lib/calculator/room-snapshot";
 import { buildTelegramDeepLink } from "@/lib/lead/telegram-link";
 import { trackMessengerClick } from "@/lib/analytics";
 export function SummaryScreen({ engine, onEditRoom, onAddRoom, onPrimaryCta, onSecondaryCta, primaryLabel, secondaryLabel }:{

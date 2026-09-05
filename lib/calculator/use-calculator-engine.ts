@@ -7,8 +7,13 @@
 import { useCallback, useMemo, useReducer, useState, useEffect } from "react";
 import { useCalculatorStore } from "@/lib/calculator/store";
 import type { SolutionScenario } from "@/lib/calculator-modal-types";
-import { buildRoomBreakdown, calcRoomsTotal, calcRoomSnapshotV2, type V2RoomConfig } from "./room-snapshot";
-import { applyMinimumOrder, pricing } from "@/content/pricing";
+import type { V2RoomConfig } from "@/lib/calculator/room-snapshot";
+import {
+  calcRoomsTotalSafe,
+  calcTotalArea,
+  mergeRoomsIntoSnapshot,
+} from "@/lib/calculator/rooms-snapshot";
+import { pricing } from "@/content/pricing";
 import { PREFILL_HINT, defaultPerimeterMeters, presetToRoom } from "@/lib/calculator/presets";
 import type { ServiceCalculatorPreset } from "@/content/services";
 import {
@@ -259,59 +264,31 @@ export function useCeilingCalculatorEngine(initialScenario: SolutionScenario = "
   const resetTouched = useCallback(() => {
     dispatch({ type: "touched/reset" });
   }, []);
-  const totalArea = useMemo(() => rooms.reduce((s, r) => s + r.area, 0), [rooms]);
+  const totalArea = useMemo(() => calcTotalArea(rooms), [rooms]);
   // T-004: единый источник итоговой суммы Шага 0 (с минимальным заказом)
-  const roomsTotal = useMemo(() => {
-    if (rooms.length === 0) return { raw: 0, applied: 0, minimumApplied: false };
-    try {
-      return calcRoomsTotal(rooms as unknown as V2RoomConfig[]);
-    } catch {
-      return applyMinimumOrder(totalArea * pricing.ceiling.standard);
-    }
-  }, [rooms, totalArea]);
+  const roomsTotal = useMemo(
+    () => calcRoomsTotalSafe(rooms as unknown as V2RoomConfig[]),
+    [rooms]
+  );
 
   const totalRub = roomsTotal.applied;
   const minimumApplied = roomsTotal.minimumApplied;
 
-  // push to bridge snapshot so Step1/Step2 see totals
+  /**
+   * N-050: сборка снапшота — чистая функция (`lib/calculator/rooms-snapshot.ts`).
+   * Эффект остался только как способ доставить результат в стор; при
+   * отсутствии изменений функция возвращает прежний объект, и React
+   * останавливает каскад рендеров.
+   */
   useEffect(() => {
-    if (rooms.length === 0) return;
-    // build aggregate snapshot (simplified)
-    const firstRoom = rooms[0];
-    try {
-      const { snapshot: s } = calcRoomSnapshotV2(firstRoom as unknown as V2RoomConfig);
-      // aggregate totals
-      const aggTotal = calcRoomsTotal(rooms as unknown as V2RoomConfig[]);
-      // T-043: секции «Люстры» и «Подсветка карниза» включаются, если их
-      // выбрали хотя бы в одной комнате, а не только в первой.
-      const derivedInputs = {
-        ...s.derivedInputs,
-        chandeliersEnabled: rooms.some(r => r.chandeliersEnabled),
-        chandeliersQty: rooms.reduce((sum, r) => sum + (r.chandeliersEnabled ? r.chandeliersCount : 0), 0),
-        corniceLightingEnabled: rooms.some(r => r.corniceLightingEnabled),
-        corniceLightingMeters: rooms.reduce(
-          (sum, r) => sum + (r.corniceLightingEnabled ? r.corniceLightingLength : 0),
-          0
-        ),
-      };
-
-      setSnapshot(prev => ({
-        ...(prev ?? s),
-        ...s,
-        derivedInputs,
-        area: totalArea,
-        total: aggTotal.applied,
-        totalRawRub: aggTotal.raw,
-        minimumOrderApplied: aggTotal.minimumApplied,
-        // T-008: устаревшее поле больше не используется
-        grandTotal: undefined,
-        // T-022: полный состав каждой комнаты (все длины/количества/суммы)
-        roomBreakdown: rooms.map(r => buildRoomBreakdown(r as unknown as V2RoomConfig)),
+    setSnapshot(prev =>
+      mergeRoomsIntoSnapshot(prev, {
+        rooms: rooms as unknown as V2RoomConfig[],
         solutionScenario,
         calculationScope: calculationScope ?? "room",
-      }));
-    } catch {}
-  }, [rooms, totalArea, setSnapshot, solutionScenario, calculationScope]);
+      })
+    );
+  }, [rooms, setSnapshot, solutionScenario, calculationScope]);
 
   // мост в старый snapshot — чтобы не ломать WizardStep1/2
   // Пишем обратно в bridge только итоговые агрегаты
