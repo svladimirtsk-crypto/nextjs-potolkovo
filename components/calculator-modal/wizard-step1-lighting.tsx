@@ -67,6 +67,7 @@ import {
   normalizeQty,
 } from "@/lib/lighting/product-predicates";
 import {
+  buildAccessorySuggestions,
   buildCartEntries,
   calcClarusPsuQty,
   calcLampCurrentBySocket,
@@ -431,51 +432,22 @@ export function WizardStep1Lighting() {
 
   /* ─── T-012: предложения по комплектующим (без принуждения) ─── */
   const accessorySuggestions = useMemo(() => {
-    const out: Array<{
-      key: string;
-      title: string;
-      priceRub: number;
-      apply: () => void;
-    }> = [];
-
-    for (const socket of LAMP_SOCKETS) {
-      const required = toNumber(lampRequiredBySocket[socket]);
-      const current = toNumber(lampCurrentBySocket[socket]);
-      const missing = required - current;
-      if (missing <= 0) continue;
-
-      const cheapest = lampOptionsBySocket[socket]?.[0];
-      if (!cheapest) continue;
-      const id = toText(cheapest.productId);
-      const priceRub = toNumber(cheapest.priceRub) * missing;
-
-      out.push({
-        key: `lamp-${socket}`,
-        title: `К ${required} светильникам нужно ${missing} ламп ${socket} — добавить самые доступные`,
-        priceRub,
-        apply: () =>
-          setCartItems((prev) => ({ ...prev, [id]: toNumber(prev[id]) + missing })),
-      });
-    }
-
-    for (const mount of missingMounts) {
-      const mid = productIdByVendorCode.get(mount.mountVendorCode);
-      if (!mid) continue;
-      const product = productsById.get(mid);
-      if (!product) continue;
-      const missing = mount.requiredQty - mount.currentQty;
-      if (missing <= 0) continue;
-
-      out.push({
-        key: `mount-${mount.mountVendorCode}`,
-        title: `К «${mount.fixtureName}» нужно ${missing} платформ — добавить`,
-        priceRub: toNumber(product.priceRub) * missing,
-        apply: () =>
-          setCartItems((prev) => ({ ...prev, [mid]: toNumber(prev[mid]) + missing })),
-      });
-    }
-
-    return out;
+    const suggestions = buildAccessorySuggestions({
+      lampRequiredBySocket,
+      lampCurrentBySocket,
+      lampOptionsBySocket,
+      missingMounts,
+      productIdByVendorCode,
+      productsById,
+    });
+    return suggestions.map((suggestion) => ({
+      ...suggestion,
+      apply: () =>
+        setCartItems((prev) => ({
+          ...prev,
+          [suggestion.productId]: toNumber(prev[suggestion.productId]) + suggestion.qty,
+        })),
+    }));
   }, [
     lampCurrentBySocket,
     lampOptionsBySocket,

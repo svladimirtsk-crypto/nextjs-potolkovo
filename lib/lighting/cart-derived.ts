@@ -216,3 +216,68 @@ export function calcClarusPsuQty(entries: CartEntry[]): number {
     )
     .reduce((sum, entry) => sum + entry.qty, 0);
 }
+
+export type AccessorySuggestion = {
+  key: string;
+  title: string;
+  priceRub: number;
+  /** Что и сколько положить в корзину, если клиент согласится. */
+  productId: string;
+  qty: number;
+};
+
+/**
+ * T-012 · Подсказки по комплектующим — предложение, а не принуждение.
+ *
+ * Считаем, чего не хватает, и во что это обойдётся. Само добавление в корзину
+ * остаётся за компонентом: здесь только данные, поэтому формулировки и суммы
+ * можно проверить тестом.
+ */
+export function buildAccessorySuggestions(input: {
+  lampRequiredBySocket: LampSocketCounts;
+  lampCurrentBySocket: LampSocketCounts;
+  lampOptionsBySocket: Record<LampSocket, FeedCatalogProduct[]>;
+  missingMounts: MissingMount[];
+  productIdByVendorCode: Map<string, string>;
+  productsById: Map<string, FeedCatalogProduct>;
+}): AccessorySuggestion[] {
+  const suggestions: AccessorySuggestion[] = [];
+
+  for (const socket of LAMP_SOCKETS) {
+    const required = toNumber(input.lampRequiredBySocket[socket]);
+    const missingQty = required - toNumber(input.lampCurrentBySocket[socket]);
+    if (missingQty <= 0) continue;
+
+    // Предлагаем самую доступную лампу: список уже отсортирован по цене.
+    const cheapest = input.lampOptionsBySocket[socket]?.[0];
+    if (!cheapest) continue;
+
+    suggestions.push({
+      key: `lamp-${socket}`,
+      title: `К ${required} светильникам нужно ${missingQty} ламп ${socket} — добавить самые доступные`,
+      priceRub: toNumber(cheapest.priceRub) * missingQty,
+      productId: toText(cheapest.productId),
+      qty: missingQty,
+    });
+  }
+
+  for (const mount of input.missingMounts) {
+    const mountId = input.productIdByVendorCode.get(mount.mountVendorCode);
+    if (!mountId) continue;
+    const product = input.productsById.get(mountId);
+    if (!product) continue;
+
+    const missingQty = mount.requiredQty - mount.currentQty;
+    if (missingQty <= 0) continue;
+
+    suggestions.push({
+      key: `mount-${mount.mountVendorCode}`,
+      title: `К «${mount.fixtureName}» нужно ${missingQty} платформ — добавить`,
+      priceRub: toNumber(product.priceRub) * missingQty,
+      productId: mountId,
+      qty: missingQty,
+    });
+  }
+
+  return suggestions;
+}

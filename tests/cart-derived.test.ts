@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import snapshot from "../data/eks-feed2-snapshot.json";
 import {
+  buildAccessorySuggestions,
   buildCartEntries,
   calcClarusPsuQty,
   calcLampCurrentBySocket,
@@ -208,5 +209,80 @@ describe("N-051 · блоки питания CLARUS", () => {
     const clarus = find((p) => p.system === "CLARUS_48");
     // Обычная позиция CLARUS блоком питания не является.
     expect(calcClarusPsuQty([entry(clarus, 2)])).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe("N-051 · подсказки по комплектующим (T-012)", () => {
+  const lampOptions = groupLampOptionsBySocket(products);
+  const empty = { GX53: 0, MR16: 0, GU10: 0 };
+
+  it("полный комплект не порождает подсказок", () => {
+    expect(
+      buildAccessorySuggestions({
+        lampRequiredBySocket: { ...empty, GX53: 4 },
+        lampCurrentBySocket: { ...empty, GX53: 4 },
+        lampOptionsBySocket: lampOptions,
+        missingMounts: [],
+        productIdByVendorCode: byVendor,
+        productsById: byId,
+      })
+    ).toEqual([]);
+  });
+
+  it("предлагает недостающие лампы и считает цену за недостачу, а не за всё", () => {
+    const [suggestion] = buildAccessorySuggestions({
+      lampRequiredBySocket: { ...empty, GX53: 6 },
+      lampCurrentBySocket: { ...empty, GX53: 2 },
+      lampOptionsBySocket: lampOptions,
+      missingMounts: [],
+      productIdByVendorCode: byVendor,
+      productsById: byId,
+    });
+    const cheapest = lampOptions.GX53[0];
+    expect(suggestion.qty).toBe(4);
+    expect(suggestion.priceRub).toBe(Number(cheapest.priceRub) * 4);
+    expect(suggestion.productId).toBe(toText(cheapest.productId));
+    expect(suggestion.title).toContain("4 ламп GX53");
+  });
+
+  it("предлагает самую доступную лампу из доступных", () => {
+    const [suggestion] = buildAccessorySuggestions({
+      lampRequiredBySocket: { ...empty, GX53: 1 },
+      lampCurrentBySocket: empty,
+      lampOptionsBySocket: lampOptions,
+      missingMounts: [],
+      productIdByVendorCode: byVendor,
+      productsById: byId,
+    });
+    const minPrice = Math.min(...lampOptions.GX53.map((l) => Number(l.priceRub)));
+    expect(suggestion.priceRub).toBe(minPrice);
+  });
+
+  it("недостающие крепления попадают в подсказки с именем светильника", () => {
+    const pair = Object.entries(POINT_TO_MOUNT_VENDOR_CODE).find(
+      ([f, m]) => byVendor.has(f) && byVendor.has(m)
+    );
+    if (!pair) return;
+    const mountId = byVendor.get(pair[1])!;
+    const [suggestion] = buildAccessorySuggestions({
+      lampRequiredBySocket: empty,
+      lampCurrentBySocket: empty,
+      lampOptionsBySocket: lampOptions,
+      missingMounts: [
+        {
+          fixtureVendorCode: pair[0],
+          mountVendorCode: pair[1],
+          fixtureName: "Тестовый светильник",
+          mountName: "Платформа",
+          requiredQty: 3,
+          currentQty: 1,
+        },
+      ],
+      productIdByVendorCode: byVendor,
+      productsById: byId,
+    });
+    expect(suggestion.qty).toBe(2);
+    expect(suggestion.productId).toBe(mountId);
+    expect(suggestion.title).toContain("Тестовый светильник");
   });
 });
