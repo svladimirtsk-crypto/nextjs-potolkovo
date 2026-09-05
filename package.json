@@ -10,7 +10,7 @@
     "lint": "eslint",
     "test:flow": "node scripts/test-calculator-flow.mjs",
     "test": "vitest run",
-    "test:e2e": "playwright test scripts/e2e-back-chain.test.ts",
+    "test:e2e": "playwright test",
     "validate:catalog": "node scripts/validate-catalog.mjs",
     "prebuild": "node scripts/validate-catalog.mjs && node scripts/build-catalog-index.mjs && node scripts/check-images.mjs",
     "build:catalog-index": "node scripts/build-catalog-index.mjs",
@@ -18,7 +18,8 @@
     "build:images": "node scripts/build-images.mjs",
     "build:catalog-images": "node scripts/build-catalog-images.mjs",
     "check:images": "node scripts/check-images.mjs",
-    "check:env": "node scripts/check-env.mjs"
+    "check:env": "node scripts/check-env.mjs",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "next": "16.1.6",

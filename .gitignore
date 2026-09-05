@@ -44,3 +44,5 @@ next-env.d.ts
 # T-061: локальные превью каталога скачиваются с хоста поставщика
 # (npm run build:catalog-images) — в репозиторий не кладём.
 /public/catalog/
+test-results/
+playwright-report/

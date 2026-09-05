@@ -1,0 +1,38 @@
+# T-001/T-090 · Конфигурация gitleaks.
+#
+# Базовый набор правил берём из апстрима и добавляем то, что специфично
+# для этого проекта: ключи Web3Forms и токены Telegram-ботов.
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "telegram-bot-token"
+description = "Telegram Bot API token"
+regex = '''\b\d{8,10}:[A-Za-z0-9_-]{35}\b'''
+tags = ["telegram", "token"]
+
+[[rules]]
+id = "web3forms-access-key"
+description = "Web3Forms access key (UUID в переменной с именем access key)"
+regex = '''(?i)web3forms[_-]?access[_-]?key["'\s:=]{1,10}[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'''
+tags = ["web3forms", "key"]
+
+[allowlist]
+description = "Заведомо безопасные совпадения"
+
+paths = [
+  # Пример окружения содержит только пустые значения.
+  '''\.env\.example$''',
+  # Снапшот каталога и сгенерированные данные — не секреты.
+  '''^data/''',
+  '''^public/''',
+  '''package-lock\.json$''',
+]
+
+regexes = [
+  # Плейсхолдеры реквизитов владельца (T-047).
+  '''TODO_OWNER''',
+  # Публичный ID счётчика Метрики — не секрет.
+  '''107200362''',
+]

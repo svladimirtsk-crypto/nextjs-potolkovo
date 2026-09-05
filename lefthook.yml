@@ -1,0 +1,36 @@
+# T-001/T-090 · Пре-коммит хуки.
+#
+# Установка: `npx lefthook install` (однократно на машине разработчика).
+#
+# Хуки намеренно быстрые: тяжёлые проверки (build, e2e) живут в CI, а здесь
+# только то, что ловит ошибку за секунды. Если lefthook не установлен,
+# коммиты продолжают работать — CI остаётся страховкой.
+
+pre-commit:
+  parallel: true
+  commands:
+    gitleaks:
+      # Главная причина существования хука: не дать секрету попасть в историю.
+      # `--no-banner`, чтобы не засорять вывод коммита.
+      run: gitleaks protect --staged --redact --no-banner --config .gitleaks.toml
+      skip:
+        - merge
+        - rebase
+      fail_text: |
+        gitleaks нашёл потенциальный секрет в staged-изменениях.
+        Уберите значение из кода (используйте .env.local) и повторите коммит.
+        Если это ложное срабатывание — добавьте исключение в .gitleaks.toml.
+
+    eslint:
+      glob: "*.{ts,tsx}"
+      run: npx eslint {staged_files}
+
+    types:
+      # tsc не умеет проверять отдельные файлы с учётом проекта,
+      # поэтому гоняем весь проект — это ~5 секунд.
+      run: npx tsc --noEmit
+
+pre-push:
+  commands:
+    unit:
+      run: npm run test
