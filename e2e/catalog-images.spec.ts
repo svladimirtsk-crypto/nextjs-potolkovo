@@ -19,7 +19,24 @@ async function openClarus(page: import("@playwright/test").Page) {
   await page.goto(PAGE);
   const clarus = page.getByRole("button", { name: /CLARUS|48/i }).first();
   if (await clarus.count()) await clarus.click();
-  await page.waitForTimeout(1200);
+
+  // Картинки ленивые: ждём фактической загрузки, а не фиксированной паузы —
+  // иначе тест флачит на медленном прогоне всего набора.
+  await expect
+    .poll(
+      async () =>
+        page.locator("#price img").evaluateAll(
+          (imgs) =>
+            imgs.filter(
+              (img) =>
+                img.getBoundingClientRect().width > 0 &&
+                (img.currentSrc || "").includes("/catalog/") &&
+                img.naturalWidth > 0
+            ).length
+        ),
+      { timeout: 15_000 }
+    )
+    .toBeGreaterThan(0);
 }
 
 test.describe("Каталог · локальные фото", () => {

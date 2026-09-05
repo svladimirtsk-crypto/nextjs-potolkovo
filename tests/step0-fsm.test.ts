@@ -11,6 +11,8 @@ import {
   type Step0FlowContext,
   type Step0Screen,
 } from "../lib/step0-fsm";
+import { calcProgress } from "../lib/calculator/fsm";
+import type { SolutionScenario } from "../lib/calculator-modal-types";
 
 /** Контекст «обычной комнаты» — база, которую тесты точечно переопределяют. */
 function makeCtx(patch: Partial<Step0FlowContext> = {}): Step0FlowContext {
@@ -151,5 +153,31 @@ describe("T-091 · fsm: сравнение экранов", () => {
     expect(isSameScreen(a, { t: "param", roomId: "room-1", param: "area" })).toBe(true);
     expect(isSameScreen(a, { t: "param", roomId: "room-2", param: "area" })).toBe(false);
     expect(isSameScreen(a, { t: "param", roomId: "room-1", param: "ceiling" })).toBe(false);
+  });
+});
+
+/**
+ * N-011 · Фиксируем фактический знаменатель «вопрос N из M».
+ *
+ * ТЗ v2 предполагало 5/8/9, но реальные значения другие: экран режима расчёта
+ * удалён в T-041, а парящий профиль спрашивается отдельным экраном. Тест
+ * закрепляет факт, чтобы M не «поплыл» незаметно при правке списка параметров.
+ */
+describe("N-011 · знаменатель прогресса Шага 0", () => {
+  it("standard = 8, modern = 10, advanced = 10", () => {
+    const totalFor = (scenario: SolutionScenario) =>
+      calcProgress({ t: "scenario" }, { scenario, enabledParams: [] }).total;
+
+    expect(totalFor("standard")).toBe(8);
+    expect(totalFor("modern")).toBe(10);
+    expect(totalFor("advanced")).toBe(10);
+  });
+
+  it("знаменатель не меняется по мере ответов", () => {
+    const ctx = { scenario: "standard" as SolutionScenario, enabledParams: ["area" as const] };
+    const atStart = calcProgress({ t: "scenario" }, ctx).total;
+    const atSummary = calcProgress({ t: "summary" }, ctx).total;
+
+    expect(atSummary).toBe(atStart);
   });
 });

@@ -32,65 +32,83 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll<HTMLElement>(selector));
 }
 
-type ProgressBarProps = {
+type StepNavProps = {
   currentStep: WizardStep;
   hasLightingSelected: boolean;
   /** T-028: Шаг 0 мог быть пропущен (вход «сначала свет») — тогда показываем «Потолок —». */
   hasCeilingCompleted: boolean;
   goToStep: (step: WizardStep) => void;
+  /** Позиция внутри Шага 0: «вопрос N из M». Null на шагах света и итога. */
+  step0Progress: { done: number; total: number } | null;
 };
 
-function ProgressBar({
+const STEP_LABELS = ["Потолок", "Свет", "Итог"] as const;
+
+/**
+ * N-011 · Единственный индикатор прогресса.
+ *
+ * Раньше в шапке жили два независимых индикатора: чипы «1 Потолок · 2 Свет ·
+ * 3 Итог» и отдельная полоска «Шаг 3 из 8». Они показывали разное (макро-шаг
+ * против номера вопроса) и на мобильном занимали две строки. Теперь один
+ * блок: подпись «Потолок · вопрос 3 из 8» плюс трёхсегментная полоска, где
+ * сегмент — макро-шаг. Клик по пройденному сегменту возвращает назад.
+ */
+function StepNav({
   currentStep,
   hasLightingSelected,
   hasCeilingCompleted,
   goToStep,
-}: ProgressBarProps) {
-  return (
-    <nav className="flex items-center gap-3 max-sm:gap-2" aria-label="Шаги калькулятора">
-      {[0, 1, 2].map((i) => {
-        const isCurrent = i === currentStep;
-        const isPast = i < currentStep;
-        const canVisit = i < currentStep;
-        const stepLabels = ["Потолок", "Свет", "Итог"];
-        const isSkippedLighting = i === 1 && isPast && !hasLightingSelected;
-        const isSkippedCeiling = i === 0 && isPast && !hasCeilingCompleted;
-        const isSkipped = isSkippedLighting || isSkippedCeiling;
-        const visualDone = isPast && !isSkipped;
+  step0Progress,
+}: StepNavProps) {
+  const isSkipped = (i: number) =>
+    (i === 1 && i < currentStep && !hasLightingSelected) ||
+    (i === 0 && i < currentStep && !hasCeilingCompleted);
 
-        return (
-          <button
-            key={i}
-            onClick={() => canVisit && goToStep(i as WizardStep)}
-            disabled={!canVisit && !isCurrent}
-            aria-label={`Шаг ${i + 1}: ${isSkipped ? `${stepLabels[i]} пропущен` : stepLabels[i]}`}
-            aria-current={isCurrent ? "step" : undefined}
-            className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-all max-sm:px-2.5 max-sm:py-1 max-sm:text-[11px] ${
-              isCurrent
-                ? "bg-slate-950 text-white"
-                : isSkipped
-                  ? "bg-slate-100 text-slate-500 cursor-pointer hover:bg-slate-200"
-                  : isPast
-                    ? "bg-slate-200 text-slate-700 cursor-pointer hover:bg-slate-300"
-                    : "bg-slate-100 text-slate-400 cursor-not-allowed"
-            }`}
-          >
-            <span
-              className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold max-sm:h-4 max-sm:w-4 max-sm:text-[9px] ${
-                visualDone
-                  ? "bg-slate-950 text-white"
-                  : isSkipped
-                    ? "bg-slate-200 text-slate-500"
-                    : ""
+  const caption =
+    currentStep === 0 && step0Progress && step0Progress.total > 0
+      ? `${STEP_LABELS[0]} · вопрос ${step0Progress.done} из ${step0Progress.total}`
+      : STEP_LABELS[currentStep];
+
+  return (
+    <div className="flex items-center gap-3 max-sm:gap-2">
+      <span className="shrink-0 text-xs font-semibold text-slate-950 max-sm:text-[11px]">
+        {caption}
+      </span>
+      <nav className="flex flex-1 items-center gap-1.5" aria-label="Шаги калькулятора">
+        {[0, 1, 2].map((i) => {
+          const isCurrent = i === currentStep;
+          const canVisit = i < currentStep;
+          const skipped = isSkipped(i);
+          const done = i < currentStep && !skipped;
+
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => canVisit && goToStep(i as WizardStep)}
+              disabled={!canVisit}
+              aria-label={
+                skipped
+                  ? `${STEP_LABELS[i]} пропущен`
+                  : canVisit
+                    ? `Вернуться: ${STEP_LABELS[i]}`
+                    : STEP_LABELS[i]
+              }
+              aria-current={isCurrent ? "step" : undefined}
+              className={`h-1.5 flex-1 rounded-full transition-colors ${
+                canVisit ? "cursor-pointer" : "cursor-default"
+              } ${
+                isCurrent
+                  ? "bg-slate-950"
+                  : done
+                    ? "bg-slate-400 hover:bg-slate-500"
+                    : "bg-slate-200"
               }`}
-            >
-              {visualDone ? "✓" : isSkipped ? "—" : i + 1}
-            </span>
-            <span className="hidden sm:inline">{isSkipped ? `${stepLabels[i]} —` : stepLabels[i]}</span>
-          </button>
-        );
-      })}
-    </nav>
+            />
+          );
+        })}
+      </nav>
+    </div>
   );
 }
 
@@ -413,41 +431,14 @@ export function CalculatorModal() {
               <h2 id="calc-modal-title" className="text-lg font-semibold text-slate-950 max-sm:text-base">
                 {stepTitle}
               </h2>
-              {/* T-030: один индикатор внутри Шага 0 — тонкая полоска «вопрос N из M»
-                  с фиксированным M. Дублирующие точки на мобильном удалены. */}
-              {currentStep === 0 && step0Progress ? (
-                <div className="mt-2 flex items-center gap-2 text-xs text-slate-600">
-                  <span className="font-semibold text-slate-950">
-                    Шаг {step0Progress.done} из {step0Progress.total}
-                  </span>
-                  <div
-                    className="relative h-1.5 w-32 overflow-hidden rounded-full bg-slate-200 max-sm:w-20"
-                    role="progressbar"
-                    aria-valuenow={step0Progress.done}
-                    aria-valuemin={0}
-                    aria-valuemax={step0Progress.total}
-                  >
-                    <div
-                      className="h-full rounded-full bg-slate-950 transition-all duration-300 ease-out"
-                      style={{
-                        width: `${
-                          step0Progress.total > 0
-                            ? Math.round((step0Progress.done / step0Progress.total) * 100)
-                            : 0
-                        }%`,
-                      }}
-                      aria-hidden="true"
-                    />
-                  </div>
-                </div>
-              ) : null}
-              {/* P0.6: progress bar instead of text */}
+              {/* N-011 · Единственный индикатор: подпись + 3-сегментная полоска. */}
               <div className="mt-2 max-sm:mt-1.5">
-                <ProgressBar
+                <StepNav
                   currentStep={currentStep}
                   hasLightingSelected={hasLightingSelected}
                   hasCeilingCompleted={Number(snapshot?.total ?? 0) > 0}
                   goToStep={goToStep}
+                  step0Progress={step0Progress ?? null}
                 />
               </div>
             </div>
