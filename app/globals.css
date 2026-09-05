@@ -120,6 +120,38 @@ button {
   scroll-margin-top: calc(var(--header-height) + 1rem);
 }
 
+/*
+ * T-065 · Затухающий край у горизонтальных лент чипов.
+ *
+ * Скроллбар скрыт (`no-scrollbar`), поэтому на мобильном не было ни одного
+ * признака, что список прокручивается вправо, — часть разделов каталога
+ * просто не находили. Маска показывает «там ещё есть», не занимая места.
+ * На широких экранах лента переносится по строкам, и маска отключается.
+ */
+.scroll-fade-x {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 1.25rem,
+    #000 calc(100% - 1.75rem),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 1.25rem,
+    #000 calc(100% - 1.75rem),
+    transparent 100%
+  );
+}
+
+@media (min-width: 640px) {
+  .scroll-fade-x {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}
+
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;

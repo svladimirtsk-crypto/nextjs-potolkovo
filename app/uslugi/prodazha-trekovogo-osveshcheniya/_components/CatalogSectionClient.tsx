@@ -107,6 +107,32 @@ function matchesPointSubtype(product: FeedCatalogProduct, subtype: PointSubtypeI
   return socket === subtype;
 }
 
+/**
+ * T-065 · К какой секции каталога относится товар.
+ *
+ * Нужна для глобального поиска: правила отбора раньше жили только внутри
+ * `filteredProducts` вперемешку с активными фильтрами, поэтому «где ещё
+ * есть эта позиция» посчитать было нечем.
+ */
+function sectionOfProduct(product: FeedCatalogProduct): CatalogSectionId | null {
+  if (product.kind === "TRACK_PROFILE" || product.kind === "TRACK_FIXTURE" || product.kind === "TRACK_ACCESSORY") {
+    return "track-systems";
+  }
+  if (product.kind === "SPOT_FIXTURE" || isPanelProduct(product)) return "point-fixtures";
+  if (product.kind === "CHANDELIER") return "chandeliers";
+  if (product.kind === "LED_STRIP" || product.kind === "PSU" || product.kind === "CONTROL") {
+    return "cornice-lighting";
+  }
+  if (product.kind === "LAMP") return "lamps";
+  if (isMountsOrGrilles(product)) return "mounts-grilles";
+  return null;
+}
+
+/** Строка, по которой ищем: название, артикул и путь категории. */
+function searchHaystack(product: FeedCatalogProduct): string {
+  return `${toText(product.name)} ${toText(product.vendorCode)} ${toText(product.categoryPath)}`.toLowerCase();
+}
+
 function normalizeQty(nextQtyRaw: number, unit: "pcs" | "m"): number {
   const step = unit === "m" ? 0.5 : 1;
   const normalized = Math.round(nextQtyRaw / step) * step;
@@ -831,6 +857,31 @@ export function CatalogSectionClient({ data }: Props) {
     });
   }, [lampSocket, pointSubtype, products, query, section, smartOnly, trackGroup, trackSystem]);
 
+  /**
+   * T-065 · Глобальный поиск: сколько совпадений в КАЖДОМ разделе.
+   *
+   * Раньше поиск работал только внутри активной секции и молчал, если товар
+   * лежал в соседней: человек искал «блок питания», получал «ничего не
+   * найдено» в «Трековых системах» и уходил, хотя позиция была в «Подсветке
+   * карниза». Считаем по всему каталогу и показываем, куда перейти.
+   */
+  const searchMatchesBySection = useMemo(() => {
+    const q = toText(query).trim().toLowerCase();
+    if (q.length < 2) return null;
+
+    const counts = new Map<CatalogSectionId, number>();
+    for (const product of products) {
+      if (!searchHaystack(product).includes(q)) continue;
+      const productSection = sectionOfProduct(product);
+      if (!productSection) continue;
+      counts.set(productSection, (counts.get(productSection) ?? 0) + 1);
+    }
+
+    return CATALOG_SECTIONS.filter((item) => item.id !== section && (counts.get(item.id) ?? 0) > 0).map(
+      (item) => ({ id: item.id, label: item.label, count: counts.get(item.id) ?? 0 })
+    );
+  }, [products, query, section]);
+
   return (
     <Section id="price" className={selectedEntries.length > 0 ? "scroll-mt-24 py-10 pb-36 max-sm:pb-44" : "scroll-mt-24 py-10"}>
       <Container>
@@ -852,7 +903,7 @@ export function CatalogSectionClient({ data }: Props) {
           как tablist/tab. Скринридер теперь сообщает «вкладка 2 из 6» и
           состояние выбора, чего не давал набор обычных кнопок.
         */}
-        <div className="mt-8 flex gap-2 overflow-x-auto pb-1 no-scrollbar sm:flex-wrap">
+        <div className="mt-8 flex gap-2 overflow-x-auto pb-1 no-scrollbar scroll-fade-x sm:flex-wrap">
           <div role="tablist" aria-label="Разделы каталога" className="contents">
             {CATALOG_SECTIONS.map((item) => (
               <button
@@ -863,8 +914,9 @@ export function CatalogSectionClient({ data }: Props) {
                 aria-selected={section === item.id}
                 aria-controls="catalog-panel"
                 onClick={() => {
+                  // T-065: запрос сохраняется при смене раздела — человек
+                  // ищет «диммер», а не «диммер в разделе Трековые системы».
                   setSection(item.id);
-                  setQuery("");
                   setVisibleCount(24);
                 }}
                 className={[
@@ -907,7 +959,7 @@ export function CatalogSectionClient({ data }: Props) {
         ) : null}
 
         {section === "track-systems" ? (
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar sm:flex-wrap">
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar scroll-fade-x sm:flex-wrap">
             {TRACK_SYSTEMS.map((system) => (
               <button
                 key={system.id}
@@ -947,7 +999,7 @@ export function CatalogSectionClient({ data }: Props) {
         ) : null}
 
         {section === "point-fixtures" ? (
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar sm:flex-wrap">
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar scroll-fade-x sm:flex-wrap">
             {POINT_SUBTYPES.map((subtype) => (
               <button
                 key={subtype.id}
@@ -969,7 +1021,7 @@ export function CatalogSectionClient({ data }: Props) {
         ) : null}
 
         {section === "lamps" ? (
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar sm:flex-wrap">
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar scroll-fade-x sm:flex-wrap">
             {(LAMP_SOCKETS).map((socket) => (
               <button
                 key={socket}
@@ -1000,10 +1052,45 @@ export function CatalogSectionClient({ data }: Props) {
           <input
           value={query}
           onChange={(event) => setQuery(String(event.target.value ?? ""))}
-          placeholder="Поиск в текущем разделе"
-          className="w-full rounded-2xl border border-slate-300 bg-white pl-10 pr-4 py-3 text-sm text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
+          placeholder="Поиск по всему каталогу"
+          aria-label="Поиск по каталогу"
+          className="w-full rounded-[var(--radius-md)] border border-slate-300 bg-white pl-10 pr-10 py-3 text-sm text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-2"
         />
+          {query ? (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              aria-label="Очистить поиск"
+              className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+            >
+              ✕
+            </button>
+          ) : null}
         </div>
+
+        {/*
+          T-065: найденное в других разделах. Без этой строки поиск выглядел
+          сломанным — совпадения в соседней секции просто не существовали
+          для пользователя.
+        */}
+        {searchMatchesBySection && searchMatchesBySection.length > 0 ? (
+          <div aria-live="polite" className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-slate-600">Найдено ещё:</span>
+            {searchMatchesBySection.map((match) => (
+              <button
+                key={match.id}
+                type="button"
+                onClick={() => {
+                  setSection(match.id);
+                  setVisibleCount(24);
+                }}
+                className="inline-flex min-h-9 items-center rounded-full border border-slate-300 bg-white px-3 text-sm font-medium text-slate-800 hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
+              >
+                «{match.label}»: {match.count}
+              </button>
+            ))}
+          </div>
+        ) : null}
 
         {/*
           T-045: один липкий бар вместо трёх конкурирующих кнопок.
@@ -1124,8 +1211,42 @@ export function CatalogSectionClient({ data }: Props) {
         ) : null}
 
         {filteredProducts.length === 0 ? (
-          <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-            Ничего не найдено
+          <div className="mt-6 rounded-[var(--radius-lg)] border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+            {searchMatchesBySection && searchMatchesBySection.length > 0 ? (
+              <>
+                <p className="font-semibold text-slate-950">
+                  В этом разделе ничего нет, но есть в других
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {searchMatchesBySection.map((match) => (
+                    <button
+                      key={match.id}
+                      type="button"
+                      onClick={() => {
+                        setSection(match.id);
+                        setVisibleCount(24);
+                      }}
+                      className="inline-flex min-h-11 items-center rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-4 text-sm font-semibold text-white hover:bg-[var(--color-accent-hover)]"
+                    >
+                      {match.label} ({match.count})
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <p>Ничего не найдено.</p>
+                {query ? (
+                  <button
+                    type="button"
+                    onClick={() => setQuery("")}
+                    className="mt-3 inline-flex min-h-11 items-center rounded-[var(--radius-sm)] border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-slate-100"
+                  >
+                    Сбросить поиск
+                  </button>
+                ) : null}
+              </>
+            )}
           </div>
         ) : null}
 
