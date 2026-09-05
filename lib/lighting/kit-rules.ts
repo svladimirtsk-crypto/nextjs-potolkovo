@@ -9,6 +9,7 @@ import { CLARUS_PSU_VENDOR_CODES } from "@/lib/catalog-ui-config";
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
 import { calcProfilesForTrackMeters, type ProfileEntry, type ProfilePiece } from "@/lib/lighting-kits";
+import { inferPieceLengthMeters } from "@/lib/product-length-meters";
 
 export type TrackSystemId = "COLIBRI_220" | "CLARUS_48" | "TRACK_220";
 
@@ -39,6 +40,12 @@ function isIncompatible(product: FeedCatalogProduct, targetSystem: TrackSystemId
   if (isSystemBoundProduct(product) && product.system !== targetSystem) return true;
   if (isClarusPsu(product) && targetSystem !== "CLARUS_48") return true;
   return false;
+}
+
+/** Длина одного куска профиля в метрах (штучный товар) либо 1 м для метражного. */
+function pieceMetersOf(product: FeedCatalogProduct): number {
+  if (product.unit === "m") return 1;
+  return toNumber(inferPieceLengthMeters(product));
 }
 
 export type CartConflict = {
@@ -137,6 +144,77 @@ export function profilesForMeters(
   profiles: readonly ProfileEntry[]
 ): ProfilePiece[] {
   return calcProfilesForTrackMeters(meters, profiles);
+}
+
+/** Подобранный кусок профиля из реального каталога. */
+export type AutoProfilePiece = {
+  product: FeedCatalogProduct;
+  qty: number;
+  /** Длина одного куска в метрах. */
+  pieceMeters: number;
+  totalRub: number;
+};
+
+export type AutoProfilePlan = {
+  pieces: AutoProfilePiece[];
+  totalMeters: number;
+  totalRub: number;
+};
+
+/**
+ * Автосборка профиля из товаров каталога: сначала длинные куски, остаток
+ * добивается самым коротким подходящим. В отличие от `profilesForMeters`,
+ * работает с реальным фидом, поэтому результат можно положить в корзину.
+ */
+export function autoAssembleProfiles(
+  meters: number,
+  products: readonly FeedCatalogProduct[]
+): AutoProfilePlan | null {
+  if (!Number.isFinite(meters) || meters <= 0) return null;
+
+  const candidates = products
+    .map((product) => ({ product, pieceMeters: pieceMetersOf(product) }))
+    .filter((entry) => entry.pieceMeters > 0 && toNumber(entry.product.priceRub) > 0)
+    .sort((a, b) => b.pieceMeters - a.pieceMeters);
+
+  if (candidates.length === 0) return null;
+
+  const picked = new Map<string, AutoProfilePiece>();
+  let remaining = meters;
+
+  const addPiece = (entry: { product: FeedCatalogProduct; pieceMeters: number }, qty: number) => {
+    if (qty <= 0) return;
+    const id = toText(entry.product.productId);
+    const existing = picked.get(id);
+    const nextQty = (existing?.qty ?? 0) + qty;
+    picked.set(id, {
+      product: entry.product,
+      qty: nextQty,
+      pieceMeters: entry.pieceMeters,
+      totalRub: toNumber(entry.product.priceRub) * nextQty,
+    });
+    remaining -= entry.pieceMeters * qty;
+  };
+
+  for (const entry of candidates) {
+    if (remaining <= 0.001) break;
+    const count = Math.floor((remaining + 0.001) / entry.pieceMeters);
+    if (count > 0) addPiece(entry, count);
+  }
+
+  // Остаток добираем самым коротким куском — длину округляем вверх.
+  if (remaining > 0.001) {
+    const shortest = candidates[candidates.length - 1];
+    addPiece(shortest, Math.ceil(remaining / shortest.pieceMeters));
+  }
+
+  const pieces = [...picked.values()].sort((a, b) => b.pieceMeters - a.pieceMeters);
+
+  return {
+    pieces,
+    totalMeters: pieces.reduce((sum, piece) => sum + piece.pieceMeters * piece.qty, 0),
+    totalRub: pieces.reduce((sum, piece) => sum + piece.totalRub, 0),
+  };
 }
 
 /**

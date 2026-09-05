@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  autoAssembleProfiles,
   clearIncompatibleSystem,
   conflicts,
   fixturesHintForMeters,
@@ -21,7 +22,11 @@ function product(patch: Partial<FeedCatalogProduct> & { productId: string }): Fe
     system: patch.system ?? "",
     kind: patch.kind ?? "OTHER",
     unit: patch.unit ?? "pcs",
-  } as FeedCatalogProduct;
+    pieceLengthMeters: patch.pieceLengthMeters ?? null,
+    lengthMeters: patch.pieceLengthMeters ?? null,
+    params: [],
+    keyAttributes: [],
+  } as unknown as FeedCatalogProduct;
 }
 
 const catalog = new Map<string, FeedCatalogProduct>(
@@ -124,5 +129,50 @@ describe("T-032 · fixturesHintForMeters", () => {
 
   it("минимум никогда не опускается ниже одного светильника", () => {
     expect(fixturesHintForMeters(1, 1)?.min).toBe(1);
+  });
+});
+
+describe("T-032 · autoAssembleProfiles", () => {
+  // Профили каталога: 3 м, 2 м и 1 м с реальными длинами куска.
+  const profiles = [
+    product({ productId: "p3", kind: "TRACK_PROFILE", priceRub: 10500, pieceLengthMeters: 3 }),
+    product({ productId: "p2", kind: "TRACK_PROFILE", priceRub: 7400, pieceLengthMeters: 2 }),
+    product({ productId: "p1", kind: "TRACK_PROFILE", priceRub: 3900, pieceLengthMeters: 1 }),
+  ];
+
+  it("без метража плана нет", () => {
+    expect(autoAssembleProfiles(0, profiles)).toBeNull();
+  });
+
+  it("без подходящих товаров плана нет", () => {
+    expect(autoAssembleProfiles(10, [])).toBeNull();
+  });
+
+  it("10 м собирает как 3 м × 3 + 1 м × 1", () => {
+    const plan = autoAssembleProfiles(10, profiles)!;
+
+    expect(plan.pieces.map((piece) => [piece.product.productId, piece.qty])).toEqual([
+      ["p3", 3],
+      ["p1", 1],
+    ]);
+    expect(plan.totalMeters).toBe(10);
+    expect(plan.totalRub).toBe(10500 * 3 + 3900);
+  });
+
+  it("остаток добирается вверх, а не оставляет недобор", () => {
+    const plan = autoAssembleProfiles(3.5, profiles)!;
+
+    expect(plan.totalMeters).toBeGreaterThanOrEqual(3.5);
+  });
+
+  it("игнорирует позиции без цены и без длины куска", () => {
+    const plan = autoAssembleProfiles(3, [
+      product({ productId: "free", kind: "TRACK_PROFILE", priceRub: 0, pieceLengthMeters: 3 }),
+      product({ productId: "nolen", kind: "TRACK_PROFILE", priceRub: 5000 }),
+      ...profiles,
+    ])!;
+
+    expect(plan.pieces.every((piece) => piece.product.productId !== "free")).toBe(true);
+    expect(plan.pieces.every((piece) => piece.product.productId !== "nolen")).toBe(true);
   });
 });

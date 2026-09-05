@@ -25,10 +25,13 @@ import {
 } from "@/lib/feed2-products";
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
 import { resolveInitialLightingStep, type WizardStep } from "@/lib/lighting/resolve-initial-step";
+import { pricing } from "@/content/pricing";
 import { useCatalogProducts } from "@/lib/lighting/use-catalog-products";
 import { useLightingCart } from "@/lib/lighting/use-lighting-cart";
 import {
+  autoAssembleProfiles,
   clearIncompatibleSystem as clearIncompatibleSystem_,
+  fixturesHintForMeters,
   isTrackSystemId,
 } from "@/lib/lighting/kit-rules";
 
@@ -1001,6 +1004,37 @@ export function WizardStep1Lighting() {
     });
   }, [products, recommendedTrackProfiles, selectedTrackSystem, trackMountType]);
 
+  /* ─── T-032: автосборка профиля и ориентир по светильникам ─── */
+
+  /** План автосборки под требуемый метраж из профилей выбранной системы. */
+  const autoProfilePlan = useMemo(
+    () => autoAssembleProfiles(requiredTrackMeters, wTrackProfiles),
+    [requiredTrackMeters, wTrackProfiles]
+  );
+
+  /** Одним тапом кладём подобранные куски в корзину. */
+  const applyAutoProfilePlan = useCallback(() => {
+    if (!autoProfilePlan) return;
+
+    markWizardTouched();
+    const system = autoProfilePlan.pieces[0]?.product.system;
+    if (system && isTrackSystemId(system)) setWSystem(system);
+
+    setCartItems((prev) => {
+      const next = { ...prev };
+      for (const piece of autoProfilePlan.pieces) {
+        next[toText(piece.product.productId)] = piece.qty;
+      }
+      return next;
+    });
+  }, [autoProfilePlan, markWizardTouched, setCartItems, setWSystem]);
+
+  /** «Ориентир для 10 м: 8–12 светильников» — вилка ±20 %. */
+  const fixturesHint = useMemo(
+    () => fixturesHintForMeters(selectedTrackMeters || requiredTrackMeters, pricing.trackSpotsPerMeter),
+    [requiredTrackMeters, selectedTrackMeters]
+  );
+
   const wTrackFixtures = useMemo(() => {
     if (!selectedTrackSystem) return [];
     return products.filter((p) => p.kind === "TRACK_FIXTURE" && p.system === selectedTrackSystem && p.priceRub > 0)
@@ -1398,6 +1432,31 @@ export function WizardStep1Lighting() {
                 <p className="mt-1 text-xs text-emerald-800">Одно нажатие «+» добавляет 1 шт. Можно собрать профиль из разных длин.</p>
               </div>
 
+              {/* T-032: автосборка под требуемый метраж одним тапом */}
+              {autoProfilePlan && requiredTrackMeters > 0 && !trackComplete ? (
+                <div className="rounded-2xl border border-slate-300 bg-white p-4">
+                  <p className="text-sm font-semibold text-slate-950">
+                    Собрать автоматически:{" "}
+                    {autoProfilePlan.pieces
+                      .map((piece) => `${fmtM(piece.pieceMeters)} м × ${piece.qty}`)
+                      .join(" + ")}{" "}
+                    = {fmt(autoProfilePlan.totalRub)} ₽
+                  </p>
+                  <p className="mt-1 text-xs text-slate-600">
+                    С потолком: {fmt(applyLightingWithCeilingDiscount(autoProfilePlan.totalRub))} ₽ · перекроет{" "}
+                    {fmtM(autoProfilePlan.totalMeters)} м из {fmtM(requiredTrackMeters)} м
+                  </p>
+                  <button
+                    type="button"
+                    onClick={applyAutoProfilePlan}
+                    className="mt-3 min-h-11 w-full rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+                  >
+                    Собрать автоматически
+                  </button>
+                  <p className="mt-2 text-xs text-slate-500">Ниже можно поправить количество вручную.</p>
+                </div>
+              ) : null}
+
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {wTrackProfiles.map((p) => {
                   const id = toText(p.productId);
@@ -1435,6 +1494,12 @@ export function WizardStep1Lighting() {
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
                 <p className="text-sm font-semibold text-emerald-950">Светильники для трека: {selectedTrackSystem ? systemLabel(selectedTrackSystem) : ""}</p>
                 <p className="mt-1 text-xs text-emerald-800">Показываем все светильники выбранной системы.</p>
+                {fixturesHint ? (
+                  <p className="mt-2 text-xs font-medium text-emerald-900">
+                    Ориентир для {fmtM(selectedTrackMeters || requiredTrackMeters)} м:{" "}
+                    {fixturesHint.min}–{fixturesHint.max} светильников
+                  </p>
+                ) : null}
               </div>
 
               {wTrackFixtures.length > 0 ? (
