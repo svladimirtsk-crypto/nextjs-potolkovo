@@ -14,6 +14,7 @@ import { deliverToWeb3Forms } from "@/lib/lead/deliver-web3forms";
 import { checkRateLimit } from "@/lib/lead/rate-limit";
 import { LeadPayloadSchema } from "@/lib/lead/schema";
 import { getLeadStore } from "@/lib/lead/store";
+import { getEnv } from "@/lib/env";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,7 +33,7 @@ function hashIp(ip: string): string {
 }
 
 export async function POST(request: Request) {
-  if (process.env.LEAD_API_ENABLED === "0") {
+  if (!getEnv().LEAD_API_ENABLED) {
     return NextResponse.json({ ok: false, error: "disabled" }, { status: 503 });
   }
 

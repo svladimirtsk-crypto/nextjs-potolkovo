@@ -3,6 +3,7 @@
  */
 import { formatLeadForTelegram } from "./format-lead";
 import type { LeadPayload } from "./schema";
+import { getEnv } from "@/lib/env";
 
 export type DeliveryResult = { ok: true } | { ok: false; error: string };
 
@@ -10,12 +11,14 @@ export async function deliverToTelegram(
   payload: LeadPayload,
   leadCode: string
 ): Promise<DeliveryResult> {
-  if (process.env.TELEGRAM_LEADS_ENABLED === "0") {
+  const env = getEnv();
+
+  if (!env.TELEGRAM_LEADS_ENABLED) {
     return { ok: false, error: "TELEGRAM_LEADS_ENABLED=0" };
   }
 
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
+  const token = env.TELEGRAM_BOT_TOKEN;
+  const chatId = env.TELEGRAM_CHAT_ID;
   if (!token || !chatId) return { ok: false, error: "Telegram is not configured" };
 
   try {

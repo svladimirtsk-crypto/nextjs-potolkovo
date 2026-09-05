@@ -5,12 +5,13 @@
 import { formatLeadBody, formatLeadSubject } from "./format-lead";
 import type { LeadPayload } from "./schema";
 import type { DeliveryResult } from "./deliver-telegram";
+import { getEnv } from "@/lib/env";
 
 export async function deliverToWeb3Forms(
   payload: LeadPayload,
   leadCode: string
 ): Promise<DeliveryResult> {
-  const accessKey = process.env.WEB3FORMS_ACCESS_KEY;
+  const accessKey = getEnv().WEB3FORMS_ACCESS_KEY;
   if (!accessKey) return { ok: false, error: "WEB3FORMS_ACCESS_KEY is not configured" };
 
   try {

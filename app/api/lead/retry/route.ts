@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { deliverToTelegram } from "@/lib/lead/deliver-telegram";
 import { deliverToWeb3Forms } from "@/lib/lead/deliver-web3forms";
 import { getLeadStore } from "@/lib/lead/store";
+import { getEnv } from "@/lib/env";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ const MAX_ATTEMPTS = 5;
 const BATCH_SIZE = 20;
 
 export async function POST(request: Request) {
-  const secret = process.env.CRON_SECRET;
+  const secret = getEnv().CRON_SECRET;
   const provided = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
 
   if (!secret || provided !== secret) {

@@ -1,4 +1,5 @@
 import snapshotData from "@/data/eks-feed2-snapshot.json";
+import { getEnv } from "@/lib/env";
 
 export type FeedCatalogParam = {
   label: string;
@@ -631,11 +632,13 @@ function parseLiveFeed(xml: string): { result: FeedCatalogResult; counters: Pars
 }
 
 export async function getCatalogData(): Promise<FeedCatalogResult> {
-  const enabled = s(process.env.CATALOG_LIVE_FEED2_ENABLED);
-  const strict = s(process.env.CATALOG_LIVE_FEED2_STRICT);
+  const env = getEnv();
+  const liveEnabled = env.CATALOG_LIVE_FEED2_ENABLED;
+  const liveStrict = env.CATALOG_LIVE_FEED2_STRICT;
 
-  const liveEnabled = enabled === "1";
-  const liveStrict = strict === "1";
+  // Диагностика ниже отдаётся как строки "0"/"1" — формат ответа не меняем.
+  const enabled = liveEnabled ? "1" : "0";
+  const strict = liveStrict ? "1" : "0";
   const fetchedAt = new Date().toISOString();
 
   const snapshot = normalizeSnapshot(snapshotData);

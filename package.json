@@ -17,7 +17,8 @@
     "check:legal": "node scripts/check-legal-fields.mjs",
     "build:images": "node scripts/build-images.mjs",
     "build:catalog-images": "node scripts/build-catalog-images.mjs",
-    "check:images": "node scripts/check-images.mjs"
+    "check:images": "node scripts/check-images.mjs",
+    "check:env": "node scripts/check-env.mjs"
   },
   "dependencies": {
     "next": "16.1.6",
