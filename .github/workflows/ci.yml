@@ -18,6 +18,28 @@ jobs:
   static:
     name: Lint · types · unit
     runs-on: ubuntu-latest
+
+    # N-001: без реальной БД интеграционные тесты хранилища молча пропускаются,
+    # и регрессия в PgLeadStore доехала бы до прода незамеченной.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: potolkovo_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/potolkovo_test
+      CRON_SECRET: ci-test-secret
+
     steps:
       - uses: actions/checkout@v4
 
@@ -33,6 +55,11 @@ jobs:
 
       - name: TypeScript
         run: npx tsc --noEmit
+
+      - name: Применить схему БД
+        run: npx drizzle-kit push --force
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
 
       - name: Unit-тесты (vitest)
         run: npm run test

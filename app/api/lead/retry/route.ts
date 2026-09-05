@@ -49,5 +49,13 @@ export async function POST(request: Request) {
     if (result.ok) recovered += 1;
   }
 
-  return NextResponse.json({ ok: true, retried, recovered });
+  // ТЗ v2 N-001 п.4: ответ {retried, sent, failed}. `recovered` сохранён
+  // для обратной совместимости с существующим тестом и мониторингом.
+  return NextResponse.json({
+    ok: true,
+    retried,
+    sent: recovered,
+    failed: retried - recovered,
+    recovered,
+  });
 }

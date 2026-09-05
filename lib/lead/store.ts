@@ -1,66 +1,34 @@
 /**
- * T-027 · Хранилище заявок.
+ * N-001 · Хранилище заявок: выбор реализации.
  *
- * Схема БД — `db/schema.sql` (Приложение Б). ORM в проект пока не добавлена
- * (ограничение по зависимостям в ТЗ), поэтому здесь описан интерфейс хранилища
- * и работающая in-memory реализация: она держит заявки в памяти процесса,
- * обслуживает дедуп и ретраи доставки. Когда появится драйвер БД, достаточно
- * реализовать `LeadStore` поверх SQL из `db/schema.sql` — вызывающий код не меняется.
+ * При заданном `DATABASE_URL` — PostgreSQL (`PgLeadStore`), иначе in-memory.
+ * In-memory осознанно оставлен: он нужен для локальной разработки и тестов,
+ * но на serverless теряет заявки при каждом холодном старте, поэтому
+ * предупреждаем один раз на процесс.
  */
-import type { LeadPayload } from "./schema";
+import { getEnv } from "@/lib/env";
 
-export type LeadStatus = "new" | "draft" | "rescue" | "contacted" | "closed";
-export type DeliveryChannel = "telegram" | "web3forms";
-export type DeliveryStatus = "pending" | "sent" | "failed";
+import { generatePublicCode } from "./public-code";
+import { PgLeadStore } from "./store-pg";
+import type {
+  DeliveryChannel,
+  DeliveryRecord,
+  DeliveryStatus,
+  LeadRecord,
+  LeadStore,
+} from "./store-types";
 
-export type LeadRecord = {
-  id: number;
-  publicCode: string;
-  createdAt: number;
-  status: LeadStatus;
-  payload: LeadPayload;
-  grandTotal: number;
-  ipHash?: string;
-  userAgent?: string;
-};
+export { generatePublicCode };
+export type {
+  DeliveryChannel,
+  DeliveryRecord,
+  DeliveryStatus,
+  LeadRecord,
+  LeadStatus,
+  LeadStore,
+} from "./store-types";
 
-export type DeliveryRecord = {
-  id: number;
-  leadId: number;
-  channel: DeliveryChannel;
-  status: DeliveryStatus;
-  attempts: number;
-  lastError?: string;
-  sentAt?: number;
-  createdAt: number;
-};
-
-export interface LeadStore {
-  createLead(input: Omit<LeadRecord, "id" | "createdAt" | "publicCode">): Promise<LeadRecord>;
-  /** Дедуп: тот же телефон за последние `windowMs`. */
-  findRecentByPhone(phone: string, windowMs: number): Promise<LeadRecord | null>;
-  recordDelivery(
-    leadId: number,
-    channel: DeliveryChannel,
-    status: DeliveryStatus,
-    error?: string
-  ): Promise<DeliveryRecord>;
-  listFailedDeliveries(limit: number): Promise<DeliveryRecord[]>;
-  getLead(leadId: number): Promise<LeadRecord | null>;
-}
-
-const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
-/** Короткий человекочитаемый код заявки, напр. `K7F3Q`. */
-export function generatePublicCode(): string {
-  let code = "";
-  for (let i = 0; i < 5; i += 1) {
-    code += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
-  }
-  return code;
-}
-
-class InMemoryLeadStore implements LeadStore {
+export class InMemoryLeadStore implements LeadStore {
   private leads: LeadRecord[] = [];
   private deliveries: DeliveryRecord[] = [];
   private leadSeq = 1;
@@ -82,13 +50,22 @@ class InMemoryLeadStore implements LeadStore {
   }
 
   async findRecentByPhone(phone: string, windowMs: number): Promise<LeadRecord | null> {
+    // Строгое `>`, как в SQL-версии (`created_at > now() - interval`):
+    // при нестрогом сравнении заявка, созданная в ту же миллисекунду, что и
+    // граница окна, считалась свежей — и две реализации расходились.
     const threshold = Date.now() - windowMs;
     for (let i = this.leads.length - 1; i >= 0; i -= 1) {
       const lead = this.leads[i];
-      if (lead.createdAt < threshold) break;
+      if (lead.createdAt <= threshold) break;
       if (lead.payload.phone === phone) return lead;
     }
     return null;
+  }
+
+  async countRecentByIpHash(ipHash: string, windowMs: number): Promise<number> {
+    const threshold = Date.now() - windowMs;
+    return this.leads.filter((lead) => lead.ipHash === ipHash && lead.createdAt > threshold)
+      .length;
   }
 
   async recordDelivery(
@@ -119,23 +96,56 @@ class InMemoryLeadStore implements LeadStore {
     return record;
   }
 
-  async listFailedDeliveries(limit: number): Promise<DeliveryRecord[]> {
-    return this.deliveries.filter((d) => d.status === "failed").slice(0, limit);
+  async listFailedDeliveries(limit: number, maxAttempts = 5): Promise<DeliveryRecord[]> {
+    return this.deliveries
+      .filter((d) => d.status === "failed" && d.attempts < maxAttempts)
+      .slice(0, limit);
   }
 
   async getLead(leadId: number): Promise<LeadRecord | null> {
     return this.leads.find((l) => l.id === leadId) ?? null;
   }
+
+  async getLeadByPublicCode(code: string): Promise<LeadRecord | null> {
+    const normalized = code.toUpperCase();
+    return this.leads.find((l) => l.publicCode === normalized) ?? null;
+  }
 }
 
 let store: LeadStore | null = null;
+let warned = false;
 
 export function getLeadStore(): LeadStore {
-  if (!store) store = new InMemoryLeadStore();
+  if (store) return store;
+
+  const { DATABASE_URL } = getEnv();
+
+  if (DATABASE_URL) {
+    store = new PgLeadStore(DATABASE_URL);
+    return store;
+  }
+
+  if (!warned) {
+    warned = true;
+    console.warn(
+      "[lead] DATABASE_URL не задан — заявки хранятся в памяти процесса и теряются " +
+        "при рестарте (на serverless — при каждом холодном старте). " +
+        "Дедуп, серверный rate-limit, ретраи и поиск по коду заявки работать не будут."
+    );
+  }
+
+  store = new InMemoryLeadStore();
   return store;
 }
 
 /** Только для тестов: сбросить состояние хранилища. */
 export function resetLeadStoreForTests(): void {
   store = new InMemoryLeadStore();
+  warned = true;
+}
+
+/** Только для тестов: подставить произвольную реализацию. */
+export function setLeadStoreForTests(custom: LeadStore): void {
+  store = custom;
+  warned = true;
 }

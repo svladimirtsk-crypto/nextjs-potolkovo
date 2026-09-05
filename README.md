@@ -103,16 +103,59 @@ npm run build           # 18 статических страниц
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | доставка в Telegram |
 | `WEB3FORMS_ACCESS_KEY` | серверный ключ дубля на почту |
 | `CRON_SECRET` | доступ к `POST /api/lead/retry` (заголовок `Authorization: Bearer …`) |
-| `DATABASE_URL` | строка подключения; схема — `db/schema.sql` |
+| `DATABASE_URL` | строка подключения к PostgreSQL; схема — `db/schema.ts` |
 
 Повторная доставка: `curl -X POST -H "Authorization: Bearer $CRON_SECRET" https://<host>/api/lead/retry`
 — берёт до 20 упавших доставок, максимум 5 попыток на каждую.
 
-**Хранилище.** Схема таблиц `leads` и `lead_deliveries` описана в `db/schema.sql`
-(Приложение Б ТЗ). ORM в проект пока не добавлена, поэтому `lib/lead/store.ts` содержит
-интерфейс `LeadStore` и in-memory реализацию: заявки живут в памяти процесса и
-обслуживают дедуп с ретраями. Для продакшена нужно реализовать `LeadStore` поверх
-SQL из `db/schema.sql` — вызывающий код (`route.ts`) при этом не меняется.
+## База данных (N-001)
+
+Заявки хранятся в PostgreSQL через Drizzle ORM. Схема — `db/schema.ts`
+(таблицы `leads` и `lead_deliveries`, Приложение Б ТЗ).
+
+**Подключение.** Подойдёт любой managed-провайдер: Neon (free-тариф достаточен),
+Vercel Postgres или Amvera Postgres. Строку подключения положить в `DATABASE_URL`,
+затем применить схему:
+
+```bash
+npx drizzle-kit push
+```
+
+**Что ломается без БД.** При пустом `DATABASE_URL` включается `InMemoryLeadStore`
+(и пишет предупреждение в лог). Он годится для локальной разработки, но на
+serverless теряет данные при каждом холодном старте, а вместе с ними:
+
+- дедуп по телефону — клиент, нажавший «отправить» дважды, создаст две заявки;
+- серверный rate-limit — защита от спама обходится тривиально;
+- очередь ретраев — упавшая доставка не будет повторена;
+- поиск по коду заявки — клиент назовёт «К7F3Q», мастер не найдёт.
+
+**Rate-limit** двухуровневый: сначала быстрая проверка в памяти процесса, затем
+`count(*)` по БД за окно 10 минут (5 заявок на IP). Если БД недоступна, проверка
+пропускается с записью в лог: потерять заявку хуже, чем пропустить лишний запрос.
+
+**Поиск заявки.** `GET /api/lead/<код>` с заголовком `Authorization: Bearer $CRON_SECRET`
+возвращает заявку по короткому коду.
+
+**Cron повторной доставки.** На Vercel — `vercel.json`:
+
+```json
+{ "crons": [{ "path": "/api/lead/retry", "schedule": "*/15 * * * *" }] }
+```
+
+Вне Vercel — любой планировщик, дёргающий тот же URL с `CRON_SECRET`.
+
+**Тесты.** Интеграционные тесты (`tests/lead-store-pg.test.ts`,
+`tests/lead-route-db.test.ts`) запускаются только при заданном `TEST_DATABASE_URL`
+и пропускаются без него. Локально поднять БД можно так:
+
+```bash
+initdb -D /tmp/pgdata -U postgres --auth=trust
+postgres -D /tmp/pgdata -p 5433 &
+createdb -h 127.0.0.1 -p 5433 -U postgres potolkovo_test
+DATABASE_URL="postgres://postgres@127.0.0.1:5433/potolkovo_test" npx drizzle-kit push --force
+TEST_DATABASE_URL="postgres://postgres@127.0.0.1:5433/potolkovo_test" npm run test
+```
 
 ## Бюджет клиентского бандла (T-029)
 

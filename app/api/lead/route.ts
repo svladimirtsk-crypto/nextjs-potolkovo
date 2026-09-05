@@ -11,7 +11,11 @@ import { NextResponse } from "next/server";
 import { resolveCallbackWindow } from "@/lib/lead/callback-window";
 import { deliverToTelegram } from "@/lib/lead/deliver-telegram";
 import { deliverToWeb3Forms } from "@/lib/lead/deliver-web3forms";
-import { checkRateLimit } from "@/lib/lead/rate-limit";
+import {
+  checkRateLimit,
+  RATE_LIMIT_MAX,
+  RATE_LIMIT_WINDOW_MS,
+} from "@/lib/lead/rate-limit";
 import { LeadPayloadSchema } from "@/lib/lead/schema";
 import { getLeadStore } from "@/lib/lead/store";
 import { getEnv } from "@/lib/env";
@@ -50,6 +54,9 @@ export async function POST(request: Request) {
   }
 
   const ip = clientIp(request);
+  const ipHash = hashIp(ip);
+
+  // Первый рубеж — память процесса: мгновенный и бесплатный.
   const limit = checkRateLimit(ip);
   if (!limit.allowed) {
     return NextResponse.json(
@@ -70,6 +77,22 @@ export async function POST(request: Request) {
   const store = getLeadStore();
   const callbackWindow = resolveCallbackWindow();
 
+  // Второй рубеж — БД. Память процесса на serverless обнуляется при каждом
+  // холодном старте, поэтому без этой проверки лимит обходится тривиально.
+  // Ошибку БД здесь глотаем: потерять заявку из-за недоступного лимитера хуже,
+  // чем пропустить лишний запрос.
+  try {
+    const recentFromIp = await store.countRecentByIpHash(ipHash, RATE_LIMIT_WINDOW_MS);
+    if (recentFromIp >= RATE_LIMIT_MAX) {
+      return NextResponse.json(
+        { ok: false, error: "rate_limited" },
+        { status: 429, headers: { "Retry-After": String(Math.ceil(RATE_LIMIT_WINDOW_MS / 1000)) } }
+      );
+    }
+  } catch (error) {
+    console.error("[lead] серверный rate-limit недоступен:", error);
+  }
+
   // Дедуп: не плодим одинаковые заявки, если человек нажал дважды.
   const duplicate = await store.findRecentByPhone(payload.phone, DEDUPE_WINDOW_MS);
   if (duplicate) {
@@ -88,7 +111,7 @@ export async function POST(request: Request) {
     status: payload.leadKind === "rescue" ? "rescue" : "new",
     payload,
     grandTotal,
-    ipHash: hashIp(ip),
+    ipHash,
     userAgent: request.headers.get("user-agent") ?? undefined,
   });
 
