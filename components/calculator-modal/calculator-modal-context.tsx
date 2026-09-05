@@ -37,6 +37,7 @@ import {
 import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
 import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 import type { CalculatorLeadSnapshot } from "@/lib/calculator/snapshot-types";
+import { mergeLightingIntoSnapshot } from "@/lib/calculator/snapshot-merge";
 import { trackCalculatorOpen, trackWizardStepView } from "@/lib/analytics";
 import { readCalcDraft } from "@/lib/calculator/draft";
 
@@ -391,37 +392,27 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
     return ceilingEffectiveTotal + lightingEffectiveTotal;
   }, [ceilingEffectiveTotal, lightingEffectiveTotal]);
 
-  // Синхронизируем выбранное освещение в общий snapshot, чтобы оно уходило в заявку на почту.
+  /**
+   * N-050: слияние вынесено в чистую mergeLightingIntoSnapshot.
+   * Эффект остаётся только как мост к внешнему стору снапшота; функция
+   * возвращает прежний объект, если менять нечего, поэтому лишнего рендера
+   * такой setSnapshot не вызывает.
+   */
   useEffect(() => {
-    setSnapshot((prev) => {
-      const hasLighting = Boolean(lightingDraft && lightingDraft.mode !== "none" && (lightingDraft.items?.length ?? 0) > 0);
-      if (!prev && !hasLighting) return prev;
-
-      const base = prev ?? createLightingOnlySnapshot();
-
-      const lightingForSnapshot = hasLighting && lightingDraft
-        ? {
-            ...lightingDraft,
-            totalRub: lightingRegularTotal,
-            discountedTotalRub: lightingEffectiveTotal,
-            standaloneDiscountedTotalRub: lightingStandaloneTotal,
-            withCeilingDiscountedTotalRub: lightingWithCeilingTotal,
-            discountMode: lightingDiscountMode,
-            discountPercentApplied: lightingDiscountPercentApplied,
-            discountAmountRub: lightingDiscountAmount,
-          }
-        : undefined;
-
-      return {
-        ...base,
-        leadSource: base.leadSource ?? String(options?.source ?? ""),
-        lighting: lightingForSnapshot,
-        lightingDiscountApplied: lightingDiscountMode !== "none",
-        lightingDiscountPercentApplied,
-        lightingDiscountMode,
-        lightingDiscountAmountRub: lightingDiscountAmount,
-      };
-    });
+    setSnapshot((prev) =>
+      mergeLightingIntoSnapshot(prev, {
+        lightingDraft,
+        regularTotal: lightingRegularTotal,
+        effectiveTotal: lightingEffectiveTotal,
+        standaloneTotal: lightingStandaloneTotal,
+        withCeilingTotal: lightingWithCeilingTotal,
+        discountMode: lightingDiscountMode,
+        discountPercentApplied: lightingDiscountPercentApplied,
+        discountAmount: lightingDiscountAmount,
+        source: String(options?.source ?? ""),
+        createEmpty: createLightingOnlySnapshot,
+      })
+    );
   }, [
     lightingDiscountAmount,
     lightingDiscountMode,

@@ -18,6 +18,7 @@ import {
   getCalculatorSummaryLines,
   usePriceCalculatorBridge,
 } from "@/components/home/price-calculator-context";
+import { mergeInstallExtraIntoSnapshot } from "@/lib/calculator/snapshot-merge";
 import { clearCalcDraft } from "@/lib/calculator/draft";
 import { buildTelegramDeepLink } from "@/lib/lead/telegram-link";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
@@ -266,23 +267,17 @@ export function WizardStep2Summary() {
     return out;
   }, [extraSpotQty, extraSpotInstall, extraTrackMeters, extraTrackInstall]);
 
-  // T-008/T-009: пишем явный досчёт монтажа вместо устаревшего grandTotal
+  // T-008/T-009 · N-050: условие «ничего не изменилось» живёт в чистой
+  // mergeInstallExtraIntoSnapshot, здесь остаётся только мост к стору.
   useEffect(() => {
     if (!canReconcileInstall) return;
 
-    setSnapshot((prev) => {
-      if (!prev) return prev;
-      const prevExtra = toNumber(prev.extraInstallRub);
-      const sameLines =
-        (prev.extraInstallLines ?? []).join("|") === extraInstallLines.join("|");
-      if (Math.abs(prevExtra - extraInstallTotal) < 0.5 && sameLines) return prev;
-      return {
-        ...prev,
-        grandTotal: undefined,
-        extraInstallRub: extraInstallTotal,
+    setSnapshot((prev) =>
+      mergeInstallExtraIntoSnapshot(prev, {
+        extraInstallTotal,
         extraInstallLines,
-      };
-    });
+      })
+    );
   }, [canReconcileInstall, extraInstallTotal, extraInstallLines, setSnapshot]);
 
   const handleEditLighting = () => {
