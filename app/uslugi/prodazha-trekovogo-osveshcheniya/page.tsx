@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 
 import { JsonLd } from "@/components/seo/json-ld";
 import { getRequiredServicePageBySlug } from "@/content/services";
-import { buildFaqSchema } from "@/lib/seo-schema";
+import { buildFaqSchema, buildProductListSchema } from "@/lib/seo-schema";
 import { ServicePageLayoutV2 } from "../_components/ServicePageLayoutV2";
 import { ServiceHero } from "../_components/ServiceHero";
-import { getKitsPriceAnchorRub } from "./_components/LightKitShowcase";
+import { getKitsPriceAnchorRub, getTrackSaleProductOffers } from "./_components/LightKitShowcase";
 import { formatRub } from "@/content/pricing";
 import { ServiceActionSection } from "../_components/ServiceActionSection";
 import { ServiceRelatedServices } from "../_components/ServiceRelatedServices";
@@ -36,11 +36,19 @@ export const metadata: Metadata = {
 
 export default function ProdazhaTrekovogoOsveshcheniyaPage() {
   const kitsAnchorRub = getKitsPriceAnchorRub();
+  const { kits, topProducts } = getTrackSaleProductOffers();
   const kitsPriceBadge = kitsAnchorRub ? `от ${formatRub(kitsAnchorRub)}` : undefined;
 
   return (
     <>
       <JsonLd data={buildFaqSchema(trackSaleFaqItems)} />
+      {/* T-063: комплекты и топ каталога — товарные офферы, а не услуга */}
+      {kits.length > 0 ? (
+        <JsonLd data={buildProductListSchema(kits, "Готовые комплекты трекового света")} />
+      ) : null}
+      {topProducts.length > 0 ? (
+        <JsonLd data={buildProductListSchema(topProducts, "Трековое освещение COLIBRI, CLARUS, ART")} />
+      ) : null}
       <ServicePageLayoutV2
         service={service}
         hero={<ServiceHero service={service} priceBadgeOverride={kitsPriceBadge} />}

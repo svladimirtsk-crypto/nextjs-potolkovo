@@ -76,6 +76,8 @@ export function buildHomeServiceSchema() {
 }
 
 export function buildServiceSchema(service: ServicePageContent) {
+  const offer = service.price.offerFrom;
+
   return {
     "@context": "https://schema.org",
     "@type": "Service",
@@ -86,6 +88,71 @@ export function buildServiceSchema(service: ServicePageContent) {
     provider: getSharedProvider(),
     serviceType: service.hero.breadcrumbLabel,
     image: toAbsoluteUrl(service.hero.imageSrc),
+
+    /*
+     * T-063: цена «от» в машиночитаемом виде — это то, что показывает
+     * поисковик в сниппете. Услуги без фиксированной ставки («по расчёту»)
+     * идут без Offer: выдуманный minPrice — прямой путь к санкциям.
+     */
+    ...(offer
+      ? {
+          offers: {
+            "@type": "Offer",
+            priceCurrency: "RUB",
+            availability: "https://schema.org/InStock",
+            url: toAbsoluteUrl(service.pathname),
+            priceSpecification: {
+              "@type": "UnitPriceSpecification",
+              priceCurrency: "RUB",
+              minPrice: offer.minPrice,
+              unitText: offer.unitText,
+            },
+          },
+        }
+      : null),
+  };
+}
+
+/** T-063: карточка товара/комплекта для страницы света. */
+export type ProductOfferInput = {
+  name: string;
+  priceRub: number;
+  url: string;
+  image?: string | null;
+  sku?: string | null;
+  brand?: string | null;
+};
+
+/**
+ * `ItemList` из товарных офферов. Используется на странице продажи света:
+ * готовые комплекты и топ каталога — это реальные позиции с ценой,
+ * поэтому им положен Product/Offer, а не абстрактный Service.
+ */
+export function buildProductListSchema(items: ProductOfferInput[], listName: string) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: listName,
+    numberOfItems: items.length,
+    itemListElement: items.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      item: {
+        "@type": "Product",
+        name: item.name,
+        ...(item.image ? { image: toAbsoluteUrl(item.image) } : null),
+        ...(item.sku ? { sku: item.sku } : null),
+        ...(item.brand ? { brand: { "@type": "Brand", name: item.brand } } : null),
+        offers: {
+          "@type": "Offer",
+          priceCurrency: "RUB",
+          price: item.priceRub,
+          availability: "https://schema.org/InStock",
+          url: toAbsoluteUrl(item.url),
+          seller: getSharedProvider(),
+        },
+      },
+    })),
   };
 }
 

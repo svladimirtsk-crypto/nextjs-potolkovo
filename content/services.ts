@@ -79,6 +79,13 @@ export type ServicePageContent = {
   slug: Phase2ServiceSlug;
   pathname: `/uslugi/${Phase2ServiceSlug}`;
 
+  /**
+   * T-063: дата последней содержательной правки страницы (YYYY-MM-DD).
+   * Идёт в `lastModified` sitemap — раньше туда подставлялась текущая дата,
+   * из-за чего все 9 страниц выглядели «обновлёнными» при каждой сборке.
+   */
+  updatedAt: string;
+
   metadata: {
     title: string;
     description: string;
@@ -133,6 +140,11 @@ export type ServicePageContent = {
     sectionTitle: string;
     sectionIntro: string;
     fromLabel: string;
+    /**
+     * T-063: та же цена, что в `fromLabel`, но числом — для schema.org Offer.
+     * `null` там, где цена только по расчёту: выдумывать minPrice нельзя.
+     */
+    offerFrom: { minPrice: number; unitText: string } | null;
     note: string;
     calculatorPreset: ServiceCalculatorPreset;
   };
@@ -165,6 +177,7 @@ export const servicePageContent: Record<
   "tenevoy-profil": {
     slug: "tenevoy-profil",
     pathname: "/uslugi/tenevoy-profil",
+    updatedAt: "2026-09-05",
 
     metadata: {
       title:
@@ -332,6 +345,7 @@ export const servicePageContent: Record<
       sectionIntro:
         "Ниже можно сразу прикинуть стоимость. Калькулятор уже открыт в режиме теневого потолка, но вы можете изменить параметры под свой объект.",
       fromLabel: "от 950 ₽ / м.п.",
+      offerFrom: { minPrice: 950, unitText: "м.п." },
       note: "Точная смета зависит от геометрии помещения, длины профиля, освещения и сопутствующих работ.",
       calculatorPreset: {
         ceilingType: "shadow",
@@ -416,6 +430,7 @@ export const servicePageContent: Record<
 "svetovye-linii": {
     slug: "svetovye-linii",
     pathname: "/uslugi/svetovye-linii",
+    updatedAt: "2026-09-05",
 
     metadata: {
       title: "Световые линии в натяжном потолке в Москве и МО | ПОТОЛКОВО",
@@ -582,6 +597,7 @@ export const servicePageContent: Record<
       sectionIntro:
         "Базовый калькулятор ниже помогает оценить потолок, треки, светильники и дополнительные элементы. Для световых линий точный расчёт лучше делать после замера и схемы расположения.",
       fromLabel: "от 3 500 ₽ / метр",
+      offerFrom: { minPrice: 3500, unitText: "м.п." },
       note: "Световые линии зависят от длины, количества, мощности, расположения и общего сценария освещения. Поэтому калькулятор здесь работает как ориентир по объекту в целом, а точную смету фиксируем после замера.",
       calculatorPreset: {
         ceilingType: "standard",
@@ -669,9 +685,10 @@ export const servicePageContent: Record<
     "trekovoe-osveshchenie": {
     slug: "trekovoe-osveshchenie",
     pathname: "/uslugi/trekovoe-osveshchenie",
+    updatedAt: "2026-09-05",
 
     metadata: {
-      title: "Трековое освещение в натяжном потолке в Москве и МО | ПОТОЛКОВО",
+      title: "Монтаж трекового освещения в натяжной потолок — Москва и МО",
       description:
         "Установка трекового освещения в натяжных потолках в Москве и МО. Магнитные треки, расчёт освещённости. Частный мастер, 15+ лет. Замер бесплатно.",
       keywords: [
@@ -691,7 +708,7 @@ export const servicePageContent: Record<
     hero: {
       breadcrumbLabel: "Трековое освещение",
       badge: "Услуга",
-      h1: "Трековое освещение в натяжном потолке в Москве и МО",
+      h1: "Встроенный трек в натяжном потолке: профиль под гарпун, монтаж за 1 день",
       subtitle:
         "Магнитные и шинные треки, встроенные в потолок. Направленный свет, который можно настраивать и менять под мебель, зоны и сценарии.",
       supportingText:
@@ -820,6 +837,7 @@ export const servicePageContent: Record<
       sectionIntro:
         "Ориентир помогает сравнить решения. Итог зависит от длины трека, типа системы, количества светильников и питания.",
       fromLabel: "от 2 500 ₽ / м.п.",
+      offerFrom: { minPrice: 2500, unitText: "м.п." },
       note: "Точную смету фиксируем после замера: учитываем помещение, схему света и комплектующие.",
       calculatorPreset: {
         ceilingType: "standard",
@@ -904,6 +922,7 @@ export const servicePageContent: Record<
     "skrytye-karnizy": {
     slug: "skrytye-karnizy",
     pathname: "/uslugi/skrytye-karnizy",
+    updatedAt: "2026-09-05",
 
     metadata: {
       title: "Скрытые карнизы в натяжном потолке в Москве и МО | ПОТОЛКОВО",
@@ -1059,6 +1078,7 @@ export const servicePageContent: Record<
       sectionIntro:
         "Стоимость зависит от длины ниши, типа решения и нюансов примыкания/стен.",
       fromLabel: "от 2 000 ₽ / м.п.",
+      offerFrom: { minPrice: 2000, unitText: "м.п." },
       note: "Точную смету фиксируем после замера — чтобы ниша была ровной и без компромиссов по узлу.",
       calculatorPreset: {
         ceilingType: "standard",
@@ -1137,6 +1157,7 @@ export const servicePageContent: Record<
     "prostye-potolki": {
     slug: "prostye-potolki",
     pathname: "/uslugi/prostye-potolki",
+    updatedAt: "2026-09-05",
 
     metadata: {
       title: "Простые натяжные потолки в Москве и МО | ПОТОЛКОВО",
@@ -1280,6 +1301,7 @@ export const servicePageContent: Record<
       sectionIntro:
         "Ориентир зависит от площади и нюансов помещения. Точную смету фиксируем после замера.",
       fromLabel: "от 1 000 ₽ / м²",
+      offerFrom: { minPrice: 1000, unitText: "м²" },
       note: "После замера фиксируем стоимость и дату монтажа — без сюрпризов.",
       calculatorPreset: {
         ceilingType: "standard",
@@ -1335,6 +1357,7 @@ export const servicePageContent: Record<
   "paryashchie-potolki": {
     slug: "paryashchie-potolki",
     pathname: "/uslugi/paryashchie-potolki",
+    updatedAt: "2026-09-05",
 
     metadata: {
       title:
@@ -1503,6 +1526,7 @@ export const servicePageContent: Record<
       sectionIntro:
         "Калькулятор ниже уже стартует в режиме парящего потолка. Можно быстро прикинуть бюджет и затем зафиксировать точную смету после замера.",
       fromLabel: "от 2 500 ₽ / м.п.",
+      offerFrom: { minPrice: 2500, unitText: "м.п." },
       note: "Точная стоимость зависит от длины парящего профиля, площади, конфигурации помещения и выбранного сценария света.",
       calculatorPreset: {
         ceilingType: "floating",
@@ -1587,6 +1611,7 @@ export const servicePageContent: Record<
   "individualnye-proekty": {
   slug: "individualnye-proekty",
   pathname: "/uslugi/individualnye-proekty",
+  updatedAt: "2026-09-05",
 
   metadata: {
     title: "Индивидуальные проекты натяжных потолков в Москве и МО | ПОТОЛКОВО",
@@ -1717,6 +1742,7 @@ export const servicePageContent: Record<
     sectionIntro:
       "Индивидуальные проекты считаются после замера и понимания узлов. Калькулятор ниже помогает прикинуть базовый бюджет, но точная смета — после выезда.",
     fromLabel: "по расчёту",
+    offerFrom: null,
     note:
       "Для нестандартных задач итог зависит от конструкции, узлов, света и инженерии — фиксируем смету после замера.",
     calculatorPreset: {
@@ -1768,6 +1794,7 @@ export const servicePageContent: Record<
   "prodazha-trekovogo-osveshcheniya": {
   slug: "prodazha-trekovogo-osveshcheniya",
   pathname: "/uslugi/prodazha-trekovogo-osveshcheniya",
+  updatedAt: "2026-09-05",
 
   metadata: {
     title: "Купить трековое освещение COLIBRI, CLARUS, ART в Москве — подбор комплекта",
@@ -1897,6 +1924,7 @@ export const servicePageContent: Record<
     sectionIntro:
       "Стоимость зависит от типа системы и количества светильников. Калькулятор ниже — для ориентира по потолку/работам, а комплект света считаем по запросу.",
     fromLabel: "по запросу",
+    offerFrom: null,
     note:
       "Комплектацию треков (профиль/светильники/питание) считаем отдельно — после понимания сценария света и помещения.",
     calculatorPreset: {
@@ -1949,6 +1977,7 @@ export const servicePageContent: Record<
   "svetoprozrachnye-potolki": {
   slug: "svetoprozrachnye-potolki",
   pathname: "/uslugi/svetoprozrachnye-potolki",
+  updatedAt: "2026-09-05",
 
   metadata: {
     title: "Светопрозрачные натяжные потолки в Москве и МО | ПОТОЛКОВО",
@@ -2077,6 +2106,7 @@ export const servicePageContent: Record<
     sectionIntro:
       "Итог зависит от площади, мощности подсветки и управления. Калькулятор ниже — ориентир по базовой части; светопрозрачное решение уточняем на замере.",
     fromLabel: "от 4 000 ₽ / м²",
+    offerFrom: { minPrice: 4000, unitText: "м²" },
     note:
       "Точную смету фиксируем после замера: учитываем задачу по свету, мощность, управление и узлы.",
     calculatorPreset: {

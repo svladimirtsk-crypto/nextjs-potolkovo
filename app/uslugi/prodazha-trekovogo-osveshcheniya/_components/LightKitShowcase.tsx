@@ -17,6 +17,7 @@ import { isRemovedColibriVendorCode } from "@/lib/catalog-ui-config";
 
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import type { LightingItem } from "@/lib/calculator-modal-types";
+import type { ProductOfferInput } from "@/lib/seo-schema";
 
 import { LightKitCtaButton } from "./LightKitCtaButton";
 
@@ -227,6 +228,43 @@ export function getKitsPriceAnchorRub(): number | null {
   );
   if (kits.length === 0) return null;
   return Math.min(...kits.map((kit) => calcTotals(kit.items).withCeilingRub));
+}
+
+/**
+ * T-063 · Данные для schema.org: 3 готовых комплекта и топ каталога.
+ *
+ * Это реальные позиции с ценой, поэтому в разметке они идут как Product/Offer,
+ * а не как абстрактный Service страницы.
+ */
+export function getTrackSaleProductOffers(topProductsLimit = 12): {
+  kits: ProductOfferInput[];
+  topProducts: ProductOfferInput[];
+} {
+  const products = getProducts();
+
+  const kits = [buildKitKitchen(products), buildKitLiving(products), buildKitHallway(products)]
+    .filter((kit): kit is KitCard => kit !== null)
+    .map((kit) => ({
+      name: kit.title,
+      // Цена комплекта — со скидкой «только свет»: именно её видит покупатель.
+      priceRub: calcTotals(kit.items).lightingOnlyRub,
+      url: "/uslugi/prodazha-trekovogo-osveshcheniya",
+      image: kit.imageSrc,
+    }));
+
+  const topProducts = [...products]
+    .sort((a, b) => toNumber(b.priceRub) - toNumber(a.priceRub))
+    .slice(0, topProductsLimit)
+    .map((product) => ({
+      name: toText(product.name),
+      priceRub: toNumber(product.priceRub),
+      url: "/uslugi/prodazha-trekovogo-osveshcheniya",
+      image: toText(product.coverImage) || null,
+      sku: toText(product.vendorCode) || null,
+      brand: toText(product.system).toUpperCase() || null,
+    }));
+
+  return { kits, topProducts };
 }
 
 export function LightKitShowcase() {
