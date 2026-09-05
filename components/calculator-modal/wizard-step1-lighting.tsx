@@ -118,6 +118,7 @@ import {
   TabBtn,
   ThinProgress,
 } from "@/components/lighting/CatalogPieces";
+import { ProductPickerScreen } from "@/components/lighting/ProductPickerScreen";
 
 
 /* ─── MAIN COMPONENT ─── */
@@ -1469,115 +1470,67 @@ export function WizardStep1Lighting() {
 
           {/* T-043: экраны включаются ответами Шага 0 и идут после точечных */}
           {shownWStep === "chandeliers" && (
-            <div className="space-y-3">
-              <div className="rounded-2xl border border-slate-200 bg-white p-3">
-                <p className="text-sm font-semibold text-slate-950">Люстры</p>
-                <p className="mt-1 text-xs text-slate-600">
-                  По расчёту нужно {fmt(toNumber(snapshot?.derivedInputs?.chandeliersQty))} шт.
-                  Установка уже посчитана на Шаге 0 — здесь выбираем сами светильники.
-                </p>
-              </div>
-
-              {wChandeliers.length > 0 ? (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {wChandeliers.map((p) => {
-                    const id = toText(p.productId);
-                    const qty = toNumber(cartItems[id]);
-                    return (
-                      <ProductCard
-                        key={id}
-                        product={p}
-                        qty={qty}
-                        onInc={() => setProductQty(p, qty + 1)}
-                        onDec={() => setProductQty(p, qty - 1)}
-                        onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })}
-                        discountPercent={cardDiscountPercent}
-                      />
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-                  Люстры сейчас не найдены в каталоге. Подберу вариант при звонке.
-                </div>
-              )}
-            </div>
+            <ProductPickerScreen
+              title="Люстры"
+              hint={`По расчёту нужно ${fmt(toNumber(snapshot?.derivedInputs?.chandeliersQty))} шт. Установка уже посчитана на Шаге 0 — здесь выбираем сами светильники.`}
+              products={wChandeliers}
+              cartItems={cartItems}
+              onQtyChange={setProductQty}
+              onZoom={setZoomImage}
+              discountPercent={cardDiscountPercent}
+              emptyText="Люстры сейчас не найдены в каталоге. Подберу вариант при звонке."
+            />
           )}
 
           {shownWStep === "corniceLighting" && (
-            <div className="space-y-3">
-              <div className="rounded-2xl border border-slate-200 bg-white p-3">
-                <p className="text-sm font-semibold text-slate-950">Подсветка карниза</p>
-                <p className="mt-1 text-xs text-slate-600">
-                  {fmtM(toNumber(snapshot?.derivedInputs?.corniceLightingMeters))} м по расчёту.
-                  Нужны лента, блок питания и управление.
-                </p>
-              </div>
-
-              {wCorniceLighting.length > 0 ? (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {wCorniceLighting.map((p) => {
-                    const id = toText(p.productId);
-                    const qty = toNumber(cartItems[id]);
-                    return (
-                      <ProductCard
-                        key={id}
-                        product={p}
-                        qty={qty}
-                        onInc={() => setProductQty(p, qty + 1)}
-                        onDec={() => setProductQty(p, qty - 1)}
-                        onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })}
-                        discountPercent={cardDiscountPercent}
-                      />
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-                  Комплектующие для подсветки подберу при звонке.
-                </div>
-              )}
-            </div>
+            <ProductPickerScreen
+              title="Подсветка карниза"
+              hint={`${fmtM(toNumber(snapshot?.derivedInputs?.corniceLightingMeters))} м по расчёту. Нужны лента, блок питания и управление.`}
+              products={wCorniceLighting}
+              cartItems={cartItems}
+              onQtyChange={setProductQty}
+              onZoom={setZoomImage}
+              discountPercent={cardDiscountPercent}
+              emptyText="Комплектующие для подсветки подберу при звонке."
+            />
           )}
 
           {/* ─── STEP: Track Fixtures (spots for track) ─── */}
           {shownWStep === "trackFixtures" && (
-            <div className="space-y-3">
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
-                <p className="text-sm font-semibold text-emerald-950">Светильники для трека: {selectedTrackSystem ? systemLabel(selectedTrackSystem) : ""}</p>
-                <p className="mt-1 text-xs text-emerald-800">Показываем все светильники выбранной системы.</p>
-                {fixturesHint ? (
-                  <p className="mt-2 text-xs font-medium text-emerald-900">
-                    Ориентир для {fmtM(selectedTrackMeters || requiredTrackMeters)} м:{" "}
-                    {fixturesHint.min}–{fixturesHint.max} светильников
-                  </p>
-                ) : null}
-              </div>
-
-              {wTrackFixtures.length > 0 ? (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {wTrackFixtures.map((p) => {
-                    const id = toText(p.productId);
-                    const qty = toNumber(cartItems[id]);
-                    return (
-                      <ProductCard key={id} product={p} qty={qty}
-                        onInc={() => setProductQty(p, qty + 1)} onDec={() => setProductQty(p, qty - 1)}
-                        onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })}
-                      discountPercent={cardDiscountPercent} />
-                    );
-                  })}
+            <ProductPickerScreen
+              tone="accent"
+              title={`Светильники для трека: ${selectedTrackSystem ? systemLabel(selectedTrackSystem) : ""}`}
+              hint="Показываем все светильники выбранной системы."
+              extraHint={
+                fixturesHint
+                  ? `Ориентир для ${fmtM(selectedTrackMeters || requiredTrackMeters)} м: ${fixturesHint.min}–${fixturesHint.max} светильников`
+                  : undefined
+              }
+              products={wTrackFixtures}
+              cartItems={cartItems}
+              onQtyChange={setProductQty}
+              onZoom={setZoomImage}
+              discountPercent={cardDiscountPercent}
+              emptyText="Нет светильников для этой системы."
+              footer={
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setWStep("trackProfile")}
+                    className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    ← Назад
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goAfterTrackFixtures}
+                    className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+                  >
+                    Подтвердить →
+                  </button>
                 </div>
-              ) : (
-                <p className="text-sm text-slate-600">Нет светильников для этой системы.</p>
-              )}
-
-              <div className="flex gap-3">
-                <button type="button" onClick={() => setWStep("trackProfile")}
-                  className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">← Назад</button>
-                <button type="button" onClick={goAfterTrackFixtures}
-                  className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800">Подтвердить →</button>
-              </div>
-            </div>
+              }
+            />
           )}
 
           {/* ─── STEP: Point Fixtures ─── */}
