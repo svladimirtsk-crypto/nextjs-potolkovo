@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   autoAssembleProfiles,
+  completeKit,
+  psuCountForWatts,
+  socketOf,
+  powerWattsOf,
+  straightConnectorsFor,
   clearIncompatibleSystem,
   conflicts,
   fixturesHintForMeters,
@@ -174,5 +179,66 @@ describe("T-032 · autoAssembleProfiles", () => {
 
     expect(plan.pieces.every((piece) => piece.product.productId !== "free")).toBe(true);
     expect(plan.pieces.every((piece) => piece.product.productId !== "nolen")).toBe(true);
+  });
+});
+
+
+describe("T-042 - completeKit: pitanie, soediniteli, BP, lampy", () => {
+  const kitCatalog = [
+    product({ productId: "clarus-profile", system: "CLARUS_48", kind: "TRACK_PROFILE", priceRub: 2500, pieceLengthMeters: 2 }),
+    product({ productId: "clarus-fixture", name: "Светильник CLARUS 18W", system: "CLARUS_48", kind: "TRACK_FIXTURE", priceRub: 3000 }),
+    product({ productId: "clarus-psu", name: "Блок питания 200W", system: "CLARUS_48", kind: "PSU", priceRub: 4000 }),
+    product({ productId: "clarus-feed", name: "Ввод питания CLARUS", system: "CLARUS_48", kind: "TRACK_ACCESSORY", priceRub: 500 }),
+    product({ productId: "clarus-straight", name: "Прямой соединитель CLARUS", system: "CLARUS_48", kind: "TRACK_ACCESSORY", priceRub: 400 }),
+    product({ productId: "colibri-profile2", system: "COLIBRI_220", kind: "TRACK_PROFILE", priceRub: 2000, pieceLengthMeters: 1 }),
+    product({ productId: "colibri-feed", name: "Ввод питания COLIBRI", system: "COLIBRI_220", kind: "TRACK_ACCESSORY", priceRub: 500 }),
+    product({ productId: "colibri-straight", name: "Прямой соединитель COLIBRI", system: "COLIBRI_220", kind: "TRACK_ACCESSORY", priceRub: 400 }),
+    product({ productId: "lamp-gu10", name: "Лампа GU10 7W", kind: "LAMP", priceRub: 300 }),
+    product({ productId: "spot-gu10", name: "Светильник встраиваемый GU10", kind: "SPOT_FIXTURE", priceRub: 900 }),
+  ];
+  const resolve = (id: string) => kitCatalog.find((p) => p.productId === id) ?? null;
+  const qtyOf = (list: ReturnType<typeof completeKit>["mandatory"], id: string) =>
+    list.find((s) => s.product.productId === id)?.qty ?? 0;
+
+  it("CLARUS 12x18 W -> 2 bloka pitaniya", () => {
+    // 12 × 18 = 216 Вт, с запасом 20 % = 259 Вт → два БП по 200 Вт.
+    expect(psuCountForWatts(12 * 18)).toBe(2);
+
+    const result = completeKit({ "clarus-profile": 1, "clarus-fixture": 12 }, resolve, kitCatalog);
+    expect(qtyOf(result.mandatory, "clarus-psu")).toBe(2);
+    expect(result.psuMissing).toBe(true);
+  });
+
+  it("COLIBRI 4 otrezka i 1 ugol -> 2 pryamyh soedinitelya i 1 vvod", () => {
+    expect(straightConnectorsFor(4, 1)).toBe(2);
+
+    const result = completeKit(
+      { "colibri-profile2": 4 },
+      resolve,
+      kitCatalog,
+      { runs: 1, corners: 1 }
+    );
+    expect(qtyOf(result.mandatory, "colibri-straight")).toBe(2);
+    expect(qtyOf(result.mandatory, "colibri-feed")).toBe(1);
+    // 220 В система не требует блока питания.
+    expect(result.psuMissing).toBe(false);
+  });
+
+  it("lampy dobirayutsya 1:1 po cokolyu", () => {
+    expect(socketOf(product({ productId: "x", name: "Светильник GU10" }))).toBe("GU10");
+    expect(powerWattsOf(product({ productId: "x", name: "Трек 18W" }))).toBe(18);
+
+    const result = completeKit({ "spot-gu10": 6 }, resolve, kitCatalog);
+    expect(qtyOf(result.mandatory, "lamp-gu10")).toBe(6);
+
+    // Уже добавленные лампы вычитаются.
+    const partial = completeKit({ "spot-gu10": 6, "lamp-gu10": 4 }, resolve, kitCatalog);
+    expect(qtyOf(partial.mandatory, "lamp-gu10")).toBe(2);
+  });
+
+  it("pustaya korzina nichego ne trebuet", () => {
+    const result = completeKit({}, resolve, kitCatalog);
+    expect(result.mandatory).toEqual([]);
+    expect(result.psuMissing).toBe(false);
   });
 });

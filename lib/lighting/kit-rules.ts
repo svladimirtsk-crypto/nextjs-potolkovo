@@ -6,7 +6,7 @@
  * и автосборка профиля под нужную длину трека.
  */
 import { CLARUS_PSU_VENDOR_CODES } from "@/lib/catalog-ui-config";
-import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
+import type { FeedCatalogKind, FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
 import { calcProfilesForTrackMeters, type ProfileEntry, type ProfilePiece } from "@/lib/lighting-kits";
 import { inferPieceLengthMeters } from "@/lib/product-length-meters";
@@ -232,5 +232,195 @@ export function fixturesHintForMeters(
     min: Math.max(1, Math.floor(suggested * 0.8)),
     max: Math.ceil(suggested * 1.2),
     suggested,
+  };
+}
+
+/* ------------------------------------------------------------------ *
+ * T-042 · Дособирание комплекта: питание, соединители, БП, лампы
+ * ------------------------------------------------------------------ */
+
+/** Мощность светильника из названия: «... 18W», «12 Вт». */
+export function powerWattsOf(product: FeedCatalogProduct): number {
+  const name = toText(product.name);
+  const match = /(\d+(?:[.,]\d+)?)\s*(?:W|Вт)\b/i.exec(name);
+  if (!match) return 0;
+  const value = Number(match[1].replace(",", "."));
+  return Number.isFinite(value) ? value : 0;
+}
+
+/** Цоколь лампы из названия: GU10, GX53, E27, E14, G9. */
+export function socketOf(product: FeedCatalogProduct): string | null {
+  const match = /\b(GU10|GX53|GU5\.3|E27|E14|G9|G4)\b/i.exec(toText(product.name));
+  return match ? match[1].toUpperCase() : null;
+}
+
+export type KitRequirement = {
+  /** Сколько независимых трасс трека — на каждую нужен свой ввод питания. */
+  runs?: number;
+  /** Число углов/поворотов трассы. */
+  corners?: number;
+};
+
+export type KitSuggestion = {
+  product: FeedCatalogProduct;
+  qty: number;
+  /** Почему позиция предложена — показываем прямо в списке. */
+  reason: string;
+};
+
+export type CompleteKitResult = {
+  /** Без этих позиций комплект не соберётся. */
+  mandatory: KitSuggestion[];
+  /** Полезно, но можно отказаться. */
+  recommended: KitSuggestion[];
+  /** CLARUS без блока питания — «К итогу» блокируется до решения. */
+  psuMissing: boolean;
+};
+
+const PSU_UTILISATION = 1.2;
+const PSU_NOMINAL_WATTS = 200;
+
+/** Сколько блоков питания нужно на суммарную мощность: ceil(ΣW × 1.2 / 200). */
+export function psuCountForWatts(totalWatts: number): number {
+  if (!Number.isFinite(totalWatts) || totalWatts <= 0) return 0;
+  return Math.ceil((totalWatts * PSU_UTILISATION) / PSU_NOMINAL_WATTS);
+}
+
+/**
+ * Число прямых соединителей: куски профиля стыкуются последовательно,
+ * каждый угол уже является стыком, плюс один стык не нужен на конце трассы.
+ */
+export function straightConnectorsFor(pieces: number, corners: number): number {
+  return Math.max(0, pieces - corners - 1);
+}
+
+/**
+ * T-042 · Что добавить к выбранному свету, чтобы он заработал.
+ *
+ * Правила намеренно живут здесь, а не в UI: их проверяет vitest, и одна и та же
+ * логика нужна и мастеру Шага 1, и витрине готовых комплектов.
+ */
+export function completeKit(
+  cart: Cart,
+  resolveProduct: (productId: string) => FeedCatalogProduct | null | undefined,
+  catalog: readonly FeedCatalogProduct[],
+  required: KitRequirement = {}
+): CompleteKitResult {
+  const entries = Object.entries(cart)
+    .map(([productId, qty]) => ({ product: resolveProduct(productId), qty: toNumber(qty) }))
+    .filter((e): e is { product: FeedCatalogProduct; qty: number } => Boolean(e.product) && e.qty > 0);
+
+  const mandatory: KitSuggestion[] = [];
+  const recommended: KitSuggestion[] = [];
+
+  const profiles = entries.filter((e) => e.product.kind === "TRACK_PROFILE");
+  const fixtures = entries.filter((e) => e.product.kind === "TRACK_FIXTURE");
+  const system = profiles[0]?.product.system ?? fixtures[0]?.product.system ?? null;
+
+  const has = (kind: FeedCatalogKind, predicate?: (p: FeedCatalogProduct) => boolean) =>
+    entries.some((e) => e.product.kind === kind && (!predicate || predicate(e.product)));
+
+  const pick = (predicate: (p: FeedCatalogProduct) => boolean) =>
+    catalog.find(
+      (p) =>
+        predicate(p) &&
+        toNumber(p.priceRub) > 0 &&
+        (system === null || p.system === system || p.kind === "PSU")
+    ) ?? null;
+
+  const nameMatches = (p: FeedCatalogProduct, re: RegExp) => re.test(toText(p.name));
+
+  const pieces = profiles.reduce((sum, e) => sum + e.qty, 0);
+  const corners = Math.max(0, toNumber(required.corners));
+  const runs = Math.max(pieces > 0 ? 1 : 0, toNumber(required.runs));
+
+  // 1. Ввод питания — по одному на трассу.
+  if (runs > 0 && !has("TRACK_ACCESSORY", (p) => nameMatches(p, /ввод|питани|feed/i))) {
+    const feed = pick((p) => p.kind === "TRACK_ACCESSORY" && nameMatches(p, /ввод|питани|feed/i));
+    if (feed) {
+      mandatory.push({
+        product: feed,
+        qty: runs,
+        reason: runs > 1 ? `По одному вводу питания на каждую из ${runs} трасс` : "Ввод питания — без него трек не подключить",
+      });
+    }
+  }
+
+  // 2. Прямые соединители между кусками профиля.
+  const straight = straightConnectorsFor(pieces, corners);
+  if (straight > 0 && !has("TRACK_ACCESSORY", (p) => nameMatches(p, /прям|соединит/i))) {
+    const connector = pick((p) => p.kind === "TRACK_ACCESSORY" && nameMatches(p, /прям|соединит/i));
+    if (connector) {
+      mandatory.push({
+        product: connector,
+        qty: straight,
+        reason: `${pieces} отрезка профиля стыкуются между собой: ${pieces} − ${corners} угл. − 1`,
+      });
+    }
+  }
+
+  // 3. Блок питания по суммарной мощности — только для низковольтных систем.
+  const needsPsu = system === "CLARUS_48";
+  const totalWatts = fixtures.reduce((sum, e) => sum + powerWattsOf(e.product) * e.qty, 0);
+  const psuNeeded = needsPsu ? psuCountForWatts(totalWatts) : 0;
+  const psuInCart = entries
+    .filter((e) => e.product.kind === "PSU")
+    .reduce((sum, e) => sum + e.qty, 0);
+
+  if (psuNeeded > psuInCart) {
+    const psu = pick((p) => p.kind === "PSU");
+    if (psu) {
+      mandatory.push({
+        product: psu,
+        qty: psuNeeded - psuInCart,
+        reason: `Суммарно ${totalWatts} Вт с запасом 20 % — нужно ${psuNeeded} БП по ${PSU_NOMINAL_WATTS} Вт`,
+      });
+    }
+  }
+
+  // 4. Лампы 1:1 к светильникам «под лампу».
+  const lampSockets = new Map<string, number>();
+  for (const entry of entries) {
+    if (entry.product.kind !== "SPOT_FIXTURE" && entry.product.kind !== "TRACK_FIXTURE") continue;
+    const socket = socketOf(entry.product);
+    if (!socket) continue;
+    lampSockets.set(socket, (lampSockets.get(socket) ?? 0) + entry.qty);
+  }
+  for (const [socket, qty] of lampSockets) {
+    const inCart = entries
+      .filter((e) => e.product.kind === "LAMP" && socketOf(e.product) === socket)
+      .reduce((sum, e) => sum + e.qty, 0);
+    if (inCart >= qty) continue;
+    const lamp = catalog.find(
+      (p) => p.kind === "LAMP" && socketOf(p) === socket && toNumber(p.priceRub) > 0
+    );
+    if (lamp) {
+      mandatory.push({
+        product: lamp,
+        qty: qty - inCart,
+        reason: `Светильники с цоколем ${socket} продаются без ламп`,
+      });
+    }
+  }
+
+  // 5. Платформы для ZOOM — рекомендация, а не блокер.
+  const zoomQty = entries
+    .filter((e) => nameMatches(e.product, /zoom/i))
+    .reduce((sum, e) => sum + e.qty, 0);
+  if (zoomQty > 0 && !has("TRACK_ACCESSORY", (p) => nameMatches(p, /платформ/i))) {
+    const platform = pick((p) => nameMatches(p, /платформ/i));
+    if (platform) {
+      recommended.push({
+        product: platform,
+        qty: zoomQty,
+        reason: "Светильники ZOOM ставятся на монтажную платформу",
+      });
+    }
+  }
+
+  return {
+    mandatory,
+    recommended,
+    psuMissing: needsPsu && psuNeeded > 0 && psuInCart === 0,
   };
 }

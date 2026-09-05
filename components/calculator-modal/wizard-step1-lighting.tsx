@@ -28,6 +28,7 @@ import { resolveInitialLightingStep, type WizardStep } from "@/lib/lighting/reso
 import { pricing } from "@/content/pricing";
 import { useCatalogProducts } from "@/lib/lighting/use-catalog-products";
 import { useLightingCart } from "@/lib/lighting/use-lighting-cart";
+import { completeKit } from "@/lib/lighting/kit-rules";
 import {
   autoAssembleProfiles,
   clearIncompatibleSystem as clearIncompatibleSystem_,
@@ -1029,6 +1030,47 @@ export function WizardStep1Lighting() {
     });
   }, [autoProfilePlan, markWizardTouched, setCartItems, setWSystem]);
 
+  /* ─── T-042: дособирание комплекта (питание, стыки, БП, лампы) ─── */
+
+  /** Чего не хватает выбранному свету, чтобы он заработал. */
+  const kitCompletion = useMemo(
+    () => completeKit(cartItems, resolveProduct, products),
+    [cartItems, products, resolveProduct]
+  );
+
+  /** «Добавить всё» — кладём обязательные позиции одним действием. */
+  const applyKitCompletion = useCallback(
+    (suggestions: readonly { product: FeedCatalogProduct; qty: number }[]) => {
+      if (suggestions.length === 0) return;
+      markWizardTouched();
+      setCartItems((prev) => {
+        const next = { ...prev };
+        for (const suggestion of suggestions) {
+          const id = toText(suggestion.product.productId);
+          next[id] = (next[id] ?? 0) + suggestion.qty;
+        }
+        return next;
+      });
+    },
+    [markWizardTouched, setCartItems]
+  );
+
+  /**
+   * T-042: CLARUS без блока питания не запустится. Не прячем кнопку совсем —
+   * даём явно согласиться на «подберём при звонке», иначе счёт уедет неполным.
+   */
+  const [psuAcknowledged, setPsuAcknowledged] = useState(false);
+  const psuBlocks = kitCompletion.psuMissing && !psuAcknowledged;
+
+  /** Кнопка «К итогу» с учётом блокировки по БП. */
+  const finishAction = useCallback(
+    (): { label: string; disabled?: boolean; onClick: () => void } =>
+      psuBlocks
+        ? { label: "Нужен блок питания", disabled: true, onClick: () => undefined }
+        : { label: "К итогу →", onClick: () => goToStep(2) },
+    [goToStep, psuBlocks]
+  );
+
   /** «Ориентир для 10 м: 8–12 светильников» — вилка ±20 %. */
   const fixturesHint = useMemo(
     () => fixturesHintForMeters(selectedTrackMeters || requiredTrackMeters, pricing.trackSpotsPerMeter),
@@ -1173,13 +1215,13 @@ export function WizardStep1Lighting() {
       setStep1FooterAction(
         missingAction
           ? { label: missingAction.label, onClick: goToMissingAction }
-          : { label: "К итогу →", onClick: () => goToStep(2) }
+          : finishAction()
       );
       return () => setStep1FooterAction(null);
     }
 
     if (shownWStep === "none") {
-      setStep1FooterAction({ label: "К итогу →", onClick: () => goToStep(2) });
+      setStep1FooterAction(finishAction());
       return () => setStep1FooterAction(null);
     }
 
@@ -1192,9 +1234,8 @@ export function WizardStep1Lighting() {
         });
       } else {
         setStep1FooterAction({
-          label: "К итогу →",
-          disabled: !requiredSelectionComplete,
-          onClick: () => goToStep(2),
+          ...finishAction(),
+          disabled: psuBlocks || !requiredSelectionComplete,
         });
       }
     } else if (shownWStep === "trackProfile") {
@@ -1224,13 +1265,15 @@ export function WizardStep1Lighting() {
       setStep1FooterAction(
         missingAction
           ? { label: missingAction.label, onClick: goToMissingAction }
-          : { label: "К итогу →", onClick: () => goToStep(2) }
+          : finishAction()
       );
     }
 
     return () => setStep1FooterAction(null);
   }, [
     activeTab,
+    finishAction,
+    psuBlocks,
     goAfterPoints,
     goAfterTrackFixtures,
     goAfterTrackProfile,
@@ -1454,6 +1497,68 @@ export function WizardStep1Lighting() {
                     Собрать автоматически
                   </button>
                   <p className="mt-2 text-xs text-slate-500">Ниже можно поправить количество вручную.</p>
+                </div>
+              ) : null}
+
+              {/* T-042: чего не хватает комплекту — с обоснованием каждой строки */}
+              {kitCompletion.mandatory.length > 0 ? (
+                <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4">
+                  <p className="text-sm font-semibold text-amber-950">Комплектующие</p>
+                  <p className="mt-1 text-xs text-amber-900">
+                    Без этих позиций комплект не соберётся — добавил расчёт, количество можно поправить.
+                  </p>
+                  <ul className="mt-3 space-y-2">
+                    {kitCompletion.mandatory.map((item) => (
+                      <li key={toText(item.product.productId)} className="text-xs text-amber-950">
+                        <span className="font-semibold">
+                          {toText(item.product.name)} × {item.qty}
+                        </span>
+                        <span className="block text-amber-800">{item.reason}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    type="button"
+                    onClick={() => applyKitCompletion(kitCompletion.mandatory)}
+                    className="mt-3 min-h-11 w-full rounded-xl bg-amber-600 px-4 text-sm font-semibold text-white hover:bg-amber-700"
+                  >
+                    Добавить всё
+                  </button>
+
+                  {kitCompletion.psuMissing ? (
+                    <label className="mt-3 flex min-h-11 items-center gap-2 text-xs text-amber-950">
+                      <input
+                        type="checkbox"
+                        checked={psuAcknowledged}
+                        onChange={(e) => setPsuAcknowledged(e.target.checked)}
+                        className="h-4 w-4 accent-amber-600"
+                      />
+                      Блок питания подберём при звонке — идти к итогу без него
+                    </label>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {kitCompletion.recommended.length > 0 ? (
+                <div className="rounded-2xl border border-slate-300 bg-white p-4">
+                  <p className="text-sm font-semibold text-slate-950">Может пригодиться</p>
+                  <ul className="mt-2 space-y-2">
+                    {kitCompletion.recommended.map((item) => (
+                      <li key={toText(item.product.productId)} className="text-xs text-slate-700">
+                        <span className="font-semibold">
+                          {toText(item.product.name)} × {item.qty}
+                        </span>
+                        <span className="block text-slate-600">{item.reason}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    type="button"
+                    onClick={() => applyKitCompletion(kitCompletion.recommended)}
+                    className="mt-3 min-h-11 w-full rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-900 hover:border-slate-500"
+                  >
+                    Добавить всё
+                  </button>
                 </div>
               ) : null}
 
