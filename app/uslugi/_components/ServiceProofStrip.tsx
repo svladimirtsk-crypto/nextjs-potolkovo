@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { Picture } from "@/components/ui/picture";
 import Link from "next/link";
 import type { ServicePageContent } from "@/content/services";
 import { Container } from "@/components/ui/container";
@@ -49,12 +49,12 @@ export function ServiceProofStrip({ service }: ServiceProofStripProps) {
               className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm"
             >
               <div className="relative aspect-[4/3] bg-slate-100">
-                <Image
+                <Picture
                   src={item.src}
                   alt={item.alt}
                   fill
                   sizes="(min-width: 1024px) 30vw, 100vw"
-                  className="object-cover"
+                  imgClassName="object-cover"
                 />
               </div>
 

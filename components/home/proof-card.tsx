@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { Picture } from "@/components/ui/picture";
 
 import { homeAssets } from "@/content/home-assets";
 
@@ -70,7 +70,7 @@ export function ProofCard({ item, mode, onOpen, onWantSame }: ProofCardProps) {
         aria-label={`Открыть кейс: ${item.title}`}
       >
         <div className="relative aspect-[5/4] overflow-hidden">
-          <Image
+          <Picture
             src={asset.src}
             alt={item.alt}
             fill
@@ -79,7 +79,7 @@ export function ProofCard({ item, mode, onOpen, onWantSame }: ProofCardProps) {
                 ? "(max-width: 768px) 78vw, 18.5rem"
                 : "(max-width: 1280px) 33vw, 380px"
             }
-            className="object-cover"
+            imgClassName="object-cover"
           />
         </div>
 

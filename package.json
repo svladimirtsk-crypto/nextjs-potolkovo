@@ -12,9 +12,12 @@
     "test": "vitest run",
     "test:e2e": "playwright test scripts/e2e-back-chain.test.ts",
     "validate:catalog": "node scripts/validate-catalog.mjs",
-    "prebuild": "node scripts/validate-catalog.mjs && node scripts/build-catalog-index.mjs",
+    "prebuild": "node scripts/validate-catalog.mjs && node scripts/build-catalog-index.mjs && node scripts/check-images.mjs",
     "build:catalog-index": "node scripts/build-catalog-index.mjs",
-    "check:legal": "node scripts/check-legal-fields.mjs"
+    "check:legal": "node scripts/check-legal-fields.mjs",
+    "build:images": "node scripts/build-images.mjs",
+    "build:catalog-images": "node scripts/build-catalog-images.mjs",
+    "check:images": "node scripts/check-images.mjs"
   },
   "dependencies": {
     "next": "16.1.6",
@@ -29,6 +32,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "sharp": "^0.35.4",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.11",

@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { Picture } from "@/components/ui/picture";
 
 import { AVITO_PROFILE } from "@/content/avito-reviews";
 import { homeAssets } from "@/content/home-assets";
@@ -33,13 +33,13 @@ export function HomeHero() {
     >
       <div className="relative min-h-[100svh]">
         <div className="absolute inset-0">
-          <Image
+          <Picture
             src={heroAsset.src}
             alt={heroAsset.alt}
             fill
             priority
             sizes="100vw"
-            className="object-cover object-center"
+            imgClassName="object-cover object-center"
           />
           <div className="absolute inset-0 bg-black/56" />
           {/* Единственный градиент: читаемость текста слева. */}
@@ -70,12 +70,12 @@ export function HomeHero() {
             {portraitAsset ? (
               <figure className="mx-auto w-full max-w-[18rem] sm:max-w-xs lg:mx-0 lg:max-w-none">
                 <div className="relative aspect-[4/5] overflow-hidden rounded-[1.75rem] border border-white/15 bg-white/5">
-                  <Image
+                  <Picture
                     src={portraitAsset.src}
                     alt={portraitAsset.alt}
                     fill
                     sizes="(max-width: 1024px) 60vw, 360px"
-                    className="object-cover object-top"
+                    imgClassName="object-cover object-top"
                   />
                 </div>
                 <figcaption className="mt-3 text-xs leading-5 text-white/70 sm:text-sm">

@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { Picture } from "@/components/ui/picture";
 import { useEffect, useMemo, useState } from "react";
 
 import { homeAssets } from "@/content/home-assets";
@@ -202,12 +202,12 @@ export function ProofModalClient({
             <div className="grid h-full lg:grid-cols-[1.15fr_0.85fr]">
               <div className="flex min-h-0 flex-col border-b border-slate-200 lg:border-b-0 lg:border-r">
                 <div className="relative aspect-[5/4] overflow-hidden bg-slate-100 lg:min-h-0 lg:flex-1 lg:aspect-auto">
-                  <Image
+                  <Picture
                     src={activeImage}
                     alt={`${item.alt} — фото ${safeImageIndex + 1}`}
                     fill
                     sizes="(max-width: 1024px) 100vw, 58vw"
-                    className="object-cover"
+                    imgClassName="object-cover"
                   />
                 </div>
 
@@ -226,12 +226,12 @@ export function ProofModalClient({
                         ].join(" ")}
                         aria-label={`Показать фото ${index + 1}`}
                       >
-                        <Image
+                        <Picture
                           src={src}
                           alt={`${item.alt} — миниатюра ${index + 1}`}
                           fill
                           sizes="(max-width: 1024px) 33vw, 180px"
-                          className="object-cover"
+                          imgClassName="object-cover"
                         />
                       </button>
                     ))}

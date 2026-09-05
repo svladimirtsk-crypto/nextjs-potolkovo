@@ -13,7 +13,7 @@ declare global {
   }
 }
 
-const YM_COUNTER = 107200362;
+export const YM_COUNTER = 107200362;
 
 /**
  * T-025 · Единственная точка отправки целей в Метрику.

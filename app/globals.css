@@ -33,7 +33,12 @@
   --color-foreground: var(--foreground);
 
   --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
+  /*
+   * T-061: отдельного моношрифта больше нет — JetBrains Mono тянул лишний
+   * веб-шрифт ради одного декоративного стиля (логотип и надзаголовки).
+   * Утилита font-mono сохранена, но рендерится тем же Inter с трекингом.
+   */
+  --font-mono: var(--font-sans);
 }
 
 *,

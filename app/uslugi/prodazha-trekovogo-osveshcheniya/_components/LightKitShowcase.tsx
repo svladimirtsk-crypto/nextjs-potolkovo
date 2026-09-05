@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { Picture } from "@/components/ui/picture";
 
 import snapshotData from "@/data/eks-feed2-snapshot.json";
 
@@ -257,12 +257,12 @@ export function LightKitShowcase() {
                 className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.04)]"
               >
                 <div className="relative aspect-[16/10] w-full bg-slate-100">
-                  <Image
+                  <Picture
                     src={kit.imageSrc}
                     alt={kit.imageAlt}
                     fill
                     sizes="(max-width: 1280px) 100vw, 520px"
-                    className="object-cover"
+                    imgClassName="object-cover"
                   />
                 </div>
 

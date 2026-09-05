@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { Picture } from "@/components/ui/picture";
 import Link from "next/link";
 import type { ServicePageContent } from "@/content/services";
 import { Button } from "@/components/ui/button";
@@ -104,13 +104,13 @@ export function ServiceHero({ service, priceBadgeOverride }: ServiceHeroProps) {
           <div className="min-w-0">
             <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-100 shadow-sm">
               <div className="relative aspect-[4/3]">
-                <Image
+                <Picture
                   src={service.hero.imageSrc}
                   alt={service.hero.imageAlt}
                   fill
                   priority
                   sizes="(min-width: 1024px) 48vw, 100vw"
-                  className="object-cover"
+                  imgClassName="object-cover"
                 />
               </div>
             </div>

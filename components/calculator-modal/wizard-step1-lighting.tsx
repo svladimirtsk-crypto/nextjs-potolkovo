@@ -183,6 +183,7 @@ function ProductCard({
         onClick={onImageClick}
       >
         <ProductImage
+          productId={toText(product.productId)}
           src={toText(product.coverImage)}
           alt={toText(product.name)}
           containerClassName="aspect-square h-32 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-3 max-sm:h-[5.25rem] max-sm:p-1.5"
@@ -2073,7 +2074,11 @@ export function WizardStep1Lighting() {
                       return (
                         <li key={toText(item.sku)} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                           <div className="grid grid-cols-[5.5rem_1fr] gap-3">
-                            <ProductImage src={toText(product.coverImage)} alt={toText(product.name)} />
+                            <ProductImage
+                              productId={toText(product.productId)}
+                              src={toText(product.coverImage)}
+                              alt={toText(product.name)}
+                            />
                             <div className="min-w-0">
                               <p className="break-words text-sm font-semibold text-slate-950">{toText(item.name)}</p>
                               <p className="mt-2 text-xs text-slate-700">

@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { Picture } from "@/components/ui/picture";
 
 import { homeAssets } from "@/content/home-assets";
 import { homepage } from "@/content/homepage";
@@ -18,12 +18,12 @@ export function FounderBlock() {
     <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-start">
       <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
         <div className="relative aspect-[4/3]">
-          <Image
+          <Picture
             src={portraitAsset.src}
             alt={founder.portraitAlt}
             fill
             sizes="(max-width: 1024px) 100vw, 520px"
-            className="object-cover"
+            imgClassName="object-cover"
           />
         </div>
       </div>

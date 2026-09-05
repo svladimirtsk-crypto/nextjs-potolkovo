@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 
+import catalogImages from "@/data/catalog-images.json";
+
 const IMG_FALLBACK =
   "data:image/svg+xml;utf8," +
   encodeURIComponent(
@@ -16,6 +18,11 @@ type ProductImageProps = {
   alt: string;
   className?: string;
   containerClassName?: string;
+  /**
+   * T-061: если превью скачано локально (`npm run build:catalog-images`),
+   * отдаём WebP 256/512 из `public/catalog` вместо ссылки на хост поставщика.
+   */
+  productId?: string | null;
 };
 
 export function ProductImage({
@@ -23,13 +30,23 @@ export function ProductImage({
   alt,
   className,
   containerClassName,
+  productId,
 }: ProductImageProps) {
   const [failed, setFailed] = useState(false);
 
   const safeSrc = useMemo(() => String(src ?? "").trim(), [src]);
   const safeAlt = useMemo(() => String(alt ?? ""), [alt]);
 
-  const imageSrc = failed || !safeSrc ? IMG_FALLBACK : safeSrc;
+  const local = useMemo(() => {
+    const id = String(productId ?? "").trim();
+    return id && id in catalogImages ? id : null;
+  }, [productId]);
+
+  const imageSrc = failed
+    ? IMG_FALLBACK
+    : local
+      ? `/catalog/${local}-512.webp`
+      : safeSrc || IMG_FALLBACK;
 
   return (
     <div
@@ -41,8 +58,13 @@ export function ProductImage({
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={imageSrc}
+        srcSet={local ? `/catalog/${local}-256.webp 256w, /catalog/${local}-512.webp 512w` : undefined}
+        sizes={local ? "(max-width: 768px) 45vw, 256px" : undefined}
         alt={safeAlt}
+        width={512}
+        height={512}
         loading="lazy"
+        decoding="async"
         className={className ?? "h-full w-full object-contain"}
         onError={() => setFailed(true)}
       />
