@@ -14,6 +14,7 @@ import {
 } from "@/lib/lighting/product-predicates";
 import catalogImages from "@/data/catalog-images.json";
 import { ProductCard } from "./CatalogProductCard";
+import { CatalogWarnings } from "./CatalogWarnings";
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
 import { Container } from "@/components/ui/container";
 import { Heading } from "@/components/ui/heading";
@@ -385,6 +386,24 @@ export function CatalogSectionClient({ data }: Props) {
       })
       .reduce((sum, entry) => sum + entry.qty, 0);
   }, [selectedEntries]);
+
+  /**
+   * Варианты БП для предупреждения: пусто, когда блок питания уже есть или
+   * система не CLARUS. Список строится из каталога, а не из констант —
+   * артикул без карточки в фиде показывать нечем.
+   */
+  const clarusPsuOptions = useMemo(() => {
+    if (!hasClarusFixtures || clarusPsuQty >= 1) return [];
+
+    return CLARUS_PSU_VENDOR_CODES.flatMap((vendorCode) => {
+      const productId = productIdByVendorCode.get(vendorCode);
+      if (!productId) return [];
+      const product = byProductId.get(productId);
+      if (!product) return [];
+
+      return [{ vendorCode, productId, name: toText(product.name) }];
+    });
+  }, [hasClarusFixtures, clarusPsuQty, productIdByVendorCode, byProductId]);
 
   const setClarusPsu = (productId: string) => {
     setCartItems((prev) => {
@@ -1074,79 +1093,19 @@ export function CatalogSectionClient({ data }: Props) {
 
         {/* Dependencies / warnings */}
         {selectedEntries.length > 0 ? (
-          <div className="mt-6 space-y-3">
-            {hasClarusFixtures && clarusPsuQty < 1 ? (
-              <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-950">
-                <p className="font-semibold">Для системы CLARUS обязателен минимум 1 блок питания.</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {CLARUS_PSU_VENDOR_CODES.map((vendor) => {
-                    const id = productIdByVendorCode.get(vendor);
-                    if (!id) return null;
-                    const product = byProductId.get(id);
-                    if (!product) return null;
-
-                    return (
-                      <button
-                        key={vendor}
-                        type="button"
-                        onClick={() => setClarusPsu(id)}
-                        className="rounded-xl bg-rose-700 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-800"
-                      >
-                        Добавить: {toText(product.name)}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : null}
-
-            {missingMounts.map((m) => (
-              <div
-                key={`${m.fixtureVendorCode}-${m.mountVendorCode}`}
-                className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
-              >
-                <p className="font-semibold">Не хватает закладных 1:1</p>
-                <p className="mt-2">
-                  Нужно: <span className="font-semibold">{m.requiredQty}</span> шт., в корзине:{" "}
-                  <span className="font-semibold">{m.currentQty}</span> шт.
-                  {m.mountName ? ` · Закладная: ${toText(m.mountName)}` : ""}
-                </p>
-
-                <button
-                  type="button"
-                  onClick={() => addMountOneToOne(m.fixtureVendorCode)}
-                  className="mt-3 rounded-xl bg-amber-700 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-800"
-                >
-                  Добавить 1:1
-                </button>
-              </div>
-            ))}
-
-            {missingLamps.map((m) => (
-              <div key={m.socket} className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
-                <p className="font-semibold">Не хватает ламп {m.socket} (1:1)</p>
-                <p className="mt-2">
-                  Нужно: <span className="font-semibold">{m.requiredQty}</span> шт., в корзине:{" "}
-                  <span className="font-semibold">{m.currentQty}</span> шт.
-                </p>
-
-                <button
-                  type="button"
-                  disabled={!m.cheapestLampId}
-                  onClick={() => {
-                    if (!m.cheapestLampId) return;
-                    addLampOneToOneCheapest(m.socket, m.cheapestLampId);
-                    setSection("lamps");
-                    setLampSocket(m.socket);
-                    setQuery("");
-                  }}
-                  className="mt-3 rounded-xl bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
-                >
-                  Добавить 1:1 (самые доступные)
-                </button>
-              </div>
-            ))}
-          </div>
+          <CatalogWarnings
+            psuOptions={clarusPsuOptions}
+            missingMounts={missingMounts}
+            missingLamps={missingLamps}
+            onAddPsu={setClarusPsu}
+            onAddMount={addMountOneToOne}
+            onAddLamp={(socket, cheapestLampId) => {
+              addLampOneToOneCheapest(socket, cheapestLampId);
+              setSection("lamps");
+              setLampSocket(socket);
+              setQuery("");
+            }}
+          />
         ) : null}
 
         <LightingCartDrawer
