@@ -17,7 +17,10 @@ export function SummaryScreen({ engine, onEditRoom, onAddRoom, onPrimaryCta, onS
     <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
       <div className="rounded-2xl bg-slate-950 p-5 text-white">
         <p className="text-sm text-white/70">Готовый расчёт</p>
-        <p className="text-3xl font-semibold">{engine.totalRub.toLocaleString("ru-RU")} ₽</p>
+        {/* T-041: сумма меняется по ходу правок — озвучиваем её скринридеру. */}
+        <p aria-live="polite" className="text-3xl font-semibold">
+          {engine.totalRub.toLocaleString("ru-RU")} ₽
+        </p>
         <p className="text-xs text-white/70 mt-1">{scenarioLabel(engine.solutionScenario)} · {engine.roomsCount} {pluralizeRooms(engine.roomsCount)}</p>
       </div>
       <div className="mt-4 space-y-2">
@@ -25,10 +28,17 @@ export function SummaryScreen({ engine, onEditRoom, onAddRoom, onPrimaryCta, onS
         {engine.rooms.map(r=>(
           <div key={r.id} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2">
             <span className="text-sm">{r.label} · {r.area} м²</span>
-            <button onClick={()=>onEditRoom(r.id)} className="text-xs underline text-slate-600">Редактировать</button>
+            <button
+              type="button"
+              onClick={()=>onEditRoom(r.id)}
+              aria-label={`Редактировать: ${r.label}`}
+              className="min-h-11 px-2 text-xs text-slate-700 underline"
+            >
+              Редактировать
+            </button>
           </div>
         ))}
-        <button onClick={onAddRoom} className="w-full rounded-xl border border-dashed border-slate-300 py-2 text-sm text-slate-600">+ Добавить ещё помещение</button>
+        <button type="button" onClick={onAddRoom} className="min-h-11 w-full rounded-xl border border-dashed border-slate-300 py-2 text-sm text-slate-700">+ добавить помещение</button>
       </div>
       {/* T-026: микро-конверсия — забрать расчёт в мессенджер */}
       <a
@@ -52,9 +62,9 @@ export function SummaryScreen({ engine, onEditRoom, onAddRoom, onPrimaryCta, onS
       </a>
 
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
-        <button onClick={onPrimaryCta} className="rounded-2xl bg-slate-950 text-white py-3 text-sm font-semibold">{primaryLabel ?? "К итогу →"}</button>
+        <button type="button" onClick={onPrimaryCta} className="min-h-12 rounded-2xl bg-slate-950 text-white py-3 text-sm font-semibold">{primaryLabel ?? "К итогу →"}</button>
         {onSecondaryCta && secondaryLabel && (
-          <button onClick={onSecondaryCta} className="rounded-2xl bg-emerald-600 text-white py-3 text-sm font-semibold">{secondaryLabel}</button>
+          <button type="button" onClick={onSecondaryCta} className="min-h-12 rounded-2xl bg-emerald-600 text-white py-3 text-sm font-semibold">{secondaryLabel}</button>
         )}
       </div>
     </section>

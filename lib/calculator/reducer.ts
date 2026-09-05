@@ -57,8 +57,11 @@ export function createInitialState(
     rooms: [],
     activeRoomId: null,
     roomSeq: 1,
-    // Непустой сценарий приходит со страницы услуги — экран выбора пропускаем.
-    screenHistory: [scenario !== "standard" ? { t: "calcMode" } : { t: "scenario" }],
+    // Непустой сценарий приходит со страницы услуги — экран выбора пропускаем
+    // и сразу спрашиваем помещение (режим расчёта живёт на экране площади).
+    screenHistory: [
+      scenario !== "standard" ? { t: "roomPicker", mode: "first" } : { t: "scenario" },
+    ],
     confirmed: {},
     prefilled: {},
     presetNote: null,
@@ -203,8 +206,10 @@ export function calculatorReducer(
         }, {}),
         presetNote: action.note,
         touched: NO_TOUCHED,
-        // Пресет уже ответил за сценарий и комнату — начинаем с выбора режима.
-        screenHistory: [{ t: "calcMode" }],
+        // Пресет уже ответил за сценарий и комнату — начинаем сразу с площади.
+        screenHistory: [
+          { t: "param", roomId: action.rooms[0]?.id ?? "object", param: "area" },
+        ],
       };
 
     case "param/confirm":

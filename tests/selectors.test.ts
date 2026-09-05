@@ -217,13 +217,9 @@ describe("T-030 - futer Shaga 0", () => {
     expect(selectFooterAction({ t: "scenario" }, { scope: null })?.label).toBe(
       "Выберите вариант выше"
     );
-    expect(selectFooterAction({ t: "calcMode" }, { scope: null })).toEqual({
-      label: "Выберите режим выше",
+    expect(selectFooterAction({ t: "roomPicker", mode: "first" }, { scope: null })).toEqual({
+      label: "Выберите помещение выше",
       disabled: true,
-    });
-    expect(selectFooterAction({ t: "calcMode" }, { scope: "room" })).toEqual({
-      label: "Продолжить →",
-      disabled: false,
     });
     expect(
       selectFooterAction({ t: "param", roomId: "r1", param: "area" }, { scope: "room" })?.label
@@ -232,15 +228,15 @@ describe("T-030 - futer Shaga 0", () => {
     expect(selectFooterAction({ t: "summary" }, { scope: "room" })).toBeNull();
   });
 
-  it("nazad skryta na scenarii i na avtoproskochennom calcMode", () => {
+  it("nazad skryta na scenarii i na pervom avtoproskochennom ekrane", () => {
     expect(
       selectBackVisible({ t: "scenario" }, { historyLength: 1, scenarioPreselected: false })
     ).toBe(false);
     expect(
-      selectBackVisible({ t: "calcMode" }, { historyLength: 1, scenarioPreselected: true })
+      selectBackVisible({ t: "roomPicker", mode: "first" }, { historyLength: 1, scenarioPreselected: true })
     ).toBe(false);
     expect(
-      selectBackVisible({ t: "calcMode" }, { historyLength: 2, scenarioPreselected: true })
+      selectBackVisible({ t: "roomPicker", mode: "first" }, { historyLength: 2, scenarioPreselected: true })
     ).toBe(true);
   });
 });
@@ -261,8 +257,8 @@ describe("T-030 - progress s fiksirovannym M", () => {
       showModernOptions: true,
     });
 
-    const a = calcProgress({ t: "calcMode" }, { scenario, enabledParams: short });
-    const b = calcProgress({ t: "calcMode" }, { scenario, enabledParams: long });
+    const a = calcProgress({ t: "roomPicker", mode: "first" }, { scenario, enabledParams: short });
+    const b = calcProgress({ t: "roomPicker", mode: "first" }, { scenario, enabledParams: long });
 
     // Включение теневого профиля не должно менять знаменатель полоски.
     expect(a.total).toBe(b.total);

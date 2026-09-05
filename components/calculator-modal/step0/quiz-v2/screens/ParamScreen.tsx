@@ -4,17 +4,31 @@ import type { ParamId } from "@/lib/step0-fsm";
 import type { CeilingEngine } from "@/lib/calculator-v2/use-ceiling-calculator-engine";
 import { SectionCard, OptionCard, RangeField } from "../ui";
 import { homepage } from "@/content/homepage";
-import { PREFILL_HINT } from "@/lib/calculator/presets";
+import { PREFILL_HINT, defaultPerimeterMeters } from "@/lib/calculator/presets";
 import { formatFrom, pricing } from "@/content/pricing";
 
 const calculator = homepage.price.calculator;
 
 function formatCurrency(v:number){ return new Intl.NumberFormat("ru-RU").format(Math.round(v)); }
 
-export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
+/**
+ * T-041: кнопки «Назад» и «Подтвердить» живут только в футере модалки,
+ * поэтому экрану больше не нужен `onBack`.
+ */
+export function ParamScreen({ roomId, param, engine, onConfirm }:{
   roomId: string; param: ParamId; engine: CeilingEngine;
-  onConfirm: ()=>void; onBack: ()=>void;
+  onConfirm: ()=>void;
 }) {
+  /**
+   * T-041 · Доступность: при смене вопроса фокус уходит на заголовок карточки,
+   * иначе скринридер и клавиатура остаются на кнопке предыдущего экрана.
+   * Это работа с DOM-узлом, а не синхронизация состояния, — эффект уместен.
+   */
+  const headingRef = useRef<HTMLHeadingElement | null>(null);
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, [param, roomId]);
+
   const room = engine.rooms.find(r=>r.id===roomId) ?? engine.activeRoom;
   // Локальное значение поля синхронизируется через key, а не через эффект.
   const [localLabel, setLocalLabel] = useState(room?.label ?? "");
@@ -59,7 +73,7 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
   if (param === "area") {
     const isObjectMode = engine.calculationScope === "object";
     return (
-      <SectionCard title="Площадь" description="Площадь считается отдельно, а профили и узлы — только по нужным участкам в метрах.">
+      <SectionCard headingRef={headingRef} title="Площадь" description="Площадь считается отдельно, а профили и узлы — только по нужным участкам в метрах.">
         {prefillHint}
         {kitHint}
         {!isObjectMode && (
@@ -72,9 +86,28 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
             onBlur={()=> update({ label: localRoomLabelTrim(localLabel) })}
             placeholder="Например: Кухня-гостиная"
           />
-          <p className="mt-2 text-xs text-slate-500">Это название будет видно в общем списке помещений и в итоговом расчёте.</p>
+          <p className="mt-2 text-xs text-slate-600">Это название будет видно в общем списке помещений и в итоговом расчёте.</p>
         </div>
         )}
+        {/* T-041: режим расчёта переехал сюда с отдельного экрана. */}
+        <div className="mb-4">
+          <p className="text-sm font-medium text-slate-700">Считаю:</p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            <OptionCard
+              active={!isObjectMode}
+              title="Комнату"
+              meta="Кухня, спальня, гостиная — точный расчёт"
+              onClick={() => engine.chooseCalcMode("room")}
+            />
+            <OptionCard
+              active={isObjectMode}
+              title="Весь объект"
+              meta="Прикинуть бюджет по квартире или дому"
+              onClick={() => engine.chooseCalcMode("object")}
+            />
+          </div>
+        </div>
+
         <RangeField
           id="area-v2"
           label={isObjectMode ? "Укажите общую площадь объекта" : "Выберите площадь помещения"}
@@ -84,12 +117,8 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
           step={1}
           unit="м²"
           onChange={v=>update({ area: v })}
-          quickValues={[1,5,10,15,20,25,30,40,50,60,80]}
+          quickValues={isObjectMode ? [40, 60, 80, 100, 120] : [10, 12, 15, 18, 20, 25, 30, 40]}
         />
-        <div className="mt-4 flex justify-between">
-          <button type="button" onClick={onBack} className="text-sm text-slate-600">← Назад</button>
-          <button type="button" onClick={onConfirm} className="rounded-2xl bg-slate-950 px-5 py-2 text-sm font-semibold text-white">Подтвердить площадь →</button>
-        </div>
       </SectionCard>
     );
   }
@@ -98,7 +127,7 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
   if (param === "ceiling") {
     const isSimple = !room.shadowEnabled && !room.floatingEnabled;
     return (
-      <SectionCard title="Тип потолка" description="Базовая площадь считается отдельно. Теневой и парящий указывайте только на нужных участках.">
+      <SectionCard headingRef={headingRef} title="Тип потолка" description="Базовая площадь считается отдельно. Теневой и парящий указывайте только на нужных участках.">
         {prefillHint}
         {kitHint}
         <div className="space-y-3">
@@ -138,10 +167,6 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
             </button>
           )}
         </div>
-        <div className="mt-4 flex justify-between">
-          <button type="button" onClick={onBack} className="text-sm text-slate-600">← Назад</button>
-          <button type="button" onClick={onConfirm} className="rounded-2xl bg-slate-950 px-5 py-2 text-sm font-semibold text-white">Подтвердить тип →</button>
-        </div>
       </SectionCard>
     );
   }
@@ -150,7 +175,7 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
   if (param === "cornice") {
     const corniceOpts = calculator.cornices;
     return (
-      <SectionCard title="Карнизы">
+      <SectionCard headingRef={headingRef} title="Карнизы">
         {prefillHint}
         {kitHint}
         <div className="grid gap-3 sm:grid-cols-2">
@@ -179,10 +204,6 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
             )}
           </div>
         )}
-        <div className="mt-4 flex justify-between">
-          <button type="button" onClick={onBack} className="text-sm text-slate-600">← Назад</button>
-          <button type="button" onClick={onConfirm} className="rounded-2xl bg-slate-950 px-5 py-2 text-sm font-semibold text-white">Подтвердить карниз →</button>
-        </div>
       </SectionCard>
     );
   }
@@ -191,18 +212,25 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
   if (param === "shadowProfile") {
     const both = room.shadowEnabled && room.floatingEnabled;
     return (
-      <SectionCard title={both ? "Теневой и парящий профиль" : "Теневой профиль"} description="Укажите метры профиля. По умолчанию 1:1 к площади.">
-        <RangeField id="shadow-v2" label="Длина теневого профиля" value={room.shadowLength} min={1} max={150} step={1} unit="м.п." onChange={v=>update({shadowLength:v})} quickValues={[room.area]} />
+      <SectionCard headingRef={headingRef} title={both ? "Теневой и парящий профиль" : "Теневой профиль"} description="По умолчанию — весь периметр помещения. Если профиль нужен не везде, переключитесь на «частично».">
+        <PerimeterField
+          id="shadow-v2"
+          label="Длина теневого профиля"
+          area={room.area}
+          value={room.shadowLength}
+          onChange={v=>update({shadowLength:v})}
+        />
         {both && (
           <div className="mt-4">
-            <RangeField id="floating-v2b" label="Длина парящего профиля" value={room.floatingLength} min={1} max={150} step={1} unit="м.п." onChange={v=>update({floatingLength:v})} quickValues={[room.area]} />
+            <PerimeterField
+              id="floating-v2b"
+              label="Длина парящего профиля"
+              area={room.area}
+              value={room.floatingLength}
+              onChange={v=>update({floatingLength:v})}
+            />
           </div>
         )}
-        <div className="mt-3 text-xs text-slate-500">Ориентир для площади {room.area} м² — {room.area} м.п. Если профиль нужен частично — введите фактические метры.</div>
-        <div className="mt-4 flex justify-between">
-          <button type="button" onClick={onBack} className="text-sm text-slate-600">← Назад</button>
-          <button type="button" onClick={onConfirm} className="rounded-2xl bg-slate-950 px-5 py-2 text-sm font-semibold text-white">Подтвердить профиль →</button>
-        </div>
       </SectionCard>
     );
   }
@@ -210,12 +238,14 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
   // FLOATING PROFILE
   if (param === "floatingProfile") {
     return (
-      <SectionCard title="Парящий профиль" description="Укажите метры парящего профиля.">
-        <RangeField id="floating-v2" label="Длина парящего профиля" value={room.floatingLength} min={1} max={150} step={1} unit="м.п." onChange={v=>update({floatingLength:v})} quickValues={[room.area]} />
-        <div className="mt-4 flex justify-between">
-          <button type="button" onClick={onBack} className="text-sm text-slate-600">← Назад</button>
-          <button type="button" onClick={onConfirm} className="rounded-2xl bg-slate-950 px-5 py-2 text-sm font-semibold text-white">Подтвердить профиль →</button>
-        </div>
+      <SectionCard headingRef={headingRef} title="Парящий профиль" description="По умолчанию — весь периметр помещения. Если профиль нужен не везде, переключитесь на «частично».">
+        <PerimeterField
+          id="floating-v2"
+          label="Длина парящего профиля"
+          area={room.area}
+          value={room.floatingLength}
+          onChange={v=>update({floatingLength:v})}
+        />
       </SectionCard>
     );
   }
@@ -223,7 +253,7 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
   // LIGHT LINES
   if (param === "lightLines") {
     return (
-      <SectionCard title="Световые линии">
+      <SectionCard headingRef={headingRef} title="Световые линии">
         <div className="grid gap-3 sm:grid-cols-2">
           <OptionCard active={!room.lightLinesEnabled} title="Без световых линий" meta="Без доп. расчёта" onClick={()=>update({lightLinesEnabled:false})} />
           <OptionCard active={room.lightLinesEnabled} title="Добавить световые линии" meta={`от ${formatCurrency(calculator.lightLines.ratePerMeter)} ₽ / м.п.`} onClick={()=>update({lightLinesEnabled:true})} />
@@ -233,10 +263,6 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
             <RangeField id="ll-v2" label="Длина световых линий" value={room.lightLinesLength} min={1} max={50} step={1} unit="м.п." onChange={v=>update({lightLinesLength:v})} />
           </div>
         )}
-        <div className="mt-4 flex justify-between">
-          <button type="button" onClick={onBack} className="text-sm text-slate-600">← Назад</button>
-          <button type="button" onClick={onConfirm} className="rounded-2xl bg-slate-950 px-5 py-2 text-sm font-semibold text-white">Подтвердить линии →</button>
-        </div>
       </SectionCard>
     );
   }
@@ -245,7 +271,7 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
   if (param === "track") {
     const trackOpts = calculator.tracks;
     return (
-      <SectionCard title="Трековое освещение">
+      <SectionCard headingRef={headingRef} title="Трековое освещение">
         {prefillHint}
         {kitHint}
         <div className="grid gap-3 sm:grid-cols-2">
@@ -258,10 +284,6 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
             <RangeField id="track-v2" label="Длина трека" value={room.trackLength} min={1} max={50} step={1} unit="м.п." onChange={v=>update({trackLength:v})} />
           </div>
         )}
-        <div className="mt-4 flex justify-between">
-          <button type="button" onClick={onBack} className="text-sm text-slate-600">← Назад</button>
-          <button type="button" onClick={onConfirm} className="rounded-2xl bg-slate-950 px-5 py-2 text-sm font-semibold text-white">Подтвердить трек →</button>
-        </div>
       </SectionCard>
     );
   }
@@ -269,7 +291,7 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
   // CHANDELIERS
   if (param === "chandeliers") {
     return (
-      <SectionCard title="Установка люстр">
+      <SectionCard headingRef={headingRef} title="Монтаж: установка люстр" description="Сами светильники подберём на следующем шаге со скидкой.">
         {prefillHint}
         {kitHint}
         <div className="grid gap-3 sm:grid-cols-2">
@@ -281,10 +303,6 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
             <RangeField id="chand-v2" label="Количество люстр" value={room.chandeliersCount} min={1} max={10} step={1} unit="шт." onChange={v=>update({chandeliersCount:v})} quickValues={[1,2,3]} />
           </div>
         )}
-        <div className="mt-4 flex justify-between">
-          <button type="button" onClick={onBack} className="text-sm text-slate-600">← Назад</button>
-          <button type="button" onClick={onConfirm} className="rounded-2xl bg-slate-950 px-5 py-2 text-sm font-semibold text-white">Подтвердить люстры →</button>
-        </div>
       </SectionCard>
     );
   }
@@ -292,7 +310,7 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
   // LIGHTS
   if (param === "lights") {
     return (
-      <SectionCard title="Точечные светильники">
+      <SectionCard headingRef={headingRef} title="Монтаж: точечные светильники" description="Сами светильники подберём на следующем шаге со скидкой.">
         {prefillHint}
         {kitHint}
         <div className="grid gap-3 sm:grid-cols-2">
@@ -304,20 +322,76 @@ export function ParamScreen({ roomId, param, engine, onConfirm, onBack }:{
             <RangeField id="lights-v2" label="Количество светильников" value={room.lightsCount} min={1} max={40} step={1} unit="шт." onChange={v=>update({lightsCount:v})} quickValues={[4,6,8,10,12]} />
           </div>
         )}
-        <div className="mt-4 flex justify-between">
-          <button type="button" onClick={onBack} className="text-sm text-slate-600">← Назад</button>
-          <button type="button" onClick={onConfirm} className="rounded-2xl bg-slate-950 px-5 py-2 text-sm font-semibold text-white">Подтвердить свет →</button>
-        </div>
       </SectionCard>
     );
   }
 
   // FALLBACK generic: экран недоступного параметра — автопереход дальше.
-  return <UnavailableParamScreen onConfirm={onConfirm} onBack={onBack} />;
+  return <UnavailableParamScreen onConfirm={onConfirm} />;
+}
+
+
+/**
+ * T-041 · Длина профиля по периметру.
+ *
+ * По умолчанию берём `round(4·√area)` — геометрический ориентир периметра,
+ * а не длину «1:1 к площади», которая завышала метраж на больших комнатах.
+ * Переключатель «частично» открывает ручной ввод: профиль часто ставят
+ * только вдоль одной-двух стен.
+ */
+function PerimeterField({
+  id,
+  label,
+  area,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  area: number;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  const full = defaultPerimeterMeters(area);
+  const isFull = Math.abs(value - full) < 0.001;
+
+  return (
+    <div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <OptionCard
+          active={isFull}
+          title="По всему периметру"
+          meta={`${full} м.п. — ориентир для ${area} м²`}
+          onClick={() => onChange(full)}
+        />
+        <OptionCard
+          active={!isFull}
+          title="Частично"
+          meta="Укажу метры вручную"
+          onClick={() => onChange(Math.max(1, Math.round(full / 2)))}
+        />
+      </div>
+
+      {!isFull ? (
+        <div className="mt-4">
+          <RangeField
+            id={id}
+            label={label}
+            value={value}
+            min={1}
+            max={150}
+            step={1}
+            unit="м.п."
+            onChange={onChange}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 /** T-003: вместо отладочного дампа — карточка + автоматический переход. */
-function UnavailableParamScreen({ onConfirm, onBack }: { onConfirm: () => void; onBack: () => void }) {
+function UnavailableParamScreen({ onConfirm }: { onConfirm: () => void }) {
   const navigatedRef = useRef(false);
 
   useEffect(() => {
@@ -330,10 +404,7 @@ function UnavailableParamScreen({ onConfirm, onBack }: { onConfirm: () => void; 
 
   return (
     <SectionCard title="Этот параметр пока недоступен" description="Переходим к следующему шагу.">
-      <div className="mt-4 flex justify-between">
-        <button type="button" onClick={onBack} className="text-sm text-slate-600">← Назад</button>
-        <button type="button" onClick={onConfirm} className="rounded-2xl bg-slate-950 px-5 py-2 text-sm font-semibold text-white">Продолжить →</button>
-      </div>
+      <p className="text-sm text-slate-600">Секунду…</p>
     </SectionCard>
   );
 }

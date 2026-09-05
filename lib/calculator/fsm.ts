@@ -78,27 +78,24 @@ export function calcProgress(
   ctx: { scenario: SolutionScenario; enabledParams: ParamId[] }
 ): Step0Progress {
   const maxParams = maxParamsForScenario(ctx.scenario);
-  // scenario + calcMode + параметры + summary
-  const total = maxParams + 3;
+  // scenario + параметры + summary (экран режима расчёта удалён в T-041)
+  const total = maxParams + 2;
 
   let done = 0;
   switch (screen.t) {
     case "scenario":
       done = 0;
       break;
-    case "calcMode":
-      done = 1;
-      break;
     case "roomPicker":
-      done = 2;
+      done = 1;
       break;
     case "param": {
       const index = ctx.enabledParams.indexOf(screen.param);
-      done = 2 + Math.max(0, index);
+      done = 1 + Math.max(0, index);
       break;
     }
     case "roomEdit":
-      done = 2 + maxParams;
+      done = 1 + maxParams;
       break;
     case "summary":
       done = total - 1;

@@ -230,10 +230,6 @@ export function selectFooterAction(
       return null;
     case "scenario":
       return { label: "Выберите вариант выше", disabled: false };
-    case "calcMode":
-      return ctx.scope
-        ? { label: "Продолжить →", disabled: false }
-        : { label: "Выберите режим выше", disabled: true };
     case "roomPicker":
       return { label: "Выберите помещение выше", disabled: true };
     case "param":
@@ -244,16 +240,16 @@ export function selectFooterAction(
 }
 
 /**
- * Видимость кнопки «Назад». Скрыта на первом экране сценария и на экране
- * выбора режима, когда сценарий пришёл со страницы услуги (там вместо
- * «назад» показывается бейдж «изменить»).
+ * Видимость кнопки «Назад». Скрыта на экране сценария, а также на первом
+ * экране после автопропуска сценария (страница услуги уже выбрала его —
+ * возвращаться некуда, вместо «назад» показывается бейдж «изменить»).
  */
 export function selectBackVisible(
   screen: Step0Screen,
   ctx: { historyLength: number; scenarioPreselected: boolean }
 ): boolean {
   if (screen.t === "scenario") return false;
-  if (screen.t === "calcMode" && ctx.historyLength <= 1 && ctx.scenarioPreselected) return false;
+  if (ctx.historyLength <= 1 && ctx.scenarioPreselected) return false;
   return true;
 }
 

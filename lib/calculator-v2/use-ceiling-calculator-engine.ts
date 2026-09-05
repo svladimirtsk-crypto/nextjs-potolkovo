@@ -9,7 +9,7 @@ import { usePriceCalculatorBridge } from "@/components/home/price-calculator-con
 import type { SolutionScenario } from "@/lib/calculator-modal-types";
 import { buildRoomBreakdown, calcRoomsTotal, calcRoomSnapshotV2, type V2RoomConfig } from "./room-snapshot";
 import { applyMinimumOrder, pricing } from "@/content/pricing";
-import { PREFILL_HINT, presetToRoom } from "@/lib/calculator/presets";
+import { PREFILL_HINT, defaultPerimeterMeters, presetToRoom } from "@/lib/calculator/presets";
 import type { ServiceCalculatorPreset } from "@/content/services";
 import {
   calculatorReducer,
@@ -88,7 +88,8 @@ function buildLightingPatch(
 /** Экспорт для unit-тестов T-024 (в UI используется внутри движка). */
 export const buildLightingPatchForTest = buildLightingPatch;
 
-const DEFAULT_AREA = 10;
+// T-041: дефолт комнаты — 18 м² (объект — 60 м², см. chooseCalcMode).
+const DEFAULT_AREA = pricing.defaults.roomArea;
 
 function newRoom(id: string, label: string): RoomConfig {
   return {
@@ -97,9 +98,10 @@ function newRoom(id: string, label: string): RoomConfig {
     area: DEFAULT_AREA,
     ceilingType: "standard",
     shadowEnabled: false,
-    shadowLength: DEFAULT_AREA,
+    // Периметр по умолчанию round(4·√area), а не 1:1 к площади.
+    shadowLength: defaultPerimeterMeters(DEFAULT_AREA),
     floatingEnabled: false,
-    floatingLength: DEFAULT_AREA,
+    floatingLength: defaultPerimeterMeters(DEFAULT_AREA),
     lightLinesEnabled: false,
     lightLinesLength: 2,
     corniceType: "none",
@@ -160,7 +162,16 @@ export function useCeilingCalculatorEngine(initialScenario: SolutionScenario = "
       type: "scope/choose",
       scope: mode as ReducerScope,
       // Для «всего объекта» редьюсер создаст единственную комнату сам.
-      room: mode === "object" ? { ...newRoom("object-1", "Весь объект"), area: 30, ...patch } : undefined,
+      room:
+        mode === "object"
+          ? {
+              ...newRoom("object-1", "Весь объект"),
+              area: pricing.defaults.objectArea,
+              shadowLength: defaultPerimeterMeters(pricing.defaults.objectArea),
+              floatingLength: defaultPerimeterMeters(pricing.defaults.objectArea),
+              ...patch,
+            }
+          : undefined,
     });
   }, [pendingLightingPrefill, touched]);
 

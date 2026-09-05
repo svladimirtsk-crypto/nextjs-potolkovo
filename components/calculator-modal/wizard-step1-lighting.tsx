@@ -298,7 +298,7 @@ function ImageQuickPreview({
               aria-label="Закрыть фото"
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200"
             >
-              ✕
+              <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="h-4 w-4"><path d="M5 5l10 10M15 5L5 15" /></svg>
             </button>
           </div>
           <ProductImage

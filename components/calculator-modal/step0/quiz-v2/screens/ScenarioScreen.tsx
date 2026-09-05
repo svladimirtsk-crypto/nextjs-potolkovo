@@ -8,7 +8,13 @@ const OPTIONS: Array<{id: SolutionScenario; title: string; text: string}> = [
   { id: "advanced", title: "Продвинутый", text: "SMART-свет и сценарии управления — обсудим лично." },
 ];
 
-export function ScenarioScreen({ value, onChoose }: { value: SolutionScenario; onChoose: (s: SolutionScenario) => void }) {
+export function ScenarioScreen({
+  value,
+  onChoose,
+}: {
+  value: SolutionScenario;
+  onChoose: (s: SolutionScenario) => void;
+}) {
   return (
     <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
       <h3 className="text-lg font-semibold text-slate-950">Какой вариант решения рассматриваете?</h3>
@@ -22,14 +28,27 @@ export function ScenarioScreen({ value, onChoose }: { value: SolutionScenario; o
               type="button"
               onClick={() => onChoose(opt.id)}
               aria-pressed={active}
-              className={`rounded-2xl border p-4 text-left transition ${active ? "border-slate-950 bg-slate-950 text-white" : "border-slate-200 bg-white hover:border-slate-400"}`}
+              className={`min-h-11 rounded-2xl border p-4 text-left transition ${active ? "border-slate-950 bg-slate-950 text-white" : "border-slate-200 bg-white hover:border-slate-400"}`}
             >
               <p className="text-sm font-semibold">{opt.title}</p>
-              <p className={`mt-1 text-xs ${active ? "text-white/70" : "text-slate-500"}`}>{opt.text}</p>
+              <p className={`mt-1 text-xs ${active ? "text-white/70" : "text-slate-600"}`}>{opt.text}</p>
             </button>
           );
         })}
       </div>
+
+      {/*
+        T-041: сомневающийся посетитель не должен упираться в выбор термина —
+        «стандартный» ведёт по самому короткому сценарию и ничего не ломает:
+        уточнить решение можно на замере.
+      */}
+      <button
+        type="button"
+        onClick={() => onChoose("standard")}
+        className="mt-4 min-h-11 text-sm text-slate-700 underline underline-offset-4 hover:text-slate-950"
+      >
+        Не знаю — помогите выбрать
+      </button>
     </section>
   );
 }

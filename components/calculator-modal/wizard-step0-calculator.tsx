@@ -293,9 +293,9 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
             type="button"
             onClick={() => setIntroHidden(true)}
             aria-label="Скрыть подсказку"
-            className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-black/5 hover:text-slate-700"
+            className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-lg text-slate-600 hover:bg-black/5 hover:text-slate-700"
           >
-            ✕
+            <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="h-4 w-4"><path d="M5 5l10 10M15 5L5 15" /></svg>
           </button>
           <p className="font-semibold">{isTrackSaleFlow ? "Освещение уже выбрано" : "Похожее решение загружено"}</p>
           <p className={isTrackSaleFlow ? "mt-1 text-emerald-900/80" : "mt-1 text-blue-900/80"}>

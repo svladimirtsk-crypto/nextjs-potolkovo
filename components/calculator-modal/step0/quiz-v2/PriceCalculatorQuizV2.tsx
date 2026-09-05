@@ -10,7 +10,6 @@ import { calcProgress } from "@/lib/calculator/fsm";
 import { selectBackVisible, selectFooterAction } from "@/lib/calculator/selectors";
 
 import { ScenarioScreen } from "./screens/ScenarioScreen";
-import { CalcModeScreen } from "./screens/CalcModeScreen";
 import { RoomPickerScreen } from "./screens/RoomPickerScreen";
 import { ParamScreen } from "./screens/ParamScreen";
 import { RoomEditScreen } from "./screens/RoomEditScreen";
@@ -75,8 +74,9 @@ export function PriceCalculatorQuizV2({
 
   // --- FSM ---
   // Auto-skip scenario screen when coming from service page with non-standard scenario
+  // T-041: экрана «что считаем» больше нет — режим переключается на экране площади.
   const startScreen: Step0Screen = initialSolutionScenario !== "standard"
-    ? { t: "calcMode" }
+    ? { t: "roomPicker", mode: "first" }
     : { t: "scenario" };
   const [history, setHistory] = useState<Step0Screen[]>([startScreen]);
   const screen = history[history.length - 1] ?? { t: "scenario" } as Step0Screen;
@@ -150,8 +150,9 @@ export function PriceCalculatorQuizV2({
     if (!preset) return;
     presetAppliedRef.current = true;
     engine.initFromPreset(preset);
-    // Пресет уже задал сценарий и комнату — начинаем сразу с параметров
-    setHistory([{ t: "calcMode" }]);
+    // Пресет уже задал сценарий и комнату — начинаем сразу с площади.
+    const presetRoomId = engine.activeRoomId ?? engine.rooms[0]?.id ?? "object";
+    setHistory([{ t: "param", roomId: presetRoomId, param: "area" }]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preset]);
 
@@ -193,26 +194,8 @@ export function PriceCalculatorQuizV2({
     }
 
     if (screen.t === "scenario") {
-      pushScreen({ t: "calcMode" });
-      return;
-    }
-    if (screen.t === "calcMode") {
-      if (engine.calculationScope === "room") {
-        pushScreen({ t: "roomPicker", mode: engine.roomsCount === 0 ? "first" : "add" });
-      } else if (engine.calculationScope === "object") {
-        // ensure object room exists
-        const objRoomId = engine.activeRoomId ?? engine.rooms[0]?.id;
-        if (!objRoomId) {
-          // fallback – try again next tick after engine creates room
-          setTimeout(() => {
-            const rid = engine.activeRoomId ?? engine.rooms[0]?.id;
-            if (rid) pushScreen({ t: "param", roomId: rid, param: enabledParams[0] ?? "area" });
-          }, 0);
-          return;
-        }
-        const first = enabledParams[0] ?? "area";
-        pushScreen({ t: "param", roomId: objRoomId, param: first });
-      }
+      // T-041: сразу к выбору помещения, дефолтный режим — «комната».
+      pushScreen({ t: "roomPicker", mode: engine.roomsCount === 0 ? "first" : "add" });
       return;
     }
     if (screen.t === "param") {
@@ -397,25 +380,16 @@ export function PriceCalculatorQuizV2({
           />
         </>
       )}
-      {screen.t === "calcMode" && (
-        <>
-          {initialSolutionScenario !== "standard" && (
-            <div className="mb-3 flex items-center gap-2 text-xs">
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700">
-                {initialSolutionScenario === "modern" ? "Современный" : initialSolutionScenario === "advanced" ? "Продвинутый" : "Стандартный"}
-              </span>
-              <button type="button" onClick={() => pushScreen({ t: "scenario" })} className="text-slate-500 underline-offset-2 hover:underline">
-                изменить
-              </button>
-            </div>
-          )}
-          <CalcModeScreen
-            value={engine.calculationScope}
-            onChoose={m => { engine.chooseCalcMode(m); goNext(); }}
-            onBack={initialSolutionScenario !== "standard" && history.length <= 1 ? undefined : goBack}
-          />
-        </>
-      )}
+      {screen.t === "roomPicker" && initialSolutionScenario !== "standard" && history.length <= 1 ? (
+        <div className="mb-3 flex items-center gap-2 text-xs">
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700">
+            {initialSolutionScenario === "modern" ? "Современный" : initialSolutionScenario === "advanced" ? "Продвинутый" : "Стандартный"}
+          </span>
+          <button type="button" onClick={() => pushScreen({ t: "scenario" })} className="text-slate-600 underline-offset-2 hover:underline">
+            изменить
+          </button>
+        </div>
+      ) : null}
       {screen.t === "roomPicker" && (
         <RoomPickerScreen
           rooms={engine.rooms}
@@ -431,7 +405,6 @@ export function PriceCalculatorQuizV2({
           param={screen.param}
           engine={engine}
           onConfirm={() => goNext(screen.param, screen.roomId)}
-          onBack={goBack}
         />
       )}
       {screen.t === "roomEdit" && (

@@ -48,8 +48,9 @@ function withRooms(...rooms: RoomConfig[]): CalculatorState {
 describe("T-030 - reducer: sessiya", () => {
   it("startovyy ekran zavisit ot scenariya", () => {
     expect(selectScreen(createInitialState("standard")).t).toBe("scenario");
-    // Сценарий со страницы услуги уже выбран — экран выбора пропускаем.
-    expect(selectScreen(createInitialState("modern")).t).toBe("calcMode");
+    // Сценарий со страницы услуги уже выбран — экран выбора пропускаем
+    // и сразу спрашиваем помещение (T-041: экран режима расчёта удалён).
+    expect(selectScreen(createInitialState("modern")).t).toBe("roomPicker");
   });
 
   it("session/reset ochishchaet komnaty i inkrementiruet sessionId", () => {
@@ -178,8 +179,8 @@ describe("T-030 - reducer: touched i prefill", () => {
     expect(state.presetNote).toBe("Похожее решение загружено");
     expect(state.touched).toEqual(NO_TOUCHED);
     expect(state.scenario).toBe("modern");
-    // Пресет уже ответил за сценарий — квиз стартует с выбора режима.
-    expect(selectScreen(state).t).toBe("calcMode");
+    // Пресет уже ответил за сценарий и комнату — квиз стартует с площади.
+    expect(selectScreen(state).t).toBe("param");
   });
 
   it("rooms/replace vosstanavlivaet chernovik", () => {
@@ -212,7 +213,10 @@ describe("T-030 - reducer: podtverzhdeniya i ekrany", () => {
 
   it("push/pop rabotayut kak istoriya, pervyy ekran ne teryaetsya", () => {
     let state = createInitialState();
-    state = calculatorReducer(state, { type: "screen/push", screen: { t: "calcMode" } });
+    state = calculatorReducer(state, {
+      type: "screen/push",
+      screen: { t: "roomPicker", mode: "first" },
+    });
     state = calculatorReducer(state, {
       type: "screen/push",
       screen: { t: "param", roomId: "r1", param: "area" },
@@ -220,7 +224,7 @@ describe("T-030 - reducer: podtverzhdeniya i ekrany", () => {
     expect(selectScreen(state).t).toBe("param");
 
     state = calculatorReducer(state, { type: "screen/pop" });
-    expect(selectScreen(state).t).toBe("calcMode");
+    expect(selectScreen(state).t).toBe("roomPicker");
 
     state = calculatorReducer(state, { type: "screen/pop" });
     state = calculatorReducer(state, { type: "screen/pop" });
@@ -231,7 +235,7 @@ describe("T-030 - reducer: podtverzhdeniya i ekrany", () => {
   it("screen/replace menyaet tekushchiy ekran bez rosta istorii", () => {
     let state = calculatorReducer(createInitialState(), {
       type: "screen/push",
-      screen: { t: "calcMode" },
+      screen: { t: "roomPicker", mode: "first" },
     });
     const before = state.screenHistory.length;
 

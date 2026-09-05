@@ -28,7 +28,6 @@ export const ALL_PARAMS: ParamId[] = [
 
 export type Step0Screen =
   | { t: "scenario" }
-  | { t: "calcMode" }
   | { t: "roomPicker"; mode: "first" | "add" }
   | { t: "roomEdit"; roomId: string }
   | { t: "param"; roomId: string | "object"; param: ParamId }
@@ -39,7 +38,6 @@ export type Step0History = Step0Screen[];
 export function screenKey(s: Step0Screen): string {
   switch (s.t) {
     case "scenario": return "scenario";
-    case "calcMode": return "calcMode";
     case "roomPicker": return `roomPicker:${s.mode}`;
     case "roomEdit": return `roomEdit:${s.roomId}`;
     case "param": return `param:${s.roomId}:${s.param}`;
@@ -99,16 +97,14 @@ export function getNextScreen(
 ): Step0Screen | null {
   switch (current.t) {
     case "scenario":
-      return { t: "calcMode" };
-    case "calcMode":
-      if (ctx.calcMode === "room") {
-        return ctx.roomsCount === 0
-          ? { t: "roomPicker", mode: "first" }
-          : { t: "roomPicker", mode: "add" };
+      // T-041: экран режима расчёта удалён — режим переключается на экране площади.
+      if (ctx.calcMode === "object") {
+        const firstParam = ctx.enabledParams[0] ?? "area";
+        return { t: "param", roomId: "object", param: firstParam };
       }
-      // object-scope: сразу к первому параметру
-      const firstParam = ctx.enabledParams[0] ?? "area";
-      return { t: "param", roomId: "object", param: firstParam };
+      return ctx.roomsCount === 0
+        ? { t: "roomPicker", mode: "first" }
+        : { t: "roomPicker", mode: "add" };
     case "roomPicker":
       // после выбора комнаты — всегда area
       if (ctx.activeRoomId) {
@@ -148,9 +144,8 @@ export function getBackFallback(
 ): Step0Screen | null {
   switch (current.t) {
     case "scenario": return null;
-    case "calcMode": return { t: "scenario" };
     case "roomPicker":
-      return { t: "calcMode" };
+      return { t: "scenario" };
     case "param": {
       // найти предыдущий подтверждённый параметр
       const idx = ctx.enabledParams.indexOf(current.param);
@@ -158,11 +153,11 @@ export function getBackFallback(
         const prev = ctx.enabledParams[idx - 1];
         return { t: "param", roomId: current.roomId, param: prev };
       }
-      // первый параметр → назад к roomPicker или calcMode
+      // первый параметр → назад к выбору помещения или к сценарию
       if (ctx.calcMode === "room") {
         return { t: "roomPicker", mode: ctx.roomsCount > 1 ? "add" : "first" };
       }
-      return { t: "calcMode" };
+      return { t: "scenario" };
     }
     case "roomEdit":
       return { t: "summary" };
@@ -173,7 +168,7 @@ export function getBackFallback(
         const roomId = ctx.activeRoomId ?? "object";
         return { t: "param", roomId, param: last };
       }
-      return { t: "calcMode" };
+      return { t: "scenario" };
     }
   }
 }
@@ -185,15 +180,13 @@ export function calcStep0Progress(
 ): { done: number; total: number } | null {
   const totalBase =
     1 + // scenario
-    1 + // calcMode
     ctx.enabledParams.length +
     1; // summary
 
   let done = 0;
   switch (screen.t) {
     case "scenario": done = 0; break;
-    case "calcMode": done = 1; break;
-    case "roomPicker": done = 2; break;
+    case "roomPicker": done = 1; break;
     case "param": {
       const idx = ctx.enabledParams.indexOf(screen.param);
       done = 2 + Math.max(0, idx);

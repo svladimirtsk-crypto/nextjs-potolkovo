@@ -83,3 +83,17 @@ describe("T-021 - presety stranic uslug", () => {
     expect(resolvePresetScenario(null)).toBe("standard");
   });
 });
+
+describe("T-041 - defolty ploshchadi i perimetra", () => {
+  it("perimetr = round(4*sqrt(area)), a ne 1:1 k ploshchadi", () => {
+    // Ключевая правка T-041: профиль больше не считается равным площади.
+    expect(defaultPerimeterMeters(18)).toBe(17);
+    expect(defaultPerimeterMeters(60)).toBe(31);
+    expect(defaultPerimeterMeters(100)).toBe(40);
+  });
+
+  it("perimetr ne padaet nizhe 1 na vyrozhdennoy ploshchadi", () => {
+    expect(defaultPerimeterMeters(0)).toBeGreaterThanOrEqual(1);
+    expect(defaultPerimeterMeters(Number.NaN)).toBeGreaterThanOrEqual(1);
+  });
+});
