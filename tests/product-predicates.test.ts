@@ -6,8 +6,10 @@ import {
   isMountsOrGrilles,
   isPanelProduct,
   isSmartProduct,
+  kindBadgeLabel,
   matchesPointSubtype,
   normalizeQty,
+  systemBadgeLabel,
 } from "../lib/lighting/product-predicates";
 import type { FeedCatalogProduct } from "../lib/eks-feed2-catalog";
 
@@ -88,5 +90,35 @@ describe("N-051 · предикаты каталога", () => {
     expect(normalizeQty(3.4, "pcs")).toBe(3);
     expect(normalizeQty(-5, "pcs")).toBe(0);
     expect(normalizeQty(Number.NaN, "pcs")).toBe(0);
+  });
+});
+
+describe("N-051 · бейджи карточки", () => {
+  const products = (snapshot as { products?: unknown[] }).products as FeedCatalogProduct[];
+
+  it("каждому товару с известной системой присвоен бейдж системы", () => {
+    const known = products.filter((p) =>
+      ["COLIBRI_220", "CLARUS_48", "TRACK_220"].includes(String(p.system))
+    );
+    expect(known.length).toBeGreaterThan(0);
+    for (const p of known) {
+      expect(systemBadgeLabel(p)).toBeTruthy();
+    }
+  });
+
+  it("панель получает бейдж «Точечный», даже если kind не SPOT_FIXTURE", () => {
+    const panels = products.filter((p) => isPanelProduct(p));
+    expect(panels.length).toBeGreaterThan(0);
+    for (const p of panels) {
+      expect(kindBadgeLabel(p)).toBe("Точечный");
+    }
+  });
+
+  it("лампы и профили не путаются между собой", () => {
+    for (const p of products) {
+      const label = kindBadgeLabel(p);
+      if (p.kind === "LAMP") expect(label).toBe("Лампа");
+      if (p.kind === "TRACK_PROFILE") expect(label).toBe("Профиль");
+    }
   });
 });

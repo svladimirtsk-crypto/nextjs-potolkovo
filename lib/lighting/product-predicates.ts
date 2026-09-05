@@ -83,3 +83,27 @@ export function normalizeQty(rawQty: number, unit: "pcs" | "m"): number {
   const normalized = Math.round(rawQty / step) * step;
   return Math.max(0, Number.isFinite(normalized) ? normalized : 0);
 }
+
+/**
+ * N-051 · Подписи бейджей карточки товара.
+ *
+ * Карточка в модалке и карточка на странице каталога рисуются по-разному
+ * (вертикальная плитка против горизонтальной строки), но набор бейджей у них
+ * обязан совпадать: покупатель видит один и тот же товар в двух местах.
+ * Раньше обе цепочки условий были скопированы дословно, и любое новое
+ * значение `system`/`kind` пришлось бы добавлять дважды.
+ */
+export function systemBadgeLabel(product: FeedCatalogProduct): string | null {
+  if (product.system === "COLIBRI_220") return "COLIBRI";
+  if (product.system === "CLARUS_48") return "CLARUS";
+  if (product.system === "TRACK_220") return "ART";
+  return null;
+}
+
+export function kindBadgeLabel(product: FeedCatalogProduct): string | null {
+  if (product.kind === "TRACK_PROFILE") return "Профиль";
+  if (product.kind === "TRACK_FIXTURE") return "Трековый свет";
+  if (product.kind === "SPOT_FIXTURE" || isPanelProduct(product)) return "Точечный";
+  if (product.kind === "LAMP") return "Лампа";
+  return null;
+}

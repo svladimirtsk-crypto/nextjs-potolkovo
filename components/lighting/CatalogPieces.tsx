@@ -5,7 +5,7 @@ import { useState, type ReactNode } from "react";
 import { ProductImage } from "@/components/feed2/ProductImage";
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import { computeBenefit, getDiscountedPrice } from "@/lib/feed2-products";
-import { isPanelProduct, isSmartProduct } from "@/lib/lighting/product-predicates";
+import { isSmartProduct, kindBadgeLabel, systemBadgeLabel } from "@/lib/lighting/product-predicates";
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
 
 /**
@@ -54,22 +54,8 @@ export function ProductCard({
   const regular = toNumber(product.priceRub);
   const discounted = getDiscountedPrice(regular, discountPercent);
   const benefit = computeBenefit(regular, discounted);
-  const systemBadge = product.system === "COLIBRI_220"
-    ? "COLIBRI"
-    : product.system === "CLARUS_48"
-      ? "CLARUS"
-      : product.system === "TRACK_220"
-        ? "ART"
-        : null;
-  const kindBadge = product.kind === "TRACK_PROFILE"
-    ? "Профиль"
-    : product.kind === "TRACK_FIXTURE"
-      ? "Трековый свет"
-      : product.kind === "SPOT_FIXTURE" || isPanelProduct(product)
-        ? "Точечный"
-        : product.kind === "LAMP"
-          ? "Лампа"
-          : null;
+  const systemBadge = systemBadgeLabel(product);
+  const kindBadge = kindBadgeLabel(product);
   const [showDetails, setShowDetails] = useState(false);
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white max-sm:grid max-sm:grid-cols-[5.75rem_1fr] max-sm:gap-2.5 max-sm:p-2.5">

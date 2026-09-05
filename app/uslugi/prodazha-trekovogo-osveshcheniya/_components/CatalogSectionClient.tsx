@@ -11,8 +11,10 @@ import {
   isMountsOrGrilles,
   isPanelProduct,
   isSmartProduct,
+  kindBadgeLabel,
   matchesPointSubtype,
   normalizeQty,
+  systemBadgeLabel,
 } from "@/lib/lighting/product-predicates";
 import catalogImages from "@/data/catalog-images.json";
 import { ProductImageLightbox } from "@/components/feed2/ProductImageLightbox";
@@ -187,22 +189,8 @@ function ProductCard({
   const regular = toNumber(product.priceRub);
   const lightingOnly = getDiscountedPrice(regular, LIGHTING_ONLY_DISCOUNT_PERCENT);
   const lightingOnlyBenefit = benefitRub(regular, LIGHTING_ONLY_DISCOUNT_PERCENT);
-  const systemBadge = product.system === "COLIBRI_220"
-    ? "COLIBRI"
-    : product.system === "CLARUS_48"
-      ? "CLARUS"
-      : product.system === "TRACK_220"
-        ? "ART"
-        : null;
-  const kindBadge = product.kind === "TRACK_PROFILE"
-    ? "Профиль"
-    : product.kind === "TRACK_FIXTURE"
-      ? "Трековый свет"
-      : product.kind === "SPOT_FIXTURE" || isPanelProduct(product)
-        ? "Точечный"
-        : product.kind === "LAMP"
-          ? "Лампа"
-          : null;
+  const systemBadge = systemBadgeLabel(product);
+  const kindBadge = kindBadgeLabel(product);
 
   const allAttrs = (product.keyAttributes?.length ? product.keyAttributes : product.params)
     .slice(0, 4)
