@@ -8,6 +8,7 @@
  * Drawer работает с той же общей корзиной (`useLightingCart`), поэтому
  * правки здесь мгновенно видны и в модалке.
  */
+import { pricing } from "@/content/pricing";
 import { useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 
@@ -149,7 +150,7 @@ export function LightingCartDrawer({
               Без скидки: <span className="line-through text-slate-400">{fmt(totalRub)} ₽</span>
             </p>
             <p className="text-emerald-700">
-              Только свет −10%: <span className="font-semibold">{fmt(discountedTotalRub)} ₽</span>
+              Только свет −{pricing.lightingDiscount.lightingOnlyPct}%: <span className="font-semibold">{fmt(discountedTotalRub)} ₽</span>
             </p>
             <p className="text-blue-700">
               С потолком −25%: <span className="font-semibold">{fmt(withCeilingTotalRub)} ₽</span> · выгода ещё{" "}

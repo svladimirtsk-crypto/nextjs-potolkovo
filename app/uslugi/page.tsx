@@ -1,3 +1,4 @@
+import { servicePriceAnchor } from "@/content/pricing";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -130,7 +131,7 @@ export default function UslugiHubPage() {
                       </h2>
 
                       <p className="mt-2 text-sm font-semibold text-slate-950">
-                        {service.price.fromLabel}
+                        {servicePriceAnchor(service.slug).label}
                       </p>
 
                       <p className="mt-3 flex-1 text-sm leading-6 text-slate-600">

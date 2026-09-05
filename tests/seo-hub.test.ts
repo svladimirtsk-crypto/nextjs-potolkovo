@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { phase2Services, servicePageContent } from "../content/services";
 import { buildServiceSchema } from "../lib/seo-schema";
+import { servicePriceAnchor } from "../content/pricing";
 
 describe("T-063 · SEO услуг", () => {
   it("у каждой услуги есть валидная updatedAt", () => {
@@ -10,15 +11,16 @@ describe("T-063 · SEO услуг", () => {
     }
   });
 
-  it("offerFrom согласован с текстовым fromLabel", () => {
+  // N-002: priceBadge/fromLabel/offerFrom удалены из content/services.ts —
+  // единственный источник цены теперь servicePriceAnchor(slug).
+  it("якорь цены согласован сам с собой: число в подписи = value", () => {
     for (const service of phase2Services) {
-      const { offerFrom, fromLabel } = service.price;
-      if (offerFrom === null) {
-        // «по расчёту»/«по запросу» — цифры в подписи быть не должно
-        expect(/\d/.test(fromLabel), service.slug).toBe(false);
+      const anchor = servicePriceAnchor(service.slug);
+      if (anchor.value === null) {
+        expect(/\d/.test(anchor.label), service.slug).toBe(false);
       } else {
-        const digits = fromLabel.replace(/[^\d]/g, "");
-        expect(digits, service.slug).toBe(String(offerFrom.minPrice));
+        const digits = anchor.label.replace(/[^\d]/g, "");
+        expect(digits, service.slug).toBe(String(anchor.value));
       }
     }
   });

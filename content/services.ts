@@ -102,7 +102,6 @@ export type ServicePageContent = {
     h1: string;
     subtitle: string;
     supportingText: string;
-    priceBadge: string;
     primaryCtaLabel: string;
     secondaryPhoneCtaLabel: string;
     secondaryTelegramCtaLabel: string;
@@ -139,12 +138,6 @@ export type ServicePageContent = {
   price: {
     sectionTitle: string;
     sectionIntro: string;
-    fromLabel: string;
-    /**
-     * T-063: та же цена, что в `fromLabel`, но числом — для schema.org Offer.
-     * `null` там, где цена только по расчёту: выдумывать minPrice нельзя.
-     */
-    offerFrom: { minPrice: number; unitText: string } | null;
     note: string;
     calculatorPreset: ServiceCalculatorPreset;
   };
@@ -201,12 +194,11 @@ export const servicePageContent: Record<
     hero: {
       breadcrumbLabel: "Теневой профиль",
       badge: "Услуга",
-      h1: "Теневой профиль для натяжных потолков в Москве и МО",
+      h1: "Теневой потолок без плинтуса: профиль и монтаж",
       subtitle:
         "Чёткая линия примыкания без плинтуса и декоративных вставок. Решение для современных интерьеров, где важны аккуратный узел, чистые стены и визуально дорогой результат.",
       supportingText:
         "Бесплатно приеду на замер, посмотрю стены и примыкания, предложу рабочее решение и заранее зафиксирую смету.",
-      priceBadge: "от 950 ₽ / м.п.",
       primaryCtaLabel: "Записаться на замер",
       secondaryPhoneCtaLabel: "Позвонить",
       secondaryTelegramCtaLabel: "Написать в Telegram",
@@ -344,8 +336,6 @@ export const servicePageContent: Record<
       sectionTitle: "Ориентир по цене на теневой профиль",
       sectionIntro:
         "Ниже можно сразу прикинуть стоимость. Калькулятор уже открыт в режиме теневого потолка, но вы можете изменить параметры под свой объект.",
-      fromLabel: "от 950 ₽ / м.п.",
-      offerFrom: { minPrice: 950, unitText: "м.п." },
       note: "Точная смета зависит от геометрии помещения, длины профиля, освещения и сопутствующих работ.",
       calculatorPreset: {
         ceilingType: "shadow",
@@ -453,12 +443,11 @@ export const servicePageContent: Record<
     hero: {
       breadcrumbLabel: "Световые линии",
       badge: "Услуга",
-      h1: "Световые линии в натяжном потолке в Москве и МО",
+      h1: "Световые линии в натяжном потолке",
       subtitle:
         "Геометричный встроенный свет вместо стандартных светильников. Световые линии помогают сделать потолок современнее, добавить ритм в интерьер и получить более цельный сценарий освещения.",
       supportingText:
         "На замере смотрю план помещения, сценарии света и компоновку, чтобы линии были не просто декоративными, а реально работали по освещению.",
-      priceBadge: "от 3 500 ₽ / линия",
       primaryCtaLabel: "Записаться на замер",
       secondaryPhoneCtaLabel: "Позвонить",
       secondaryTelegramCtaLabel: "Написать в Telegram",
@@ -596,8 +585,6 @@ export const servicePageContent: Record<
       sectionTitle: "Ориентир по цене на световые линии",
       sectionIntro:
         "Базовый калькулятор ниже помогает оценить потолок, треки, светильники и дополнительные элементы. Для световых линий точный расчёт лучше делать после замера и схемы расположения.",
-      fromLabel: "от 3 500 ₽ / метр",
-      offerFrom: { minPrice: 3500, unitText: "м.п." },
       note: "Световые линии зависят от длины, количества, мощности, расположения и общего сценария освещения. Поэтому калькулятор здесь работает как ориентир по объекту в целом, а точную смету фиксируем после замера.",
       calculatorPreset: {
         ceilingType: "standard",
@@ -713,7 +700,6 @@ export const servicePageContent: Record<
         "Магнитные и шинные треки, встроенные в потолок. Направленный свет, который можно настраивать и менять под мебель, зоны и сценарии.",
       supportingText:
         "На замере подскажу конфигурацию, рассчитаю освещённость и заранее зафиксирую понятную смету.",
-      priceBadge: "от 2 500 ₽ / м.п.",
       primaryCtaLabel: "Записаться на замер",
       secondaryPhoneCtaLabel: "Позвонить",
       secondaryTelegramCtaLabel: "Написать в Telegram",
@@ -836,8 +822,6 @@ export const servicePageContent: Record<
       sectionTitle: "Цена трекового освещения — ориентир до замера",
       sectionIntro:
         "Ориентир помогает сравнить решения. Итог зависит от длины трека, типа системы, количества светильников и питания.",
-      fromLabel: "от 2 500 ₽ / м.п.",
-      offerFrom: { minPrice: 2500, unitText: "м.п." },
       note: "Точную смету фиксируем после замера: учитываем помещение, схему света и комплектующие.",
       calculatorPreset: {
         ceilingType: "standard",
@@ -945,12 +929,11 @@ export const servicePageContent: Record<
     hero: {
       breadcrumbLabel: "Скрытые карнизы",
       badge: "Услуга",
-      h1: "Скрытые карнизы в натяжном потолке в Москве и МО",
+      h1: "Скрытый карниз для штор в натяжном потолке",
       subtitle:
         "Карниз спрятан в нишу, а шторы идут прямо от потолка — чистый современный вид без накладок и коробов.",
       supportingText:
         "На замере подскажу тип ниши и узел под вашу стену/окна и заранее зафиксирую смету.",
-      priceBadge: "от 2 000 ₽ / м.п.",
       primaryCtaLabel: "Записаться на замер",
       secondaryPhoneCtaLabel: "Позвонить",
       secondaryTelegramCtaLabel: "Написать в Telegram",
@@ -1028,7 +1011,7 @@ export const servicePageContent: Record<
     faq: [
       {
         q: "Сколько стоит скрытый карниз за метр и что входит",
-        a: "Ниша под скрытый карниз — от 2 000 ₽ за погонный метр. В цену входит формирование ниши и монтаж; сам карниз и подсветка считаются отдельно. Итог фиксирую в смете.",
+        a: "Скрытый карниз — от 1 000 ₽ за погонный метр (накладной). Ниша под карниз — от 1 800 ₽, встроенный вариант — от 4 500 ₽ за погонный метр. В цену входит формирование узла и монтаж; подсветка считается отдельно. Итог фиксирую в смете.",
       },
       {
         q: "Подойдёт ли скрытая ниша к моим стенам и высоте",
@@ -1077,8 +1060,6 @@ export const servicePageContent: Record<
       sectionTitle: "Цена скрытого карниза — ориентир до замера",
       sectionIntro:
         "Стоимость зависит от длины ниши, типа решения и нюансов примыкания/стен.",
-      fromLabel: "от 2 000 ₽ / м.п.",
-      offerFrom: { minPrice: 2000, unitText: "м.п." },
       note: "Точную смету фиксируем после замера — чтобы ниша была ровной и без компромиссов по узлу.",
       calculatorPreset: {
         ceilingType: "standard",
@@ -1180,12 +1161,11 @@ export const servicePageContent: Record<
     hero: {
       breadcrumbLabel: "Простые потолки",
       badge: "Услуга",
-      h1: "Простые натяжные потолки для квартиры в Москве и МО",
+      h1: "Простые натяжные потолки для квартиры",
       subtitle:
         "Классический белый матовый или сатиновый потолок: ровно, быстро и без лишних деталей.",
       supportingText:
         "Хороший вариант для ремонта квартиры, когда важны аккуратность, сроки и понятная стоимость.",
-      priceBadge: "от 1 000 ₽ / м²",
       primaryCtaLabel: "Записаться на замер",
       secondaryPhoneCtaLabel: "Позвонить",
       secondaryTelegramCtaLabel: "Написать в Telegram",
@@ -1300,8 +1280,6 @@ export const servicePageContent: Record<
       sectionTitle: "Цена простого потолка — ориентир до замера",
       sectionIntro:
         "Ориентир зависит от площади и нюансов помещения. Точную смету фиксируем после замера.",
-      fromLabel: "от 1 000 ₽ / м²",
-      offerFrom: { minPrice: 1000, unitText: "м²" },
       note: "После замера фиксируем стоимость и дату монтажа — без сюрпризов.",
       calculatorPreset: {
         ceilingType: "standard",
@@ -1381,12 +1359,11 @@ export const servicePageContent: Record<
     hero: {
       breadcrumbLabel: "Парящие потолки",
       badge: "Услуга",
-      h1: "Парящие натяжные потолки с подсветкой в Москве и МО",
+      h1: "Парящие натяжные потолки с подсветкой по контуру",
       subtitle:
         "Эффект лёгкого отрыва потолка от стен и мягкий контурный свет по периметру. Решение для интерьеров, где хочется добавить объём, атмосферу и современный характер.",
       supportingText:
         "Помогу понять, где парящий потолок действительно будет смотреться выигрышно, а где лучше предложить более рациональный вариант.",
-      priceBadge: "от 2 500 ₽ / м.п.",
       primaryCtaLabel: "Записаться на замер",
       secondaryPhoneCtaLabel: "Позвонить",
       secondaryTelegramCtaLabel: "Написать в Telegram",
@@ -1525,8 +1502,6 @@ export const servicePageContent: Record<
       sectionTitle: "Ориентир по цене на парящий потолок",
       sectionIntro:
         "Калькулятор ниже уже стартует в режиме парящего потолка. Можно быстро прикинуть бюджет и затем зафиксировать точную смету после замера.",
-      fromLabel: "от 2 500 ₽ / м.п.",
-      offerFrom: { minPrice: 2500, unitText: "м.п." },
       note: "Точная стоимость зависит от длины парящего профиля, площади, конфигурации помещения и выбранного сценария света.",
       calculatorPreset: {
         ceilingType: "floating",
@@ -1638,7 +1613,6 @@ export const servicePageContent: Record<
     subtitle: "нестандартные формы и конструкции",
     supportingText:
       "Купола, многоуровневые решения, нестандартная геометрия. Если можно натянуть — сделаю. На замере оценю задачу и предложу рабочее решение с понятной сметой.",
-    priceBadge: "по расчёту",
     primaryCtaLabel: "Записаться на замер",
     secondaryPhoneCtaLabel: "Позвонить",
     secondaryTelegramCtaLabel: "Написать в Telegram",
@@ -1741,8 +1715,6 @@ export const servicePageContent: Record<
     sectionTitle: "Ориентир по стоимости",
     sectionIntro:
       "Индивидуальные проекты считаются после замера и понимания узлов. Калькулятор ниже помогает прикинуть базовый бюджет, но точная смета — после выезда.",
-    fromLabel: "по расчёту",
-    offerFrom: null,
     note:
       "Для нестандартных задач итог зависит от конструкции, узлов, света и инженерии — фиксируем смету после замера.",
     calculatorPreset: {
@@ -1822,7 +1794,6 @@ export const servicePageContent: Record<
       "Соберу совместимый комплект: профиль, светильники, питание, лампы. −10 % на свет, −25 % при заказе потолка.",
     supportingText:
       "Проверю совместимость системы, питание, блоки CLARUS, лампы и закладные. Можно оформить только оборудование или сразу связать свет с монтажом потолка.",
-    priceBadge: "по расчёту комплекта",
     primaryCtaLabel: "Собрать комплект",
     secondaryPhoneCtaLabel: "Позвонить",
     secondaryTelegramCtaLabel: "Написать в Telegram",
@@ -1923,8 +1894,6 @@ export const servicePageContent: Record<
     sectionTitle: "Стоимость подбора и комплекта",
     sectionIntro:
       "Стоимость зависит от типа системы и количества светильников. Калькулятор ниже — для ориентира по потолку/работам, а комплект света считаем по запросу.",
-    fromLabel: "по запросу",
-    offerFrom: null,
     note:
       "Комплектацию треков (профиль/светильники/питание) считаем отдельно — после понимания сценария света и помещения.",
     calculatorPreset: {
@@ -2004,7 +1973,6 @@ export const servicePageContent: Record<
     subtitle: "равномерный свет по всей площади",
     supportingText:
       "Полупрозрачное полотно с LED-подсветкой за ним — потолок светится равномерно, без видимых светильников и точек. На замере подскажу мощность и управление (диммер).",
-    priceBadge: "от 4 000 ₽ / м²",
     primaryCtaLabel: "Записаться на замер",
     secondaryPhoneCtaLabel: "Позвонить",
     secondaryTelegramCtaLabel: "Написать в Telegram",
@@ -2105,8 +2073,6 @@ export const servicePageContent: Record<
     sectionTitle: "Цена светопрозрачного потолка — ориентир до замера",
     sectionIntro:
       "Итог зависит от площади, мощности подсветки и управления. Калькулятор ниже — ориентир по базовой части; светопрозрачное решение уточняем на замере.",
-    fromLabel: "от 4 000 ₽ / м²",
-    offerFrom: { minPrice: 4000, unitText: "м²" },
     note:
       "Точную смету фиксируем после замера: учитываем задачу по свету, мощность, управление и узлы.",
     calculatorPreset: {

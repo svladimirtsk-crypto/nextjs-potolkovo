@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useCalculatorModal } from "./calculator-modal-context";
+import { pricing } from "@/content/pricing";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("ru-RU").format(Math.round(n));
@@ -71,7 +72,12 @@ export function PriceStrip() {
     );
   }
 
-  const lightingPercent = lightingDiscountMode === "with-ceiling" ? 25 : lightingDiscountMode === "lighting-only" ? 10 : 0;
+  const lightingPercent =
+    lightingDiscountMode === "with-ceiling"
+      ? pricing.lightingDiscount.withCeilingPct
+      : lightingDiscountMode === "lighting-only"
+        ? pricing.lightingDiscount.lightingOnlyPct
+        : 0;
   const lightingDiscounted = lightingDiscountMode === "with-ceiling"
     ? lightingWithCeilingTotal
     : lightingDiscountMode === "lighting-only"
@@ -88,14 +94,14 @@ export function PriceStrip() {
     hasLighting && lightingDiscountMode !== "with-ceiling" && lightingWithCeilingTotal > 0 ? (
       <span className="text-slate-500">
         {" "}· с потолком{" "}
-        <DiscountPrice regular={lightingRegularTotal} discounted={lightingWithCeilingTotal} percent={25} />
+        <DiscountPrice regular={lightingRegularTotal} discounted={lightingWithCeilingTotal} percent={pricing.lightingDiscount.withCeilingPct} />
       </span>
     ) : null;
 
   const mobileSubtitle = (() => {
     if (!showCeilingPrice && hasLighting) {
       if (currentStep === 0) return `Свет сохранён: ${fmt(lightingEffectiveTotal)} ₽ · потолок уточняем`;
-      if (lightingDiscountMode === "lighting-only") return `Свет −10%: ${fmt(lightingEffectiveTotal)} ₽`;
+      if (lightingDiscountMode === "lighting-only") return `Свет −${pricing.lightingDiscount.lightingOnlyPct}%: ${fmt(lightingEffectiveTotal)} ₽`;
       return `Свет: ${fmt(lightingEffectiveTotal)} ₽`;
     }
 

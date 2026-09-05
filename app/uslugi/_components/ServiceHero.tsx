@@ -1,3 +1,4 @@
+import { servicePriceAnchor } from "@/content/pricing";
 import { Picture } from "@/components/ui/picture";
 import Link from "next/link";
 import type { ServicePageContent } from "@/content/services";
@@ -13,6 +14,8 @@ type ServiceHeroProps = {
 };
 
 export function ServiceHero({ service, priceBadgeOverride }: ServiceHeroProps) {
+  // N-002: цена берётся из прайса, а не из строкового литерала в services.ts.
+  const priceAnchor = servicePriceAnchor(service.slug);
   const isTrackSalePage = service.slug === "prodazha-trekovogo-osveshcheniya";
   const primaryHref = isTrackSalePage ? "#price" : "#action";
 
@@ -57,8 +60,11 @@ export function ServiceHero({ service, priceBadgeOverride }: ServiceHeroProps) {
               Остаётся ценовой якорь — крупно, как главный факт экрана.
             */}
             <p className="mt-6 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-              {priceBadgeOverride ?? service.hero.priceBadge}
+              {priceBadgeOverride ?? priceAnchor.label}
             </p>
+            {!priceBadgeOverride && priceAnchor.note ? (
+              <p className="mt-2 text-sm text-slate-600">{priceAnchor.note}</p>
+            ) : null}
 
             {/* T-045: вместо двух крупных «штампов» — одна спокойная строка про скидки. */}
             {isTrackSalePage ? (

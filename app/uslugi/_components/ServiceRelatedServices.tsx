@@ -1,3 +1,4 @@
+import { servicePriceAnchor } from "@/content/pricing";
 import Link from "next/link";
 import type { ServicePageContent } from "@/content/services";
 import { getRelatedServiceLinks, servicePageContent } from "@/content/services";
@@ -53,7 +54,7 @@ export function ServiceRelatedServices({
                 </p>
                 {/* T-046: ценовой якорь и живое описание вместо общей заглушки */}
                 <p className="mt-1 text-sm font-semibold text-slate-700">
-                  {servicePageContent[item.slug].price.fromLabel}
+                  {servicePriceAnchor(item.slug).label}
                 </p>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
                   {item.shortDescription}

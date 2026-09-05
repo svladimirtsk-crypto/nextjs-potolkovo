@@ -1,5 +1,6 @@
 "use client";
 
+import { pricing } from "@/content/pricing";
 import {
   createContext,
   useContext,
@@ -363,7 +364,11 @@ export function getLightingSummaryLines(
   const discountPercent =
     snapshot?.lightingDiscountPercentApplied ??
     lighting.discountPercentApplied ??
-    (discountMode === "with-ceiling" ? 25 : discountMode === "lighting-only" ? 10 : 0);
+    (discountMode === "with-ceiling"
+      ? pricing.lightingDiscount.withCeilingPct
+      : discountMode === "lighting-only"
+        ? pricing.lightingDiscount.lightingOnlyPct
+        : 0);
 
   const total = toNumber(lighting.totalRub);
   const discounted = lighting.discountedTotalRub != null ? toNumber(lighting.discountedTotalRub) : total;

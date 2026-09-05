@@ -1,3 +1,4 @@
+import { servicePriceAnchor } from "@/content/pricing";
 import { contacts } from "@/content/contacts";
 import { homepage } from "@/content/homepage";
 import type { ServicePageContent } from "@/content/services";
@@ -76,7 +77,8 @@ export function buildHomeServiceSchema() {
 }
 
 export function buildServiceSchema(service: ServicePageContent) {
-  const offer = service.price.offerFrom;
+  // N-002: Offer.price из того же якоря, что и видимая цена на странице.
+  const anchor = servicePriceAnchor(service.slug);
 
   return {
     "@context": "https://schema.org",
@@ -94,7 +96,7 @@ export function buildServiceSchema(service: ServicePageContent) {
      * поисковик в сниппете. Услуги без фиксированной ставки («по расчёту»)
      * идут без Offer: выдуманный minPrice — прямой путь к санкциям.
      */
-    ...(offer
+    ...(anchor.value !== null
       ? {
           offers: {
             "@type": "Offer",
@@ -104,8 +106,8 @@ export function buildServiceSchema(service: ServicePageContent) {
             priceSpecification: {
               "@type": "UnitPriceSpecification",
               priceCurrency: "RUB",
-              minPrice: offer.minPrice,
-              unitText: offer.unitText,
+              minPrice: anchor.value,
+              unitText: anchor.unit ?? undefined,
             },
           },
         }

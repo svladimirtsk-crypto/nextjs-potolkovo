@@ -12,6 +12,8 @@ export const pricing = {
     floatingBase: 800,
     shadowProfilePerM: 950,
     floatingProfilePerM: 2500,
+    /** N-002: якорь светопрозрачных потолков (раньше был литералом в services.ts). */
+    translucentPerSqm: 4000,
   },
   cornice: {
     builtIn: 4500,
@@ -75,3 +77,81 @@ export function lightingDiscountPercent(mode: "with-ceiling" | "lighting-only" |
 
 export const MINIMUM_ORDER_COPY =
   "Минимальный заказ — 18 000 ₽: в него входит выезд, замер и монтаж до 18 м².";
+
+/**
+ * N-002 · Ценовой якорь страницы услуги — единственный источник «от N ₽».
+ *
+ * До этого hero и секция цены хранили строковые литералы в `content/services.ts`
+ * и разошлись с прайсом: у скрытых карнизов стояло «от 2 000 ₽/м.п.» при
+ * фактических 1 000/1 800/4 500, а у световых линий — «/ линия» в hero и
+ * «/ метр» в блоке цены. Теперь обе строки считаются отсюда.
+ */
+export type ServicePriceUnit = "м²" | "м.п." | "линия";
+
+export type ServicePriceAnchor = {
+  /** null — цена не выводится числом («по проекту», «по расчёту комплекта»). */
+  value: number | null;
+  unit: ServicePriceUnit | null;
+  /** Готовая строка для UI и JSON-LD. */
+  label: string;
+  /** Уточнение под якорем, если у услуги несколько вариантов исполнения. */
+  note?: string;
+};
+
+const SERVICE_PRICE_ANCHORS: Record<string, ServicePriceAnchor> = {
+  "tenevoy-profil": {
+    value: pricing.ceiling.shadowProfilePerM,
+    unit: "м.п.",
+    label: formatFrom(pricing.ceiling.shadowProfilePerM, "м.п."),
+  },
+  "paryashchie-potolki": {
+    value: pricing.ceiling.floatingProfilePerM,
+    unit: "м.п.",
+    label: formatFrom(pricing.ceiling.floatingProfilePerM, "м.п."),
+  },
+  "svetovye-linii": {
+    value: pricing.lightLinesPerM,
+    unit: "м.п.",
+    label: formatFrom(pricing.lightLinesPerM, "м.п."),
+  },
+  "trekovoe-osveshchenie": {
+    value: pricing.track.builtInPerM,
+    unit: "м.п.",
+    label: formatFrom(pricing.track.builtInPerM, "м.п."),
+    note: `накладной трек — ${formatFrom(pricing.track.surfacePerM, "м.п.")}`,
+  },
+  "skrytye-karnizy": {
+    value: pricing.cornice.surface,
+    unit: "м.п.",
+    label: formatFrom(pricing.cornice.surface, "м.п."),
+    note: `ниша — ${formatFrom(pricing.cornice.hiddenNiche, "м.п.")}, встроенный — ${formatFrom(
+      pricing.cornice.builtIn,
+      "м.п."
+    )}`,
+  },
+  "prostye-potolki": {
+    value: pricing.ceiling.standard,
+    unit: "м²",
+    label: formatFrom(pricing.ceiling.standard, "м²"),
+  },
+  "svetoprozrachnye-potolki": {
+    value: pricing.ceiling.translucentPerSqm,
+    unit: "м²",
+    label: formatFrom(pricing.ceiling.translucentPerSqm, "м²"),
+  },
+  "individualnye-proekty": {
+    value: null,
+    unit: null,
+    label: "по проекту",
+  },
+  // Цена собирается из комплектов (T-014), единого якоря нет.
+  "prodazha-trekovogo-osveshcheniya": {
+    value: null,
+    unit: null,
+    label: "по расчёту комплекта",
+  },
+};
+
+export function servicePriceAnchor(slug: string): ServicePriceAnchor {
+  return SERVICE_PRICE_ANCHORS[slug] ?? { value: null, unit: null, label: "по расчёту" };
+}
