@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { contacts } from "@/content/contacts";
@@ -68,6 +69,13 @@ export function HomeHeader() {
     };
   }, []);
 
+  const pathname = usePathname();
+  /**
+   * T-046: на страницах услуг секции `#trust` и `#proof` — про саму услугу,
+   * а пункт «О мастере» должен вести на блок о мастере на главной. Поэтому
+   * вне главной эти пункты становятся обычными ссылками на `/#…`.
+   */
+  const isHomePage = pathname === "/";
   const navItems = useMemo(() => homepage.header.navItems, []);
 
   return (
@@ -127,19 +135,25 @@ export function HomeHeader() {
             ) : null}
           </div>
 
-          {navItems.map((item) => (
-            <a
-              key={item.targetId}
-              href={`#${item.targetId}`}
-              className="text-sm font-medium text-slate-700 transition-colors hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
-              onClick={(event) => {
-                event.preventDefault();
-                scrollToAnchorTarget(`#${item.targetId}`);
-              }}
-            >
-              {item.label}
-            </a>
-          ))}
+          {navItems.map((item) => {
+            const homeOnly = item.targetId === "trust" || item.targetId === "proof";
+            const useHomeLink = !isHomePage && homeOnly;
+
+            return (
+              <a
+                key={item.targetId}
+                href={useHomeLink ? `/#${item.targetId}` : `#${item.targetId}`}
+                className="text-sm font-medium text-slate-700 transition-colors hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                onClick={(event) => {
+                  if (useHomeLink) return;
+                  event.preventDefault();
+                  scrollToAnchorTarget(`#${item.targetId}`);
+                }}
+              >
+                {item.label}
+              </a>
+            );
+          })}
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">

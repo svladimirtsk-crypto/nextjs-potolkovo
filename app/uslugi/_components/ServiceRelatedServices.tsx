@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ServicePageContent } from "@/content/services";
-import { getRelatedServiceLinks } from "@/content/services";
+import { getRelatedServiceLinks, servicePageContent } from "@/content/services";
 import { Container } from "@/components/ui/container";
 
 type ServiceRelatedServicesProps = {
@@ -51,9 +51,12 @@ export function ServiceRelatedServices({
                 <p className="text-lg font-semibold text-slate-950">
                   {item.label}
                 </p>
+                {/* T-046: ценовой якорь и живое описание вместо общей заглушки */}
+                <p className="mt-1 text-sm font-semibold text-slate-700">
+                  {servicePageContent[item.slug].price.fromLabel}
+                </p>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Перейти на страницу услуги и посмотреть детали, примеры работ и
-                  ориентир по цене.
+                  {item.shortDescription}
                 </p>
                 <span className="mt-4 inline-flex text-sm font-semibold text-slate-950 transition-transform group-hover:translate-x-1">
                   Открыть →

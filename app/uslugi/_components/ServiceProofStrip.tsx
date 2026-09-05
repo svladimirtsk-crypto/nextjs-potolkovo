@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { ServicePageContent } from "@/content/services";
 import { Container } from "@/components/ui/container";
 
@@ -6,7 +7,17 @@ type ServiceProofStripProps = {
   service: ServicePageContent;
 };
 
+/**
+ * T-046: страницы, где все «примеры» — одно и то же фото.
+ * Показывать его трижды нечестно и выглядит как заглушка, поэтому для таких
+ * услуг оставляем один снимок и честно говорим, что примеры покажем на замере.
+ */
+const SINGLE_PHOTO_SLUGS = new Set(["individualnye-proekty", "svetoprozrachnye-potolki"]);
+
 export function ServiceProofStrip({ service }: ServiceProofStripProps) {
+  const isSinglePhoto = SINGLE_PHOTO_SLUGS.has(service.slug);
+  const items = isSinglePhoto ? service.proof.items.slice(0, 1) : service.proof.items;
+
   return (
     <section
       id="proof"
@@ -31,8 +42,8 @@ export function ServiceProofStrip({ service }: ServiceProofStripProps) {
           </p>
         </div>
 
-        <div className="mt-10 grid gap-6 lg:grid-cols-3">
-          {service.proof.items.map((item) => (
+        <div className={`mt-10 grid gap-6 ${isSinglePhoto ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}>
+          {items.map((item) => (
             <article
               key={`${service.slug}-${item.title}`}
               className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm"
@@ -87,6 +98,25 @@ export function ServiceProofStrip({ service }: ServiceProofStripProps) {
               </div>
             </article>
           ))}
+
+          {isSinglePhoto ? (
+            <article className="flex flex-col justify-center rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm">
+              <h3 className="text-xl font-semibold tracking-tight text-slate-950">
+                Покажу примеры на замере
+              </h3>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                Такие проекты сильно отличаются друг от друга, поэтому вместо
+                случайных фото привожу папку с работами: узлы, схемы и материалы —
+                можно посмотреть вживую и потрогать.
+              </p>
+              <Link
+                href="/#proof"
+                className="mt-5 inline-flex min-h-11 items-center text-sm font-semibold text-slate-950 underline underline-offset-4"
+              >
+                Смотреть работы на главной
+              </Link>
+            </article>
+          ) : null}
         </div>
       </Container>
     </section>

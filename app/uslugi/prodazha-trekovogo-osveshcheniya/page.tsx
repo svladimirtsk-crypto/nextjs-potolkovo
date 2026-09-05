@@ -9,6 +9,7 @@ import { getKitsPriceAnchorRub } from "./_components/LightKitShowcase";
 import { formatRub } from "@/content/pricing";
 import { ServiceActionSection } from "../_components/ServiceActionSection";
 import { ServiceRelatedServices } from "../_components/ServiceRelatedServices";
+import { AvitoReviewsSection } from "@/components/home/avito-reviews-section";
 import { LightKitShowcase } from "./_components/LightKitShowcase";
 import { CatalogSection } from "./_components/CatalogSection";
 import { TrackSaleSystemGuideSection } from "./_components/TrackSaleSystemGuideSection";
@@ -60,6 +61,7 @@ export default function ProdazhaTrekovogoOsveshcheniyaPage() {
             <TrackSaleTermsSection />
           </>
         }
+        reviews={<AvitoReviewsSection />}
         action={<ServiceActionSection service={service} />}
         related={<ServiceRelatedServices service={service} />}
       />

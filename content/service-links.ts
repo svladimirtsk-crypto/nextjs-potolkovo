@@ -1,6 +1,11 @@
+/**
+ * T-046: `shortDescription` — одна строка для карточки смежной услуги.
+ * Раньше во всех карточках стоял один и тот же текст-заглушка.
+ */
 export const serviceLinks = [
   {
     slug: "tenevoy-profil",
+    shortDescription: "Ровная теневая линия вместо плинтуса, без видимого примыкания к стене.",
     label: "Теневой профиль",
     shortLabel: "Теневой профиль",
     href: "/uslugi/tenevoy-profil",
@@ -12,6 +17,7 @@ export const serviceLinks = [
   },
   {
     slug: "paryashchie-potolki",
+    shortDescription: "Светящийся контур по периметру — потолок словно висит в воздухе.",
     label: "Парящие потолки",
     shortLabel: "Парящие",
     href: "/uslugi/paryashchie-potolki",
@@ -23,6 +29,7 @@ export const serviceLinks = [
   },
   {
     slug: "svetovye-linii",
+    shortDescription: "Встроенные линии любой геометрии: замена люстрам и точечникам.",
     label: "Световые линии",
     shortLabel: "Световые линии",
     href: "/uslugi/svetovye-linii",
@@ -34,6 +41,7 @@ export const serviceLinks = [
   },
   {
     slug: "trekovoe-osveshchenie",
+    shortDescription: "Трек в потолке или накладной: свет можно двигать и перенаправлять.",
     label: "Трековое освещение",
     shortLabel: "Треки",
     href: "/uslugi/trekovoe-osveshchenie",
@@ -45,6 +53,7 @@ export const serviceLinks = [
   },
   {
     slug: "skrytye-karnizy",
+    shortDescription: "Ниша под карниз: шторы выходят прямо из потолка, без короба.",
     label: "Скрытые карнизы",
     shortLabel: "Карнизы",
     href: "/uslugi/skrytye-karnizy",
@@ -56,6 +65,7 @@ export const serviceLinks = [
   },
   {
     slug: "prostye-potolki",
+    shortDescription: "Ровный матовый или сатиновый потолок за один день.",
     label: "Простые потолки",
     shortLabel: "Простые",
     href: "/uslugi/prostye-potolki",
@@ -67,6 +77,7 @@ export const serviceLinks = [
   },
   {
     slug: "individualnye-proekty",
+    shortDescription: "Многоуровневые и криволинейные конструкции по вашей схеме.",
     label: "Индивидуальные проекты",
     shortLabel: "Проекты",
     href: "/uslugi/individualnye-proekty",
@@ -78,6 +89,7 @@ export const serviceLinks = [
   },
   {
     slug: "prodazha-trekovogo-osveshcheniya",
+    shortDescription: "Комплект света без монтажа: профиль, светильники, питание и лампы.",
     label: "Продажа трекового освещения",
     shortLabel: "Продажа треков",
     href: "/uslugi/prodazha-trekovogo-osveshcheniya",
@@ -89,6 +101,7 @@ export const serviceLinks = [
   },
   {
     slug: "svetoprozrachnye-potolki",
+    shortDescription: "Равномерно светящееся полотно вместо привычных светильников.",
     label: "Светопрозрачные потолки",
     shortLabel: "Светопрозрачные",
     href: "/uslugi/svetoprozrachnye-potolki",

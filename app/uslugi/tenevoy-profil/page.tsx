@@ -6,6 +6,9 @@ import { ServiceCompareSection } from "../_components/ServiceCompareSection";
 import { ServiceHero } from "../_components/ServiceHero";
 import { AvitoReviewsSection } from "@/components/home/avito-reviews-section";
 import { ServicePriceSection } from "../_components/ServicePriceSection";
+import { ServiceAboutSection } from "../_components/ServiceAboutSection";
+import { ServiceUseCasesSection } from "../_components/ServiceUseCasesSection";
+import { ServiceFaqSection } from "../_components/ServiceFaqSection";
 import { ServicePromiseSection } from "../_components/ServicePromiseSection";
 import { ServiceProofStrip } from "../_components/ServiceProofStrip";
 import { ServiceRelatedServices } from "../_components/ServiceRelatedServices";
@@ -38,9 +41,21 @@ export default function TenevoyProfilPage() {
       service={service}
       hero={<ServiceHero service={service} />}
       proof={<ServiceProofStrip service={service} />}
-      price={<ServicePriceSection service={service} />}
+      price={
+        <>
+          <ServicePriceSection service={service} />
+          {/* T-046: контент из content/services.ts, который раньше не рендерился */}
+          <ServiceAboutSection service={service} />
+          <ServiceUseCasesSection service={service} />
+        </>
+      }
       compare={<ServiceCompareSection />}
-      trust={<ServiceTrustSection service={service} />}
+      trust={
+        <>
+          <ServiceTrustSection service={service} />
+          <ServiceFaqSection service={service} />
+        </>
+      }
       promise={<ServicePromiseSection service={service} />}
       reviews={<AvitoReviewsSection />}
       related={<ServiceRelatedServices service={service} />}
