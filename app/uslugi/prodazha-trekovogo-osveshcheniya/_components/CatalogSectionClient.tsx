@@ -7,6 +7,13 @@ import {
   type CalculatorLeadSnapshot,
   usePriceCalculatorBridge,
 } from "@/components/home/price-calculator-context";
+import {
+  isMountsOrGrilles,
+  isPanelProduct,
+  isSmartProduct,
+  matchesPointSubtype,
+  normalizeQty,
+} from "@/lib/lighting/product-predicates";
 import catalogImages from "@/data/catalog-images.json";
 import { ProductImageLightbox } from "@/components/feed2/ProductImageLightbox";
 import { Container } from "@/components/ui/container";
@@ -63,50 +70,10 @@ function fmt(value: number): string {
   return new Intl.NumberFormat("ru-RU").format(Math.round(value));
 }
 
-function isMountsOrGrilles(product: FeedCatalogProduct): boolean {
-  const text = `${toText(product.name)} ${toText(product.vendorCode)} ${toText(product.categoryPath)}`.toLowerCase();
-  if (product.kind === "CEILING_COMPONENT") return true;
-  return text.includes("заклад") || text.includes("решетк") || text.includes("решётк");
-}
 
-function isSmartProduct(product: FeedCatalogProduct): boolean {
-  const text = `${toText(product.name)} ${toText(product.categoryPath)} ${toText(product.vendorCode)}`.toLowerCase();
-  return text.includes("смарт") || text.includes("smart") || text.includes("умный дом");
-}
 
-function isPanelProduct(product: FeedCatalogProduct): boolean {
-  const text = `${toText(product.name)} ${toText(product.categoryPath)}`.toLowerCase();
-  return (
-    text.includes("панел") ||
-    text.includes("panel") ||
-    text.includes("led панел") ||
-    text.includes("led-панел") ||
-    text.includes("led panel") ||
-    text.includes("600x600") ||
-    text.includes("595x595")
-  );
-}
 
-function getPointSocket(product: FeedCatalogProduct): LampSocket | null {
-  const vendorCode = toText(product.vendorCode);
 
-  // legacy точечные
-  if (vendorCode === "0У-00007177" || vendorCode === "0У-00007176") return "GX53";
-  if (vendorCode === "0У-00001551" || vendorCode === "0У-00001552") return "MR16";
-
-  const fromDetect = detectSocket(product);
-  if (fromDetect === "GX53") return "GX53";
-  if (fromDetect === "MR16") return "MR16";
-  return null;
-}
-
-function matchesPointSubtype(product: FeedCatalogProduct, subtype: PointSubtypeId): boolean {
-  // FIX: панели определяем до kind-check
-  if (subtype === "PANELS") return isPanelProduct(product);
-  if (product.kind !== "SPOT_FIXTURE") return false;
-  const socket = getPointSocket(product);
-  return socket === subtype;
-}
 
 /**
  * T-065 · К какой секции каталога относится товар.
@@ -134,11 +101,6 @@ function searchHaystack(product: FeedCatalogProduct): string {
   return `${toText(product.name)} ${toText(product.vendorCode)} ${toText(product.categoryPath)}`.toLowerCase();
 }
 
-function normalizeQty(nextQtyRaw: number, unit: "pcs" | "m"): number {
-  const step = unit === "m" ? 0.5 : 1;
-  const normalized = Math.round(nextQtyRaw / step) * step;
-  return Math.max(0, Number.isFinite(normalized) ? normalized : 0);
-}
 
 function productToLightingItem(product: FeedCatalogProduct, qty: number): LightingItem {
   return {
