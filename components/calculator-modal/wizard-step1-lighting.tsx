@@ -184,6 +184,7 @@ function ProductCard({
       >
         <ProductImage
           productId={toText(product.productId)}
+          kind={toText(product.kind)}
           src={toText(product.coverImage)}
           alt={toText(product.name)}
           containerClassName="aspect-square h-32 w-full overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-3 max-sm:h-[5.25rem] max-sm:p-1.5"
@@ -2075,6 +2076,7 @@ export function WizardStep1Lighting() {
                           <div className="grid grid-cols-[5.5rem_1fr] gap-3">
                             <ProductImage
                               productId={toText(product.productId)}
+                              kind={toText(product.kind)}
                               src={toText(product.coverImage)}
                               alt={toText(product.name)}
                             />

@@ -9,9 +9,12 @@ type Props = {
   src: string;
   alt: string;
   thumbClassName?: string;
+  /** N-020: локальное превью и осмысленная заглушка. */
+  productId?: string | null;
+  kind?: string | null;
 };
 
-export function ProductImageLightbox({ src, alt, thumbClassName }: Props) {
+export function ProductImageLightbox({ src, alt, thumbClassName, productId, kind }: Props) {
   const [open, setOpen] = useState(false);
 
   const safeSrc = String(src ?? "").trim();
@@ -101,7 +104,13 @@ export function ProductImageLightbox({ src, alt, thumbClassName }: Props) {
         aria-label="Открыть фото"
         title="Нажмите, чтобы увеличить"
       >
-        <ProductImage src={safeSrc} alt={alt} className="object-cover" />
+        <ProductImage
+          src={safeSrc}
+          alt={alt}
+          productId={productId}
+          kind={kind}
+          className="object-cover"
+        />
       </button>
 
       {portal}

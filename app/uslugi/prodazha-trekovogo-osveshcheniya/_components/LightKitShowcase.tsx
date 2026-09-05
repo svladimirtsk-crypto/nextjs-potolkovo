@@ -1,6 +1,7 @@
 import { Picture } from "@/components/ui/picture";
 
 import snapshotData from "@/data/eks-feed2-snapshot.json";
+import catalogImages from "@/data/catalog-images.json";
 
 import { Container } from "@/components/ui/container";
 import { Heading } from "@/components/ui/heading";
@@ -108,6 +109,23 @@ type KitCard = {
   items: LightingItem[];
 };
 
+
+/**
+ * N-020 · Обложка комплекта.
+ *
+ * Раньше бралась прямо из `coverImage` товара-представителя, но у поставщика
+ * эти три PNG удалены (404) — карточки комплектов висели с битой картинкой.
+ * Отсутствие товара в манифесте означает, что скачать обложку не удалось
+ * (у поставщика 404), поэтому внешняя ссылка в этом случае заведомо битая и
+ * использовать её нельзя — сразу отдаём фото страницы услуги.
+ */
+function kitImageSrc(product: { productId?: unknown; coverImage?: unknown }): string {
+  const id = toText(product.productId);
+  return id && id in (catalogImages as Record<string, unknown>)
+    ? `/catalog/${id}-512.webp`
+    : "/svc-tracksale.jpeg";
+}
+
 function buildKitKitchen(products: FeedCatalogProduct[]): KitCard | null {
   const profile2000 = pickColibriProfileByLength(products, 2);
   const profile1000 = pickColibriProfileByLength(products, 1);
@@ -132,7 +150,7 @@ function buildKitKitchen(products: FeedCatalogProduct[]): KitCard | null {
     itemFromProduct(powerFeed, 1),
   ];
 
-  const imageSrc = toText(f1335.coverImage) || "/svc-tracksale.jpeg";
+  const imageSrc = kitImageSrc(f1335);
 
   return {
     title: "Для кухни — COLIBRI",
@@ -176,7 +194,7 @@ function buildKitLiving(products: FeedCatalogProduct[]): KitCard | null {
     ...(straightJoints > 0 ? [itemFromProduct(straightConnector, straightJoints)] : []),
   ];
 
-  const imageSrc = toText(f1339.coverImage) || "/svc-tracksale.jpeg";
+  const imageSrc = kitImageSrc(f1339);
 
   return {
     title: "Для гостиной — COLIBRI",
@@ -200,7 +218,7 @@ function buildKitHallway(products: FeedCatalogProduct[]): KitCard | null {
     itemFromProduct(lampMr16, 4),
   ];
 
-  const imageSrc = toText(fixtureArt.coverImage) || "/svc-tracksale.jpeg";
+  const imageSrc = kitImageSrc(fixtureArt);
 
   return {
     title: "Для прихожей — ART",

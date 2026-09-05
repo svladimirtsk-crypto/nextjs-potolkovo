@@ -7,6 +7,7 @@ import {
   type CalculatorLeadSnapshot,
   usePriceCalculatorBridge,
 } from "@/components/home/price-calculator-context";
+import catalogImages from "@/data/catalog-images.json";
 import { ProductImageLightbox } from "@/components/feed2/ProductImageLightbox";
 import { Container } from "@/components/ui/container";
 import { Heading } from "@/components/ui/heading";
@@ -259,7 +260,12 @@ function ProductCard({
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
       <div className="grid grid-cols-[5.5rem_1fr] gap-3 sm:grid-cols-[8rem_1fr] sm:gap-4">
         <div className="cursor-zoom-in">
-          <ProductImageLightbox src={toText(product.coverImage)} alt={toText(product.name)} />
+          <ProductImageLightbox
+            src={toText(product.coverImage)}
+            alt={toText(product.name)}
+            productId={toText(product.productId)}
+            kind={toText(product.kind)}
+          />
         </div>
 
         <div className="min-w-0">
@@ -817,6 +823,20 @@ export function CatalogSectionClient({ data }: Props) {
     });
   };
 
+  /**
+   * N-020 · Товары с локальным фото — выше.
+   *
+   * У 34 позиций поставщик удалил обложки, и они кучно стоят в начале фида:
+   * первый экран каталога состоял почти из одних заглушек. Сортировка
+   * стабильная, поэтому внутри каждой из двух групп исходный порядок фида
+   * сохраняется — меняется только приоритет показа.
+   */
+  const withPhotoFirst = useCallback((list: FeedCatalogProduct[]): FeedCatalogProduct[] => {
+    const hasPhoto = (product: FeedCatalogProduct) =>
+      toText(product.productId) in (catalogImages as Record<string, unknown>);
+    return [...list].sort((a, b) => Number(hasPhoto(b)) - Number(hasPhoto(a)));
+  }, []);
+
   const filteredProducts = useMemo(() => {
     let scoped: FeedCatalogProduct[] = [];
 
@@ -849,13 +869,15 @@ export function CatalogSectionClient({ data }: Props) {
     }
 
     const q = toText(query).toLowerCase();
-    if (!q) return scoped;
+    if (!q) return withPhotoFirst(scoped);
 
-    return scoped.filter((product) => {
-      const haystack = `${toText(product.name)} ${toText(product.vendorCode)} ${toText(product.categoryPath)}`.toLowerCase();
-      return haystack.includes(q);
-    });
-  }, [lampSocket, pointSubtype, products, query, section, smartOnly, trackGroup, trackSystem]);
+    return withPhotoFirst(
+      scoped.filter((product) => {
+        const haystack = `${toText(product.name)} ${toText(product.vendorCode)} ${toText(product.categoryPath)}`.toLowerCase();
+        return haystack.includes(q);
+      }),
+    );
+  }, [lampSocket, pointSubtype, products, query, section, smartOnly, trackGroup, trackSystem, withPhotoFirst]);
 
   /**
    * T-065 · Глобальный поиск: сколько совпадений в КАЖДОМ разделе.

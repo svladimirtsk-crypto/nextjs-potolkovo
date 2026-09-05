@@ -25,7 +25,14 @@ const SNAPSHOT = path.join(ROOT, "data", "eks-feed2-snapshot.json");
 
 const WIDTHS = [256, 512];
 const CONCURRENCY = 6;
-const TIMEOUT_MS = 15_000;
+const TIMEOUT_MS = 8_000;
+const RETRIES = 2;
+const MISSING_PATH = path.join(ROOT, "data", "catalog-images-missing.json");
+
+// Хост поставщика отдаёт 403 на запросы без браузерного UA.
+const USER_AGENT =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+  "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
 async function exists(p) {
   try {
@@ -37,17 +44,30 @@ async function exists(p) {
 }
 
 async function fetchBuffer(url) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-  try {
-    const res = await fetch(url, { signal: controller.signal });
-    if (!res.ok) return null;
-    return Buffer.from(await res.arrayBuffer());
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
+  // N-020: ретраи с паузой — часть 5xx/таймаутов у поставщика разовые,
+  // без повтора мы теряли товары на ровном месте.
+  for (let attempt = 0; attempt <= RETRIES; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: { "user-agent": USER_AGENT, accept: "image/*,*/*" },
+      });
+      if (res.ok) return Buffer.from(await res.arrayBuffer());
+      // 404 не лечится повтором.
+      if (res.status === 404) return null;
+    } catch {
+      // сеть/таймаут — пробуем ещё раз
+    } finally {
+      clearTimeout(timer);
+    }
+
+    if (attempt < RETRIES) {
+      await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+    }
   }
+  return null;
 }
 
 async function processOne(product) {
@@ -63,7 +83,7 @@ async function processOne(product) {
 
   // Уже скачано в прошлый раз — не ходим в сеть повторно.
   if ((await Promise.all(targets.map((t) => exists(t.file)))).every(Boolean)) {
-    return [id, { widths: WIDTHS, system: product.systemId ?? null }];
+    return [id, { widths: WIDTHS, system: product.system ?? null }];
   }
 
   const buffer = await fetchBuffer(url);
@@ -80,7 +100,7 @@ async function processOne(product) {
     return null; // не картинка / повреждена
   }
 
-  return [id, { widths: WIDTHS, system: product.systemId ?? null }];
+  return [id, { widths: WIDTHS, system: product.system ?? null }];
 }
 
 async function main() {
@@ -91,21 +111,38 @@ async function main() {
   const products = Array.isArray(snapshot?.products) ? snapshot.products : [];
 
   const map = {};
-  let failed = 0;
+  const missing = [];
 
   for (let i = 0; i < products.length; i += CONCURRENCY) {
     const batch = products.slice(i, i + CONCURRENCY);
-    const results = await Promise.all(batch.map(processOne));
-    for (const entry of results) {
-      if (entry) map[entry[0]] = entry[1];
-      else failed += 1;
+    const results = await Promise.all(
+      batch.map(async (product) => [product, await processOne(product)])
+    );
+    for (const [product, entry] of results) {
+      if (entry) {
+        map[entry[0]] = entry[1];
+      } else {
+        missing.push({
+          productId: product.productId ?? null,
+          vendorCode: product.vendorCode ?? null,
+          name: product.name ?? null,
+          coverImage: product.coverImage ?? null,
+        });
+      }
+    }
+    if (i % 120 === 0) {
+      console.log(`[catalog-images] обработано ${Math.min(i + CONCURRENCY, products.length)}/${products.length}`);
     }
   }
 
   await writeFile(MAP_PATH, JSON.stringify(map, null, 2));
+  await writeFile(MISSING_PATH, JSON.stringify(missing, null, 2));
 
+  const covered = Object.keys(map).length;
+  const pct = products.length ? Math.round((covered / products.length) * 100) : 0;
   console.log(
-    `[catalog-images] ${Object.keys(map).length} из ${products.length} обложек локально; недоступно: ${failed}`
+    `[catalog-images] ${covered} из ${products.length} обложек локально (${pct}%); ` +
+      `без фото: ${missing.length} — список в data/catalog-images-missing.json`
   );
 }
 

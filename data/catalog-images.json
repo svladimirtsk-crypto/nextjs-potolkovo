@@ -1,1 +1,3593 @@
-{}
+{
+  "eks-00008487": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00008490": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00010363": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00000453": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00000454": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00000455": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00000456": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001763": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001994": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00010174": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00010175": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00010177": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00010179": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00010180": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00010181": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00010182": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00010361": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00010610": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001190": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001204": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001484": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001494": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001761": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001762": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00002347": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00000476": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00000477": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00000478": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00000479": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00000480": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00000481": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00000482": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00000483": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00002991": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00002992": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00002993": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00002994": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00002995": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00002996": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004761": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004762": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004763": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-utt00005957": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00008963": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00008964": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00010609": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001760": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00002966": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00003025": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00003026": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004804": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004805": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001257": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001258": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001259": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001261": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001263": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001266": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001267": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001268": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001269": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001270": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001271": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001272": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001273": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001275": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001276": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001410": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-utt00004640": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PSU"
+  },
+  "eks-utt00004641": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PSU"
+  },
+  "eks-utt00004642": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PSU"
+  },
+  "eks-utt00004643": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PSU"
+  },
+  "eks-utt00004644": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PSU"
+  },
+  "eks-utt00004645": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PSU"
+  },
+  "eks-uta00000395": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PSU"
+  },
+  "eks-uta00000396": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PSU"
+  },
+  "eks-uta00000397": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PSU"
+  },
+  "eks-uta00000398": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PSU"
+  },
+  "eks-uta00000400": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PSU"
+  },
+  "eks-00009145": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PSU"
+  },
+  "eks-00010703": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00010705": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00010706": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001331": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001332": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001333": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001334": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00006001": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00006002": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00006003": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004910": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00006335": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00006336": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00006337": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00006338": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00006339": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00006340": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00006329": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00006330": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00006331": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00006332": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00006333": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00006334": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00007176": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00007177": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00009441": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00009442": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00009443": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00009444": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00009445": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00009446": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00010280": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00010282": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00010285": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00010286": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00010287": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001651": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001652": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001653": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001663": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00002123": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00002124": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004909": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00006323": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00006324": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00006325": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00006326": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00006327": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00006328": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001349": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001350": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001351": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001352": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001353": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001354": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001355": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001356": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001357": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001358": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001359": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001360": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001361": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001362": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001363": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001364": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001365": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001366": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001367": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001368": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001369": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001370": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001557": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001613": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001614": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00002960": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00002961": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00002962": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00002963": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00006341": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00006342": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00006358": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00006475": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00006476": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00001340": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00001341": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00001342": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00001343": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00001344": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00001345": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00001346": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00001347": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00001348": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00001456": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00001457": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00001556": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00001564": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00001566": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00006092": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00006093": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00002285": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002288": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002292": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002297": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002300": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002301": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002304": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002305": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002306": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002307": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002308": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002309": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002310": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002311": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002312": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002313": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002314": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002315": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002316": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002317": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002318": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002319": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002320": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002321": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002322": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002323": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002324": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002325": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002326": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002327": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002328": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002329": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002330": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002284": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002286": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002287": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002289": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002290": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002291": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002293": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002294": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002295": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002296": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002298": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002299": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002302": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002303": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002956": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002957": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002958": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002989": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00002990": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00004524": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00004525": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00006633": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00006634": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00006635": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-0-00006636": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "CLARUS_48"
+  },
+  "eks-utt00004366": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-utt00004367": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-utt00004370": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-utt00004371": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-utt00004373": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-utt00004374": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-utt00004377": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-utt00004378": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-utt00004388": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-utt00004389": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-utt00004390": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-utt00004392": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-utt00004394": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-utt00004395": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-utt00004396": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-utt00004397": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-00009379": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-00009380": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-00009381": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-00009382": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-00009383": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-00009384": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00000494": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00000495": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00000496": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00000497": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00001170": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00001171": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00002011": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00002012": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00002013": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00002014": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00002015": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00002016": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00002017": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00002018": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00002902": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00002903": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00002904": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00002905": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00002906": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00002907": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00004479": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00004480": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00004481": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00004482": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00004806": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-0-00004807": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "PANEL"
+  },
+  "eks-uta00001105": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-uta00001106": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-uta00815742": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-uta00001108": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-uta00001109": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-uta00001110": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-uta00001112": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-uta00001113": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-uta00001114": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-uta00001115": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-uta00001116": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-uta00001117": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-uta00001118": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-uta00001119": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-uta00001121": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-uta00002396": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-uta00002397": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-uta00002398": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-uta00002399": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-utt00001840": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-utt00001841": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001406": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001781": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001995": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001996": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00002079": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00002662": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00002663": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004449": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004447": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004450": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004444": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004451": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004443": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004441": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004442": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004445": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004446": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004448": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004452": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00003018": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00003286": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004722": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004723": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004720": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004721": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004718": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004719": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004726": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004727": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004724": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004725": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004928": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004979": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00005160": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00005425": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00005498": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001522": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001523": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001524": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001525": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001526": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001527": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001547": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001548": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001549": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001550": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001551": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001552": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004812": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004813": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004904": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004905": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00002541": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00002847": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004544": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004545": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004546": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004547": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004548": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004511": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004512": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004513": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004911": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004526": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004527": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004740": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00002848": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00002849": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004741": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004501": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004502": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00010276": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00010274": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00000457": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001546": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004742": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00010278": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00010279": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001545": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004505": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004506": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004507": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004508": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004509": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004510": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004517": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004518": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004519": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004549": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00002350": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00002351": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00002352": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00002353": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00005052": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00005053": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00005054": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00005055": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00005056": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00005057": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00006343": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00008597": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00009896": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001188": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00002537": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00002538": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-utt00004459": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001189": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-utt00006002": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-utt00006004": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-utt00004460": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00000459": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001500": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-utt00004454": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-utt00004455": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00000460": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00001501": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00008598": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00009745": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00009277": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00009744": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004900": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004901": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004902": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004903": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-utt00006015": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-utt00005994": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-utt00006011": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-utt00006013": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00009886": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-utt00005993": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-utt00006009": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00009888": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-utt00006010": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-utt00006012": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-00009887": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00006554": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006555": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006556": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006557": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006558": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006559": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006560": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006561": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006562": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006563": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006564": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006565": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006566": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006567": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006551": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006552": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006553": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006489": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006490": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006491": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006492": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006493": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006494": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006495": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006496": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006497": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006498": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006499": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006500": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006501": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006502": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006503": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006504": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006505": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006506": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006507": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006508": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006509": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006510": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006511": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006512": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006513": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006514": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006515": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006516": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006522": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006523": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006524": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006517": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006518": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006519": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006520": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006521": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006525": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006526": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006527": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006528": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006530": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006531": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006532": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006533": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006534": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006535": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006536": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006537": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006538": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006539": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006540": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006541": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006542": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006543": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  },
+  "eks-0-00006544": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "LED_STRIP"
+  }
+}
