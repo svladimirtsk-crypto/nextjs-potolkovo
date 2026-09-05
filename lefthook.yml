@@ -12,7 +12,17 @@ pre-commit:
     gitleaks:
       # Главная причина существования хука: не дать секрету попасть в историю.
       # `--no-banner`, чтобы не засорять вывод коммита.
-      run: gitleaks protect --staged --redact --no-banner --config .gitleaks.toml
+      # gitleaks — отдельный бинарь, не npm-пакет. Если его нет на машине,
+      # молча пропускаем: иначе хук заблокировал бы вообще все коммиты у
+      # разработчика без gitleaks. Полная проверка всё равно идёт в CI (job
+      # `secrets`), так что дыры это не создаёт.
+      # Установка: brew install gitleaks | apt install gitleaks
+      run: |
+        if ! command -v gitleaks >/dev/null 2>&1; then
+          echo "gitleaks не найден — проверка секретов пропущена (CI её выполнит)."
+          exit 0
+        fi
+        gitleaks protect --staged --redact --no-banner --config .gitleaks.toml
       skip:
         - merge
         - rebase
