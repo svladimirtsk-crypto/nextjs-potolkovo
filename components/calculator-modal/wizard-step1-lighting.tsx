@@ -54,10 +54,7 @@ import {
 import {
   ART_TRACK_PROFILE_VENDOR_WHITELIST,
 } from "@/lib/vendor-code-overrides";
-import {
-  calcTrackProfileMeters,
-  inferPieceLengthMeters,
-} from "@/lib/product-length-meters";
+import { inferPieceLengthMeters } from "@/lib/product-length-meters";
 
 import {
   isLamp,
@@ -82,6 +79,11 @@ import {
   groupLampOptionsBySocket,
   hasClarusInCart as hasClarusInCartFn,
 } from "@/lib/lighting/cart-derived";
+import {
+  calcOrphanTrackMeters,
+  decideOrphanTrackAction,
+  selectOrphanTrackEntries,
+} from "@/lib/lighting/orphan-track";
 import { ProductImage } from "@/components/feed2/ProductImage";
 import { useCalculatorModal } from "./calculator-modal-context";
 import { useCalculatorStore } from "@/lib/calculator/store";
@@ -129,6 +131,7 @@ function getScrollParent(node: HTMLElement | null): HTMLElement | null {
 
 import {
   ImageQuickPreview,
+  OrphanTrackNotice,
   ProductCard,
   TabBtn,
   ThinProgress,
@@ -372,30 +375,17 @@ export function WizardStep1Lighting() {
    * и даём клиенту решить самому. */
   const isLightingFirst = options?.entryMode === "lighting-first";
 
-  const orphanTrackEntries = useMemo(() => {
-    if (requiredTrackMeters > 0) return [];
-    const clarusPsuVendorCodes = new Set<string>(CLARUS_PSU_VENDOR_CODES);
-    return cartEntries.filter((entry) => {
-      const product = entry.product;
-      const isTrackProduct =
-        product.kind === "TRACK_PROFILE" ||
-        product.kind === "TRACK_FIXTURE" ||
-        product.kind === "TRACK_ACCESSORY";
-      return isTrackProduct || clarusPsuVendorCodes.has(toText(product.vendorCode));
-    });
-  }, [cartEntries, requiredTrackMeters]);
+  const orphanTrackEntries = useMemo(
+    () => selectOrphanTrackEntries(cartEntries, requiredTrackMeters),
+    [cartEntries, requiredTrackMeters]
+  );
 
   const orphanTrackMeters = useMemo(
-    () =>
-      orphanTrackEntries.reduce(
-        (sum, entry) =>
-          entry.product.kind === "TRACK_PROFILE"
-            ? sum + calcTrackProfileMeters(entry.product, entry.qty)
-            : sum,
-        0
-      ),
+    () => calcOrphanTrackMeters(orphanTrackEntries),
     [orphanTrackEntries]
   );
+
+  const orphanTrackCount = orphanTrackEntries.length;
 
   const dropOrphanTrackItems = useCallback(() => {
     const ids = new Set(orphanTrackEntries.map((entry) => toText(entry.product.productId)));
@@ -413,14 +403,34 @@ export function WizardStep1Lighting() {
     });
   }, [orphanTrackEntries, setCartItems]);
 
-  useEffect(() => {
-    // Автоочистка — только для позиций, добавленных внутри калькулятора.
-    if (isLightingFirst) return;
-    if (orphanTrackEntries.length === 0) return;
-    dropOrphanTrackItems();
-  }, [isLightingFirst, orphanTrackEntries.length, dropOrphanTrackItems]);
+  /**
+   * N-051: чистим корзину только когда трек действительно «выключили» на
+   * Шаге 0. Раньше условием был сам факт `requiredTrackMeters === 0`, и
+   * автоочистка съедала позиции, которые клиент добавлял руками, — «+» на
+   * трековом светильнике не работал без единого объяснения.
+   *
+   * Решение принимается внутри эффекта: прошлое значение метража живёт в ref,
+   * а читать ref во время рендера нельзя.
+   */
+  const prevRequiredTrackMetersRef = useRef(requiredTrackMeters);
 
-  const showOrphanTrackWarning = isLightingFirst && orphanTrackEntries.length > 0;
+  useEffect(() => {
+    const decision = decideOrphanTrackAction({
+      requiredTrackMeters,
+      previousRequiredTrackMeters: prevRequiredTrackMetersRef.current,
+      orphanCount: orphanTrackCount,
+      isLightingFirst,
+    });
+    prevRequiredTrackMetersRef.current = requiredTrackMeters;
+    if (decision === "drop") dropOrphanTrackItems();
+  }, [requiredTrackMeters, orphanTrackCount, isLightingFirst, dropOrphanTrackItems]);
+
+  /**
+   * Предупреждение показываем всегда, когда трековые позиции есть, а трек не
+   * заказан: если их только что удалили автоматически, счётчик обнулится и
+   * блок исчезнет сам.
+   */
+  const showOrphanTrackWarning = orphanTrackCount > 0 && requiredTrackMeters <= 0;
 
   // T-025: выбранная система трека
   const lastSystemRef = useRef<string>("");
@@ -1652,26 +1662,11 @@ export function WizardStep1Lighting() {
           )}
 
           {showOrphanTrackWarning ? (
-            /* T-024: корзину из каталога не чистим молча — спрашиваем клиента */
-            <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4">
-              <p className="text-sm font-semibold text-amber-950">
-                Вы указали «без трека», но в наборе
-                {orphanTrackMeters > 0 ? ` ${Math.round(orphanTrackMeters * 10) / 10} м профиля` : " трековые позиции"}
-                {" "}— оставить?
-              </p>
-              <p className="mt-1 text-xs text-amber-900">
-                Позиции собраны в каталоге, поэтому мы их не удаляли.
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={dropOrphanTrackItems}
-                  className="min-h-11 rounded-xl border border-amber-300 bg-white px-3 text-xs font-semibold text-amber-900 hover:bg-amber-100"
-                >
-                  Убрать трековые позиции
-                </button>
-              </div>
-            </div>
+            <OrphanTrackNotice
+              meters={orphanTrackMeters}
+              isLightingFirst={isLightingFirst}
+              onDrop={dropOrphanTrackItems}
+            />
           ) : null}
 
           {shownCatalogView === "selected" && accessorySuggestions.length > 0 ? (

@@ -201,3 +201,43 @@ export function ImageQuickPreview({
     </>
   );
 }
+
+/**
+ * T-024 · Трековые позиции в корзине, когда трек не заказан.
+ *
+ * Молча удалять их нельзя: клиент либо собрал набор в каталоге, либо добавил
+ * позицию только что руками. Объясняем ситуацию и оставляем решение за ним.
+ */
+export function OrphanTrackNotice({
+  meters,
+  isLightingFirst,
+  onDrop,
+}: {
+  meters: number;
+  isLightingFirst: boolean;
+  onDrop: () => void;
+}) {
+  const what = meters > 0 ? ` ${Math.round(meters * 10) / 10} м профиля` : " трековые позиции";
+
+  return (
+    <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4">
+      <p className="text-sm font-semibold text-amber-950">
+        Вы указали «без трека», но в наборе{what} — оставить?
+      </p>
+      <p className="mt-1 text-xs text-amber-900">
+        {isLightingFirst
+          ? "Позиции собраны в каталоге, поэтому мы их не удаляли."
+          : "Вы добавили их вручную — мы ничего не убираем без вашего решения."}
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={onDrop}
+          className="min-h-11 rounded-xl border border-amber-300 bg-white px-3 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+        >
+          Убрать трековые позиции
+        </button>
+      </div>
+    </div>
+  );
+}
