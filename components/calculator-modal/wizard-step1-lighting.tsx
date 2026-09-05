@@ -119,6 +119,7 @@ import {
   ThinProgress,
 } from "@/components/lighting/CatalogPieces";
 import { ProductGrid, ProductPickerScreen, WizardFooter } from "@/components/lighting/ProductPickerScreen";
+import { resolveStep1FooterAction } from "@/lib/lighting/step1-footer-action";
 
 
 /* ─── MAIN COMPONENT ─── */
@@ -1066,8 +1067,44 @@ export function WizardStep1Lighting() {
   const shownWStep: WStep =
     wStep === "done" && !requiredSelectionComplete && missingAction ? missingAction.step : wStep;
 
+  /**
+   * N-050: выбор кнопки футера — чистая функция resolveStep1FooterAction,
+   * здесь остаётся только привязка обработчиков к намерению.
+   */
+  const footerDescriptor = useMemo(
+    () =>
+      resolveStep1FooterAction({
+        activeTab,
+        shownWStep,
+        hasMissingAction: Boolean(missingAction),
+        hasSystemOptions: wizardSystemOptions.length > 0,
+        psuBlocks,
+        requiredSelectionComplete,
+        requiredTrackMeters,
+        hasTrackSystem: Boolean(selectedTrackSystem),
+        trackComplete,
+        pointsComplete,
+        lampsComplete,
+      }),
+    [
+      activeTab,
+      lampsComplete,
+      missingAction,
+      pointsComplete,
+      psuBlocks,
+      requiredSelectionComplete,
+      requiredTrackMeters,
+      selectedTrackSystem,
+      shownWStep,
+      trackComplete,
+      wizardSystemOptions.length,
+    ]
+  );
+
   useEffect(() => {
-    if (activeTab !== "recommendations") {
+    const { intent, label, disabled } = footerDescriptor;
+
+    if (intent === "missing") {
       setStep1FooterAction(
         missingAction
           ? { label: missingAction.label, onClick: goToMissingAction }
@@ -1076,88 +1113,41 @@ export function WizardStep1Lighting() {
       return () => setStep1FooterAction(null);
     }
 
-    if (shownWStep === "none") {
-      setStep1FooterAction(finishAction());
+    if (intent === "finish") {
+      const base = finishAction();
+      setStep1FooterAction(disabled === undefined ? base : { ...base, disabled });
       return () => setStep1FooterAction(null);
     }
 
-    if (shownWStep === "system") {
-      if (wizardSystemOptions.length > 0) {
-        setStep1FooterAction({
-          label: "Выберите систему",
-          disabled: true,
-          onClick: () => undefined,
-        });
-      } else {
-        setStep1FooterAction({
-          ...finishAction(),
-          disabled: psuBlocks || !requiredSelectionComplete,
-        });
-      }
-    } else if (shownWStep === "trackProfile") {
-      setStep1FooterAction({
-        label: "Подтвердить профиль →",
-        disabled: requiredTrackMeters > 0 && (!selectedTrackSystem || !trackComplete),
-        onClick: goAfterTrackProfile,
-      });
-    } else if (shownWStep === "trackFixtures") {
-      setStep1FooterAction({
-        label: "Подтвердить светильники →",
-        onClick: goAfterTrackFixtures,
-      });
-    } else if (shownWStep === "points") {
-      setStep1FooterAction({
-        label: "Подтвердить точки →",
-        disabled: !pointsComplete,
-        onClick: goAfterPoints,
-      });
-    } else if (shownWStep === "lamps") {
-      setStep1FooterAction({
-        label: "Подтвердить лампы →",
-        disabled: !lampsComplete,
-        onClick: goAfterLamps,
-      });
-    } else if (shownWStep === "chandeliers") {
-      setStep1FooterAction({
-        label: "Подтвердить люстры →",
-        onClick: goAfterChandeliers,
-      });
-    } else if (shownWStep === "corniceLighting") {
-      setStep1FooterAction({
-        label: "Подтвердить подсветку →",
-        onClick: () => setWStep("done"),
-      });
-    } else {
-      setStep1FooterAction(
-        missingAction
-          ? { label: missingAction.label, onClick: goToMissingAction }
-          : finishAction()
-      );
-    }
+    const handlers: Record<string, () => void> = {
+      pickSystem: () => undefined,
+      confirmTrackProfile: goAfterTrackProfile,
+      confirmTrackFixtures: goAfterTrackFixtures,
+      confirmPoints: goAfterPoints,
+      confirmLamps: goAfterLamps,
+      confirmChandeliers: goAfterChandeliers,
+      confirmCornice: () => setWStep("done"),
+    };
+
+    setStep1FooterAction({
+      label: label ?? "",
+      disabled,
+      onClick: handlers[intent] ?? (() => undefined),
+    });
 
     return () => setStep1FooterAction(null);
   }, [
-    activeTab,
     finishAction,
-    psuBlocks,
-    goAfterPoints,
-    goAfterLamps,
+    footerDescriptor,
     goAfterChandeliers,
+    goAfterLamps,
+    goAfterPoints,
     goAfterTrackFixtures,
     goAfterTrackProfile,
     goToMissingAction,
-    goToStep,
-    lampsComplete,
-    pointsComplete,
     missingAction,
-    requiredSelectionComplete,
-    requiredTrackMeters,
-    selectedTrackSystem,
     setStep1FooterAction,
     setWStep,
-    trackComplete,
-    shownWStep,
-    wizardSystemOptions.length,
   ]);
 
   /* ─── Scoped catalog products ─── */
