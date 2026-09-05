@@ -93,6 +93,16 @@ function makeDictionary() {
   };
 }
 
+/**
+ * T-043: в фиде пульты лежат в категории блоков питания. Оставить их как PSU
+ * нельзя — они попадут в автоподбор блоков питания по мощности.
+ */
+function resolveKind(product) {
+  const name = text(product.name).toLowerCase();
+  if (/пульт|контроллер|диммер/.test(name)) return "CONTROL";
+  return text(product.kind);
+}
+
 const systems = makeDictionary();
 const kinds = makeDictionary();
 const units = makeDictionary();
@@ -109,7 +119,7 @@ const rows = products.map((product) => {
     Number(product.priceRub) || 0,
     product.available ? 1 : 0,
     systems.idOf(product.system),
-    kinds.idOf(product.kind),
+    kinds.idOf(resolveKind(product)),
     units.idOf(product.unit),
     pieceLength === null || pieceLength === undefined ? null : Number(pieceLength),
     sockets.idOf(detectSocket(product)),
@@ -125,7 +135,7 @@ for (const product of products) {
   const lengthMeters = product.pieceLengthMeters ?? product.lengthMeters;
   // Кортеж [kindId, systemId, lengthMm] вместо объекта с ключами.
   prefill[sku] = [
-    kinds.idOf(product.kind),
+    kinds.idOf(resolveKind(product)),
     systems.idOf(product.system),
     lengthMeters ? Math.round(Number(lengthMeters) * 1000) : null,
   ];

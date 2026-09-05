@@ -37,7 +37,7 @@ import {
 } from "@/lib/lighting/kit-rules";
 
 import {
-  CATALOG_SECTIONS,
+  visibleCatalogSections,
   POINT_SUBTYPES,
   POINT_TO_MOUNT_VENDOR_CODE,
   CLARUS_PSU_VENDOR_CODES,
@@ -373,6 +373,22 @@ export function WizardStep1Lighting() {
 
   /* ─── Catalog filters ─── */
   const [section, setSection] = useState<CatalogSectionId>("track-systems");
+
+  /**
+   * T-043: «Люстры» и «Подсветка карниза» показываются только тем, кто ответил
+   * «да» на Шаге 0 — остальным они лишний шум в и без того длинном каталоге.
+   */
+  const needsChandeliers = Boolean(snapshot?.derivedInputs?.chandeliersEnabled);
+  const needsCorniceLighting = Boolean(snapshot?.derivedInputs?.corniceLightingEnabled);
+
+  const shownCatalogSections = useMemo(
+    () =>
+      visibleCatalogSections({
+        chandeliersEnabled: Boolean(snapshot?.derivedInputs?.chandeliersEnabled),
+        corniceLightingEnabled: Boolean(snapshot?.derivedInputs?.corniceLightingEnabled),
+      }),
+    [snapshot?.derivedInputs?.chandeliersEnabled, snapshot?.derivedInputs?.corniceLightingEnabled]
+  );
   const [trackSystem, setTrackSystem] = useState<TrackSystemId>("COLIBRI_220");
   const [trackGroup, setTrackGroup] = useState<TrackGroupId>("TRACK_FIXTURE");
   const [pointSubtype, setPointSubtype] = useState<PointSubtypeId>("GX53");
@@ -1030,6 +1046,16 @@ export function WizardStep1Lighting() {
     });
   }, [autoProfilePlan, markWizardTouched, setCartItems, setWSystem]);
 
+  /** Товары для экранов T-043. */
+  const wChandeliers = useMemo(
+    () => products.filter((p) => p.kind === "CHANDELIER"),
+    [products]
+  );
+  const wCorniceLighting = useMemo(
+    () => products.filter((p) => p.kind === "LED_STRIP" || p.kind === "PSU" || p.kind === "CONTROL"),
+    [products]
+  );
+
   /* ─── T-042: дособирание комплекта (питание, стыки, БП, лампы) ─── */
 
   /** Чего не хватает выбранному свету, чтобы он заработал. */
@@ -1144,13 +1170,37 @@ export function WizardStep1Lighting() {
     setWStep("done");
   }, [lampCurrentTotal, lampRequiredTotal, requiredPointQty, selectedPointQty, setWStep]);
 
+  /** T-043: следующий экран после ламп — люстры, затем подсветка карниза. */
+  const goAfterLamps = useCallback(() => {
+    if (needsChandeliers) {
+      setWStep("chandeliers");
+      setSection("chandeliers");
+      return;
+    }
+    if (needsCorniceLighting) {
+      setWStep("corniceLighting");
+      setSection("cornice-lighting");
+      return;
+    }
+    setWStep("done");
+  }, [needsChandeliers, needsCorniceLighting, setWStep]);
+
+  const goAfterChandeliers = useCallback(() => {
+    if (needsCorniceLighting) {
+      setWStep("corniceLighting");
+      setSection("cornice-lighting");
+      return;
+    }
+    setWStep("done");
+  }, [needsCorniceLighting, setWStep]);
+
   const goAfterPoints = useCallback(() => {
     if (lampRequiredTotal > 0 && lampCurrentTotal < lampRequiredTotal) {
       setWStep("lamps");
       return;
     }
-    setWStep("done");
-  }, [lampCurrentTotal, lampRequiredTotal, setWStep]);
+    goAfterLamps();
+  }, [goAfterLamps, lampCurrentTotal, lampRequiredTotal, setWStep]);
 
   const goBackFromLamps = useCallback(() => {
     if (requiredPointQty > 0) {
@@ -1259,6 +1309,16 @@ export function WizardStep1Lighting() {
       setStep1FooterAction({
         label: "Подтвердить лампы →",
         disabled: !lampsComplete,
+        onClick: goAfterLamps,
+      });
+    } else if (shownWStep === "chandeliers") {
+      setStep1FooterAction({
+        label: "Подтвердить люстры →",
+        onClick: goAfterChandeliers,
+      });
+    } else if (shownWStep === "corniceLighting") {
+      setStep1FooterAction({
+        label: "Подтвердить подсветку →",
         onClick: () => setWStep("done"),
       });
     } else {
@@ -1275,6 +1335,8 @@ export function WizardStep1Lighting() {
     finishAction,
     psuBlocks,
     goAfterPoints,
+    goAfterLamps,
+    goAfterChandeliers,
     goAfterTrackFixtures,
     goAfterTrackProfile,
     goToMissingAction,
@@ -1303,6 +1365,13 @@ export function WizardStep1Lighting() {
         scoped = products.filter((p) => p.system === trackSystem && p.kind === "TRACK_PROFILE" && allowed.has(toText(p.vendorCode)));
       } else { scoped = products.filter((p) => p.system === trackSystem && p.kind === trackGroup); }
     } else if (section === "point-fixtures") { scoped = products.filter((p) => matchesPointSubtype(p, pointSubtype)); }
+    else if (section === "chandeliers") { scoped = products.filter((p) => p.kind === "CHANDELIER"); }
+    else if (section === "cornice-lighting") {
+      // Для подсветки карниза нужны лента, питание и управление ей.
+      scoped = products.filter(
+        (p) => p.kind === "LED_STRIP" || p.kind === "PSU" || p.kind === "CONTROL"
+      );
+    }
     else if (section === "lamps") { scoped = products.filter((p) => isLamp(p) && detectSocket(p) === lampSocket); }
     else { scoped = products.filter(isMountsOrGrilles); }
     const q = toText(query).toLowerCase();
@@ -1593,6 +1662,79 @@ export function WizardStep1Lighting() {
             </div>
           )}
 
+          {/* T-043: экраны включаются ответами Шага 0 и идут после точечных */}
+          {shownWStep === "chandeliers" && (
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-slate-200 bg-white p-3">
+                <p className="text-sm font-semibold text-slate-950">Люстры</p>
+                <p className="mt-1 text-xs text-slate-600">
+                  По расчёту нужно {fmt(toNumber(snapshot?.derivedInputs?.chandeliersQty))} шт.
+                  Установка уже посчитана на Шаге 0 — здесь выбираем сами светильники.
+                </p>
+              </div>
+
+              {wChandeliers.length > 0 ? (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {wChandeliers.map((p) => {
+                    const id = toText(p.productId);
+                    const qty = toNumber(cartItems[id]);
+                    return (
+                      <ProductCard
+                        key={id}
+                        product={p}
+                        qty={qty}
+                        onInc={() => setProductQty(p, qty + 1)}
+                        onDec={() => setProductQty(p, qty - 1)}
+                        onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })}
+                        discountPercent={cardDiscountPercent}
+                      />
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                  Люстры сейчас не найдены в каталоге. Подберу вариант при звонке.
+                </div>
+              )}
+            </div>
+          )}
+
+          {shownWStep === "corniceLighting" && (
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-slate-200 bg-white p-3">
+                <p className="text-sm font-semibold text-slate-950">Подсветка карниза</p>
+                <p className="mt-1 text-xs text-slate-600">
+                  {fmtM(toNumber(snapshot?.derivedInputs?.corniceLightingMeters))} м по расчёту.
+                  Нужны лента, блок питания и управление.
+                </p>
+              </div>
+
+              {wCorniceLighting.length > 0 ? (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {wCorniceLighting.map((p) => {
+                    const id = toText(p.productId);
+                    const qty = toNumber(cartItems[id]);
+                    return (
+                      <ProductCard
+                        key={id}
+                        product={p}
+                        qty={qty}
+                        onInc={() => setProductQty(p, qty + 1)}
+                        onDec={() => setProductQty(p, qty - 1)}
+                        onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })}
+                        discountPercent={cardDiscountPercent}
+                      />
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                  Комплектующие для подсветки подберу при звонке.
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ─── STEP: Track Fixtures (spots for track) ─── */}
           {shownWStep === "trackFixtures" && (
             <div className="space-y-3">
@@ -1760,7 +1902,7 @@ export function WizardStep1Lighting() {
                   className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">← Назад</button>
                 <button
                   type="button"
-                  onClick={() => setWStep("done")}
+                  onClick={goAfterLamps}
                   disabled={!lampsComplete}
                   className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-slate-950"
                 >
@@ -1989,7 +2131,7 @@ export function WizardStep1Lighting() {
           ) : (
             <>
               <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar max-sm:-mx-5 max-sm:px-5">
-                {CATALOG_SECTIONS.map((item) => (
+                {shownCatalogSections.map((item) => (
                   <button key={item.id} type="button" onClick={() => { setSection(item.id); setQuery(""); }}
                     className={["whitespace-nowrap rounded-xl border border-slate-200 px-3 py-2 text-sm max-sm:px-2.5 max-sm:py-1.5 max-sm:text-xs",
                       section === item.id ? "bg-slate-950 text-white" : "bg-white text-slate-700 hover:bg-slate-50"].join(" ")}>

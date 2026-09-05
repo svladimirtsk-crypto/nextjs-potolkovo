@@ -1,4 +1,10 @@
-export type CatalogSectionId = "track-systems" | "point-fixtures" | "mounts-grilles" | "lamps";
+export type CatalogSectionId =
+  | "track-systems"
+  | "point-fixtures"
+  | "mounts-grilles"
+  | "lamps"
+  | "chandeliers"
+  | "cornice-lighting";
 export type TrackSystemId = "COLIBRI_220" | "CLARUS_48" | "TRACK_220";
 export type TrackGroupId = "TRACK_FIXTURE" | "TRACK_PROFILE" | "TRACK_ACCESSORY";
 export type PointSubtypeId = "GX53" | "MR16" | "GU10" | "PANELS" | "OTHER";
@@ -13,9 +19,29 @@ export const PROFILE_PERIMETER_AUTO_RATIO = 1;
 export const CATALOG_SECTIONS: { id: CatalogSectionId; label: string }[] = [
   { id: "track-systems", label: "Трековые системы" },
   { id: "point-fixtures", label: "Точечные светильники" },
+  { id: "chandeliers", label: "Люстры" },
+  { id: "cornice-lighting", label: "Подсветка карниза" },
   { id: "mounts-grilles", label: "Закладные и решетки" },
   { id: "lamps", label: "Лампы" },
 ];
+
+/**
+ * T-043 · Секции, которые показываем только если посетитель ответил «да»
+ * на соответствующий вопрос Шага 0. Иначе каталог выглядит бесконечным.
+ */
+const CONDITIONAL_SECTIONS: Partial<Record<CatalogSectionId, "chandeliersEnabled" | "corniceLightingEnabled">> = {
+  chandeliers: "chandeliersEnabled",
+  "cornice-lighting": "corniceLightingEnabled",
+};
+
+export function visibleCatalogSections(
+  answers: { chandeliersEnabled?: boolean; corniceLightingEnabled?: boolean } = {}
+): { id: CatalogSectionId; label: string }[] {
+  return CATALOG_SECTIONS.filter((section) => {
+    const flag = CONDITIONAL_SECTIONS[section.id];
+    return !flag || answers[flag] === true;
+  });
+}
 
 export const TRACK_SYSTEMS: { id: TrackSystemId; label: string }[] = [
   { id: "COLIBRI_220", label: "COLIBRI 220V" },

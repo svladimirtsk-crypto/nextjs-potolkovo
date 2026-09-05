@@ -24,6 +24,11 @@ export type DerivedInputs = {
   trackMountType: "built-in" | "surface" | "none";
   trackLengthMeters: number;
   recommendedTrackSpotsQty: number;
+  /** T-043: ответы Шага 0, включающие секции «Люстры» и «Подсветка карниза». */
+  chandeliersEnabled?: boolean;
+  chandeliersQty?: number;
+  corniceLightingEnabled?: boolean;
+  corniceLightingMeters?: number;
 };
 
 export type LightingSnapshot = {

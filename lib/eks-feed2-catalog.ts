@@ -17,6 +17,7 @@ export type FeedCatalogKind =
   | "TRACK_ACCESSORY"
   | "TRACK_FIXTURE"
   | "SPOT_FIXTURE"
+  | "CHANDELIER"
   | "LAMP"
   | "PSU"
   | "CONTROL"
@@ -318,8 +319,14 @@ function deriveKind(categoryId: string, name: string, path: string): FeedCatalog
   const joined = `${name} ${path}`.toLowerCase();
 
   if (categoryId === "41" || categoryId === "42" || categoryId === "210") return "LAMP";
+  // T-043: пульты лежат в одной категории с блоками питания, но это управление,
+  // а не питание — иначе они засоряют подбор БП по мощности.
+  if (joined.includes("пульт") || joined.includes("контроллер") || joined.includes("диммер")) {
+    return "CONTROL";
+  }
   if (categoryId === "46" || joined.includes("блок питания")) return "PSU";
   if (categoryId === "177" || categoryId === "185" || categoryId === "145") return "CONTROL";
+  if (categoryId === "43" || joined.includes("люстра")) return "CHANDELIER";
   if (categoryId === "213" || joined.includes("лента")) return "LED_STRIP";
   if (
     categoryId === "133" ||

@@ -282,9 +282,23 @@ export function useCeilingCalculatorEngine(initialScenario: SolutionScenario = "
       const { snapshot: s } = calcRoomSnapshotV2(firstRoom as unknown as V2RoomConfig);
       // aggregate totals
       const aggTotal = calcRoomsTotal(rooms as unknown as V2RoomConfig[]);
+      // T-043: секции «Люстры» и «Подсветка карниза» включаются, если их
+      // выбрали хотя бы в одной комнате, а не только в первой.
+      const derivedInputs = {
+        ...s.derivedInputs,
+        chandeliersEnabled: rooms.some(r => r.chandeliersEnabled),
+        chandeliersQty: rooms.reduce((sum, r) => sum + (r.chandeliersEnabled ? r.chandeliersCount : 0), 0),
+        corniceLightingEnabled: rooms.some(r => r.corniceLightingEnabled),
+        corniceLightingMeters: rooms.reduce(
+          (sum, r) => sum + (r.corniceLightingEnabled ? r.corniceLightingLength : 0),
+          0
+        ),
+      };
+
       setSnapshot(prev => ({
         ...(prev ?? s),
         ...s,
+        derivedInputs,
         area: totalArea,
         total: aggTotal.applied,
         totalRawRub: aggTotal.raw,

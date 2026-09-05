@@ -102,6 +102,10 @@ export function calcRoomSnapshotV2(room: V2RoomConfig): { total: number; snapsho
       trackMountType: derivedTrackMountType,
       trackLengthMeters: room.trackType!=="none" ? room.trackLength : 0,
       recommendedTrackSpotsQty: calcRecommendedTrackSpots(room.trackType!=="none" ? room.trackLength : 0),
+      chandeliersEnabled: room.chandeliersEnabled,
+      chandeliersQty: room.chandeliersEnabled ? room.chandeliersCount : 0,
+      corniceLightingEnabled: room.corniceLightingEnabled,
+      corniceLightingMeters: room.corniceLightingEnabled ? room.corniceLightingLength : 0,
     },
   };
 

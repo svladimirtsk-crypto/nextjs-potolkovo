@@ -8,6 +8,9 @@ export type WizardStep =
   | "trackFixtures"
   | "points"
   | "lamps"
+  // T-043: экраны включаются ответами Шага 0, идут после точечных.
+  | "chandeliers"
+  | "corniceLighting"
   | "done"
   | "none";
 
