@@ -23,6 +23,8 @@ type ProofCardProps = {
   item: ProofItem;
   mode: "mobile" | "desktop";
   onOpen: () => void;
+  /** T-040: «Хочу так же» → калькулятор с пресетом кейса. */
+  onWantSame?: () => void;
 };
 
 function splitPriceLabel(priceLabel?: string) {
@@ -42,7 +44,7 @@ function splitPriceLabel(priceLabel?: string) {
   };
 }
 
-export function ProofCard({ item, mode, onOpen }: ProofCardProps) {
+export function ProofCard({ item, mode, onOpen, onWantSame }: ProofCardProps) {
   const isMobile = mode === "mobile";
   const price = splitPriceLabel(item.priceLabel);
 
@@ -160,12 +162,28 @@ export function ProofCard({ item, mode, onOpen }: ProofCardProps) {
           </div>
 
           <div className="mt-auto pt-4">
-            <div className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-slate-950 bg-slate-950 px-4 text-sm font-semibold text-white">
+            <div className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-slate-950 px-4 text-sm font-semibold text-slate-950">
               Подробнее
             </div>
           </div>
         </div>
       </button>
+
+      {/*
+        T-040: отдельная кнопка вне карточки-кнопки — вложенные <button> невалидны.
+        Ведёт сразу в калькулятор с пресетом кейса, минуя модалку работы.
+      */}
+      {onWantSame ? (
+        <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+          <button
+            type="button"
+            onClick={onWantSame}
+            className="min-h-11 w-full rounded-full bg-slate-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+          >
+            {item.ctaLabel}
+          </button>
+        </div>
+      ) : null}
     </article>
   );
 }

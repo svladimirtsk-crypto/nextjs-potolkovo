@@ -8,6 +8,7 @@ import { serviceLinks } from "@/content/service-links";
 import { scrollToAnchorTarget } from "@/lib/scroll-to-anchor";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
+import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 
 
 const priorityRank = {
@@ -25,6 +26,7 @@ const headerServiceLinks = serviceLinks
   );
 
 export function HomeHeader() {
+  const { openCalculator } = useCalculatorModal();
   const [isDesktopServicesOpen, setIsDesktopServicesOpen] = useState(false);
   const [isMobileServicesOpen, setIsMobileServicesOpen] = useState(false);
 
@@ -182,8 +184,13 @@ export function HomeHeader() {
             {contacts.phoneDisplay}
           </a>
 
-          <Button href="#action" className="whitespace-nowrap px-4 sm:px-5">
-            <span className="sm:hidden">Замер</span>
+          {/* T-040: primary хедера открывает калькулятор напрямую. */}
+          <Button
+            type="button"
+            className="whitespace-nowrap px-4 sm:px-5"
+            onClick={() => openCalculator({ source: "home:header" })}
+          >
+            <span className="sm:hidden">Рассчитать</span>
             <span className="hidden sm:inline">{homepage.header.primaryCtaLabel}</span>
           </Button>
         </div>

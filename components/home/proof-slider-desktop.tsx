@@ -10,9 +10,11 @@ type ProofItem = (typeof homepage.proof.items)[number];
 type ProofSliderDesktopProps = {
   items: readonly ProofItem[];
   onOpen: (slug: string) => void;
+  /** T-040: «Хочу так же» → калькулятор с пресетом кейса. */
+  onWantSame?: (item: ProofItem) => void;
 };
 
-export function ProofSliderDesktop({ items, onOpen }: ProofSliderDesktopProps) {
+export function ProofSliderDesktop({ items, onOpen, onWantSame }: ProofSliderDesktopProps) {
   const trackRef = useRef<HTMLDivElement>(null);
 
   const scroll = (dir: "prev" | "next") => {
@@ -46,6 +48,7 @@ export function ProofSliderDesktop({ items, onOpen }: ProofSliderDesktopProps) {
               item={item}
               mode="desktop"
               onOpen={() => onOpen(item.slug)}
+              onWantSame={onWantSame ? () => onWantSame(item) : undefined}
             />
           </div>
         ))}

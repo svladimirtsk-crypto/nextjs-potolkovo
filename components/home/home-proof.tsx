@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 
+import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
+import type { ServiceCalculatorPreset } from "@/content/services";
+
 import { homepage } from "@/content/homepage";
 import { Container } from "@/components/ui/container";
 import { Heading } from "@/components/ui/heading";
@@ -15,7 +18,16 @@ import { ProofSliderDesktop } from "./proof-slider-desktop";
 const proof = homepage.proof;
 
 export function HomeProof() {
+  const { openCalculator } = useCalculatorModal();
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
+  /** T-040: «Хочу так же» открывает калькулятор с пресетом кейса. */
+  const wantSame = (item: (typeof proof.items)[number]) => {
+    // У части кейсов пресета нет — открываем калькулятор со стандартным потолком.
+    const itemPreset = (item as { actionPreset?: ServiceCalculatorPreset }).actionPreset;
+    const preset = (itemPreset ?? { ceilingType: "standard" }) as ServiceCalculatorPreset;
+    openCalculator({ preset, forcePreset: true, source: `${item.slug}:proof-card` });
+  };
 
   const openByIndex = (index: number) => setSelectedIndex(index);
 
@@ -66,6 +78,7 @@ export function HomeProof() {
                     item={item}
                     mode="mobile"
                     onOpen={() => openByIndex(index)}
+                    onWantSame={() => wantSame(item)}
                   />
                 ))}
               </ProofTrackClient>
@@ -78,7 +91,7 @@ export function HomeProof() {
 
         {/* Desktop: scroll-snap slider, 3 cards visible */}
         <div className="mt-10 hidden lg:block">
-          <ProofSliderDesktop items={proof.items} onOpen={openBySlug} />
+          <ProofSliderDesktop items={proof.items} onOpen={openBySlug} onWantSame={wantSame} />
         </div>
       </Container>
 
