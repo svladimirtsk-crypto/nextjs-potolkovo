@@ -197,9 +197,7 @@ function ProductCard({
 }) {
   const regular = toNumber(product.priceRub);
   const lightingOnly = getDiscountedPrice(regular, LIGHTING_ONLY_DISCOUNT_PERCENT);
-  const withCeiling = getDiscountedPrice(regular, LIGHTING_WITH_CEILING_DISCOUNT_PERCENT);
-  const lightingOnlyBenefit = benefitRub(regular, 10);
-  const withCeilingBenefit = benefitRub(regular, 25);
+  const lightingOnlyBenefit = benefitRub(regular, LIGHTING_ONLY_DISCOUNT_PERCENT);
   const systemBadge = product.system === "COLIBRI_220"
     ? "COLIBRI"
     : product.system === "CLARUS_48"
@@ -212,7 +210,7 @@ function ProductCard({
     : product.kind === "TRACK_FIXTURE"
       ? "Трековый свет"
       : product.kind === "SPOT_FIXTURE" || isPanelProduct(product)
-        ? "Точка"
+        ? "Точечный"
         : product.kind === "LAMP"
           ? "Лампа"
           : null;
@@ -280,12 +278,17 @@ function ProductCard({
             </p>
           ) : null}
 
+          {/*
+            T-044: одна ценовая подпись — итог со скидкой и зачёркнутая базовая.
+            Раньше карточка несла шесть чисел (две скидки, два процента, две
+            выгоды), и цену приходилось расшифровывать. Режим скидки объявлен
+            баннером над сеткой.
+          */}
           <div className="mt-3 text-xs">
-            <span className="line-through text-slate-400">{fmt(regular)} ₽</span>{" "}
             <span className="font-semibold text-emerald-700">{fmt(lightingOnly)} ₽</span>
-            <span className="text-slate-500"> · −10% (−{fmt(lightingOnlyBenefit)} ₽)</span>
-            <br />
-            <span className="text-blue-700">С потолком: {fmt(withCeiling)} ₽ · −25% (−{fmt(withCeilingBenefit)} ₽)</span>
+            {lightingOnlyBenefit > 0 ? (
+              <span className="ml-1.5 text-slate-500 line-through">{fmt(regular)} ₽</span>
+            ) : null}
           </div>
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -940,7 +943,12 @@ export function CatalogSectionClient({ data }: Props) {
         ) : null}
 
         <div className="relative mt-4">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">🔍</span>
+          <span aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+              <circle cx="9" cy="9" r="5.5" />
+              <path d="M13.5 13.5L17 17" strokeLinecap="round" />
+            </svg>
+          </span>
           <input
           value={query}
           onChange={(event) => setQuery(String(event.target.value ?? ""))}
@@ -1027,8 +1035,13 @@ export function CatalogSectionClient({ data }: Props) {
           </div>
         ) : null}
 
+        {/* T-044: режим скидки — одной строкой над сеткой, а не в каждой карточке */}
+        <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800">
+          Цены со скидкой −{LIGHTING_ONLY_DISCOUNT_PERCENT} % на свет · −{LIGHTING_WITH_CEILING_DISCOUNT_PERCENT} % при заказе с потолком
+        </div>
+
         {/* Products grid with "Показать ещё" */}
-        <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filteredProducts.slice(0, visibleCount).map((product) => {
             const id = toText(product.productId);
             const qty = toNumber(cartItems[id]);

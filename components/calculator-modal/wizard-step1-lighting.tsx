@@ -170,7 +170,7 @@ function ProductCard({
     : product.kind === "TRACK_FIXTURE"
       ? "Трековый свет"
       : product.kind === "SPOT_FIXTURE" || isPanelProduct(product)
-        ? "Точка"
+        ? "Точечный"
         : product.kind === "LAMP"
           ? "Лампа"
           : null;
@@ -213,11 +213,16 @@ function ProductCard({
           {toText(product.name)}
         </p>
 
+        {/*
+          T-044: на карточке максимум два числа — итоговая цена и зачёркнутая
+          базовая. Процент и рублёвая выгода вынесены в баннер над сеткой,
+          иначе в плитке четыре числа и цена перестаёт читаться.
+        */}
         <div className="mt-2 text-xs leading-5 max-sm:mt-1.5 max-sm:text-[11px] max-sm:leading-4">
-          <span className="line-through text-slate-400">{fmt(regular)} ₽</span>{" "}
           <span className="font-semibold text-emerald-700">{fmt(discounted)} ₽</span>
-          {benefit > 0 ? <span className="text-slate-500"> · −{discountPercent}% (−{fmt(benefit)} ₽)</span> : null}
-          <span className="text-slate-400"> · {discountPercent >= 25 ? "с потолком" : "только свет"}</span>
+          {benefit > 0 ? (
+            <span className="ml-1.5 text-slate-500 line-through">{fmt(regular)} ₽</span>
+          ) : null}
         </div>
 
         {pickAttrs(product).length > 0 || toText(product.vendorCode) ? (
@@ -308,7 +313,6 @@ function ImageQuickPreview({
             containerClassName="h-[min(52dvh,420px)] w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-3"
             className="h-full w-full object-contain"
           />
-          <p className="mt-2 text-center text-[11px] text-slate-500">Кликните вне фото или на крестик, чтобы закрыть.</p>
         </div>
       </div>
     </>
@@ -1830,7 +1834,6 @@ export function WizardStep1Lighting() {
             <div className="space-y-3">
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3">
                 <p className="text-sm font-semibold text-amber-950">Лампы к светильникам</p>
-                <p className="mt-1 text-xs text-amber-800">Показываем все подходящие лампы, не только первые позиции.</p>
               </div>
 
               {lampSocketsToShow.length === 0 ? (
@@ -2189,10 +2192,29 @@ export function WizardStep1Lighting() {
               )}
 
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">🔍</span>
+                <span aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+                    <circle cx="9" cy="9" r="5.5" />
+                    <path d="M13.5 13.5L17 17" strokeLinecap="round" />
+                  </svg>
+                </span>
                 <input value={query} onChange={(e) => setQuery(e.target.value ?? "")}
                   placeholder="Поиск в текущем разделе"
                   className="w-full rounded-2xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-sm text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2" />
+              </div>
+
+              {/* T-044: режим скидки объявляем один раз над сеткой, а не в каждой карточке */}
+              <div
+                className={[
+                  "rounded-2xl border px-4 py-3 text-sm font-semibold",
+                  hasCeilingContext
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                    : "border-slate-200 bg-slate-50 text-slate-800",
+                ].join(" ")}
+              >
+                {hasCeilingContext
+                  ? `Цены со скидкой −${LIGHTING_WITH_CEILING_DISCOUNT_PERCENT} % при заказе потолка`
+                  : `Цены со скидкой −${LIGHTING_ONLY_DISCOUNT_PERCENT} % — только свет`}
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
