@@ -15,6 +15,15 @@ import {
 import catalogImages from "@/data/catalog-images.json";
 import { ProductCard } from "./CatalogProductCard";
 import { CatalogWarnings } from "./CatalogWarnings";
+import {
+  calcClarusPsuOptions,
+  calcLampCurrentBySocket,
+  calcLampRequiredBySocket,
+  calcMissingLamps,
+  calcMissingMounts,
+  calcMountRequiredByVendor,
+  groupLampsBySocket,
+} from "@/lib/lighting/catalog-kit-gaps";
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
 import { Container } from "@/components/ui/container";
 import { Heading } from "@/components/ui/heading";
@@ -36,7 +45,7 @@ import {
   applyLightingWithCeilingDiscount,
   calcLightingDiscountAmount,
 } from "@/lib/lighting-formulas";
-import { detectSocket, getRequiredLampSocket } from "@/lib/feed2-products";
+import { detectSocket } from "@/lib/feed2-products";
 
 import {
   CATALOG_SECTIONS,
@@ -279,131 +288,31 @@ export function CatalogSectionClient({ data }: Props) {
   }, [lightingOnlySelectedTotal, selectedLightingItems, selectedTotal, setSnapshot]);
 
   // ===== Dependencies (mounts / lamps / PSU) =====
-  const mountRequiredByVendor = useMemo(() => {
-    const required: Record<string, number> = {};
-    for (const entry of selectedEntries) {
-      const fixtureVendor = toText(entry.product.vendorCode);
-      const mountVendor = POINT_TO_MOUNT_VENDOR_CODE[fixtureVendor];
-      if (!mountVendor) continue;
-      required[mountVendor] = (required[mountVendor] ?? 0) + entry.qty;
-    }
-    return required;
-  }, [selectedEntries]);
+  const mountRequiredByVendor = useMemo(() => calcMountRequiredByVendor(selectedEntries), [selectedEntries]);
 
-  const missingMounts = useMemo(() => {
-    const out: Array<{
-      fixtureVendorCode: string;
-      mountVendorCode: string;
-      requiredQty: number;
-      currentQty: number;
-      mountName?: string;
-    }> = [];
+  const missingMounts = useMemo(
+    () => calcMissingMounts(cartItems, productIdByVendorCode, byProductId),
+    [byProductId, cartItems, productIdByVendorCode],
+  );
 
-    for (const [fixtureVendor, mountVendor] of Object.entries(POINT_TO_MOUNT_VENDOR_CODE)) {
-      const fixtureId = productIdByVendorCode.get(fixtureVendor);
-      const mountId = productIdByVendorCode.get(mountVendor);
-      if (!fixtureId || !mountId) continue;
+  const lampProductsBySocket = useMemo(() => groupLampsBySocket(products), [products]);
 
-      const fixtureQty = toNumber(cartItems[fixtureId]);
-      if (fixtureQty <= 0) continue;
+  const lampRequiredBySocket = useMemo(() => calcLampRequiredBySocket(selectedEntries), [selectedEntries]);
 
-      const mountQty = toNumber(cartItems[mountId]);
-      if (mountQty < fixtureQty) {
-        out.push({
-          fixtureVendorCode: fixtureVendor,
-          mountVendorCode: mountVendor,
-          requiredQty: fixtureQty,
-          currentQty: mountQty,
-          mountName: byProductId.get(mountId)?.name,
-        });
-      }
-    }
+  const lampCurrentBySocket = useMemo(
+    () => calcLampCurrentBySocket(cartItems, lampProductsBySocket),
+    [cartItems, lampProductsBySocket],
+  );
 
-    return out;
-  }, [byProductId, cartItems, productIdByVendorCode]);
+  const missingLamps = useMemo(
+    () => calcMissingLamps(lampRequiredBySocket, lampCurrentBySocket, lampProductsBySocket),
+    [lampCurrentBySocket, lampProductsBySocket, lampRequiredBySocket],
+  );
 
-  const lampProductsBySocket = useMemo(() => {
-    const base = products
-      .filter((p) => p.kind === "LAMP" && p.available !== false && toNumber(p.priceRub) > 0)
-      .sort((a, b) => toNumber(a.priceRub) - toNumber(b.priceRub));
-
-    const bySocket: Record<LampSocket, FeedCatalogProduct[]> = { GX53: [], MR16: [], GU10: [] };
-    for (const socket of LAMP_SOCKETS) {
-      bySocket[socket] = base.filter((p) => detectSocket(p) === socket);
-    }
-    return bySocket;
-  }, [products]);
-
-  const lampRequiredBySocket = useMemo(() => {
-    const required: Record<LampSocket, number> = { GX53: 0, MR16: 0, GU10: 0 };
-    for (const entry of selectedEntries) {
-      const socket = getRequiredLampSocket(entry.product);
-      if (!socket) continue;
-      required[socket] = (required[socket] ?? 0) + entry.qty;
-    }
-    return required;
-  }, [selectedEntries]);
-
-  const lampCurrentBySocket = useMemo(() => {
-    const current: Record<LampSocket, number> = { GX53: 0, MR16: 0, GU10: 0 };
-    for (const lamp of lampProductsBySocket.GX53) current.GX53 += toNumber(cartItems[toText(lamp.productId)]);
-    for (const lamp of lampProductsBySocket.MR16) current.MR16 += toNumber(cartItems[toText(lamp.productId)]);
-    return current;
-  }, [cartItems, lampProductsBySocket]);
-
-  const missingLamps = useMemo(() => {
-    const out: Array<{ socket: LampSocket; requiredQty: number; currentQty: number; cheapestLampId: string | null }> =
-      [];
-
-    for (const socket of LAMP_SOCKETS) {
-      const required = toNumber(lampRequiredBySocket[socket]);
-      if (required <= 0) continue;
-
-      const current = toNumber(lampCurrentBySocket[socket]);
-      if (current >= required) continue;
-
-      const cheapest = lampProductsBySocket[socket][0];
-      out.push({
-        socket,
-        requiredQty: required,
-        currentQty: current,
-        cheapestLampId: cheapest ? toText(cheapest.productId) : null,
-      });
-    }
-
-    return out;
-  }, [lampCurrentBySocket, lampProductsBySocket, lampRequiredBySocket]);
-
-  const hasClarusFixtures = useMemo(() => {
-    return selectedEntries.some((e) => e.product.system === "CLARUS_48" && e.product.kind === "TRACK_FIXTURE");
-  }, [selectedEntries]);
-
-  const clarusPsuQty = useMemo(() => {
-    return selectedEntries
-      .filter((entry) => {
-        const vendorCode = toText(entry.product.vendorCode);
-        return CLARUS_PSU_VENDOR_CODES.some((code) => code === vendorCode);
-      })
-      .reduce((sum, entry) => sum + entry.qty, 0);
-  }, [selectedEntries]);
-
-  /**
-   * Варианты БП для предупреждения: пусто, когда блок питания уже есть или
-   * система не CLARUS. Список строится из каталога, а не из констант —
-   * артикул без карточки в фиде показывать нечем.
-   */
-  const clarusPsuOptions = useMemo(() => {
-    if (!hasClarusFixtures || clarusPsuQty >= 1) return [];
-
-    return CLARUS_PSU_VENDOR_CODES.flatMap((vendorCode) => {
-      const productId = productIdByVendorCode.get(vendorCode);
-      if (!productId) return [];
-      const product = byProductId.get(productId);
-      if (!product) return [];
-
-      return [{ vendorCode, productId, name: toText(product.name) }];
-    });
-  }, [hasClarusFixtures, clarusPsuQty, productIdByVendorCode, byProductId]);
+  const clarusPsuOptions = useMemo(
+    () => calcClarusPsuOptions(selectedEntries, productIdByVendorCode, byProductId),
+    [selectedEntries, productIdByVendorCode, byProductId],
+  );
 
   const setClarusPsu = (productId: string) => {
     setCartItems((prev) => {
