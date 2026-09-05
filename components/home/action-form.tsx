@@ -6,6 +6,7 @@ import { contacts } from "@/content/contacts";
 import { buildLeadSnapshotV2 } from "@/lib/calculator/types";
 import { fillCallbackWindow, resolveStep2Copy, type Step2Intent } from "@/lib/calculator-flow";
 import { legal } from "@/content/legal";
+import { getAvailabilityLabel } from "@/content/availability";
 import { getKitDisplayName } from "@/lib/calculator-modal-types";
 import {
   trackFormOpened,
@@ -200,6 +201,9 @@ export function ActionForm({
 
   /** Только для комплектов света: как получить и когда удобно. */
   const [fulfilment, setFulfilment] = useState<"pickup" | "delivery">("pickup");
+  /** T-047: согласие на обработку данных — явный чекбокс, а не «по факту отправки». */
+  const [consentGiven, setConsentGiven] = useState(false);
+  const availabilityLabel = useMemo(() => getAvailabilityLabel(), []);
   const [preferredTime, setPreferredTime] = useState<"today" | "tomorrow_morning" | "telegram">(
     "today"
   );
@@ -269,6 +273,14 @@ export function ActionForm({
       setFieldErrors(nextErrors);
       setStatus("error");
       setMessage("Проверьте имя и телефон — без них не смогу перезвонить.");
+      return;
+    }
+
+    // T-047: без явного согласия заявку не отправляем.
+    if (!consentGiven) {
+      trackLeadError({ kind: "validation", placement });
+      setStatus("error");
+      setMessage("Отметьте согласие на обработку персональных данных.");
       return;
     }
 
@@ -475,10 +487,14 @@ export function ActionForm({
 
           <fieldset>
             <legend className="text-sm font-semibold text-slate-950">Когда удобно</legend>
+            {/* T-047: честный ручной календарь — не показываем, если список устарел */}
+            {availabilityLabel ? (
+              <p className="mt-1 text-xs text-slate-600">{availabilityLabel}</p>
+            ) : null}
             <div className="mt-2 space-y-2">
               {(
                 [
-                  ["today", "Сегодня"],
+                  ["today", "Сегодня до 21:00"],
                   ["tomorrow_morning", "Завтра утром"],
                   ["telegram", "Лучше напишите в Telegram"],
                 ] as const
@@ -605,7 +621,7 @@ export function ActionForm({
       </div>
 
       {/* P2.18: loading state on submit button */}
-      <Button type="submit" className="w-full" disabled={isPending}>
+      <Button type="submit" className="w-full" disabled={isPending || !consentGiven}>
         {isPending ? (
           <span className="flex items-center justify-center gap-2">
             <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -619,13 +635,26 @@ export function ActionForm({
         )}
       </Button>
 
-      <p className="text-xs text-slate-500">
-        {COPY.helperText}
-        <br />
-        {legal.consentTextPrefix}{" "}
-        <TextLink href={legal.privacyHref}>{legal.privacyLabel}</TextLink>{" "}
-        {legal.consentTextSuffix}
-      </p>
+      {/*
+        T-047: согласие стало явным действием. Раньше это была строка мелким
+        шрифтом под кнопкой — формально согласие «по факту отправки», что для
+        персональных данных слабое основание.
+      */}
+      <label className="flex items-start gap-2.5 text-xs leading-5 text-slate-600">
+        <input
+          type="checkbox"
+          checked={consentGiven}
+          onChange={(event) => setConsentGiven(event.target.checked)}
+          className="mt-0.5 h-4 w-4 shrink-0 accent-slate-950"
+        />
+        <span>
+          {legal.consentTextPrefix}
+          <TextLink href={legal.privacyHref}>{legal.privacyLabel}</TextLink>
+          {legal.consentTextSuffix}
+        </span>
+      </label>
+
+      <p className="text-xs text-slate-500">{COPY.helperText}</p>
     </form>
   );
 }

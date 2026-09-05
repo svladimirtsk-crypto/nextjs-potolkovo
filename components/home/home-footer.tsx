@@ -1,4 +1,4 @@
-import { contacts } from "@/content/contacts";
+import { contacts, isLegalFieldFilled } from "@/content/contacts";
 import { homepage } from "@/content/homepage";
 import { legal } from "@/content/legal";
 import { Container } from "@/components/ui/container";
@@ -61,6 +61,16 @@ export function HomeFooter() {
               </div>
 
               <div className="pt-2 text-sm text-slate-500">
+                {/* T-047: реквизиты продавца; заглушки TODO_OWNER не рендерим */}
+                {isLegalFieldFilled(contacts.legalName) ? (
+                  <p className="mb-1">{contacts.legalName}</p>
+                ) : null}
+                {isLegalFieldFilled(contacts.inn) ? (
+                  <p className="mb-1">ИНН {contacts.inn}</p>
+                ) : null}
+                {isLegalFieldFilled(contacts.ogrnip) ? (
+                  <p className="mb-1">ОГРНИП {contacts.ogrnip}</p>
+                ) : null}
                 <p>{contacts.regionLabel}</p>
                 {contacts.workingHoursLabel ? (
                   <p className="mt-1">{contacts.workingHoursLabel}</p>

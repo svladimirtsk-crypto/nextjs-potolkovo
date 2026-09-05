@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { getAvailabilityLabel } from "@/content/availability";
 
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import { homepage } from "@/content/homepage";
@@ -145,6 +146,7 @@ export function WizardStep2Summary() {
   // T-028: номер заявки и окно перезвона приходят из ответа /api/lead.
   const [leadPublicCode, setLeadPublicCode] = useState<string | null>(null);
   const [callbackWindow, setCallbackWindow] = useState("в ближайшее время");
+  const availabilityLabel = useMemo(() => getAvailabilityLabel(), []);
   const lightingAppliedBenefit = Math.max(
     0,
     resolvedLightingRegularTotal - resolvedLightingEffectiveTotal
@@ -505,6 +507,10 @@ export function WizardStep2Summary() {
       {/* What happens next */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4">
         <p className="text-sm font-semibold text-slate-950">Что происходит дальше</p>
+        {/* T-047: ближайшие окна замера — из ручного календаря content/availability.ts */}
+        {availabilityLabel ? (
+          <p className="mt-1 text-xs text-slate-600">{availabilityLabel}</p>
+        ) : null}
         <div className="mt-3 space-y-2">
           {fillCallbackWindow(step2Copy.nextSteps, callbackWindow).map((step, idx) => (
             <div key={step} className="flex items-start gap-2.5 text-sm text-slate-600">

@@ -13,7 +13,8 @@
     "test:e2e": "playwright test scripts/e2e-back-chain.test.ts",
     "validate:catalog": "node scripts/validate-catalog.mjs",
     "prebuild": "node scripts/validate-catalog.mjs && node scripts/build-catalog-index.mjs",
-    "build:catalog-index": "node scripts/build-catalog-index.mjs"
+    "build:catalog-index": "node scripts/build-catalog-index.mjs",
+    "check:legal": "node scripts/check-legal-fields.mjs"
   },
   "dependencies": {
     "next": "16.1.6",
