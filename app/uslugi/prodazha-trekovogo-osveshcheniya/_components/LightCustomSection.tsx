@@ -34,7 +34,7 @@ export function LightCustomSection() {
               }
               className="justify-center py-6 text-base"
             >
-              Подобрать освещение −10%
+              Собрать комплект
             </Button>
 
             <Button
@@ -48,7 +48,7 @@ export function LightCustomSection() {
               }
               className="justify-center"
             >
-              Добавить потолок −25%
+              С потолком −25 %
             </Button>
           </div>
 

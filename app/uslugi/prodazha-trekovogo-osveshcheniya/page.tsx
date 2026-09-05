@@ -14,6 +14,9 @@ import { CatalogSection } from "./_components/CatalogSection";
 import { TrackSaleSystemGuideSection } from "./_components/TrackSaleSystemGuideSection";
 import { TrackSaleFaqSection, trackSaleFaqItems } from "./_components/TrackSaleFaqSection";
 import { TrackSaleOrderingSection } from "./_components/TrackSaleOrderingSection";
+import { TrackSaleTermsSection } from "./_components/TrackSaleTermsSection";
+import { ServiceAboutSection } from "../_components/ServiceAboutSection";
+import { ServiceUseCasesSection } from "../_components/ServiceUseCasesSection";
 
 const service = getRequiredServicePageBySlug("prodazha-trekovogo-osveshcheniya");
 
@@ -45,10 +48,18 @@ export default function ProdazhaTrekovogoOsveshcheniyaPage() {
           <>
             <CatalogSection />
             <TrackSaleSystemGuideSection />
+            {/* T-045: контент страницы уже был в content/services.ts, но не рендерился */}
+            <ServiceAboutSection service={service} />
+            <ServiceUseCasesSection service={service} />
           </>
         }
         trust={<TrackSaleFaqSection />}
-        promise={<TrackSaleOrderingSection />}
+        promise={
+          <>
+            <TrackSaleOrderingSection />
+            <TrackSaleTermsSection />
+          </>
+        }
         action={<ServiceActionSection service={service} />}
         related={<ServiceRelatedServices service={service} />}
       />

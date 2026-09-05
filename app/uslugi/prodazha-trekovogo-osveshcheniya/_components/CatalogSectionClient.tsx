@@ -332,6 +332,13 @@ function ProductCard({
 type Props = { data: FeedCatalogResult };
 
 export function CatalogSectionClient({ data }: Props) {
+  /** Дата прайса поставщика — показываем рядом с каталогом. */
+  const catalogUpdatedAtLabel = useMemo(() => {
+    const parsed = new Date(toText(data.updatedAt));
+    if (Number.isNaN(parsed.getTime())) return "актуальную дату уточню";
+    return parsed.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+  }, [data.updatedAt]);
+
   const { openCalculator } = useCalculatorModal();
   const { setSnapshot } = usePriceCalculatorBridge();
 
@@ -668,6 +675,33 @@ export function CatalogSectionClient({ data }: Props) {
     });
   };
 
+  /**
+   * T-045 · Экран интента перед оформлением.
+   *
+   * Режим скидки определяет весь дальнейший путь: «только оборудование» ведёт
+   * сразу к заявке (Шаг 2), «с потолком» — в расчёт потолка (Шаг 0). Спрашиваем
+   * это один раз явным вопросом, а не двумя кнопками в липком баре.
+   */
+  const openCheckoutIntent = async () => {
+    if (selectedEntries.length === 0) return;
+
+    const withCeiling = await showConfirmDialog({
+      title: "Как оформляем комплект?",
+      message:
+        "Только оборудование — скидка 10 %, пришлю счёт после проверки наличия. " +
+        "С натяжным потолком — скидка на свет 25 %, сначала посчитаем потолок.",
+      confirmLabel: "С потолком −25 %",
+      cancelLabel: "Только оборудование −10 %",
+      variant: "info",
+    });
+
+    if (withCeiling === true) {
+      openWithCeiling();
+      return;
+    }
+    openLightingOrder();
+  };
+
   // T-031: «Посмотреть» открывает мини-корзину прямо на странице,
   // без ухода в калькулятор.
   const openSelectedList = () => {
@@ -957,41 +991,33 @@ export function CatalogSectionClient({ data }: Props) {
         />
         </div>
 
-        {/* Selected cart */}
+        {/*
+          T-045: один липкий бар вместо трёх конкурирующих кнопок.
+          Выбор режима скидки перенесён в экран интента — раньше человек должен
+          был решить «свет −10 %» или «потолок −25 %» прямо в баре, не понимая
+          разницы.
+        */}
         {selectedEntries.length > 0 ? (
           <div data-cart-bar data-count={selectedEntries.length} style={{ zIndex: "var(--z-cart, 45)" }} className="fixed bottom-4 left-1/2 hidden w-[min(1120px,calc(100vw-2rem))] -translate-x-1/2 rounded-[1.5rem] border border-slate-200 bg-white/95 p-4 shadow-[0_14px_42px_rgba(15,23,42,0.16)] backdrop-blur sm:block">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-slate-950">Корзина света: {selectedEntries.length} поз.</p>
-                <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
-                  <span>Без скидки: <span className="line-through text-slate-400">{fmt(selectedTotal)} ₽</span></span>
-                  <span className="text-emerald-700">Только свет −10%: <span className="font-semibold">{fmt(lightingOnlySelectedTotal)} ₽</span></span>
-                  <span className="text-blue-700">С потолком −25%: <span className="font-semibold">{fmt(withCeilingSelectedTotal)} ₽</span></span>
-                  <span className="font-semibold text-slate-950">Доп. выгода: {fmt(additionalCeilingBenefit)} ₽</span>
-                </div>
-              </div>
+              <p className="min-w-0 text-sm font-semibold text-slate-950">
+                Корзина · {selectedEntries.length} поз. · {fmt(lightingOnlySelectedTotal)} ₽
+              </p>
 
-              <div className="grid shrink-0 gap-2 sm:grid-cols-3">
+              <div className="flex shrink-0 gap-2">
                 <button
                   type="button"
                   onClick={openSelectedList}
-                  className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                  className="min-h-11 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-100"
                 >
                   Посмотреть
                 </button>
                 <button
                   type="button"
-                  onClick={openLightingOrder}
-                  className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                  onClick={openCheckoutIntent}
+                  className="min-h-11 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800"
                 >
-                  Свет −10%
-                </button>
-                <button
-                  type="button"
-                  onClick={openWithCeiling}
-                  className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100"
-                >
-                  Потолок −25%
+                  Оформить
                 </button>
               </div>
             </div>
@@ -1001,34 +1027,23 @@ export function CatalogSectionClient({ data }: Props) {
         {selectedEntries.length > 0 ? (
           <div data-cart-bar data-count={selectedEntries.length} style={{ zIndex: "var(--z-cart, 45)", paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }} className="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white/95 p-3 shadow-[0_-8px_28px_rgba(15,23,42,0.12)] backdrop-blur sm:hidden">
             <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-slate-950">Корзина: {selectedEntries.length} поз.</p>
-                <p className="mt-0.5 text-xs text-slate-600">
-                  Свет −10%: <span className="font-semibold text-emerald-700">{fmt(lightingOnlySelectedTotal)} ₽</span>
-                </p>
-                <p className="text-[11px] text-blue-700">С потолком −25%: {fmt(withCeilingSelectedTotal)} ₽ · выгода ещё {fmt(additionalCeilingBenefit)} ₽</p>
-              </div>
-              <div className="grid shrink-0 gap-1.5">
+              <p className="min-w-0 text-xs font-semibold text-slate-950">
+                Корзина · {selectedEntries.length} поз. · {fmt(lightingOnlySelectedTotal)} ₽
+              </p>
+              <div className="flex shrink-0 gap-1.5">
                 <button
                   type="button"
                   onClick={openSelectedList}
-                  className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-700"
+                  className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700"
                 >
                   Посмотреть
                 </button>
                 <button
                   type="button"
-                  onClick={openLightingOrder}
-                  className="min-h-11 rounded-xl bg-slate-950 px-3 text-[11px] font-semibold text-white"
+                  onClick={openCheckoutIntent}
+                  className="min-h-11 rounded-xl bg-slate-950 px-3 text-xs font-semibold text-white"
                 >
-                  Оформить · свет −10%
-                </button>
-                <button
-                  type="button"
-                  onClick={openWithCeiling}
-                  className="min-h-11 rounded-xl border border-blue-200 bg-blue-50 px-3 text-[11px] font-semibold text-blue-700"
-                >
-                  Потолок −25%
+                  Оформить
                 </button>
               </div>
             </div>
@@ -1039,6 +1054,14 @@ export function CatalogSectionClient({ data }: Props) {
         <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800">
           Цены со скидкой −{LIGHTING_ONLY_DISCOUNT_PERCENT} % на свет · −{LIGHTING_WITH_CEILING_DISCOUNT_PERCENT} % при заказе с потолком
         </div>
+
+        {/*
+          T-045: честная оговорка про источник цен. Прайс поставщика меняется,
+          и обещать неизменную цену до проверки наличия нельзя.
+        */}
+        <p className="mt-3 text-xs leading-5 text-slate-600">
+          Цены и наличие по прайсу поставщика EKS Market на {catalogUpdatedAtLabel}; уточню перед счётом.
+        </p>
 
         {/* Products grid with "Показать ещё" */}
         <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">

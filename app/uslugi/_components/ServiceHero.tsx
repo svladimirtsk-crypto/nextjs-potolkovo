@@ -4,6 +4,7 @@ import { contacts } from "@/content/contacts";
 import type { ServicePageContent } from "@/content/services";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
+import { ServiceHeroLightingCta } from "./ServiceHeroLightingCta";
 
 type ServiceHeroProps = {
   /** T-014: вычисляемый ценовой якорь вместо статичного бейджа. */
@@ -68,21 +69,11 @@ export function ServiceHero({ service, priceBadgeOverride }: ServiceHeroProps) {
               </div>
             </div>
 
+            {/* T-045: вместо двух крупных «штампов» — одна спокойная строка про скидки. */}
             {isTrackSalePage ? (
-              <div className="mt-6 grid max-w-2xl gap-3 sm:grid-cols-2">
-                <div className="discount-stamp discount-stamp-emerald">
-                  <div className="discount-stamp-shine" aria-hidden="true" />
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-700">Только свет</p>
-                  <p className="mt-1 text-4xl font-black tracking-tight text-emerald-700">−10%</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-950">купить оборудование отдельно</p>
-                </div>
-                <div className="discount-stamp discount-stamp-blue">
-                  <div className="discount-stamp-shine" aria-hidden="true" />
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700">С потолком</p>
-                  <p className="mt-1 text-4xl font-black tracking-tight text-blue-700">−25%</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-950">максимальная выгода на свет</p>
-                </div>
-              </div>
+              <p className="mt-6 text-sm font-semibold text-slate-700">
+                −10 % на свет · −25 % при заказе потолка
+              </p>
             ) : null}
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
@@ -91,9 +82,7 @@ export function ServiceHero({ service, priceBadgeOverride }: ServiceHeroProps) {
               </Button>
 
               {isTrackSalePage ? (
-                <Button href="#price" variant="secondary" className="justify-center">
-                  Добавить потолок −25%
-                </Button>
+                <ServiceHeroLightingCta label="Открыть в калькуляторе" />
               ) : (
                 <Button
                   href={contacts.telegramUrl}
