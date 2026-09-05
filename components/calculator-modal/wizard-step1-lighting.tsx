@@ -85,6 +85,8 @@ import {
   selectOrphanTrackEntries,
 } from "@/lib/lighting/orphan-track";
 import {
+  AutoProfilePlanCard,
+  KitCompletionCard,
   KitDoneScreen,
   ManualPickScreen,
   TrackSystemScreen,
@@ -1227,66 +1229,30 @@ export function WizardStep1Lighting() {
 
               {/* T-032: автосборка под требуемый метраж одним тапом */}
               {autoProfilePlan && requiredTrackMeters > 0 && !trackComplete ? (
-                <div className="rounded-2xl border border-slate-300 bg-white p-4">
-                  <p className="text-sm font-semibold text-slate-950">
-                    Собрать автоматически:{" "}
-                    {autoProfilePlan.pieces
-                      .map((piece) => `${fmtM(piece.pieceMeters)} м × ${piece.qty}`)
-                      .join(" + ")}{" "}
-                    = {fmt(autoProfilePlan.totalRub)} ₽
-                  </p>
-                  <p className="mt-1 text-xs text-slate-600">
-                    С потолком: {fmt(applyLightingWithCeilingDiscount(autoProfilePlan.totalRub))} ₽ · перекроет{" "}
-                    {fmtM(autoProfilePlan.totalMeters)} м из {fmtM(requiredTrackMeters)} м
-                  </p>
-                  <button
-                    type="button"
-                    onClick={applyAutoProfilePlan}
-                    className="mt-3 min-h-11 w-full rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800"
-                  >
-                    Собрать автоматически
-                  </button>
-                  <p className="mt-2 text-xs text-slate-500">Ниже можно поправить количество вручную.</p>
-                </div>
+                <AutoProfilePlanCard
+                  pieces={autoProfilePlan.pieces}
+                  totalRub={autoProfilePlan.totalRub}
+                  discountedTotalRub={applyLightingWithCeilingDiscount(autoProfilePlan.totalRub)}
+                  totalMeters={autoProfilePlan.totalMeters}
+                  requiredMeters={requiredTrackMeters}
+                  onApply={applyAutoProfilePlan}
+                />
               ) : null}
 
               {/* T-042: чего не хватает комплекту — с обоснованием каждой строки */}
               {kitCompletion.mandatory.length > 0 ? (
-                <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4">
-                  <p className="text-sm font-semibold text-amber-950">Комплектующие</p>
-                  <p className="mt-1 text-xs text-amber-900">
-                    Без этих позиций комплект не соберётся — добавил расчёт, количество можно поправить.
-                  </p>
-                  <ul className="mt-3 space-y-2">
-                    {kitCompletion.mandatory.map((item) => (
-                      <li key={toText(item.product.productId)} className="text-xs text-amber-950">
-                        <span className="font-semibold">
-                          {toText(item.product.name)} × {item.qty}
-                        </span>
-                        <span className="block text-amber-800">{item.reason}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <button
-                    type="button"
-                    onClick={() => applyKitCompletion(kitCompletion.mandatory)}
-                    className="mt-3 min-h-11 w-full rounded-xl bg-amber-600 px-4 text-sm font-semibold text-white hover:bg-amber-700"
-                  >
-                    Добавить всё
-                  </button>
-
-                  {kitCompletion.psuMissing ? (
-                    <label className="mt-3 flex min-h-11 items-center gap-2 text-xs text-amber-950">
-                      <input
-                        type="checkbox"
-                        checked={psuAcknowledged}
-                        onChange={(e) => setPsuAcknowledged(e.target.checked)}
-                        className="h-4 w-4 accent-amber-600"
-                      />
-                      Блок питания подберём при звонке — идти к итогу без него
-                    </label>
-                  ) : null}
-                </div>
+                <KitCompletionCard
+                  items={kitCompletion.mandatory.map((item) => ({
+                    productId: toText(item.product.productId),
+                    name: toText(item.product.name),
+                    qty: item.qty,
+                    reason: item.reason,
+                  }))}
+                  psuMissing={kitCompletion.psuMissing}
+                  psuAcknowledged={psuAcknowledged}
+                  onAddAll={() => applyKitCompletion(kitCompletion.mandatory)}
+                  onPsuAcknowledgedChange={setPsuAcknowledged}
+                />
               ) : null}
 
               {kitCompletion.recommended.length > 0 ? (

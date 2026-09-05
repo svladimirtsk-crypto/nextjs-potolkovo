@@ -264,3 +264,110 @@ export function KitDoneScreen({
     </div>
   );
 }
+
+/** Метры с одним знаком после запятой: «2,5 м», но «3 м». */
+const fmtMeters = (v: number): string =>
+  new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 }).format(v);
+
+/**
+ * T-032 · Автосборка профиля под требуемый метраж.
+ *
+ * Собрать трек из кусков разной длины вручную — задача, в которой легко
+ * ошибиться, поэтому предлагаем готовый план одним тапом и сразу показываем,
+ * сколько метров он перекрывает.
+ */
+export function AutoProfilePlanCard({
+  pieces,
+  totalRub,
+  discountedTotalRub,
+  totalMeters,
+  requiredMeters,
+  onApply,
+}: {
+  pieces: Array<{ pieceMeters: number; qty: number }>;
+  totalRub: number;
+  discountedTotalRub: number;
+  totalMeters: number;
+  requiredMeters: number;
+  onApply: () => void;
+}) {
+  const plan = pieces.map((p) => `${fmtMeters(p.pieceMeters)} м × ${p.qty}`).join(" + ");
+
+  return (
+    <div className="rounded-2xl border border-slate-300 bg-white p-4">
+      <p className="text-sm font-semibold text-slate-950">
+        Собрать автоматически: {plan} = {fmtRub(totalRub)} ₽
+      </p>
+      <p className="mt-1 text-xs text-slate-600">
+        С потолком: {fmtRub(discountedTotalRub)} ₽ · перекроет {fmtMeters(totalMeters)} м из{" "}
+        {fmtMeters(requiredMeters)} м
+      </p>
+      <button
+        type="button"
+        onClick={onApply}
+        className="mt-3 min-h-11 w-full rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+      >
+        Собрать автоматически
+      </button>
+      <p className="mt-2 text-xs text-slate-500">Ниже можно поправить количество вручную.</p>
+    </div>
+  );
+}
+
+/**
+ * T-042 · Обязательные комплектующие с обоснованием каждой строки.
+ *
+ * Блок питания для CLARUS выделен отдельно: без него свет не включится, но
+ * запрещать переход нельзя — даём явно согласиться на «подберём при звонке».
+ */
+export function KitCompletionCard({
+  items,
+  psuMissing,
+  psuAcknowledged,
+  onAddAll,
+  onPsuAcknowledgedChange,
+}: {
+  items: Array<{ productId: string; name: string; qty: number; reason: string }>;
+  psuMissing: boolean;
+  psuAcknowledged: boolean;
+  onAddAll: () => void;
+  onPsuAcknowledgedChange: (value: boolean) => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4">
+      <p className="text-sm font-semibold text-amber-950">Комплектующие</p>
+      <p className="mt-1 text-xs text-amber-900">
+        Без этих позиций комплект не соберётся — добавил расчёт, количество можно поправить.
+      </p>
+      <ul className="mt-3 space-y-2">
+        {items.map((item) => (
+          <li key={item.productId} className="text-xs text-amber-950">
+            <span className="font-semibold">
+              {item.name} × {item.qty}
+            </span>
+            <span className="block text-amber-800">{item.reason}</span>
+          </li>
+        ))}
+      </ul>
+      <button
+        type="button"
+        onClick={onAddAll}
+        className="mt-3 min-h-11 w-full rounded-xl bg-amber-600 px-4 text-sm font-semibold text-white hover:bg-amber-700"
+      >
+        Добавить всё
+      </button>
+
+      {psuMissing ? (
+        <label className="mt-3 flex min-h-11 items-center gap-2 text-xs text-amber-950">
+          <input
+            type="checkbox"
+            checked={psuAcknowledged}
+            onChange={(e) => onPsuAcknowledgedChange(e.target.checked)}
+            className="h-4 w-4 accent-amber-600"
+          />
+          Блок питания подберём при звонке — идти к итогу без него
+        </label>
+      ) : null}
+    </div>
+  );
+}
