@@ -18,11 +18,11 @@ import {
 import {
 } from "@/lib/lighting-formulas";
 
+import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
 import {
   getCalculatorSummaryLines,
   getLightingSummaryLines,
-  usePriceCalculatorBridge,
-} from "@/components/home/price-calculator-context";
+} from "@/lib/calculator/summary-lines";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -98,6 +98,9 @@ describe("N-002 · проценты скидок только из прайса"
     "components/calculator-modal/price-strip.tsx",
     "components/home/price-calculator-context.tsx",
     "components/lighting/LightingCartDrawer.tsx",
+    // N-050: строки сводки уехали из price-calculator-context.tsx сюда,
+    // запрет на литералы процентов должен был переехать вместе с ними.
+    "lib/calculator/summary-lines.ts",
   ];
 
   it("в UI нет литералов 25/10 рядом со скидкой", () => {

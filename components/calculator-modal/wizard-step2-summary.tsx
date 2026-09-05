@@ -14,10 +14,8 @@ import { fillCallbackWindow, resolveStep2Copy, type Step2Intent } from "@/lib/ca
 import { trackMessengerClick } from "@/lib/analytics";
 
 import { ActionForm } from "@/components/home/action-form";
-import {
-  getCalculatorSummaryLines,
-  usePriceCalculatorBridge,
-} from "@/components/home/price-calculator-context";
+import { usePriceCalculatorBridge } from "@/components/home/price-calculator-context";
+import { getCalculatorSummaryLines } from "@/lib/calculator/summary-lines";
 import { mergeInstallExtraIntoSnapshot } from "@/lib/calculator/snapshot-merge";
 import { clearCalcDraft } from "@/lib/calculator/draft";
 import { buildTelegramDeepLink } from "@/lib/lead/telegram-link";
