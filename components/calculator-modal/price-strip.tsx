@@ -108,7 +108,16 @@ export function PriceStrip() {
   })();
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm max-sm:px-3 max-sm:py-2">
+    /*
+     * T-064: сумма пересчитывается от действий в другой части экрана, поэтому
+     * полоса объявлена live-регионом — иначе незрячий пользователь меняет
+     * параметр и не узнаёт, что итог изменился. `polite`, чтобы не перебивать.
+     */
+    <div
+      aria-live="polite"
+      aria-atomic="true"
+      className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm max-sm:px-3 max-sm:py-2"
+    >
       <div className="sm:hidden">
         {!hasCeilingEstimate && hasLighting ? (
           <>

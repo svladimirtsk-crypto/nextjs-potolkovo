@@ -840,32 +840,46 @@ export function CatalogSectionClient({ data }: Props) {
           <button
             type="button"
             onClick={openInCalculator}
-            className="rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+            className="min-h-11 rounded-[var(--radius-md)] bg-[var(--color-accent)] px-4 text-sm font-semibold text-white hover:bg-[var(--color-accent-hover)]"
           >
 Собрать в калькуляторе →
           </button>
         </div>
 
         {/* Controls */}
+        {/*
+          T-064: секции каталога — это настоящие вкладки, поэтому размечены
+          как tablist/tab. Скринридер теперь сообщает «вкладка 2 из 6» и
+          состояние выбора, чего не давал набор обычных кнопок.
+        */}
         <div className="mt-8 flex gap-2 overflow-x-auto pb-1 no-scrollbar sm:flex-wrap">
-          {CATALOG_SECTIONS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => {
-                setSection(item.id);
-                setQuery("");
-                setVisibleCount(24);
-              }}
-              className={[
-                "whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium",
-                section === item.id ? "bg-slate-950 text-white" : "bg-white text-slate-700 hover:bg-slate-50",
-                "border border-slate-200",
-              ].join(" ")}
-            >
-              {item.label}
-            </button>
-          ))}
+          <div role="tablist" aria-label="Разделы каталога" className="contents">
+            {CATALOG_SECTIONS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                id={`catalog-tab-${item.id}`}
+                aria-selected={section === item.id}
+                aria-controls="catalog-panel"
+                onClick={() => {
+                  setSection(item.id);
+                  setQuery("");
+                  setVisibleCount(24);
+                }}
+                className={[
+                  "inline-flex min-h-11 items-center whitespace-nowrap rounded-[var(--radius-sm)] px-3.5 text-sm font-medium",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2",
+                  section === item.id
+                    ? "border-[var(--color-accent)] bg-[var(--color-accent)] text-white"
+                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                  "border",
+                ].join(" ")}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
           <button
             type="button"
             onClick={() => {
@@ -1000,7 +1014,8 @@ export function CatalogSectionClient({ data }: Props) {
         {selectedEntries.length > 0 ? (
           <div data-cart-bar data-count={selectedEntries.length} style={{ zIndex: "var(--z-cart, 45)" }} className="fixed bottom-4 left-1/2 hidden w-[min(1120px,calc(100vw-2rem))] -translate-x-1/2 rounded-[1.5rem] border border-slate-200 bg-white/95 p-4 shadow-[0_14px_42px_rgba(15,23,42,0.16)] backdrop-blur sm:block">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <p className="min-w-0 text-sm font-semibold text-slate-950">
+              {/* T-064: сумма меняется от кликов по карточкам — озвучиваем. */}
+              <p aria-live="polite" aria-atomic="true" className="min-w-0 text-sm font-semibold text-slate-950">
                 Корзина · {selectedEntries.length} поз. · {fmt(lightingOnlySelectedTotal)} ₽
               </p>
 
@@ -1015,7 +1030,7 @@ export function CatalogSectionClient({ data }: Props) {
                 <button
                   type="button"
                   onClick={openCheckoutIntent}
-                  className="min-h-11 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+                  className="min-h-11 rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-4 text-sm font-semibold text-white hover:bg-[var(--color-accent-hover)]"
                 >
                   Оформить
                 </button>
@@ -1027,7 +1042,7 @@ export function CatalogSectionClient({ data }: Props) {
         {selectedEntries.length > 0 ? (
           <div data-cart-bar data-count={selectedEntries.length} style={{ zIndex: "var(--z-cart, 45)", paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }} className="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white/95 p-3 shadow-[0_-8px_28px_rgba(15,23,42,0.12)] backdrop-blur sm:hidden">
             <div className="flex items-center justify-between gap-3">
-              <p className="min-w-0 text-xs font-semibold text-slate-950">
+              <p aria-live="polite" aria-atomic="true" className="min-w-0 text-xs font-semibold text-slate-950">
                 Корзина · {selectedEntries.length} поз. · {fmt(lightingOnlySelectedTotal)} ₽
               </p>
               <div className="flex shrink-0 gap-1.5">
@@ -1064,7 +1079,12 @@ export function CatalogSectionClient({ data }: Props) {
         </p>
 
         {/* Products grid with "Показать ещё" */}
-        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div
+          id="catalog-panel"
+          role="tabpanel"
+          aria-labelledby={`catalog-tab-${section}`}
+          className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
+        >
           {filteredProducts.slice(0, visibleCount).map((product) => {
             const id = toText(product.productId);
             const qty = toNumber(cartItems[id]);

@@ -6,10 +6,18 @@ import { isHashHref, scrollToAnchorTarget } from "@/lib/scroll-to-anchor";
 
 type ButtonVariant = "primary" | "secondary" | "ghost";
 
+/**
+ * T-064: три размера вместо одной захардкоженной высоты.
+ * `sm` — 44px (минимум для касания по WCAG 2.5.5), `md` — 48px (дефолт),
+ * `lg` — 56px для главных CTA на широких экранах.
+ */
+type ButtonSize = "sm" | "md" | "lg";
+
 type CommonProps = {
   children: React.ReactNode;
   className?: string;
   variant?: ButtonVariant;
+  size?: ButtonSize;
 };
 
 type ButtonAsButtonProps = CommonProps & {
@@ -24,6 +32,18 @@ type ButtonAsLinkProps = CommonProps & {
 };
 
 type ButtonProps = ButtonAsButtonProps | ButtonAsLinkProps;
+
+function getSizeClasses(size: ButtonSize) {
+  switch (size) {
+    case "sm":
+      return "min-h-11 px-4 py-2.5 text-sm";
+    case "lg":
+      return "min-h-14 px-7 py-4 text-base";
+    case "md":
+    default:
+      return "min-h-12 px-5 py-3 text-sm";
+  }
+}
 
 function getVariantClasses(variant: ButtonVariant) {
   switch (variant) {
@@ -41,10 +61,15 @@ function getVariantClasses(variant: ButtonVariant) {
       ].join(" ");
     case "primary":
     default:
+      /*
+       * T-064: primary — акцентный синий, а не чёрный. Раньше главная кнопка
+       * визуально не отличалась от тёмных секций и служебных элементов,
+       * поэтому «Записаться на замер» терялась среди slate-950.
+       */
       return [
-        "border border-slate-950 bg-slate-950",
+        "border border-[var(--color-accent)] bg-[var(--color-accent)]",
         "!text-white",
-        "hover:border-slate-800 hover:bg-slate-800",
+        "hover:border-[var(--color-accent-hover)] hover:bg-[var(--color-accent-hover)]",
       ].join(" ");
   }
 }
@@ -55,9 +80,11 @@ function isLinkProps(props: ButtonProps): props is ButtonAsLinkProps {
 
 export function Button(props: ButtonProps) {
   const variant = props.variant ?? "primary";
+  const size = props.size ?? "md";
 
   const baseClassName = [
-    "inline-flex min-h-12 items-center justify-center rounded-full px-5 py-3 text-sm font-semibold",
+    "inline-flex items-center justify-center rounded-full font-semibold",
+    getSizeClasses(size),
     "transition-colors",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2",
     "disabled:pointer-events-none disabled:opacity-60",

@@ -242,15 +242,14 @@ function ProductCard({
 
         {/* Qty controls */}
         <div className="mt-3 flex items-center gap-2 max-sm:mt-2 max-sm:gap-1.5">
-          <button type="button" onClick={onDec}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 active:scale-95 max-sm:h-9 max-sm:w-9"
-            style={{ minHeight: 36, minWidth: 36 }}>−</button>
+          {/* T-064: 44×44 — минимальная площадь касания (WCAG 2.5.5); раньше было 36. */}
+          <button type="button" onClick={onDec} aria-label="Уменьшить количество"
+            className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-sm)] border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 active:scale-95">−</button>
           <span className="min-w-[2.5rem] text-center text-sm font-semibold text-slate-950 max-sm:min-w-[2rem]">
             {product.unit === "m" ? Number(qty.toFixed(1)) : qty}
           </span>
-          <button type="button" onClick={onInc}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 active:scale-95 max-sm:h-9 max-sm:w-9"
-            style={{ minHeight: 36, minWidth: 36 }}>+</button>
+          <button type="button" onClick={onInc} aria-label="Увеличить количество"
+            className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-sm)] border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 active:scale-95">+</button>
           <span className="ml-auto text-xs text-slate-500 max-sm:text-[11px]">{product.unit === "m" ? "м" : "шт."}</span>
         </div>
       </div>
