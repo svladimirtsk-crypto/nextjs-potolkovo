@@ -20,7 +20,6 @@ import {
   buildProductsIndex,
   detectSocket,
   getDiscountedPrice,
-  getRequiredLampSocket,
 } from "@/lib/feed2-products";
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
 import { resolveInitialLightingStep, type WizardStep } from "@/lib/lighting/resolve-initial-step";
@@ -67,6 +66,21 @@ import {
   matchesPointSubtype,
   normalizeQty,
 } from "@/lib/lighting/product-predicates";
+import {
+  buildCartEntries,
+  calcClarusPsuQty,
+  calcLampCurrentBySocket,
+  calcLampCurrentTotal,
+  calcLampRequiredBySocket,
+  calcLampRequiredTotal,
+  calcLampSocketsToShow,
+  calcMissingLamps,
+  calcMissingMounts,
+  calcSelectedPointQty,
+  calcSelectedTrackMeters,
+  groupLampOptionsBySocket,
+  hasClarusInCart as hasClarusInCartFn,
+} from "@/lib/lighting/cart-derived";
 import { ProductImage } from "@/components/feed2/ProductImage";
 import { useCalculatorModal } from "./calculator-modal-context";
 import { useCalculatorStore } from "@/lib/calculator/store";
@@ -252,21 +266,13 @@ export function WizardStep1Lighting() {
   }, [options?.initialLighting, resolveProduct]);
 
   /* ─── Derived cart data ─── */
-  const cartEntries = useMemo(() =>
-    Object.entries(cartItems)
-      .filter(([, q]) => q > 0)
-      .map(([id, qty]) => ({ productId: id, product: resolveProduct(id), qty }))
-      .filter((e): e is { productId: string; product: FeedCatalogProduct; qty: number } => Boolean(e.product))
-      .filter((e) => !REMOVED_COLIBRI_VENDOR_CODES.has(toText(e.product.vendorCode))),
-    [cartItems, resolveProduct]);
+  const cartEntries = useMemo(
+    () => buildCartEntries(cartItems, resolveProduct),
+    [cartItems, resolveProduct]
+  );
 
-  const selectedTrackMeters = useMemo(() => {
-    let m = 0; for (const e of cartEntries) { if (e.product.kind === "TRACK_PROFILE") m += calcTrackProfileMeters(e.product, e.qty); } return m;
-  }, [cartEntries]);
-
-  const selectedPointQty = useMemo(() => {
-    let q = 0; for (const e of cartEntries) { if (e.product.kind === "SPOT_FIXTURE" || isPanelProduct(e.product)) q += e.qty; } return q;
-  }, [cartEntries]);
+  const selectedTrackMeters = useMemo(() => calcSelectedTrackMeters(cartEntries), [cartEntries]);
+  const selectedPointQty = useMemo(() => calcSelectedPointQty(cartEntries), [cartEntries]);
 
   const requiredTrackMeters = showCeilingInUi ? toNumber(snapshot?.derivedInputs?.trackLengthMeters) : 0;
   const requiredPointQty = showCeilingInUi ? toNumber(snapshot?.derivedInputs?.pointSpotsQty) : 0;
@@ -313,81 +319,51 @@ export function WizardStep1Lighting() {
   const hasRecommendations = recommendedTrackProfiles.length > 0 || requiredPointQty > 0;
 
   /* ─── Lamps / mounts deps ─── */
-  const lampOptionsBySocket = useMemo(() => {
-    const lamps = products.filter(isLamp);
-    const s = (a: FeedCatalogProduct, b: FeedCatalogProduct) => toNumber(a.priceRub) - toNumber(b.priceRub);
-    const bySocket: Record<LampSocket, FeedCatalogProduct[]> = { GX53: [], MR16: [], GU10: [] };
-    for (const socket of LAMP_SOCKETS) {
-      bySocket[socket] = lamps.filter((l) => detectSocket(l) === socket).sort(s);
-    }
-    return bySocket;
-  }, [products]);
+  const lampOptionsBySocket = useMemo(() => groupLampOptionsBySocket(products), [products]);
 
-  const lampRequiredBySocket = useMemo(() => {
-    const r: Record<LampSocket, number> = { GX53: 0, MR16: 0, GU10: 0 };
-    for (const e of cartEntries) { if (e.product.kind === "LAMP") continue; const s = getRequiredLampSocket(e.product); if (s) r[s] += e.qty; }
-    return r;
-  }, [cartEntries]);
+  const lampRequiredBySocket = useMemo(() => calcLampRequiredBySocket(cartEntries), [cartEntries]);
 
-  const lampCurrentBySocket = useMemo(() => {
-    const c: Record<LampSocket, number> = { GX53: 0, MR16: 0, GU10: 0 };
-    for (const s of LAMP_SOCKETS) {
-      const ids = lampOptionsBySocket[s].map((l) => toText(l.productId));
-      c[s] = ids.reduce((sum, id) => sum + toNumber(cartItems[id]), 0);
-    }
-    return c;
-  }, [cartItems, lampOptionsBySocket]);
+  const lampCurrentBySocket = useMemo(
+    () => calcLampCurrentBySocket(cartItems, lampOptionsBySocket),
+    [cartItems, lampOptionsBySocket]
+  );
 
   const mountRequiredByVendor = useMemo(() => {
-    const r: Record<string, number> = {};
-    for (const e of cartEntries) { const mv = POINT_TO_MOUNT_VENDOR_CODE[toText(e.product.vendorCode)]; if (mv) r[mv] = (r[mv] ?? 0) + e.qty; }
-    return r;
+    const required: Record<string, number> = {};
+    for (const entry of cartEntries) {
+      const mountVendor = POINT_TO_MOUNT_VENDOR_CODE[toText(entry.product.vendorCode)];
+      if (mountVendor) required[mountVendor] = (required[mountVendor] ?? 0) + entry.qty;
+    }
+    return required;
   }, [cartEntries]);
 
-  const missingLamps = useMemo(() => {
-    const out: Array<{ socket: LampSocket; requiredQty: number; currentQty: number }> = [];
-    for (const s of LAMP_SOCKETS) { const r = toNumber(lampRequiredBySocket[s]); if (r <= 0) continue; const c = toNumber(lampCurrentBySocket[s]); if (c < r) out.push({ socket: s, requiredQty: r, currentQty: c }); }
-    return out;
-  }, [lampCurrentBySocket, lampRequiredBySocket]);
-
-  const lampRequiredTotal = useMemo(() => {
-    return (LAMP_SOCKETS).reduce((sum, s) => sum + toNumber(lampRequiredBySocket[s]), 0);
-  }, [lampRequiredBySocket]);
-
-  const lampCurrentTotal = useMemo(() => {
-    return (LAMP_SOCKETS).reduce((sum, s) => {
-      if (toNumber(lampRequiredBySocket[s]) <= 0) return sum;
-      return sum + toNumber(lampCurrentBySocket[s]);
-    }, 0);
-  }, [lampCurrentBySocket, lampRequiredBySocket]);
-
-  const lampSocketsToShow = useMemo(() => {
-    return (LAMP_SOCKETS).filter((s) => {
-      return toNumber(lampRequiredBySocket[s]) > 0 || toNumber(lampCurrentBySocket[s]) > 0;
-    });
-  }, [lampCurrentBySocket, lampRequiredBySocket]);
-
-  const missingMounts = useMemo(() => {
-    const out: Array<{ fixtureVendorCode: string; mountVendorCode: string; fixtureName: string; mountName: string; requiredQty: number; currentQty: number }> = [];
-    for (const [fv, mv] of Object.entries(POINT_TO_MOUNT_VENDOR_CODE)) {
-      const fid = productIdByVendorCode.get(fv); const mid = productIdByVendorCode.get(mv);
-      if (!fid || !mid) continue; const fp = productsById.get(fid); const mp = productsById.get(mid);
-      if (!fp || !mp) continue; const fq = toNumber(cartItems[fid]); if (fq <= 0) continue;
-      const mq = toNumber(cartItems[mid]); if (mq < fq) out.push({ fixtureVendorCode: fv, mountVendorCode: mv, fixtureName: toText(fp.name), mountName: toText(mp.name), requiredQty: fq, currentQty: mq });
-    }
-    return out;
-  }, [cartItems, productIdByVendorCode, productsById]);
-
-  const hasClarusInCart = useMemo(() => cartEntries.some((e) => e.product.system === "CLARUS_48"), [cartEntries]);
-  const clarusPsuQty = useMemo(
-    () =>
-      cartEntries
-        .filter((entry) =>
-          CLARUS_PSU_VENDOR_CODES.some((vendorCode) => vendorCode === toText(entry.product.vendorCode))
-        )
-        .reduce((sum, entry) => sum + entry.qty, 0),
-    [cartEntries]
+  const missingLamps = useMemo(
+    () => calcMissingLamps(lampRequiredBySocket, lampCurrentBySocket),
+    [lampCurrentBySocket, lampRequiredBySocket]
   );
+
+  const lampRequiredTotal = useMemo(
+    () => calcLampRequiredTotal(lampRequiredBySocket),
+    [lampRequiredBySocket]
+  );
+
+  const lampCurrentTotal = useMemo(
+    () => calcLampCurrentTotal(lampRequiredBySocket, lampCurrentBySocket),
+    [lampCurrentBySocket, lampRequiredBySocket]
+  );
+
+  const lampSocketsToShow = useMemo(
+    () => calcLampSocketsToShow(lampRequiredBySocket, lampCurrentBySocket),
+    [lampCurrentBySocket, lampRequiredBySocket]
+  );
+
+  const missingMounts = useMemo(
+    () => calcMissingMounts({ cartItems, productIdByVendorCode, productsById }),
+    [cartItems, productIdByVendorCode, productsById]
+  );
+
+  const hasClarusInCart = useMemo(() => hasClarusInCartFn(cartEntries), [cartEntries]);
+  const clarusPsuQty = useMemo(() => calcClarusPsuQty(cartEntries), [cartEntries]);
 
   /* ─── T-024: трек выключен, но в корзине есть трековые позиции ───
    * Раньше эффект молча вычищал корзину. Если набор собран в каталоге
