@@ -118,7 +118,7 @@ import {
   TabBtn,
   ThinProgress,
 } from "@/components/lighting/CatalogPieces";
-import { ProductPickerScreen } from "@/components/lighting/ProductPickerScreen";
+import { ProductGrid, ProductPickerScreen, WizardFooter } from "@/components/lighting/ProductPickerScreen";
 
 
 /* ─── MAIN COMPONENT ─── */
@@ -1513,74 +1513,45 @@ export function WizardStep1Lighting() {
               discountPercent={cardDiscountPercent}
               emptyText="Нет светильников для этой системы."
               footer={
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setWStep("trackProfile")}
-                    className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                  >
-                    ← Назад
-                  </button>
-                  <button
-                    type="button"
-                    onClick={goAfterTrackFixtures}
-                    className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
-                  >
-                    Подтвердить →
-                  </button>
-                </div>
+                <WizardFooter onBack={() => setWStep("trackProfile")} onNext={goAfterTrackFixtures} />
               }
             />
           )}
 
           {/* ─── STEP: Point Fixtures ─── */}
           {shownWStep === "points" && (
-            <div className="space-y-3">
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
-                <p className="text-sm font-semibold text-emerald-950">Точечные светильники</p>
-                <p className="mt-1 text-xs text-emerald-800">Выберите GX53, MR16 или панели.</p>
-              </div>
-
-              {/* Sub-tabs for point types */}
-              <div className="flex gap-2">
-                {POINT_SUBTYPES.map((st) => (
-                  <button key={st.id} type="button" onClick={() => setWPointTab(st.id)}
-                    className={["rounded-xl px-3 py-1.5 text-xs font-medium",
-                      wPointTab === st.id ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"].join(" ")}>
-                    {st.label}
-                    {pointProgressBySubtype[st.id].current > 0 && (
-                      <span className="ml-1 text-[10px] opacity-70">{pointProgressBySubtype[st.id].current} шт.</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {wPointProducts.map((p) => {
-                  const id = toText(p.productId);
-                  const qty = toNumber(cartItems[id]);
-                  return (
-                    <ProductCard key={id} product={p} qty={qty}
-                      onInc={() => setProductQty(p, qty + 1)} onDec={() => setProductQty(p, qty - 1)}
-                      onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })}
-                      discountPercent={cardDiscountPercent} />
-                  );
-                })}
-              </div>
-
-              <div className="flex gap-3">
-                <button type="button" onClick={() => setWStep(selectedTrackSystem ? "trackFixtures" : requiredTrackMeters > 0 ? "trackProfile" : "system")}
-                  className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">← Назад</button>
-                <button
-                  type="button"
-                  onClick={goAfterPoints}
-                  disabled={!pointsComplete}
-                  className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-slate-950"
-                >
-                  Подтвердить →
-                </button>
-              </div>
-            </div>
+            <ProductPickerScreen
+              tone="accent"
+              title="Точечные светильники"
+              hint="Выберите GX53, MR16 или панели."
+              products={wPointProducts}
+              cartItems={cartItems}
+              onQtyChange={setProductQty}
+              onZoom={setZoomImage}
+              discountPercent={cardDiscountPercent}
+              emptyText="Точечные светильники сейчас не найдены в каталоге. Подберу вариант при звонке."
+              beforeGrid={
+                <div className="flex gap-2">
+                  {POINT_SUBTYPES.map((st) => (
+                    <button key={st.id} type="button" onClick={() => setWPointTab(st.id)}
+                      className={["rounded-xl px-3 py-1.5 text-xs font-medium",
+                        wPointTab === st.id ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"].join(" ")}>
+                      {st.label}
+                      {pointProgressBySubtype[st.id].current > 0 && (
+                        <span className="ml-1 text-[10px] opacity-70">{pointProgressBySubtype[st.id].current} шт.</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              }
+              footer={
+                <WizardFooter
+                  onBack={() => setWStep(selectedTrackSystem ? "trackFixtures" : requiredTrackMeters > 0 ? "trackProfile" : "system")}
+                  onNext={goAfterPoints}
+                  nextDisabled={!pointsComplete}
+                />
+              }
+            />
           )}
 
           {/* ─── STEP: Lamps ─── */}
@@ -1600,7 +1571,6 @@ export function WizardStep1Lighting() {
                 const required = toNumber(lampRequiredBySocket[socket]);
                 const current = toNumber(lampCurrentBySocket[socket]);
                 const missing = Math.max(0, required - current);
-                const lamps = wLampProducts[socket] ?? [];
 
                 return (
                   <div key={socket} className="space-y-2">
@@ -1627,45 +1597,19 @@ export function WizardStep1Lighting() {
                       </div>
                     </div>
 
-                    {lamps.length > 0 ? (
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {lamps.map((p) => {
-                          const id = toText(p.productId);
-                          const qty = toNumber(cartItems[id]);
-                          return (
-                            <ProductCard
-                              key={id}
-                              product={p}
-                              qty={qty}
-                              onInc={() => setProductQty(p, qty + 1)}
-                              onDec={() => setProductQty(p, qty - 1)}
-                              onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })}
-                              discountPercent={cardDiscountPercent}
-                            />
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-                        Подходящие лампы сейчас не найдены в каталоге. Я уточню вариант при звонке.
-                      </div>
-                    )}
+                    <ProductGrid
+                      products={wLampProducts[socket] ?? []}
+                      cartItems={cartItems}
+                      onQtyChange={setProductQty}
+                      onZoom={setZoomImage}
+                      discountPercent={cardDiscountPercent}
+                      emptyText="Подходящие лампы сейчас не найдены в каталоге. Я уточню вариант при звонке."
+                    />
                   </div>
                 );
               })}
 
-              <div className="flex gap-3">
-                <button type="button" onClick={goBackFromLamps}
-                  className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">← Назад</button>
-                <button
-                  type="button"
-                  onClick={goAfterLamps}
-                  disabled={!lampsComplete}
-                  className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-slate-950"
-                >
-                  Подтвердить →
-                </button>
-              </div>
+              <WizardFooter onBack={goBackFromLamps} onNext={goAfterLamps} nextDisabled={!lampsComplete} />
             </div>
           )}
 

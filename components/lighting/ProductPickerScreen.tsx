@@ -36,9 +36,103 @@ export type ProductPickerScreenProps = {
   discountPercent: number;
   /** Что показать, если каталог по этому шагу пуст. */
   emptyText: string;
+  /** Блок между шапкой и сеткой (например, под-вкладки типов точек). */
+  beforeGrid?: ReactNode;
   /** Кнопки навигации — рисует оркестратор, он же знает порядок шагов. */
   footer?: ReactNode;
 };
+
+/**
+ * Сетка карточек товара с пустым состоянием.
+ *
+ * Вынесена отдельно от {@link ProductPickerScreen}, потому что шаг «Лампы»
+ * рисует несколько таких сеток подряд — по одной на цоколь — со своей шапкой
+ * и прогрессом у каждой, и целиком экран-пикер ему не подходит.
+ */
+export function ProductGrid({
+  products,
+  cartItems,
+  onQtyChange,
+  onZoom,
+  discountPercent,
+  emptyText,
+}: {
+  products: readonly FeedCatalogProduct[];
+  cartItems: Record<string, number>;
+  onQtyChange: (product: FeedCatalogProduct, qty: number) => void;
+  onZoom: (image: { src: string; alt: string }) => void;
+  discountPercent: number;
+  emptyText: string;
+}) {
+  if (products.length === 0) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+        {emptyText}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {products.map((product) => {
+        const id = toText(product.productId);
+        const qty = toNumber(cartItems[id]);
+
+        return (
+          <ProductCard
+            key={id}
+            product={product}
+            qty={qty}
+            onInc={() => onQtyChange(product, qty + 1)}
+            onDec={() => onQtyChange(product, qty - 1)}
+            onImageClick={() =>
+              onZoom({ src: toText(product.coverImage), alt: toText(product.name) })
+            }
+            discountPercent={discountPercent}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Пара кнопок «Назад / Подтвердить» внизу шага мастера.
+ *
+ * Одинаковая разметка повторялась на пяти экранах Шага 1; отличались только
+ * подпись основной кнопки и условие блокировки.
+ */
+export function WizardFooter({
+  onBack,
+  onNext,
+  nextLabel = "Подтвердить →",
+  nextDisabled = false,
+}: {
+  onBack: () => void;
+  onNext: () => void;
+  nextLabel?: string;
+  nextDisabled?: boolean;
+}) {
+  return (
+    <div className="flex gap-3">
+      <button
+        type="button"
+        onClick={onBack}
+        className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+      >
+        ← Назад
+      </button>
+      <button
+        type="button"
+        onClick={onNext}
+        disabled={nextDisabled}
+        className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-slate-950"
+      >
+        {nextLabel}
+      </button>
+    </div>
+  );
+}
 
 export function ProductPickerScreen({
   title,
@@ -51,6 +145,7 @@ export function ProductPickerScreen({
   onZoom,
   discountPercent,
   emptyText,
+  beforeGrid,
   footer,
 }: ProductPickerScreenProps) {
   const isAccent = tone === "accent";
@@ -79,32 +174,16 @@ export function ProductPickerScreen({
         ) : null}
       </div>
 
-      {products.length > 0 ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {products.map((product) => {
-            const id = toText(product.productId);
-            const qty = toNumber(cartItems[id]);
+      {beforeGrid}
 
-            return (
-              <ProductCard
-                key={id}
-                product={product}
-                qty={qty}
-                onInc={() => onQtyChange(product, qty + 1)}
-                onDec={() => onQtyChange(product, qty - 1)}
-                onImageClick={() =>
-                  onZoom({ src: toText(product.coverImage), alt: toText(product.name) })
-                }
-                discountPercent={discountPercent}
-              />
-            );
-          })}
-        </div>
-      ) : (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-          {emptyText}
-        </div>
-      )}
+      <ProductGrid
+        products={products}
+        cartItems={cartItems}
+        onQtyChange={onQtyChange}
+        onZoom={onZoom}
+        discountPercent={discountPercent}
+        emptyText={emptyText}
+      />
 
       {footer}
     </div>
