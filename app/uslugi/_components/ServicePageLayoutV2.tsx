@@ -7,6 +7,7 @@ import { HomeFooter } from "@/components/home/home-footer";
 import { MobileStickyCta } from "@/components/home/mobile-sticky-cta";
 import { buildBreadcrumbSchema, buildServiceSchema } from "@/lib/seo-schema";
 import { CalculatorPageContextProvider } from "@/components/calculator-modal/page-context";
+import { ServiceMidCta } from "./ServiceMidCta";
 
 type ServicePageLayoutV2Props = {
   service: ServicePageContent;
@@ -61,6 +62,8 @@ export function ServicePageLayoutV2({
           {proof}
           {price}
           {compare ?? null}
+          {/* N-032 (F-33): второй вход в расчёт после сравнения решений. */}
+          <ServiceMidCta slug={service.slug} />
           {trust}
           {promise}
           {reviews ?? null}

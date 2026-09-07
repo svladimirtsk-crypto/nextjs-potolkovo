@@ -41,7 +41,12 @@ export function ServiceHero({ service, priceBadgeOverride }: ServiceHeroProps) {
           </ol>
         </nav>
 
-        <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-12">
+        {/*
+          N-032 (F-35): изображение должно продавать эффект, поэтому колонки
+          равные, а на mobile фото идёт ПОСЛЕ блока с ценой и CTA — иначе
+          первый экран занимает картинка, а кнопка уезжает под сгиб.
+        */}
+        <div className="grid gap-8 lg:grid-cols-2 lg:items-center lg:gap-12">
           <div className="min-w-0">
             <h1
               id={`${service.slug}-hero-title`}
@@ -84,7 +89,7 @@ export function ServiceHero({ service, priceBadgeOverride }: ServiceHeroProps) {
               ) : (
                 <>
                   {/* Primary ведёт в калькулятор с пресетом этой услуги. */}
-                  <ServiceHeroCta slug={service.slug} label="Рассчитать с этим узлом" />
+                  <ServiceHeroCta slug={service.slug} label="Рассчитать этот потолок" />
                   <a
                     href="#action"
                     className="min-h-11 text-center text-sm font-semibold text-slate-700 underline underline-offset-4 transition-colors hover:text-slate-950 sm:text-left"
@@ -107,7 +112,7 @@ export function ServiceHero({ service, priceBadgeOverride }: ServiceHeroProps) {
             </div>
           </div>
 
-          <div className="min-w-0">
+          <div className="order-last min-w-0 lg:order-none">
             <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-100 shadow-sm">
               <div className="relative aspect-[4/3]">
                 <Picture

@@ -2,6 +2,7 @@ import { Picture } from "@/components/ui/picture";
 import Link from "next/link";
 import type { ServicePageContent } from "@/content/services";
 import { Container } from "@/components/ui/container";
+import { ServiceProofWantSame } from "./ServiceProofWantSame";
 
 type ServiceProofStripProps = {
   service: ServicePageContent;
@@ -95,6 +96,9 @@ export function ServiceProofStrip({ service }: ServiceProofStripProps) {
                     </p>
                   </div>
                 </div>
+
+                {/* N-032 (F-36): вход в расчёт прямо с примера. */}
+                <ServiceProofWantSame slug={service.slug} areaLabel={item.areaLabel} />
               </div>
             </article>
           ))}

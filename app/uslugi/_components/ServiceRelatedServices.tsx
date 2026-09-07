@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ServicePageContent } from "@/content/services";
 import { getRelatedServiceLinks, servicePageContent } from "@/content/services";
 import { Container } from "@/components/ui/container";
+import { relatedServiceReason } from "@/lib/service-page-actions";
 
 type ServiceRelatedServicesProps = {
   service: ServicePageContent;
@@ -56,9 +57,16 @@ export function ServiceRelatedServices({
                 <p className="mt-1 text-sm font-semibold text-slate-700">
                   {servicePriceAnchor(item.slug).label}
                 </p>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  {item.shortDescription}
-                </p>
+                {/* N-032 (F-37): зачем это берут вместе — под ценой. */}
+                {relatedServiceReason(service.slug, item.slug) ? (
+                  <p className="mt-2 rounded-xl bg-slate-50 px-3 py-2 text-sm leading-6 text-slate-700">
+                    {relatedServiceReason(service.slug, item.slug)}
+                  </p>
+                ) : (
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    {item.shortDescription}
+                  </p>
+                )}
                 <span className="mt-4 inline-flex text-sm font-semibold text-slate-950 transition-transform group-hover:translate-x-1">
                   Открыть →
                 </span>

@@ -16,7 +16,7 @@ test.describe("Страница услуги", () => {
   test("сценарий 3: калькулятор открывается с CTA услуги", async ({ page }) => {
     await page.goto(SERVICE);
 
-    await page.getByRole("button", { name: "Рассчитать с этим узлом" }).first().click();
+    await page.getByRole("button", { name: "Рассчитать этот потолок" }).first().click();
 
     const modal = page.locator(MODAL);
     await modal.waitFor();
@@ -33,7 +33,7 @@ test.describe("Страница услуги", () => {
     page,
   }) => {
     await page.goto(SERVICE);
-    await page.getByRole("button", { name: "Рассчитать с этим узлом" }).first().click();
+    await page.getByRole("button", { name: "Рассчитать этот потолок" }).first().click();
 
     const modal = page.locator(MODAL);
     await modal.waitFor();
