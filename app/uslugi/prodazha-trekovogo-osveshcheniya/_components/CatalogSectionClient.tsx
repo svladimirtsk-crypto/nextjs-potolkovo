@@ -9,6 +9,7 @@ import { normalizeQty } from "@/lib/lighting/product-predicates";
 import catalogImages from "@/data/catalog-images.json";
 import { ProductCard } from "./CatalogProductCard";
 import { CatalogWarnings } from "./CatalogWarnings";
+import { CatalogFilterChipGroup, CatalogFilterChipsRow } from "./CatalogFilterChips";
 import {
   buildCatalogLightingSnapshot,
   cartToLightingItems,
@@ -579,87 +580,50 @@ export function CatalogSectionClient({ data }: Props) {
         ) : null}
 
         {section === "track-systems" ? (
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar scroll-fade-x sm:flex-wrap">
-            {TRACK_SYSTEMS.map((system) => (
-              <button
-                key={system.id}
-                type="button"
-                onClick={() => {
-                  setTrackSystem(system.id);
-                  setQuery("");
-                }}
-                className={[
-                  "whitespace-nowrap rounded-xl px-3 py-1.5 text-xs",
-                  trackSystem === system.id ? "bg-slate-900 text-white" : "bg-white text-slate-700",
-                  "border border-slate-200",
-                ].join(" ")}
-              >
-                {system.label}
-              </button>
-            ))}
-
-            {TRACK_GROUPS.map((group) => (
-              <button
-                key={group.id}
-                type="button"
-                onClick={() => {
-                  setTrackGroup(group.id);
-                  setQuery("");
-                }}
-                className={[
-                  "whitespace-nowrap rounded-xl px-3 py-1.5 text-xs",
-                  trackGroup === group.id ? "bg-slate-900 text-white" : "bg-white text-slate-700",
-                  "border border-slate-200",
-                ].join(" ")}
-              >
-                {group.label}
-              </button>
-            ))}
-          </div>
+          <CatalogFilterChipsRow ariaLabel="Система и группа трека">
+            <CatalogFilterChipGroup
+              options={TRACK_SYSTEMS}
+              active={trackSystem}
+              onSelect={(id) => {
+                setTrackSystem(id);
+                setQuery("");
+              }}
+            />
+            <CatalogFilterChipGroup
+              options={TRACK_GROUPS}
+              active={trackGroup}
+              onSelect={(id) => {
+                setTrackGroup(id);
+                setQuery("");
+              }}
+            />
+          </CatalogFilterChipsRow>
         ) : null}
 
         {section === "point-fixtures" ? (
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar scroll-fade-x sm:flex-wrap">
-            {POINT_SUBTYPES.map((subtype) => (
-              <button
-                key={subtype.id}
-                type="button"
-                onClick={() => {
-                  setPointSubtype(subtype.id);
-                  setQuery("");
-                }}
-                className={[
-                  "whitespace-nowrap rounded-xl px-3 py-1.5 text-xs",
-                  pointSubtype === subtype.id ? "bg-slate-900 text-white" : "bg-white text-slate-700",
-                  "border border-slate-200",
-                ].join(" ")}
-              >
-                {subtype.label}
-              </button>
-            ))}
-          </div>
+          <CatalogFilterChipsRow ariaLabel="Тип точечного светильника">
+            <CatalogFilterChipGroup
+              options={POINT_SUBTYPES}
+              active={pointSubtype}
+              onSelect={(id) => {
+                setPointSubtype(id);
+                setQuery("");
+              }}
+            />
+          </CatalogFilterChipsRow>
         ) : null}
 
         {section === "lamps" ? (
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar scroll-fade-x sm:flex-wrap">
-            {(LAMP_SOCKETS).map((socket) => (
-              <button
-                key={socket}
-                type="button"
-                onClick={() => {
-                  setLampSocket(socket);
-                  setQuery("");
-                }}
-                className={[
-                  "whitespace-nowrap rounded-xl px-3 py-1.5 text-xs",
-                  lampSocket === socket ? "bg-slate-900 text-white" : "bg-white text-slate-700",
-                  "border border-slate-200",
-                ].join(" ")}
-              >
-                {socket}
-              </button>
-            ))}
-          </div>
+          <CatalogFilterChipsRow ariaLabel="Цоколь лампы">
+            <CatalogFilterChipGroup
+              options={LAMP_SOCKETS.map((socket) => ({ id: socket, label: socket }))}
+              active={lampSocket}
+              onSelect={(id) => {
+                setLampSocket(id);
+                setQuery("");
+              }}
+            />
+          </CatalogFilterChipsRow>
         ) : null}
 
         <div className="relative mt-4">
