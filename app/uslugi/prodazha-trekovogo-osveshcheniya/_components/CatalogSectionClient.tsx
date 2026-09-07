@@ -8,6 +8,7 @@ import type { CalculatorLeadSnapshot } from "@/lib/calculator/snapshot-types";
 import { normalizeQty } from "@/lib/lighting/product-predicates";
 import catalogImages from "@/data/catalog-images.json";
 import { ProductCard } from "./CatalogProductCard";
+import { CatalogFreshness } from "./CatalogFreshness";
 import { CatalogWarnings } from "./CatalogWarnings";
 import { CatalogFilterChipGroup, CatalogFilterChipsRow } from "./CatalogFilterChips";
 import {
@@ -144,13 +145,6 @@ function buildLightingSnapshotFromItems(items: LightingItem[]): LightingSnapshot
 type Props = { data: FeedCatalogResult };
 
 export function CatalogSectionClient({ data }: Props) {
-  /** Дата прайса поставщика — показываем рядом с каталогом. */
-  const catalogUpdatedAtLabel = useMemo(() => {
-    const parsed = new Date(toText(data.updatedAt));
-    if (Number.isNaN(parsed.getTime())) return "актуальную дату уточню";
-    return parsed.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
-  }, [data.updatedAt]);
-
   const { openCalculator } = useCalculatorModal();
   const { setSnapshot } = useCalculatorStore();
 
@@ -745,9 +739,7 @@ export function CatalogSectionClient({ data }: Props) {
           T-045: честная оговорка про источник цен. Прайс поставщика меняется,
           и обещать неизменную цену до проверки наличия нельзя.
         */}
-        <p className="mt-3 text-xs leading-5 text-slate-600">
-          Цены и наличие по прайсу поставщика EKS Market на {catalogUpdatedAtLabel}; уточню перед счётом.
-        </p>
+        <CatalogFreshness updatedAt={toText(data.updatedAt)} />
 
         {/* Products grid with "Показать ещё" */}
         <div

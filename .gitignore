@@ -48,3 +48,6 @@ next-env.d.ts
 # Если каталог вырастет за ~100 МБ — переходить на Git LFS.
 test-results/
 playwright-report/
+
+# N-041: отчёт о дельте цен — только для тела PR, в репозиторий не едет.
+feed-diff.md

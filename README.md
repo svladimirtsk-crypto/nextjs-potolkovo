@@ -157,6 +157,28 @@ DATABASE_URL="postgres://postgres@127.0.0.1:5433/potolkovo_test" npx drizzle-kit
 TEST_DATABASE_URL="postgres://postgres@127.0.0.1:5433/potolkovo_test" npm run test
 ```
 
+## Обновление каталога (N-041)
+
+Фид поставщика **не обновляется сам** — это единственный источник цен на сайте,
+и без регламента он тихо стареет.
+
+```bash
+FEED_URL="https://…" node scripts/refresh-feed.mjs --dry-run  # показать дельту цен
+FEED_URL="https://…" node scripts/refresh-feed.mjs            # обновить снапшот
+```
+
+Скрипт скачивает фид, сверяет его с текущим снапшотом и пересобирает производные
+файлы (`validate-catalog` → `build-catalog-index` → `build-catalog-images`).
+Он **отказывается** перезаписывать данные, если фид пуст, сменил формат или
+похудел больше чем вдвое: почти всегда это сбой выгрузки, а не распродажа.
+
+Автоматически это делает `.github/workflows/refresh-catalog.yml` — по
+понедельникам в 06:00 UTC и по кнопке (`workflow_dispatch`). Workflow не пишет в
+`main`, а открывает PR с топ-20 изменений цены в теле. Нужен секрет `FEED_URL`.
+
+Если прайс старше **45 дней** (`isStale`, `lib/lighting/catalog-index.ts`), на
+странице света вместо даты показывается плашка «Цены могли измениться».
+
 ## Бюджет клиентского бандла (T-029)
 
 Полный фид `data/eks-feed2-snapshot.json` (~940 КБ) — **серверный** ресурс. Клиентские

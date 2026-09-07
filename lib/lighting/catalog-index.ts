@@ -154,3 +154,38 @@ export function resetCatalogIndexForTests(): void {
   indexPromise = null;
   prefillPromise = null;
 }
+
+/**
+ * N-041 · Свежесть прайса (F-44).
+ *
+ * Фид выгружается вручную, и без напоминания цены тихо стареют: дата над
+ * каталогом набрана мелко, а клиент видит суммы как действующие. Порог в 45
+ * дней выбран как полтора цикла обновления — сработает раньше, чем прайс
+ * успеет разойтись с реальностью настолько, что счёт придётся переписывать.
+ */
+export const CATALOG_STALE_DAYS = 45;
+
+const MS_IN_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * Прайс устарел и его цифрам нельзя доверять как окончательным.
+ *
+ * Нераспознанная дата считается устаревшей: неизвестно — значит непроверено,
+ * и лучше предупредить лишний раз, чем назвать цену, которой уже нет.
+ */
+export function isStale(
+  updatedAt: string | null | undefined,
+  now: Date = new Date(),
+  staleDays: number = CATALOG_STALE_DAYS
+): boolean {
+  if (!updatedAt) return true;
+
+  const parsed = new Date(updatedAt);
+  if (Number.isNaN(parsed.getTime())) return true;
+
+  // Дата из будущего — сбой выгрузки, а не свежий прайс.
+  const ageDays = (now.getTime() - parsed.getTime()) / MS_IN_DAY;
+  if (ageDays < 0) return true;
+
+  return ageDays > staleDays;
+}
