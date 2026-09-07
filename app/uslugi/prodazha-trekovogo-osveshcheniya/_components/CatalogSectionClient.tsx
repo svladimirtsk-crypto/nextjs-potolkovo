@@ -10,6 +10,11 @@ import catalogImages from "@/data/catalog-images.json";
 import { ProductCard } from "./CatalogProductCard";
 import { CatalogWarnings } from "./CatalogWarnings";
 import {
+  buildCatalogLightingSnapshot,
+  cartToLightingItems,
+  productToLightingItem,
+} from "@/lib/lighting/catalog-checkout";
+import {
   filterCatalogProducts,
   searchMatchesBySection,
 } from "@/lib/lighting/catalog-filters";
@@ -75,15 +80,6 @@ function fmt(value: number): string {
 
 
 
-
-function productToLightingItem(product: FeedCatalogProduct, qty: number): LightingItem {
-  return {
-    sku: toText(product.productId),
-    name: toText(product.name),
-    qty,
-    priceRub: toNumber(product.priceRub),
-  };
-}
 
 function createLightingOnlySnapshot(): CalculatorLeadSnapshot {
   return {
@@ -359,7 +355,7 @@ export function CatalogSectionClient({ data }: Props) {
   );
 
   const openInCalculator = () => {
-    const items: LightingItem[] = selectedEntries.map((entry) => productToLightingItem(entry.product, entry.qty));
+    const items = cartToLightingItems(selectedEntries);
 
     if (items.length === 0) {
       openCalculator({
@@ -372,28 +368,13 @@ export function CatalogSectionClient({ data }: Props) {
       return;
     }
 
-    const totalRub = items.reduce((sum, item) => sum + item.qty * item.priceRub, 0);
-    const discountedTotalRub = applyLightingOnlyDiscount(totalRub);
-    const withCeilingDiscountedTotalRub = applyLightingWithCeilingDiscount(totalRub);
-
-    const initialLighting: LightingSnapshot = {
-      mode: "catalog",
-      items,
-      totalRub,
-      discountedTotalRub,
-      standaloneDiscountedTotalRub: discountedTotalRub,
-      withCeilingDiscountedTotalRub,
-      discountMode: "lighting-only",
-      discountPercentApplied: LIGHTING_ONLY_DISCOUNT_PERCENT,
-      discountAmountRub: calcLightingDiscountAmount(totalRub, discountedTotalRub),
-      userCustomizedLighting: true,
-    };
+    const initialLighting = buildCatalogLightingSnapshot(items);
 
     trackLightingCartCheckout({
       mode: "open-calculator",
       itemsCount: items.length,
-      lightingTotalRub: totalRub,
-      lightingDiscountedRub: discountedTotalRub,
+      lightingTotalRub: initialLighting.totalRub,
+      lightingDiscountedRub: initialLighting.discountedTotalRub,
       source: "track-sale-page",
     });
 
@@ -441,32 +422,16 @@ export function CatalogSectionClient({ data }: Props) {
   };
 
   const openLightingOrder = () => {
-    const items: LightingItem[] = selectedEntries.map((entry) => productToLightingItem(entry.product, entry.qty));
-
+    const items = cartToLightingItems(selectedEntries);
     if (items.length === 0) return;
 
-    const totalRub = items.reduce((sum, item) => sum + item.qty * item.priceRub, 0);
-    const discountedTotalRub = applyLightingOnlyDiscount(totalRub);
-    const withCeilingDiscountedTotalRub = applyLightingWithCeilingDiscount(totalRub);
-
-    const initialLighting: LightingSnapshot = {
-      mode: "catalog",
-      items,
-      totalRub,
-      discountedTotalRub,
-      standaloneDiscountedTotalRub: discountedTotalRub,
-      withCeilingDiscountedTotalRub,
-      discountMode: "lighting-only",
-      discountPercentApplied: LIGHTING_ONLY_DISCOUNT_PERCENT,
-      discountAmountRub: calcLightingDiscountAmount(totalRub, discountedTotalRub),
-      userCustomizedLighting: true,
-    };
+    const initialLighting = buildCatalogLightingSnapshot(items);
 
     trackLightingCartCheckout({
       mode: "lighting-only",
       itemsCount: items.length,
-      lightingTotalRub: totalRub,
-      lightingDiscountedRub: discountedTotalRub,
+      lightingTotalRub: initialLighting.totalRub,
+      lightingDiscountedRub: initialLighting.discountedTotalRub,
       source: "track-sale-page-lighting-only",
     });
 
@@ -481,35 +446,20 @@ export function CatalogSectionClient({ data }: Props) {
   };
 
   const openWithCeiling = () => {
-    const items: LightingItem[] = selectedEntries.map((entry) => productToLightingItem(entry.product, entry.qty));
+    const items = cartToLightingItems(selectedEntries);
 
     if (items.length === 0) {
       openCalculator({ initialStep: 0, source: "track-sale-add-ceiling-empty" });
       return;
     }
 
-    const totalRub = items.reduce((sum, item) => sum + item.qty * item.priceRub, 0);
-    const discountedTotalRub = applyLightingOnlyDiscount(totalRub);
-    const withCeilingDiscountedTotalRub = applyLightingWithCeilingDiscount(totalRub);
-
-    const initialLighting: LightingSnapshot = {
-      mode: "catalog",
-      items,
-      totalRub,
-      discountedTotalRub,
-      standaloneDiscountedTotalRub: discountedTotalRub,
-      withCeilingDiscountedTotalRub,
-      discountMode: "lighting-only",
-      discountPercentApplied: LIGHTING_ONLY_DISCOUNT_PERCENT,
-      discountAmountRub: calcLightingDiscountAmount(totalRub, discountedTotalRub),
-      userCustomizedLighting: true,
-    };
+    const initialLighting = buildCatalogLightingSnapshot(items);
 
     trackLightingCartCheckout({
       mode: "with-ceiling",
       itemsCount: items.length,
-      lightingTotalRub: totalRub,
-      lightingDiscountedRub: withCeilingDiscountedTotalRub,
+      lightingTotalRub: initialLighting.totalRub,
+      lightingDiscountedRub: initialLighting.withCeilingDiscountedTotalRub,
       source: "track-sale-page-add-ceiling",
     });
 
