@@ -86,7 +86,7 @@ export function resolveStep1FooterAction(input: Step1FooterInput): Step1FooterDe
     case "points":
       return {
         intent: "confirmPoints",
-        label: "Подтвердить точки →",
+        label: "Подтвердить светильники →",
         disabled: !input.pointsComplete,
       };
 

@@ -81,7 +81,7 @@ export function formatLeadBody(payload: LeadPayload, leadCode?: string): string 
       if (room.trackLength && room.trackLabel) {
         nodes.push(`${room.trackLabel.toLowerCase()} · ${room.trackLength} м.п.`);
       }
-      if (room.lightsCount) nodes.push(`точки · ${room.lightsCount} шт.`);
+      if (room.lightsCount) nodes.push(`светильники · ${room.lightsCount} шт.`);
       if (room.chandeliersCount) nodes.push(`люстры · ${room.chandeliersCount} шт.`);
       for (const node of nodes) lines.push(`  – ${node}`);
     }

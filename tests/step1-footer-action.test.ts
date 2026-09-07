@@ -40,7 +40,7 @@ describe("resolveStep1FooterAction", () => {
   it("каждый шаг мастера даёт свою подпись", () => {
     expect(at({ shownWStep: "trackProfile" }).label).toBe("Подтвердить профиль →");
     expect(at({ shownWStep: "trackFixtures" }).label).toBe("Подтвердить светильники →");
-    expect(at({ shownWStep: "points" }).label).toBe("Подтвердить точки →");
+    expect(at({ shownWStep: "points" }).label).toBe("Подтвердить светильники →");
     expect(at({ shownWStep: "lamps" }).label).toBe("Подтвердить лампы →");
     expect(at({ shownWStep: "chandeliers" }).label).toBe("Подтвердить люстры →");
     expect(at({ shownWStep: "corniceLighting" }).label).toBe("Подтвердить подсветку →");

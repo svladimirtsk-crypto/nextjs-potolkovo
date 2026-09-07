@@ -260,7 +260,7 @@ export function WizardStep2Summary() {
 
   const extraInstallLines = useMemo(() => {
     const out: string[] = [];
-    if (extraSpotQty > 0) out.push(`Монтаж ещё ${extraSpotQty} точек · ${fmt(extraSpotInstall)} ₽`);
+    if (extraSpotQty > 0) out.push(`Монтаж ещё ${extraSpotQty} светильников · ${fmt(extraSpotInstall)} ₽`);
     if (extraTrackMeters > 0) out.push(`Монтаж ещё ${extraTrackMeters} м трека · ${fmt(extraTrackInstall)} ₽`);
     return out;
   }, [extraSpotQty, extraSpotInstall, extraTrackMeters, extraTrackInstall]);
@@ -295,7 +295,7 @@ export function WizardStep2Summary() {
           {resolvedShowCeilingInUi ? <span>Потолок и работы {fmt(resolvedCeilingTotal)} ₽</span> : null}
           {resolvedShowCeilingInUi && (includedSpotQty > 0 || includedTrackMeters > 0) ? (
             <span>
-              Монтаж света: {includedSpotQty} точек, {includedTrackMeters} м трека — уже в потолке
+              Монтаж света: {includedSpotQty} светильников, {includedTrackMeters} м трека — уже в потолке
             </span>
           ) : null}
           {extraInstallLines.map((line) => (
@@ -383,7 +383,7 @@ export function WizardStep2Summary() {
                   {room.corniceLength && room.corniceLabel ? <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">{room.corniceLabel} {room.corniceLength} м.п.</span> : null}
                   {room.corniceLightingLength ? <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">Подсветка {room.corniceLightingLength} м.п.</span> : null}
                   {room.trackLength && room.trackLabel ? <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">{room.trackLabel} {room.trackLength} м.п.</span> : null}
-                  {room.lightsCount ? <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">Точки {room.lightsCount} шт.</span> : null}
+                  {room.lightsCount ? <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">Светильники {room.lightsCount} шт.</span> : null}
                   {room.chandeliersCount ? <span className="rounded-full bg-white px-2 py-1 ring-1 ring-slate-200">Люстры {room.chandeliersCount} шт.</span> : null}
                 </div>
               </div>

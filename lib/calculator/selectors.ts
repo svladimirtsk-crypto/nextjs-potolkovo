@@ -141,7 +141,7 @@ export function selectExtraInstall(
   const metersRub = Math.round(extraMeters * trackRate);
 
   if (extraPoints > 0) {
-    lines.push(`Монтаж ещё ${extraPoints} точек — ${pointsRub.toLocaleString("ru-RU")} ₽`);
+    lines.push(`Монтаж ещё ${extraPoints} светильников — ${pointsRub.toLocaleString("ru-RU")} ₽`);
   }
   if (extraMeters > 0) {
     lines.push(

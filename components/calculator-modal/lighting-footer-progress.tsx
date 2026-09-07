@@ -161,7 +161,7 @@ export function LightingFooterProgress() {
   const metrics: Metric[] = [
     { id: "track", label: "Профиль", current: selectedTrackMeters, required: requiredTrackMeters, unit: "м" },
     { id: "track-fixtures", label: "Трековые", current: selectedTrackFixtureQty, required: requiredTrackFixtureQty, unit: "шт." },
-    { id: "points", label: "Точки", current: selectedPointQty, required: requiredPointQty, unit: "шт." },
+    { id: "points", label: "Светильники", current: selectedPointQty, required: requiredPointQty, unit: "шт." },
     { id: "lamps", label: "Лампы", current: currentLampQty, required: requiredLampQty, unit: "шт." },
   ];
 

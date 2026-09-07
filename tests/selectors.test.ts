@@ -136,7 +136,7 @@ describe("T-030 - doschet montazha", () => {
   it("14 korpusov -> 2 x 750 = 1500", () => {
     const extra = selectExtraInstall(requirements, { ...NO_LIGHTING, selectedPointsQty: 14 });
     expect(extra.rub).toBe(2 * pricing.spotInstall);
-    expect(extra.lines[0]).toContain("2 точек");
+    expect(extra.lines[0]).toContain("2 светильников");
   });
 
   it("menshe korpusov, chem zalozheno -> ne vychitaem", () => {
@@ -181,7 +181,7 @@ describe("T-030 - selectTotals", () => {
       totals.ceilingApplied + totals.extraInstallRub + totals.lightingEffective
     );
     expect(totals.discountPct).toBe(pricing.lightingDiscount.withCeilingPct);
-    // 20 корпусов против 6 заложенных → досчёт за 14 точек.
+    // 20 корпусов против 6 заложенных → досчёт за 14 светильников.
     expect(totals.extraInstallRub).toBe(14 * pricing.spotInstall);
   });
 

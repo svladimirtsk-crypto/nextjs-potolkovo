@@ -64,7 +64,7 @@ export function getCalculatorSummaryLines(
       if (room.corniceLength && room.corniceLabel) details.push(`${room.corniceLabel.toLowerCase()} ${room.corniceLength} м.п.`);
       if (room.corniceLightingLength) details.push(`подсветка карниза ${room.corniceLightingLength} м.п.`);
       if (room.trackLength && room.trackLabel) details.push(`${room.trackLabel.toLowerCase()} ${room.trackLength} м.п.`);
-      if (room.lightsCount) details.push(`точки ${room.lightsCount} шт.`);
+      if (room.lightsCount) details.push(`светильники ${room.lightsCount} шт.`);
       if (room.chandeliersCount) details.push(`люстры ${room.chandeliersCount} шт.`);
 
       lines.push(

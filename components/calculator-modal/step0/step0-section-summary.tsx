@@ -99,7 +99,7 @@ function RoomCard({
               {room.trackLabel} {room.trackLength} м.п.
             </Tag>
           ) : null}
-          {room.lightsCount ? <Tag>Точки {room.lightsCount} шт.</Tag> : null}
+          {room.lightsCount ? <Tag>Светильники {room.lightsCount} шт.</Tag> : null}
           {room.chandeliersCount ? (
             <Tag>Люстры {room.chandeliersCount} шт.</Tag>
           ) : null}

@@ -16,7 +16,7 @@ export const STEP0_CONFIRM_LABELS = {
   cornice: "Подтвердить карниз →",
   track: "Подтвердить трек →",
   chandeliers: "Подтвердить люстры →",
-  lights: "Подтвердить точки →",
+  lights: "Подтвердить светильники →",
 } as const;
 
 export type Step0ConfirmStepId = keyof typeof STEP0_CONFIRM_LABELS;

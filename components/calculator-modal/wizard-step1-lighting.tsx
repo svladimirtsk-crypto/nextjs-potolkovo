@@ -94,6 +94,8 @@ import {
   TrackSystemScreen,
 } from "@/components/lighting/Step1Screens";
 import { ProductImage } from "@/components/feed2/ProductImage";
+import { PointsScreen } from "@/components/lighting/PointKindPicker";
+import { pointProgressBySocket, pointsOfKind, type PointKindId } from "@/lib/lighting/popular-points";
 import { useCalculatorModal } from "./calculator-modal-context";
 import { useCalculatorStore } from "@/lib/calculator/store";
 
@@ -308,6 +310,10 @@ export function WizardStep1Lighting() {
     []
   );
   const [wPointTab, setWPointTab] = useState<PointSubtypeId>("GX53");
+  /** N-021: выбранный тип светильника (вид, а не цоколь). */
+  const [pointKind, setPointKind] = useState<PointKindId>("recessed");
+  /** N-021: ручной выбор по цоколю свёрнут, пока человек не попросил. */
+  const [manualPointsOpen, setManualPointsOpen] = useState(false);
 
   /* ─── Recommendations ─── */
   const recommendedTrackProfiles = useMemo(() => {
@@ -892,36 +898,27 @@ export function WizardStep1Lighting() {
       .sort((a, b) => a.priceRub - b.priceRub);
   }, [selectedTrackSystem, products]);
 
+  /**
+   * N-021: сетка следует за выбранным типом. Цоколь сужает её дальше, но
+   * только когда человек сам открыл ручной выбор — иначе тип и цоколь
+   * противоречили бы друг другу (панели не имеют цоколя вовсе).
+   */
   const wPointProducts = useMemo(() => {
-    return products.filter((p) => matchesPointSubtype(p, wPointTab) && p.priceRub > 0)
-      .sort((a, b) => a.priceRub - b.priceRub);
-  }, [wPointTab, products]);
+    if (manualPointsOpen) {
+      return products.filter((p) => matchesPointSubtype(p, wPointTab) && p.priceRub > 0)
+        .sort((a, b) => a.priceRub - b.priceRub);
+    }
+    return pointsOfKind(products, pointKind);
+  }, [manualPointsOpen, wPointTab, pointKind, products]);
 
   const wLampProducts = useMemo(() => {
     return lampOptionsBySocket; // use as-is, already sorted
   }, [lampOptionsBySocket]);
 
-  // Point fixture progress by subtype
-  const pointProgressBySubtype = useMemo(() => {
-    const result: Record<PointSubtypeId, { current: number; required: number }> = {
-      GX53: { current: 0, required: 0 },
-      MR16: { current: 0, required: 0 },
-      GU10: { current: 0, required: 0 },
-      PANELS: { current: 0, required: 0 },
-      OTHER: { current: 0, required: 0 },
-    };
-    for (const e of cartEntries) {
-      if (e.product.kind === "SPOT_FIXTURE") {
-        const s = detectSocket(e.product);
-        if (s) result[s].current += e.qty;
-        else if (!isPanelProduct(e.product)) result.OTHER.current += e.qty;
-      }
-      if (isPanelProduct(e.product)) result.PANELS.current += e.qty;
-    }
-    // Общий план по точкам показываем в общей липкой полосе; в табах — только факт выбора.
-    if (requiredPointQty > 0) result.GX53.required = requiredPointQty;
-    return result;
-  }, [cartEntries, requiredPointQty]);
+  const pointProgressBySubtype = useMemo(
+    () => pointProgressBySocket(cartEntries, requiredPointQty, isPanelProduct, detectSocket),
+    [cartEntries, requiredPointQty]
+  );
 
   const goAfterTrackProfile = useCallback(() => {
     if (requiredTrackMeters > 0 && (!selectedTrackSystem || selectedTrackMeters < requiredTrackMeters)) return;
@@ -1015,7 +1012,7 @@ export function WizardStep1Lighting() {
     if (missingTrackMeters > 0) {
       return { label: selectedTrackSystem ? "Добрать профиль →" : "Выбрать систему →", step: selectedTrackSystem ? "trackProfile" : "system" } as const;
     }
-    if (missingPointQty > 0) return { label: "Выбрать точки →", step: "points" } as const;
+    if (missingPointQty > 0) return { label: "Выбрать светильники →", step: "points" } as const;
     if (missingLampQty > 0) return { label: "Добавить лампы →", step: "lamps" } as const;
     return null;
   }, [missingLampQty, missingPointQty, missingTrackMeters, selectedTrackSystem]);
@@ -1351,30 +1348,26 @@ export function WizardStep1Lighting() {
 
           {/* ─── STEP: Point Fixtures ─── */}
           {shownWStep === "points" && (
-            <ProductPickerScreen
-              tone="accent"
-              title="Точечные светильники"
-              hint="Выберите GX53, MR16 или панели."
-              products={wPointProducts}
+            <PointsScreen
+              products={products}
+              gridProducts={wPointProducts}
+              required={requiredPointQty}
+              current={selectedPointQty}
               cartItems={cartItems}
               onQtyChange={setProductQty}
               onZoom={setZoomImage}
               discountPercent={cardDiscountPercent}
-              emptyText="Точечные светильники сейчас не найдены в каталоге. Подберу вариант при звонке."
-              beforeGrid={
-                <div className="flex gap-2">
-                  {POINT_SUBTYPES.map((st) => (
-                    <button key={st.id} type="button" onClick={() => setWPointTab(st.id)}
-                      className={["rounded-xl px-3 py-1.5 text-xs font-medium",
-                        wPointTab === st.id ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"].join(" ")}>
-                      {st.label}
-                      {pointProgressBySubtype[st.id].current > 0 && (
-                        <span className="ml-1 text-[10px] opacity-70">{pointProgressBySubtype[st.id].current} шт.</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              }
+              activeKind={pointKind}
+              onKindChange={(kind) => {
+                setPointKind(kind);
+                // Тип задан — ручной фильтр по цоколю больше не к месту.
+                setManualPointsOpen(false);
+              }}
+              manualOpen={manualPointsOpen}
+              onManualOpen={() => setManualPointsOpen(true)}
+              socketTab={wPointTab}
+              onSocketTabChange={setWPointTab}
+              socketProgress={pointProgressBySubtype}
               footer={
                 <WizardFooter
                   onBack={() => setWStep(selectedTrackSystem ? "trackFixtures" : requiredTrackMeters > 0 ? "trackProfile" : "system")}
