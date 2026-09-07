@@ -1,5 +1,6 @@
 import pricingInputs from "@/data/proof-pricing-inputs.json";
 import { toText } from "@/lib/feed2-snapshot-normalize";
+import { formatAnchorRub } from "@/lib/home-price-anchor";
 
 export type HomeCalculatorConfig = {
   areaMin: number;
@@ -113,10 +114,6 @@ const proofInputs = pricingInputs as {
   profiles: ProofProfile[];
   prices: Record<string, number>;
 };
-
-function formatPriceLabel(value: number) {
-  return `≈ ${Math.round(value).toLocaleString("ru-RU")} ₽`;
-}
 
 function getPriceByVendorCode(vendorCode: string): number {
   return proofInputs.prices[vendorCode] ?? 0;
@@ -240,5 +237,6 @@ export function buildProofBudgetBreakdown(
 }
 
 export function toProofPriceLabel(budget: ProofBudgetBreakdown) {
-  return formatPriceLabel(budget.totalRub);
+  // N-031 (F-25): ориентир кейса округляется — точность до рубля обещает смету.
+  return formatAnchorRub(budget.totalRub);
 }
