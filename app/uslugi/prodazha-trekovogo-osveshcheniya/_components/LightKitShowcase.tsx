@@ -20,6 +20,7 @@ import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import type { LightingItem } from "@/lib/calculator-modal-types";
 import type { ProductOfferInput } from "@/lib/seo-schema";
 
+import { kitCompositionLine, kitSkuCount } from "@/lib/lighting/kit-offer";
 import { LightKitCtaButton } from "./LightKitCtaButton";
 
 function fmtRub(n: number) {
@@ -65,6 +66,11 @@ function itemFromProduct(product: FeedCatalogProduct, qty: number): LightingItem
     name: toText(product.name),
     qty,
     priceRub: toNumber(product.priceRub),
+    // N-040: вид и артикул нужны и в письме менеджеру, и для человеческой
+    // строки состава — без них позиция неотличима от любой другой.
+    vendorCode: toText(product.vendorCode),
+    system: toText(product.system),
+    kind: toText(product.kind),
   };
 }
 
@@ -305,7 +311,7 @@ export function LightKitShowcase() {
 
         <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {kits.map((kit) => {
-            const { totalRub, lightingOnlyRub, withCeilingRub, lightingOnlyBenefitRub, withCeilingBenefitRub } = calcTotals(kit.items);
+            const { totalRub, lightingOnlyRub, withCeilingRub } = calcTotals(kit.items);
 
             return (
               <article
@@ -327,33 +333,51 @@ export function LightKitShowcase() {
                     <h3 className="text-lg font-semibold tracking-tight text-slate-950">
                       {kit.title}
                     </h3>
-                    <p className="mt-1 text-sm text-slate-600">{kit.subtitle}</p>
+
                   </div>
 
-                  <ul className="mt-5 space-y-2 text-sm text-slate-700">
-                    {kit.items.map((item) => (
-                      <li key={`${item.sku}-${item.name}`} className="flex items-start gap-2">
-                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-900" />
-                        <span className="leading-snug">
-                          {item.name} × <span className="font-semibold">{item.qty}</span>
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
+                  {/*
+                    N-040 (F-41): состав одной строкой на языке клиента.
+                    Артикулы нужны при сборке заказа, но не в момент, когда
+                    человек решает «подходит или нет».
+                  */}
+                  <p className="mt-4 text-sm text-slate-700">
+                    {kitCompositionLine(kit.items)}
+                  </p>
 
-                  <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                      <p className="text-sm text-slate-600">
-                        Без скидки: <span className="font-semibold text-slate-950 line-through decoration-slate-400">{fmtRub(totalRub)} ₽</span>
-                      </p>
-                      <p className="text-sm text-emerald-700">
-                        Только свет: <span className="font-semibold">{fmtRub(lightingOnlyRub)} ₽</span> · −10% (−{fmtRub(lightingOnlyBenefitRub)} ₽)
-                      </p>
-                      <p className="text-sm text-blue-700">
-                        С потолком: <span className="font-semibold">{fmtRub(withCeilingRub)} ₽</span> · −25% (−{fmtRub(withCeilingBenefitRub)} ₽)
-                      </p>
-                    </div>
+                  {/*
+                    Одна цена крупно — та, по которой купит большинство
+                    (с потолком), и зачёркнутая база рядом. Раньше карточка
+                    показывала три цены и два процента одновременно.
+                  */}
+                  <div className="mt-5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <p className="text-2xl font-semibold tracking-tight text-slate-950">
+                      {fmtRub(withCeilingRub)} ₽
+                    </p>
+                    <p className="text-sm text-slate-500 line-through decoration-slate-400">
+                      {fmtRub(totalRub)} ₽
+                    </p>
                   </div>
+                  <p className="mt-1 text-sm text-slate-600">с заказом потолка</p>
+
+                  <details className="mt-4 group">
+                    <summary className="min-h-11 cursor-pointer list-none text-sm font-medium text-slate-700 underline underline-offset-4 hover:text-slate-950">
+                      Состав по артикулам ({kitSkuCount(kit.items)}) ▾
+                    </summary>
+                    <p className="mt-3 text-sm text-slate-700">
+                      Только оборудование, без потолка: {fmtRub(lightingOnlyRub)} ₽
+                    </p>
+                    <ul className="mt-3 space-y-2 text-sm text-slate-700">
+                      {kit.items.map((item) => (
+                        <li key={`${item.sku}-${item.name}`} className="flex items-start gap-2">
+                          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-900" />
+                          <span className="leading-snug">
+                            {item.name} × <span className="font-semibold">{item.qty}</span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
 
                   <div className="mt-5">
                     <LightKitCtaButton

@@ -124,13 +124,23 @@ export function LightKitCtaButton({ title, items, source }: LightKitCtaButtonPro
   };
 
   return (
-    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
-      <Button type="button" className="w-full justify-center" onClick={openLightingOnly}>
-        Оформить
+    /*
+      N-040 (F-41): одно главное действие. Крупная цена на карточке — та, что
+      с потолком, поэтому и первичная кнопка ведёт туда же: разные адресаты у
+      цены и кнопки заставляли бы клиента сверять, что он вообще нажимает.
+      Покупка только оборудования остаётся, но вторичной.
+    */
+    <div className="grid gap-2">
+      <Button type="button" className="w-full justify-center" onClick={openWithCeiling}>
+        Взять этот комплект
       </Button>
-      <Button type="button" variant="secondary" className="w-full justify-center" onClick={openWithCeiling}>
-С потолком −25 %
-      </Button>
+      <button
+        type="button"
+        onClick={openLightingOnly}
+        className="min-h-11 text-sm font-medium text-slate-700 underline underline-offset-4 hover:text-slate-950"
+      >
+        Только оборудование
+      </button>
     </div>
   );
 }

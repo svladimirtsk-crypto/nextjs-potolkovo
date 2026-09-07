@@ -10,10 +10,12 @@ import { ServiceHeroCta } from "./ServiceHeroCta";
 type ServiceHeroProps = {
   /** T-014: вычисляемый ценовой якорь вместо статичного бейджа. */
   priceBadgeOverride?: string;
+  /** N-040: строка про наличие и дату прайса вместо третьего упоминания скидки. */
+  availabilityNote?: string;
   service: ServicePageContent;
 };
 
-export function ServiceHero({ service, priceBadgeOverride }: ServiceHeroProps) {
+export function ServiceHero({ service, priceBadgeOverride, availabilityNote }: ServiceHeroProps) {
   // N-002: цена берётся из прайса, а не из строкового литерала в services.ts.
   const priceAnchor = servicePriceAnchor(service.slug);
   const isTrackSalePage = service.slug === "prodazha-trekovogo-osveshcheniya";
@@ -71,11 +73,14 @@ export function ServiceHero({ service, priceBadgeOverride }: ServiceHeroProps) {
               <p className="mt-2 text-sm text-slate-600">{priceAnchor.note}</p>
             ) : null}
 
-            {/* T-045: вместо двух крупных «штампов» — одна спокойная строка про скидки. */}
-            {isTrackSalePage ? (
-              <p className="mt-6 text-sm font-semibold text-slate-700">
-                −10 % на свет · −25 % при заказе потолка
-              </p>
+            {/*
+              N-040 (F-42): на первом экране скидка упоминалась трижды — в
+              чипах, в этой строке и в подзаголовке — и ни разу не говорилось
+              про наличие и срок. Проценты остаются на карточках комплектов,
+              а здесь стоит факт, которого клиенту не хватало.
+            */}
+            {isTrackSalePage && availabilityNote ? (
+              <p className="mt-6 text-sm font-medium text-slate-700">{availabilityNote}</p>
             ) : null}
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">

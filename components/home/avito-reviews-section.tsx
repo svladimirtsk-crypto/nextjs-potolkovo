@@ -67,9 +67,29 @@ function ReviewCard({
   );
 }
 
-export function AvitoReviewsSection() {
+/**
+ * N-040 (F-46): на странице оборудования показывались те же отзывы про
+ * натяжные потолки. Для покупателя света релевантнее отзыв про подбор и
+ * доставку — но выдавать монтажные отзывы за световые нельзя, поэтому если
+ * подходящих меньше двух, секция честно называет их отзывами по монтажу.
+ */
+const LIGHT_REVIEW_PATTERN = /трек|светильник|подсветк|люстр|свет/i;
+const MIN_TOPIC_REVIEWS = 2;
+
+export function AvitoReviewsSection({ filter }: { filter?: "light" } = {}) {
   const [showAll, setShowAll] = useState(false);
-  const displayed = showAll ? avitoReviews : avitoReviews.slice(0, INITIAL_COUNT);
+
+  const topical = filter === "light"
+    ? avitoReviews.filter((review) => LIGHT_REVIEW_PATTERN.test(review.text))
+    : avitoReviews;
+
+  // Слишком мало по теме — показываем общие, но не притворяемся.
+  const useTopical = filter !== "light" || topical.length >= MIN_TOPIC_REVIEWS;
+  const source = useTopical ? topical : avitoReviews;
+  const honestNote =
+    filter === "light" && !useTopical ? "Отзывы по монтажу потолков" : null;
+
+  const displayed = showAll ? source : source.slice(0, INITIAL_COUNT);
 
   return (
     <Section id="reviews" className="bg-slate-50">
@@ -80,6 +100,10 @@ export function AvitoReviewsSection() {
             title="Что говорят клиенты"
             description="Реальные отзывы с Avito — 19 отзывов, рейтинг 5.0"
           />
+
+          {honestNote ? (
+            <p className="mt-3 text-sm text-slate-600">{honestNote}</p>
+          ) : null}
         </div>
 
         {/* Avito Profile Badge */}

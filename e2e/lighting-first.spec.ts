@@ -20,7 +20,7 @@ test.describe("Сценарий 6 · комплект «Для кухни» → 
 
     const kit = page.locator("article").filter({ hasText: /Для кухни/ }).first();
     await kit.scrollIntoViewIfNeeded();
-    await kit.getByRole("button", { name: /С потолком/ }).click();
+    await kit.getByRole("button", { name: "Взять этот комплект" }).click();
 
     const modal = page.locator(MODAL);
     await modal.waitFor();
