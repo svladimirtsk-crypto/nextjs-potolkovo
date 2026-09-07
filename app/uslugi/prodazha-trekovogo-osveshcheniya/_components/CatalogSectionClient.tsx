@@ -5,16 +5,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 import { useCalculatorStore } from "@/lib/calculator/store";
 import type { CalculatorLeadSnapshot } from "@/lib/calculator/snapshot-types";
-import {
-  isMountsOrGrilles,
-  isPanelProduct,
-  isSmartProduct,
-  matchesPointSubtype,
-  normalizeQty,
-} from "@/lib/lighting/product-predicates";
+import { normalizeQty } from "@/lib/lighting/product-predicates";
 import catalogImages from "@/data/catalog-images.json";
 import { ProductCard } from "./CatalogProductCard";
 import { CatalogWarnings } from "./CatalogWarnings";
+import {
+  filterCatalogProducts,
+  searchMatchesBySection,
+} from "@/lib/lighting/catalog-filters";
 import {
   calcClarusPsuOptions,
   calcLampCurrentBySocket,
@@ -45,13 +43,11 @@ import {
   applyLightingWithCeilingDiscount,
   calcLightingDiscountAmount,
 } from "@/lib/lighting-formulas";
-import { detectSocket } from "@/lib/feed2-products";
 
 import {
   CATALOG_SECTIONS,
   POINT_SUBTYPES,
   TRACK_GROUPS,
-  TRACK_PROFILE_WHITELIST,
   TRACK_SYSTEMS,
   POINT_TO_MOUNT_VENDOR_CODE,
   CLARUS_PSU_VENDOR_CODES,
@@ -64,7 +60,7 @@ import {
   type LampSocket,
 } from "@/lib/catalog-ui-config";
 
-import { ART_TRACK_PROFILE_VENDOR_WHITELIST, applyVendorOverrides } from "@/lib/vendor-code-overrides";
+import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
 
 type CartItems = Record<string, number>;
 
@@ -77,31 +73,7 @@ function fmt(value: number): string {
 
 
 
-/**
- * T-065 · К какой секции каталога относится товар.
- *
- * Нужна для глобального поиска: правила отбора раньше жили только внутри
- * `filteredProducts` вперемешку с активными фильтрами, поэтому «где ещё
- * есть эта позиция» посчитать было нечем.
- */
-function sectionOfProduct(product: FeedCatalogProduct): CatalogSectionId | null {
-  if (product.kind === "TRACK_PROFILE" || product.kind === "TRACK_FIXTURE" || product.kind === "TRACK_ACCESSORY") {
-    return "track-systems";
-  }
-  if (product.kind === "SPOT_FIXTURE" || isPanelProduct(product)) return "point-fixtures";
-  if (product.kind === "CHANDELIER") return "chandeliers";
-  if (product.kind === "LED_STRIP" || product.kind === "PSU" || product.kind === "CONTROL") {
-    return "cornice-lighting";
-  }
-  if (product.kind === "LAMP") return "lamps";
-  if (isMountsOrGrilles(product)) return "mounts-grilles";
-  return null;
-}
 
-/** Строка, по которой ищем: название, артикул и путь категории. */
-function searchHaystack(product: FeedCatalogProduct): string {
-  return `${toText(product.name)} ${toText(product.vendorCode)} ${toText(product.categoryPath)}`.toLowerCase();
-}
 
 
 function productToLightingItem(product: FeedCatalogProduct, qty: number): LightingItem {
@@ -559,78 +531,26 @@ export function CatalogSectionClient({ data }: Props) {
    * стабильная, поэтому внутри каждой из двух групп исходный порядок фида
    * сохраняется — меняется только приоритет показа.
    */
-  const withPhotoFirst = useCallback((list: FeedCatalogProduct[]): FeedCatalogProduct[] => {
-    const hasPhoto = (product: FeedCatalogProduct) =>
-      toText(product.productId) in (catalogImages as Record<string, unknown>);
-    return [...list].sort((a, b) => Number(hasPhoto(b)) - Number(hasPhoto(a)));
-  }, []);
+  /** Есть ли у товара локальное фото — влияет только на порядок показа. */
+  const hasPhoto = useCallback(
+    (product: FeedCatalogProduct) => toText(product.productId) in (catalogImages as Record<string, unknown>),
+    [],
+  );
 
-  const filteredProducts = useMemo(() => {
-    let scoped: FeedCatalogProduct[] = [];
+  const filters = useMemo(
+    () => ({ section, trackSystem, trackGroup, pointSubtype, lampSocket, smartOnly, query }),
+    [section, trackSystem, trackGroup, pointSubtype, lampSocket, smartOnly, query],
+  );
 
-    if (section === "track-systems") {
-      if (trackGroup === "TRACK_PROFILE") {
-        const base = TRACK_PROFILE_WHITELIST[trackSystem] ?? [];
-        const allowed =
-          trackSystem === "TRACK_220" ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST]) : new Set(base);
+  const filteredProducts = useMemo(
+    () => filterCatalogProducts(products, filters, hasPhoto),
+    [products, filters, hasPhoto],
+  );
 
-        scoped = products.filter((product) => {
-          if (product.system !== trackSystem) return false;
-          if (product.kind !== "TRACK_PROFILE") return false;
-          return allowed.has(toText(product.vendorCode));
-        });
-      } else {
-        scoped = products.filter((product) => product.system === trackSystem && product.kind === trackGroup);
-      }
-    } else if (section === "point-fixtures") {
-      scoped = products.filter((product) => matchesPointSubtype(product, pointSubtype));
-    } else if (section === "lamps") {
-      scoped = products
-        .filter((p) => p.kind === "LAMP" && p.available !== false && toNumber(p.priceRub) > 0)
-        .filter((p) => detectSocket(p) === lampSocket);
-    } else {
-      scoped = products.filter((product) => isMountsOrGrilles(product));
-    }
-
-    if (smartOnly) {
-      scoped = scoped.filter(isSmartProduct);
-    }
-
-    const q = toText(query).toLowerCase();
-    if (!q) return withPhotoFirst(scoped);
-
-    return withPhotoFirst(
-      scoped.filter((product) => {
-        const haystack = `${toText(product.name)} ${toText(product.vendorCode)} ${toText(product.categoryPath)}`.toLowerCase();
-        return haystack.includes(q);
-      }),
-    );
-  }, [lampSocket, pointSubtype, products, query, section, smartOnly, trackGroup, trackSystem, withPhotoFirst]);
-
-  /**
-   * T-065 · Глобальный поиск: сколько совпадений в КАЖДОМ разделе.
-   *
-   * Раньше поиск работал только внутри активной секции и молчал, если товар
-   * лежал в соседней: человек искал «блок питания», получал «ничего не
-   * найдено» в «Трековых системах» и уходил, хотя позиция была в «Подсветке
-   * карниза». Считаем по всему каталогу и показываем, куда перейти.
-   */
-  const searchMatchesBySection = useMemo(() => {
-    const q = toText(query).trim().toLowerCase();
-    if (q.length < 2) return null;
-
-    const counts = new Map<CatalogSectionId, number>();
-    for (const product of products) {
-      if (!searchHaystack(product).includes(q)) continue;
-      const productSection = sectionOfProduct(product);
-      if (!productSection) continue;
-      counts.set(productSection, (counts.get(productSection) ?? 0) + 1);
-    }
-
-    return CATALOG_SECTIONS.filter((item) => item.id !== section && (counts.get(item.id) ?? 0) > 0).map(
-      (item) => ({ id: item.id, label: item.label, count: counts.get(item.id) ?? 0 })
-    );
-  }, [products, query, section]);
+  const searchMatches = useMemo(
+    () => searchMatchesBySection(products, query, section),
+    [products, query, section],
+  );
 
   return (
     <Section id="price" className={selectedEntries.length > 0 ? "scroll-mt-24 py-10 pb-36 max-sm:pb-44" : "scroll-mt-24 py-10"}>
@@ -823,10 +743,10 @@ export function CatalogSectionClient({ data }: Props) {
           сломанным — совпадения в соседней секции просто не существовали
           для пользователя.
         */}
-        {searchMatchesBySection && searchMatchesBySection.length > 0 ? (
+        {searchMatches && searchMatchesBySection.length > 0 ? (
           <div aria-live="polite" className="mt-3 flex flex-wrap items-center gap-2 text-sm">
             <span className="text-slate-600">Найдено ещё:</span>
-            {searchMatchesBySection.map((match) => (
+            {searchMatches.map((match) => (
               <button
                 key={match.id}
                 type="button"
@@ -962,13 +882,13 @@ export function CatalogSectionClient({ data }: Props) {
 
         {filteredProducts.length === 0 ? (
           <div className="mt-6 rounded-[var(--radius-lg)] border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-            {searchMatchesBySection && searchMatchesBySection.length > 0 ? (
+            {searchMatches && searchMatchesBySection.length > 0 ? (
               <>
                 <p className="font-semibold text-slate-950">
                   В этом разделе ничего нет, но есть в других
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {searchMatchesBySection.map((match) => (
+                  {searchMatches.map((match) => (
                     <button
                       key={match.id}
                       type="button"

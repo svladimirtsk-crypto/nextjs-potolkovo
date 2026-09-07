@@ -1,11 +1,22 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+
 import { CATALOG_SECTIONS } from "../lib/catalog-ui-config";
+import { searchMatchesBySection, sectionOfProduct } from "../lib/lighting/catalog-filters";
+import type { FeedCatalogProduct } from "../lib/eks-feed2-catalog";
 
 const source = readFileSync(
   new URL("../app/uslugi/prodazha-trekovogo-osveshcheniya/_components/CatalogSectionClient.tsx", import.meta.url),
   "utf8"
 );
+
+const product = (over: Partial<FeedCatalogProduct>): FeedCatalogProduct =>
+  ({
+    productId: "p", vendorCode: "", offerId: "", name: "Товар", url: "",
+    categoryId: "", categoryPath: "", images: [], coverImage: "", priceRub: 100,
+    available: true, params: [], keyAttributes: [], system: "NONE", kind: "OTHER",
+    unit: "pcs", lengthMeters: null, pieceLengthMeters: null, ...over,
+  }) as FeedCatalogProduct;
 
 describe("T-065 · глобальный поиск по каталогу", () => {
   it("запрос не сбрасывается при смене раздела", () => {
@@ -19,8 +30,19 @@ describe("T-065 · глобальный поиск по каталогу", () =>
   });
 
   it("совпадения считаются по всему каталогу, а не по активной секции", () => {
-    expect(source).toContain("searchMatchesBySection");
-    expect(source).toContain("for (const product of products)");
+    const products = [
+      product({ productId: "psu", name: "Блок питания 100Вт", kind: "PSU" }),
+      product({ productId: "ch", name: "Люстра Блок", kind: "CHANDELIER" }),
+    ];
+
+    // Активен раздел трековых систем — совпадений там нет, но подсказка их находит.
+    const matches = searchMatchesBySection(products, "блок", "track-systems");
+    expect(matches?.map((m) => m.id).sort()).toEqual(["chandeliers", "cornice-lighting"]);
+  });
+
+  it("активный раздел из подсказок исключён — переходить некуда", () => {
+    const products = [product({ productId: "psu", name: "Блок питания", kind: "PSU" })];
+    expect(searchMatchesBySection(products, "блок", "cornice-lighting")).toEqual([]);
   });
 
   it("подсказка показывает раздел и число найденного", () => {
@@ -33,9 +55,24 @@ describe("T-065 · глобальный поиск по каталогу", () =>
     expect(source).toContain("scroll-fade-x");
   });
 
+  /**
+   * Каждый раздел каталога должен быть достижим: подсказка ведёт только туда,
+   * куда `sectionOfProduct` умеет относить товары. Раздел без единого
+   * возможного товара — мёртвая вкладка.
+   */
   it("каждая секция каталога может быть целью подсказки", () => {
+    const samples: Array<[string, FeedCatalogProduct]> = [
+      ["track-systems", product({ kind: "TRACK_PROFILE" })],
+      ["point-fixtures", product({ kind: "SPOT_FIXTURE" })],
+      ["chandeliers", product({ kind: "CHANDELIER" })],
+      ["cornice-lighting", product({ kind: "LED_STRIP" })],
+      ["lamps", product({ kind: "LAMP" })],
+      ["mounts-grilles", product({ name: "Вент.решетка D100", kind: "CEILING_COMPONENT" })],
+    ];
+
+    const reachable = new Set(samples.map(([, p]) => sectionOfProduct(p)));
     for (const section of CATALOG_SECTIONS) {
-      expect(source, section.id).toContain(`"${section.id}"`);
+      expect(reachable, section.id).toContain(section.id);
     }
   });
 });
