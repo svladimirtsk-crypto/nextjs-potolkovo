@@ -13,7 +13,7 @@ import { MODAL, interceptLeadApi, openCalculatorFromHero, submitLeadForm } from 
 async function completeModernStep0(page: import("@playwright/test").Page) {
   const modal = page.locator(MODAL);
 
-  await modal.getByRole("button", { name: /^Комнату/ }).click();
+  await modal.getByRole("button", { name: /Одну комнату/ }).click();
   await modal.getByRole("button", { name: "18 м²", exact: true }).click();
   await modal.getByRole("button", { name: /Подтвердить площадь/ }).click();
 

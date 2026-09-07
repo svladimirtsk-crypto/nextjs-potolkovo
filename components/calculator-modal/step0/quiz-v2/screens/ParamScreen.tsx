@@ -32,12 +32,25 @@ export function ParamScreen({ roomId, param, engine, onConfirm }:{
   const room = engine.rooms.find(r=>r.id===roomId) ?? engine.activeRoom;
   // Локальное значение поля синхронизируется через key, а не через эффект.
   const [localLabel, setLocalLabel] = useState(room?.label ?? "");
+  /** N-013 (F-08): поле названия свёрнуто — на входе от человека не требуют печатать. */
+  const [nameOpen, setNameOpen] = useState(false);
 
   if (!room) {
     return <div className="p-4 text-rose-600">Комната {roomId} не найдена</div>;
   }
 
   const update = (patch: Parameters<CeilingEngine["updateRoom"]>[1]) => engine.updateRoom(room.id, patch);
+
+  /**
+   * N-013 (F-10): плашка предзаполнения раньше висела и на главной, где
+   * пресета нет: контекст модалки подставляет заглушку {standard, 10 м²},
+   * и `prefilled.area` выставлялся всегда. Признак настоящего пресета —
+   * пришедшее со страницы название источника (`presetNote`).
+   */
+  const areaPrefillNote =
+    param === "area" && engine.prefilled?.area && engine.presetNote
+      ? `Подставил ${room?.area ?? 0} м² со страницы — поправьте под себя`
+      : null;
 
   // T-021: подпись под предзаполненным пресетом параметром
   const prefillHint = engine.prefilled?.[param] ? (
@@ -72,53 +85,89 @@ export function ParamScreen({ roomId, param, engine, onConfirm }:{
   // AREA
   if (param === "area") {
     const isObjectMode = engine.calculationScope === "object";
+    const isSecondRoom = engine.rooms.length > 1;
+
     return (
-      <SectionCard headingRef={headingRef} title="Площадь" description="Площадь считается отдельно, а профили и узлы — только по нужным участкам в метрах.">
-        {prefillHint}
+      <SectionCard
+        headingRef={headingRef}
+        title="Площадь потолка"
+        /* N-013 (F-09): «узлы» и «участки в метрах» — язык монтажника. */
+        description="Только площадь. Профили, карнизы и свет спрошу дальше — по метрам."
+      >
         {kitHint}
-        {!isObjectMode && (
-        <div className="mb-4 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
-          <p className="text-sm font-medium text-slate-700">Название помещения</p>
-          <input
-            className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-            value={localLabel}
-            onChange={e=>setLocalLabel(e.target.value)}
-            onBlur={()=> update({ label: localRoomLabelTrim(localLabel) })}
-            placeholder="Например: Кухня-гостиная"
-          />
-          <p className="mt-2 text-xs text-slate-600">Это название будет видно в общем списке помещений и в итоговом расчёте.</p>
-        </div>
-        )}
-        {/* T-041: режим расчёта переехал сюда с отдельного экрана. */}
+
+        {/*
+          N-013 (F-11): порядок блоков идёт от общего к частному —
+          (a) что считаем, (b) сколько это в метрах, (c) как назвать.
+          Раньше первым стоял ввод названия: человек ещё ничего не посчитал,
+          а его уже просили печатать (F-08).
+        */}
         <div className="mb-4">
-          <p className="text-sm font-medium text-slate-700">Считаю:</p>
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          <p className="text-sm font-medium text-slate-700">Что считаем?</p>
+          <div className="mt-2 grid grid-cols-2 gap-2">
             <OptionCard
               active={!isObjectMode}
-              title="Комнату"
-              meta="Кухня, спальня, гостиная — точный расчёт"
+              title="Одну комнату"
+              meta="Точный расчёт"
               onClick={() => engine.chooseCalcMode("room")}
             />
             <OptionCard
               active={isObjectMode}
-              title="Весь объект"
-              meta="Прикинуть бюджет по квартире или дому"
+              title="Всю квартиру или дом"
+              meta="Прикинуть бюджет"
               onClick={() => engine.chooseCalcMode("object")}
             />
           </div>
         </div>
 
+        {/* N-013 (F-10): плашка — только когда значение действительно пришло
+            со страницы, и с указанием, что именно подставлено. */}
+        {areaPrefillNote ? (
+          <p className="mb-4 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900 ring-1 ring-amber-200">
+            {areaPrefillNote}
+          </p>
+        ) : null}
+
         <RangeField
           id="area-v2"
-          label={isObjectMode ? "Укажите общую площадь объекта" : "Выберите площадь помещения"}
+          label={isObjectMode ? "Общая площадь объекта" : "Площадь потолка"}
           value={room.area}
           min={1}
           max={isObjectMode ? 1000 : 200}
           step={1}
           unit="м²"
+          valueText={`${room.area} квадратных метров`}
           onChange={v=>update({ area: v })}
-          quickValues={isObjectMode ? [40, 60, 80, 100, 120] : [10, 12, 15, 18, 20, 25, 30, 40]}
+          /* N-013 (F-13): пять значений вместо восьми — на mobile один ряд. */
+          quickValues={isObjectMode ? [40, 60, 80, 100, 120] : [12, 15, 18, 22, 30]}
         />
+
+        {/* (c) Название — свёрнуто. Нужно только когда комнат больше одной. */}
+        <div className="mt-4">
+          {nameOpen || isSecondRoom ? (
+            <div className="rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+              <label htmlFor="room-label-v2" className="text-sm font-medium text-slate-700">
+                Название помещения
+              </label>
+              <input
+                id="room-label-v2"
+                className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                value={localLabel}
+                onChange={e=>setLocalLabel(e.target.value)}
+                onBlur={()=> update({ label: localRoomLabelTrim(localLabel) })}
+                placeholder="Например: Кухня-гостиная"
+              />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setNameOpen(true)}
+              className="min-h-11 text-sm font-medium text-slate-700 underline underline-offset-4 hover:text-slate-950"
+            >
+              Назвать помещение (например, Кухня)
+            </button>
+          )}
+        </div>
       </SectionCard>
     );
   }
@@ -127,7 +176,7 @@ export function ParamScreen({ roomId, param, engine, onConfirm }:{
   if (param === "ceiling") {
     const isSimple = !room.shadowEnabled && !room.floatingEnabled;
     return (
-      <SectionCard headingRef={headingRef} title="Тип потолка" description="Базовая площадь считается отдельно. Теневой и парящий указывайте только на нужных участках.">
+      <SectionCard headingRef={headingRef} title="Тип потолка" description="Выберите вид потолка. Длину профиля укажем следующим вопросом — в метрах.">
         {prefillHint}
         {kitHint}
         <div className="space-y-3">

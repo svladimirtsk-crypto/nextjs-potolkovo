@@ -32,6 +32,8 @@ import { useCalculatorModal } from "../../calculator-modal-context";
 
 type Props = {
   preset?: ServiceCalculatorPreset;
+  /** N-013: "default" — пресет фабрикует контекст, а не страница. */
+  presetOrigin?: "page" | "default";
   initialSolutionScenario?: SolutionScenario;
   onStep0ProgressChange?: (p: {done:number; total:number} | null) => void;
   onIsStep0SummaryReadyChange?: (ready: boolean) => void;
@@ -51,6 +53,7 @@ type Props = {
 
 export function PriceCalculatorQuizV2({
   preset,
+  presetOrigin,
   initialSolutionScenario = "standard",
   onStep0ProgressChange,
   onIsStep0SummaryReadyChange,
@@ -149,7 +152,8 @@ export function PriceCalculatorQuizV2({
     if (presetAppliedRef.current) return;
     if (!preset) return;
     presetAppliedRef.current = true;
-    engine.initFromPreset(preset);
+    // N-013 (F-10): у заглушки нет источника — и подписи «со страницы» тоже.
+    engine.initFromPreset(preset, presetOrigin === "default" ? null : undefined);
     // Пресет уже задал сценарий и комнату — начинаем сразу с площади.
     const presetRoomId = engine.activeRoomId ?? engine.rooms[0]?.id ?? "object";
     setHistory([{ t: "param", roomId: presetRoomId, param: "area" }]);

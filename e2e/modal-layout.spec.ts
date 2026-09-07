@@ -40,8 +40,8 @@ test.describe("Раскладка модалки", () => {
     await modal.waitFor();
 
     // Оба ключевых элемента должны попадать в вьюпорт без прокрутки.
-    await expect(modal.getByRole("button", { name: /^Комнату/ })).toBeInViewport();
-    await expect(modal.getByRole("button", { name: /^Весь объект/ })).toBeInViewport();
+    await expect(modal.getByRole("button", { name: /Одну комнату/ })).toBeInViewport();
+    await expect(modal.getByRole("button", { name: /Всю квартиру или дом/ })).toBeInViewport();
   });
 
   test("desktop: модалка — окно со сводкой справа, а не полноэкранная полоса", async ({
@@ -70,7 +70,7 @@ test.describe("Раскладка модалки", () => {
      */
     await expect(aside).toContainText(/Ответьте на \d+ вопрос/);
 
-    await modal.getByRole("button", { name: /^Комнату/ }).click();
+    await modal.getByRole("button", { name: /Одну комнату/ }).click();
     await expect(aside).toContainText("₽");
   });
 

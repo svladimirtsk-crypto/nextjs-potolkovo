@@ -20,10 +20,10 @@ test.describe("Step 0 · цепочка «Назад»", () => {
   test("«Назад» с типа потолка возвращает на площадь и сохраняет её", async ({ page }) => {
     const modal = page.locator(MODAL);
 
-    await modal.getByRole("button", { name: /^Комнату/ }).click();
+    await modal.getByRole("button", { name: /Одну комнату/ }).click();
 
     // Выбираем нестандартную площадь, чтобы отличить её от дефолта 18 м².
-    await modal.getByRole("button", { name: "25 м²", exact: true }).click();
+    await modal.getByRole("button", { name: "30 м²", exact: true }).click();
     await modal.getByRole("button", { name: /Подтвердить площадь/ }).click();
 
     // Мы на экране типа потолка.
@@ -34,7 +34,7 @@ test.describe("Step 0 · цепочка «Назад»", () => {
     // Вернулись именно на площадь, и выбор не потерян.
     const confirmArea = modal.getByRole("button", { name: /Подтвердить площадь/ });
     await expect(confirmArea).toBeVisible();
-    await expect(modal.getByRole("button", { name: "25 м²", exact: true })).toHaveAttribute(
+    await expect(modal.getByRole("button", { name: "30 м²", exact: true })).toHaveAttribute(
       "aria-pressed",
       "true"
     );
@@ -45,12 +45,12 @@ test.describe("Step 0 · цепочка «Назад»", () => {
   }) => {
     const modal = page.locator(MODAL);
 
-    await modal.getByRole("button", { name: /^Комнату/ }).click();
+    await modal.getByRole("button", { name: /Одну комнату/ }).click();
     await modal.getByRole("button", { name: /Назад/ }).click();
 
     // Модалка осталась открытой и предлагает снова выбрать режим расчёта.
     await expect(modal).toBeVisible();
-    await expect(modal.getByRole("button", { name: /^Комнату/ })).toBeVisible();
-    await expect(modal.getByRole("button", { name: /^Весь объект/ })).toBeVisible();
+    await expect(modal.getByRole("button", { name: /Одну комнату/ })).toBeVisible();
+    await expect(modal.getByRole("button", { name: /Всю квартиру или дом/ })).toBeVisible();
   });
 });

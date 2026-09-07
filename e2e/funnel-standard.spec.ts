@@ -64,7 +64,7 @@ test.describe("Воронка · стандартный сценарий", () =>
 
     await completeAreaScreen(page, { area: "18 м²", points: "6 шт." });
 
-    await addSecondRoom(page, { room: "+ Кухня", area: "20 м²" });
+    await addSecondRoom(page, { room: "+ Кухня", area: "22 м²" });
 
     await modal.getByRole("button", { name: /К итогу/ }).first().click();
     await submitLeadForm(page, { name: "Ольга", phone: "9161112233", scope: modal });

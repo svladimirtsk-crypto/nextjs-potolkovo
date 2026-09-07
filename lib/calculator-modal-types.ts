@@ -80,6 +80,12 @@ export type CalculatorEntryMode = "default" | "lighting-first";
 export type OpenCalculatorOptions = {
   preset?: ServiceCalculatorPreset;
   forcePreset?: boolean;
+  /**
+   * N-013 (F-10): откуда взялся пресет. "default" — заглушка, которую
+   * подставляет сам контекст, когда страница ничего не передала; о таком
+   * «предзаполнении» клиенту сообщать нечего.
+   */
+  presetOrigin?: "page" | "default";
 
   initialStep?: WizardStep;
   initialLighting?: LightingSnapshot;

@@ -27,7 +27,7 @@ test.describe("Сценарий 6 · комплект «Для кухни» → 
 
     // Шаг 0: комната 18 м². Экрана «трек» здесь быть не должно — он уже задан
     // комплектом, поэтому цепочка короче обычной.
-    await modal.getByRole("button", { name: /^Комнату/ }).click();
+    await modal.getByRole("button", { name: /Одну комнату/ }).click();
     await modal.getByRole("button", { name: "18 м²", exact: true }).click();
     await modal.getByRole("button", { name: /Подтвердить площадь/ }).click();
 

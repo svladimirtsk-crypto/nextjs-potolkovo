@@ -37,11 +37,12 @@ test.describe("Главная · ценовые примеры", () => {
 
     // Пресет должен доехать до экрана площади — иначе клик по примеру
     // ничем не отличается от обычной кнопки «Рассчитать».
-    await expect(modal.getByLabel("Выберите площадь помещения", { exact: true })).toHaveValue("24");
+    await expect(modal.getByLabel("Площадь потолка, м²", { exact: true })).toHaveValue("24");
 
     // Теневой потолок переводит квиз в сценарий modern (10 вопросов вместо 8),
     // то есть доехала не только площадь, но и тип потолка.
     await expect(modal.getByText(/вопрос 1 из 10/)).toBeVisible();
-    await expect(modal.getByText(/Стартовое значение со страницы/)).toBeVisible();
+    // N-013: плашка называет подставленное значение, а не абстрактный «старт».
+    await expect(modal.getByText(/Подставил 24 м² со страницы/)).toBeVisible();
   });
 });

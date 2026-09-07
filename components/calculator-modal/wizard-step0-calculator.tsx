@@ -262,7 +262,7 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
               ? "Теперь добавьте параметры потолка, чтобы увидеть общий бюджет. Площадь считается отдельно, а трек, карнизы и профили — только по фактическим метрам."
               : (proofContext?.actionPreset?.introNote ?? (
                 <>
-                  {caseHint(String(proofContext?.title ?? ""))}. Проверьте площадь и уточните только нужные участки профилей и узлов.
+                  {caseHint(String(proofContext?.title ?? ""))}. Проверьте площадь и поправьте, что нужно.
                 </>
               ))}
           </p>
@@ -271,6 +271,7 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
 
       <PriceCalculatorQuizV2
         preset={resolvedPreset}
+        presetOrigin={options?.presetOrigin ?? "default"}
         initialSolutionScenario={initialSolutionScenario}
         prefillFromLighting={
           prefillMetrics.hasAny

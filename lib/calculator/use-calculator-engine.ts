@@ -199,7 +199,12 @@ export function useCeilingCalculatorEngine(initialScenario: SolutionScenario = "
         scenario: resolved.scenario,
         scope: resolved.scope,
         prefilled: resolved.prefilled,
-        note: note ?? resolved.introNote ?? (preset ? PREFILL_HINT : null),
+        // N-013: явный null = «источника нет», подпись не показываем.
+        // `??` тут не годится: он пропустил бы null дальше в дефолт.
+        note:
+          note !== undefined
+            ? note
+            : (resolved.introNote ?? (preset ? PREFILL_HINT : null)),
       });
     },
     []

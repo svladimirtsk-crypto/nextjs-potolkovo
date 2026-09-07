@@ -26,7 +26,7 @@ export function HomeProof() {
     // У части кейсов пресета нет — открываем калькулятор со стандартным потолком.
     const itemPreset = (item as { actionPreset?: ServiceCalculatorPreset }).actionPreset;
     const preset = (itemPreset ?? { ceilingType: "standard" }) as ServiceCalculatorPreset;
-    openCalculator({ preset, forcePreset: true, source: `${item.slug}:proof-card` });
+    openCalculator({ preset, forcePreset: true, presetOrigin: "page", source: `${item.slug}:proof-card` });
   };
 
   const openByIndex = (index: number) => setSelectedIndex(index);

@@ -1,3 +1,4 @@
+import { pricing } from "@/content/pricing";
 export type CatalogSectionId =
   | "track-systems"
   | "point-fixtures"
@@ -13,7 +14,12 @@ export type LampSocket = "GX53" | "MR16" | "GU10";
 /** T-013: единственный список цоколей для перебора. */
 export const LAMP_SOCKETS: LampSocket[] = ["GX53", "MR16", "GU10"];
 
-export const DEFAULT_CALCULATOR_AREA = 10;
+/**
+ * N-013: дефолт площади берётся из прайса, а не живёт отдельным числом.
+ * 10 м² не совпадало ни с одним быстрым чипом, поэтому на входе ни один из
+ * них не был активен — экран выглядел так, будто выбор не сделан.
+ */
+export const DEFAULT_CALCULATOR_AREA = pricing.defaults.roomArea;
 export const PROFILE_PERIMETER_AUTO_RATIO = 1;
 
 export const CATALOG_SECTIONS: { id: CatalogSectionId; label: string }[] = [

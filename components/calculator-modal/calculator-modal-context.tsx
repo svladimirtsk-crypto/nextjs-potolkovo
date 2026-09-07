@@ -190,6 +190,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
                 ceilingType: "standard",
                 areaDefault: DEFAULT_CALCULATOR_AREA,
               }),
+        presetOrigin: incoming.presetOrigin ?? (incoming.preset ? "page" : "default"),
       };
 
       const effectiveSource = String(resolvedOpts.source ?? "unknown");

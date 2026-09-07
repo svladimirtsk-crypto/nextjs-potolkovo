@@ -63,6 +63,7 @@ export function RangeField({
   onChange,
   quickValues,
   hint,
+  valueText,
 }: {
   id: string;
   label: string;
@@ -74,6 +75,8 @@ export function RangeField({
   onChange: (v: number) => void;
   quickValues?: number[];
   hint?: string;
+  /** Человеческое озвучивание значения для скринридера: «18 квадратных метров». */
+  valueText?: string;
 }) {
   const [manual, setManual] = useState(String(value));
   const [isFocused, setIsFocused] = useState(false);
@@ -110,7 +113,7 @@ export function RangeField({
           <input
             id={id}
             inputMode="decimal"
-            aria-label={label}
+            aria-label={`${label}, ${unit}`}
             value={manual}
             onFocus={() => setIsFocused(true)}
             onChange={(e) => {
@@ -139,29 +142,34 @@ export function RangeField({
         </div>
       </div>
 
-      {/* Слайдер — основной способ ввода на мобильном. */}
+      {/*
+        N-013 (F-13): три способа задать одну величину — перебор. На мобильном
+        слайдер съедал высоту, из-за которой площадь уходила под сгиб, поэтому
+        он остаётся только там, где место есть: степпер + чипы хватает везде.
+      */}
       <input
         type="range"
         aria-label={`${label}: слайдер`}
+        aria-valuetext={valueText ?? `${value} ${unit}`}
         min={min}
         max={max}
         step={step}
         value={clamp(value, min, max)}
         onChange={(e) => onChange(normalize(Number(e.target.value)))}
-        className="mt-3 h-11 w-full cursor-pointer accent-slate-950"
+        className="mt-3 hidden h-11 w-full cursor-pointer accent-slate-950 lg:block"
       />
 
       {hint ? <p className="mt-1 text-xs text-slate-600">{hint}</p> : null}
 
       {quickValues && quickValues.length > 0 ? (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 grid grid-cols-5 gap-1.5">
           {quickValues.map((q) => (
             <button
               key={q}
               type="button"
               onClick={() => onChange(normalize(q))}
               aria-pressed={Math.abs(value - q) < 0.001}
-              className={`min-h-11 rounded-full px-3.5 text-xs font-semibold transition-colors ${
+              className={`min-h-11 rounded-full px-1 text-xs font-semibold transition-colors ${
                 Math.abs(value - q) < 0.001 ? "bg-slate-950 text-white" : "bg-white text-slate-700 ring-1 ring-slate-300 hover:ring-slate-500"
               }`}
             >

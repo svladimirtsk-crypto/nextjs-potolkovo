@@ -80,7 +80,7 @@ export async function submitLeadForm(
  */
 export async function addSecondRoom(
   page: Page,
-  { room = "+ Кухня", area = "20 м²" }: { room?: string; area?: string } = {}
+  { room = "+ Кухня", area = "22 м²" }: { room?: string; area?: string } = {}
 ) {
   const modal = page.locator(MODAL);
 
@@ -119,7 +119,7 @@ export async function completeAreaScreen(
 ) {
   const modal = page.locator(MODAL);
 
-  await modal.getByRole("button", { name: /^Комнату/ }).click();
+  await modal.getByRole("button", { name: /Одну комнату/ }).click();
   await modal.getByRole("button", { name: area, exact: true }).click();
   await modal.getByRole("button", { name: /Подтвердить площадь/ }).click();
   await modal.getByRole("button", { name: /Подтвердить тип/ }).click();

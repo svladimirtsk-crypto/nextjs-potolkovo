@@ -65,6 +65,9 @@ export function CalculatorTeaserButton({
 
         openCalculator({
           preset: resolvedPreset,
+          // N-013 (F-10): подпись «подставил со страницы» уместна только
+          // когда страница действительно что-то подставила.
+          presetOrigin: effectivePreset ? "page" : "default",
           source: safeSource,
         });
       }}

@@ -24,6 +24,7 @@ export function HomePriceExamples() {
               openCalculator({
                 preset: example.preset,
                 forcePreset: true,
+                presetOrigin: "page",
                 source: `homepage:price-example:${example.id}`,
               })
             }
