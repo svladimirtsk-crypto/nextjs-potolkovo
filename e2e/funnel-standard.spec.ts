@@ -20,7 +20,20 @@ test.describe("Воронка · стандартный сценарий", () =>
     const modal = page.locator(MODAL);
     await modal.waitFor();
 
+    /**
+     * N-012 · Ценовая полоса до и после первого ответа. До него сумма — это
+     * дефолтная комната, а не выбор человека, поэтому вместо цифры стоит
+     * приглашение ответить.
+     */
+    const strip = modal.locator("[data-strip-state]").locator("visible=true").first();
+    await expect(strip).toHaveAttribute("data-strip-state", "idle");
+    await expect(strip).toContainText(/Ответьте на \d+ вопрос/);
+    await expect(strip).not.toContainText("₽");
+
     await completeAreaScreen(page, { area: "18 м²", points: "6 шт." });
+
+    await expect(strip).not.toHaveAttribute("data-strip-state", "idle");
+    await expect(strip).toContainText("₽");
 
     await modal.getByRole("button", { name: /К итогу/ }).first().click();
     await expect(modal.getByRole("heading", { name: "Итог расчета" })).toBeVisible();

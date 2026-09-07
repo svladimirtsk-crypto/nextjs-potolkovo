@@ -1,117 +1,81 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useCalculatorModal } from "./calculator-modal-context";
+
 import { pricing } from "@/content/pricing";
+import { selectStripState } from "@/lib/calculator/selectors";
+import { useCalculatorStore } from "@/lib/calculator/store";
 
-function fmt(n: number) {
-  return new Intl.NumberFormat("ru-RU").format(Math.round(n));
+import { useCalculatorModal } from "./calculator-modal-context";
+
+/** Рубли без дробей; ₽ отделяем неразрывным пробелом, чтобы не отрывался. */
+function fmtRub(n: number): string {
+  return `${new Intl.NumberFormat("ru-RU").format(Math.round(n))}\u00a0₽`;
 }
 
-function DiscountPrice({
-  regular,
-  discounted,
-  percent,
-}: {
-  regular: number;
-  discounted: number;
-  percent: number;
-}) {
-  const benefit = Math.max(0, regular - discounted);
-  return (
-    <>
-      <span className="line-through text-slate-400">{fmt(regular)} ₽</span>{" "}
-      <span>{fmt(discounted)} ₽</span>{" "}
-      <span className="text-emerald-700">−{percent}% (−{fmt(benefit)} ₽)</span>
-    </>
-  );
-}
-
+/**
+ * N-012 · Ценовая полоса калькулятора.
+ *
+ * Раньше компонент сам разбирал шесть флагов контекста и рисовал четыре
+ * варианта строки для desktop и три для mobile — отсюда дубль
+ * «Потолок 18 000 · Итого 18 000» при равенстве сумм. Теперь состояние
+ * считает `selectStripState`, а здесь остаётся только отрисовка одной строки,
+ * одинаковой для обеих раскладок.
+ */
 export function PriceStrip() {
   const {
     ceilingTotal,
     lightingEffectiveTotal,
     lightingRegularTotal,
-    lightingStandaloneTotal,
-    lightingWithCeilingTotal,
     lightingDiscountMode,
     showCeilingInUi,
-    grandTotal,
-    currentStep,
-    options,
+    step0Progress,
+    step0SessionInteracted,
   } = useCalculatorModal();
 
-  const hasLighting = lightingRegularTotal > 0;
-  // Динамический ориентир: показываем цену потолка сразу, как только движок
-  // её посчитал (ceilingTotal > 0), не дожидаясь «инженерного подтверждения»
-  // Step0. Подтверждение (step0AreaConfirmed) по-прежнему управляет только
-  // досчётом монтажа (grandTotal в snapshot) — механика не меняется.
-  const hasCeilingEstimate = showCeilingInUi && ceilingTotal > 0;
-  const showCeilingPrice = hasCeilingEstimate;
-  const displayGrandTotal = hasCeilingEstimate ? grandTotal : lightingEffectiveTotal;
+  const { snapshot } = useCalculatorStore();
 
-  // P2.17: Pulse animation key
-  const prevTotalRef = useRef(displayGrandTotal);
-  const [animKey, setAnimKey] = useState(0);
-  useEffect(() => {
-    if (displayGrandTotal === prevTotalRef.current) return;
-
-    prevTotalRef.current = displayGrandTotal;
-    const frame = requestAnimationFrame(() => setAnimKey((k) => k + 1));
-    return () => cancelAnimationFrame(frame);
-  }, [displayGrandTotal]);
-
-  if (!showCeilingPrice && !hasLighting) {
-    // До первого расчёта (экран выбора сценария): нейтральная строка вместо
-    // требования «подтвердите площадь» — цена появится сама, как только
-    // движок посчитает первую конфигурацию.
-    return (
-      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm max-sm:px-3 max-sm:py-2 max-sm:text-xs">
-        Цена считается автоматически по мере выбора параметров
-      </div>
-    );
-  }
-
-  const lightingPercent =
+  const lightingDiscountPct =
     lightingDiscountMode === "with-ceiling"
       ? pricing.lightingDiscount.withCeilingPct
       : lightingDiscountMode === "lighting-only"
         ? pricing.lightingDiscount.lightingOnlyPct
         : 0;
-  const lightingDiscounted = lightingDiscountMode === "with-ceiling"
-    ? lightingWithCeilingTotal
-    : lightingDiscountMode === "lighting-only"
-      ? lightingStandaloneTotal
-      : lightingEffectiveTotal;
 
-  const lightingPrice = lightingPercent > 0 && lightingRegularTotal > lightingDiscounted ? (
-    <DiscountPrice regular={lightingRegularTotal} discounted={lightingDiscounted} percent={lightingPercent} />
-  ) : (
-    <>{fmt(lightingEffectiveTotal)} ₽</>
-  );
+  /**
+   * Пока человек не ответил ни на один вопрос, потолок в сторе — это дефолтная
+   * комната, а не его выбор. Показывать её сумму нельзя: цифра выглядит как
+   * ответ на незаданный вопрос.
+   */
+  const ceilingKnown = showCeilingInUi && step0SessionInteracted;
 
-  const withCeilingHint =
-    hasLighting && lightingDiscountMode !== "with-ceiling" && lightingWithCeilingTotal > 0 ? (
-      <span className="text-slate-500">
-        {" "}· с потолком{" "}
-        <DiscountPrice regular={lightingRegularTotal} discounted={lightingWithCeilingTotal} percent={pricing.lightingDiscount.withCeilingPct} />
-      </span>
-    ) : null;
+  const state = selectStripState({
+    ceilingRub: ceilingTotal,
+    ceilingKnown,
+    lightingEffectiveRub: lightingEffectiveTotal,
+    lightingRegularRub: lightingRegularTotal,
+    lightingDiscountPct,
+    // Досчёт монтажа уже включён в grandTotal контекста; отдельной строкой
+    // показываем его только когда движок посчитал его явно.
+    extraInstallRub: 0,
+    minimumApplied: Boolean(snapshot?.minimumOrderApplied),
+    questionsTotal: step0Progress?.total ?? 6,
+  });
 
-  const mobileSubtitle = (() => {
-    if (!showCeilingPrice && hasLighting) {
-      if (currentStep === 0) return `Свет сохранён: ${fmt(lightingEffectiveTotal)} ₽ · потолок уточняем`;
-      if (lightingDiscountMode === "lighting-only") return `Свет −${pricing.lightingDiscount.lightingOnlyPct}%: ${fmt(lightingEffectiveTotal)} ₽`;
-      return `Свет: ${fmt(lightingEffectiveTotal)} ₽`;
-    }
+  const totalRub = state.kind === "idle" ? 0 : state.totalRub;
 
-    if (hasLighting) {
-      const benefit = Math.max(0, lightingRegularTotal - lightingEffectiveTotal);
-      return `Потолок ${fmt(ceilingTotal)} ₽ · свет ${fmt(lightingEffectiveTotal)} ₽${benefit > 0 ? ` · выгода ${fmt(benefit)} ₽` : ""}`;
-    }
+  // Анимируем только смену числа, а не весь блок.
+  const prevTotalRef = useRef(totalRub);
+  const [animKey, setAnimKey] = useState(0);
+  useEffect(() => {
+    if (totalRub === prevTotalRef.current) return;
 
-    return `Потолок ${fmt(ceilingTotal)} ₽`;
-  })();
+    prevTotalRef.current = totalRub;
+    const frame = requestAnimationFrame(() => setAnimKey((k) => k + 1));
+    return () => cancelAnimationFrame(frame);
+  }, [totalRub]);
+
+  const [hintOpen, setHintOpen] = useState(false);
 
   return (
     /*
@@ -122,69 +86,54 @@ export function PriceStrip() {
     <div
       aria-live="polite"
       aria-atomic="true"
+      data-strip-state={state.kind}
       className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm max-sm:px-3 max-sm:py-2"
     >
-      <div className="sm:hidden">
-        {!hasCeilingEstimate && hasLighting ? (
-          <>
-            <p key={animKey} className="text-sm font-bold text-slate-950 animate-pulse-once">
-              Свет сохранён: {fmt(lightingEffectiveTotal)} ₽
-            </p>
-            <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500">
-              потолок уточняем
-            </p>
-          </>
-        ) : (
-          <>
-            <p key={animKey} className="text-sm font-bold text-slate-950 animate-pulse-once">
-              {displayGrandTotal > 0 ? `Итого: ~${fmt(displayGrandTotal)} ₽` : "Цена появится по мере выбора параметров"}
-            </p>
-            <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500">
-              {mobileSubtitle}
-            </p>
-          </>
-        )}
-      </div>
+      {state.kind === "idle" ? (
+        <p className="text-slate-700 max-sm:text-xs">{state.text}</p>
+      ) : (
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span key={animKey} className="font-semibold text-slate-950 animate-pulse-once">
+            ~{fmtRub(totalRub)}
+          </span>
 
-      <div className="hidden sm:block">
-        {!showCeilingPrice && hasLighting ? (
-          <>
-            <span className="font-medium">Свет: {lightingPrice}</span>
-            {withCeilingHint}
-            <span className="text-slate-500"> · Потолок рассчитаем на этом шаге</span>
-          </>
-        ) : !showCeilingPrice ? (
-          <span className="text-slate-700">Цена считается автоматически по мере выбора параметров</span>
-        ) : !showCeilingInUi && hasLighting ? (
-          <>
-            <span className="font-medium">Свет: {lightingPrice}</span>
-            {withCeilingHint}
-            <span className="text-slate-500"> · </span>
-            <span className="text-slate-700">Итого по свету: ~{fmt(displayGrandTotal)} ₽</span>
-            {options?.entryMode === "lighting-first" ? <span className="text-slate-500"> · Потолок — можно добавить на следующем шаге</span> : null}
-          </>
-        ) : (
-          <>
-            <span className="font-medium">Потолок: {fmt(ceilingTotal)} ₽</span>
-            {hasLighting ? (
-              <>
-                <span className="text-slate-500"> · </span>
-                <span className="font-medium">Свет: {lightingPrice}</span>
-                {withCeilingHint}
-                <span className="text-slate-500"> · </span>
-                <span key={animKey} className="font-semibold inline-block animate-pulse-once">
-                  Итого: ~{fmt(displayGrandTotal)} ₽
+          {state.kind === "estimating" ? (
+            <>
+              {state.minimumApplied ? (
+                <span className="text-slate-500 max-sm:text-xs">· минимальный заказ</span>
+              ) : null}
+              {state.hint ? (
+                <>
+                  <button
+                    type="button"
+                    aria-expanded={hintOpen}
+                    onClick={() => setHintOpen((open) => !open)}
+                    className="text-xs text-slate-500 underline decoration-slate-300 underline-offset-2 hover:text-slate-800"
+                  >
+                    что входит
+                  </button>
+                  {hintOpen ? (
+                    <p className="w-full text-xs leading-5 text-slate-600">{state.hint}</p>
+                  ) : null}
+                </>
+              ) : null}
+            </>
+          ) : (
+            <span className="text-slate-500 max-sm:text-xs">
+              ·{" "}
+              {state.parts.map((part, index) => (
+                <span key={part.id}>
+                  {index > 0 ? " + " : ""}
+                  {part.label} {fmtRub(part.rub)}
+                  {part.id === "lighting" && state.lightingDiscountPct > 0
+                    ? ` (−${state.lightingDiscountPct}\u00a0%)`
+                    : ""}
                 </span>
-              </>
-            ) : (
-              <span key={animKey} className="font-semibold inline-block animate-pulse-once">
-                {" "}
-                · Итого: ~{fmt(displayGrandTotal)} ₽
-              </span>
-            )}
-          </>
-        )}
-      </div>
+              ))}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

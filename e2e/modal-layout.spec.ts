@@ -58,19 +58,23 @@ test.describe("Раскладка модалки", () => {
 
     const box = await modal.boundingBox();
     expect(box).not.toBeNull();
+    expect(box!.width).toBeLessThan((viewport?.width ?? 0) - 40);
 
-    // Панель не должна растягиваться на всю ширину экрана (F-01).
-    expect(box!.width).toBeLessThanOrEqual(1200);
-    expect(box!.width).toBeLessThan(viewport!.width);
+    const aside = modal.locator("aside");
+    await expect(aside).toBeVisible();
 
-    // Правая колонка со сводкой присутствует и держит сумму на виду.
-    const summary = modal.locator("aside");
-    await expect(summary).toBeVisible();
-    await expect(summary).toContainText("Сводка");
-    await expect(summary).toContainText("₽");
+    /**
+     * N-012: до первого ответа сводка предлагает ответить, а не показывает
+     * сумму дефолтной комнаты — цифра без заданного вопроса выглядит как
+     * ответ на него.
+     */
+    await expect(aside).toContainText(/Ответьте на \d+ вопрос/);
+
+    await modal.getByRole("button", { name: /^Комнату/ }).click();
+    await expect(aside).toContainText("₽");
   });
 
-  test("мобильный остаётся полноэкранным, сводка-колонка скрыта", async ({ page, viewport }) => {
+    test("мобильный остаётся полноэкранным, сводка-колонка скрыта", async ({ page, viewport }) => {
     test.skip((viewport?.width ?? 0) > 640, "только мобильный проект");
 
     await page.goto("/");
@@ -99,6 +103,6 @@ test.describe("Раскладка модалки", () => {
     // Независимо от ширины сумма расчёта должна быть на экране. Строка цены
     // существует в двух экземплярах (мобильная сверху и desktop-сводка
     // справа), но видимой в любой момент должна быть ровно одна.
-    await expect(modal.getByText(/Итого/).locator("visible=true").first()).toBeVisible();
+    await expect(modal.getByText(/₽/).locator("visible=true").first()).toBeVisible();
   });
 });

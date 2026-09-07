@@ -303,3 +303,94 @@ export function selectRequirementsFromBreakdown(
     rooms: perRoom,
   };
 }
+
+/* ------------------------------------------------------------------ *
+ * N-012 · Состояние ценовой полосы
+ * ------------------------------------------------------------------ */
+
+/**
+ * N-012 · Что показывает PriceStrip.
+ *
+ * Раньше полоса сама разбирала шесть флагов контекста прямо в разметке и
+ * рисовала четыре разных варианта строки для desktop и три для mobile. Из-за
+ * этого «Потолок 18 000 · Итого 18 000» дублировалось при равенстве сумм, а
+ * до первого ответа висела строка-заглушка без пользы.
+ *
+ * Состояния:
+ * - `idle` — ни один параметр не подтверждён, считать нечего;
+ * - `estimating` — известна только площадь, показываем ориентир, а при
+ *   срабатывании минимального заказа — объяснение, откуда сумма;
+ * - `detailed` — есть разбивка (потолок и/или свет).
+ */
+export type StripState =
+  | { kind: "idle"; text: string }
+  | { kind: "estimating"; totalRub: number; minimumApplied: boolean; hint: string | null }
+  | {
+      kind: "detailed";
+      totalRub: number;
+      parts: StripPart[];
+      /** Скидка на свет, если применена, — для подписи «(−25 %)». */
+      lightingDiscountPct: number;
+    };
+
+export type StripPart = {
+  id: "ceiling" | "lighting" | "install";
+  label: string;
+  rub: number;
+};
+
+export type StripInput = {
+  ceilingRub: number;
+  /** Потолок ещё не считался: на странице света или до подтверждения площади. */
+  ceilingKnown: boolean;
+  lightingEffectiveRub: number;
+  lightingRegularRub: number;
+  lightingDiscountPct: number;
+  extraInstallRub: number;
+  minimumApplied: boolean;
+  /** Сколько вопросов в сценарии — для текста приглашения. */
+  questionsTotal: number;
+};
+
+export function selectStripState(input: StripInput): StripState {
+  const hasCeiling = input.ceilingKnown && input.ceilingRub > 0;
+  const hasLighting = input.lightingEffectiveRub > 0;
+
+  if (!hasCeiling && !hasLighting) {
+    return {
+      kind: "idle",
+      text: `Ответьте на ${input.questionsTotal} вопросов — покажу ориентир`,
+    };
+  }
+
+  const parts: StripPart[] = [];
+  if (hasCeiling) parts.push({ id: "ceiling", label: "потолок", rub: input.ceilingRub });
+  if (hasLighting) parts.push({ id: "lighting", label: "свет", rub: input.lightingEffectiveRub });
+  if (input.extraInstallRub > 0) {
+    parts.push({ id: "install", label: "монтаж", rub: input.extraInstallRub });
+  }
+
+  const totalRub = input.ceilingRub * (hasCeiling ? 1 : 0) + input.lightingEffectiveRub + input.extraInstallRub;
+
+  /**
+   * Одна составляющая — раскладывать нечего: «Потолок 18 000 · Итого 18 000»
+   * повторяет одно число дважды. Показываем ориентир одной строкой.
+   */
+  if (parts.length < 2) {
+    return {
+      kind: "estimating",
+      totalRub,
+      minimumApplied: input.minimumApplied,
+      hint: input.minimumApplied
+        ? `В минимальный заказ ${pricing.minimumOrderRub.toLocaleString("ru-RU")} ₽ входит выезд, замер и монтаж до 18 м²`
+        : null,
+    };
+  }
+
+  return {
+    kind: "detailed",
+    totalRub,
+    parts,
+    lightingDiscountPct: input.lightingRegularRub > input.lightingEffectiveRub ? input.lightingDiscountPct : 0,
+  };
+}
