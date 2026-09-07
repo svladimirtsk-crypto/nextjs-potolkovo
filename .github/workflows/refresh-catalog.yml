@@ -1,0 +1,61 @@
+name: Обновление каталога
+
+# N-041 (F-44): фид выгружался вручную, и цены тихо старели. Раз в неделю
+# скрипт скачивает свежий прайс и открывает PR — изменения каталога проходят
+# ревью, а не приезжают в main молча.
+on:
+  workflow_dispatch:
+  schedule:
+    # Понедельник, 06:00 UTC — до начала рабочего дня.
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Скачать фид и пересобрать каталог
+        env:
+          FEED_URL: ${{ secrets.FEED_URL }}
+        run: node scripts/refresh-feed.mjs
+
+      - name: Проверки на новых данных
+        run: |
+          npx tsc --noEmit
+          npm run test
+
+      - name: Собрать тело PR
+        id: body
+        run: |
+          {
+            echo 'text<<PR_BODY_EOF'
+            cat feed-diff.md
+            echo ''
+            echo 'PR открыт автоматически. Проверьте топ изменений цены перед merge.'
+            echo 'PR_BODY_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Открыть PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          # Отчёт нужен только для тела PR — в репозиторий он не едет.
+          add-paths: |
+            data/
+            public/catalog/
+          branch: chore/refresh-catalog
+          delete-branch: true
+          commit-message: "chore: обновление каталога"
+          title: "chore: обновление каталога ${{ github.run_id }}"
+          body: ${{ steps.body.outputs.text }}
