@@ -16,8 +16,6 @@ import type {
   OpenCalculatorOptions,
   WizardStep,
   Step1FooterAction,
-  CalculatorFooterAction,
-  CalculatorFooterBackAction,
 } from "@/lib/calculator-modal-types";
 import {
   resolveInitialLightingTab,
