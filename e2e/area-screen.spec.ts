@@ -72,7 +72,7 @@ test.describe("Шаг 0 · экран площади", () => {
 
     await page.reload();
     await page.goto("/uslugi/tenevoy-profil");
-    await page.getByRole("button", { name: /Рассчитать этот потолок/ }).first().click();
+    await page.getByRole("button", { name: "Рассчитать теневой потолок" }).first().click();
     await modal.waitFor();
 
     // А здесь площадь действительно подставлена — и плашка называет её.

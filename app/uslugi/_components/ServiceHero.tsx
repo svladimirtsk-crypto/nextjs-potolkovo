@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { ServiceHeroLightingCta } from "./ServiceHeroLightingCta";
 import { ServiceHeroCta } from "./ServiceHeroCta";
+import { serviceCtaLabel } from "@/lib/service-page-actions";
 
 type ServiceHeroProps = {
   /** T-014: вычисляемый ценовой якорь вместо статичного бейджа. */
@@ -94,7 +95,7 @@ export function ServiceHero({ service, priceBadgeOverride, availabilityNote }: S
               ) : (
                 <>
                   {/* Primary ведёт в калькулятор с пресетом этой услуги. */}
-                  <ServiceHeroCta slug={service.slug} label="Рассчитать этот потолок" />
+                  <ServiceHeroCta slug={service.slug} label={serviceCtaLabel(service.slug)} />
                   <a
                     href="#action"
                     className="min-h-11 text-center text-sm font-semibold text-slate-700 underline underline-offset-4 transition-colors hover:text-slate-950 sm:text-left"

@@ -125,3 +125,36 @@ export function relatedServiceReason(
 ): string | null {
   return PAIR_REASONS[`${fromSlug}|${toSlug}`] ?? null;
 }
+
+/**
+ * N-060 · Название услуги в винительном падеже для кнопки расчёта (F-34).
+ *
+ * Primary звучал «Рассчитать с этим узлом» — слово из словаря монтажника,
+ * которое клиенту ничего не говорит. Теперь кнопка называет то, ради чего
+ * человек пришёл: «Рассчитать теневой потолок».
+ *
+ * Падежи заданы явно: автоматически склонять русские словосочетания —
+ * отдельная задача, а список услуг закрытый и меняется раз в год.
+ */
+const CTA_OBJECT: Record<string, string> = {
+  "tenevoy-profil": "теневой потолок",
+  "paryashchie-potolki": "парящий потолок",
+  "svetovye-linii": "световые линии",
+  "trekovoe-osveshchenie": "трек в потолке",
+  "skrytye-karnizy": "скрытый карниз",
+  "prostye-potolki": "простой потолок",
+  "individualnye-proekty": "проект",
+  "svetoprozrachnye-potolki": "светопрозрачный потолок",
+  "prodazha-trekovogo-osveshcheniya": "комплект света",
+};
+
+/**
+ * Подпись главной кнопки страницы услуги.
+ *
+ * Для незнакомого слага — нейтральное «Рассчитать стоимость»: лучше общая
+ * формулировка, чем кнопка с пустым местом посередине.
+ */
+export function serviceCtaLabel(slug: string): string {
+  const object = CTA_OBJECT[slug];
+  return object ? `Рассчитать ${object}` : "Рассчитать стоимость";
+}

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   parseAreaLabel,
+  serviceCtaLabel,
   proofItemPreset,
   relatedServiceReason,
 } from "../lib/service-page-actions";
@@ -106,6 +107,36 @@ describe("relatedServiceReason", () => {
   it("услуга не рекламирует саму себя", () => {
     for (const slug of phase2ServiceSlugs) {
       expect(relatedServiceReason(slug, slug)).toBeNull();
+    }
+  });
+});
+
+describe("N-060 · подпись кнопки расчёта (F-34)", () => {
+  it("кнопка называет услугу, а не «этот узел»", () => {
+    expect(serviceCtaLabel("tenevoy-profil")).toBe("Рассчитать теневой потолок");
+    expect(serviceCtaLabel("svetovye-linii")).toBe("Рассчитать световые линии");
+    expect(serviceCtaLabel("skrytye-karnizy")).toBe("Рассчитать скрытый карниз");
+  });
+
+  it("у каждой страницы услуги есть своя подпись", () => {
+    // Пропущенный слаг молча даст всем одинаковую кнопку — проверяем поимённо.
+    for (const slug of phase2ServiceSlugs) {
+      expect(serviceCtaLabel(slug), slug).not.toBe("Рассчитать стоимость");
+    }
+  });
+
+  it("подписи не повторяются: кнопка отличает услуги друг от друга", () => {
+    const labels = phase2ServiceSlugs.map((slug) => serviceCtaLabel(slug));
+    expect(new Set(labels).size).toBe(labels.length);
+  });
+
+  it("незнакомый слаг даёт нейтральную подпись, а не пустое место", () => {
+    expect(serviceCtaLabel("нет-такой-услуги")).toBe("Рассчитать стоимость");
+  });
+
+  it("в подписях нет жаргона", () => {
+    for (const slug of phase2ServiceSlugs) {
+      expect(serviceCtaLabel(slug)).not.toMatch(/узел|узл|точк/i);
     }
   });
 });
