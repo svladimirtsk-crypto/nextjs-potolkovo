@@ -283,21 +283,21 @@ export function ProofModalClient({
 
                   {item.challenge ? (
                     <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Задача</p>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">Задача</p>
                       <p className="mt-2 text-sm leading-6 text-slate-700">{item.challenge}</p>
                     </div>
                   ) : null}
 
                   {item.workDone ? (
                     <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Что сделано</p>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">Что сделано</p>
                       <p className="mt-2 text-sm leading-6 text-slate-700">{item.workDone}</p>
                     </div>
                   ) : null}
 
                   {item.configurationLines?.length ? (
                     <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Конфигурация</p>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">Конфигурация</p>
                       <ul className="mt-2 space-y-1.5 text-sm text-slate-700">
                         {item.configurationLines.map((line) => (
                           <li key={line}>• {line}</li>
@@ -308,7 +308,7 @@ export function ProofModalClient({
 
                   {item.priceLabel ? (
                     <div className="mt-8 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
                         Ориентир по бюджету
                       </p>
 

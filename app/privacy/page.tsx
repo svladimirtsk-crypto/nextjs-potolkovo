@@ -146,7 +146,7 @@ export default function PrivacyPage() {
                 как можно запросить их удаление или уточнение.
               </p>
 
-              <p className="mt-4 text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
+              <p className="mt-4 text-xs font-medium uppercase tracking-[0.18em] text-slate-600">
                 Дата обновления: {new Date().toLocaleDateString("ru-RU")}
               </p>
             </div>

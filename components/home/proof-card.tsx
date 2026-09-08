@@ -132,7 +132,7 @@ export function ProofCard({ item, mode, onOpen, onWantSame }: ProofCardProps) {
 
             {item.priceLabel ? (
               <div className="border-t border-slate-200 pt-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
                   Ориентир по бюджету
                 </p>
 

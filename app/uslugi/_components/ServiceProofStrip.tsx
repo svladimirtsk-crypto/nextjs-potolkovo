@@ -70,7 +70,7 @@ export function ServiceProofStrip({ service }: ServiceProofStripProps) {
 
                 <div className="mt-5 grid grid-cols-3 gap-3 border-t border-slate-200 pt-4">
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">
                       Площадь
                     </p>
                     <p className="mt-1 text-sm font-medium text-slate-900">
@@ -79,7 +79,7 @@ export function ServiceProofStrip({ service }: ServiceProofStripProps) {
                   </div>
 
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">
                       Срок
                     </p>
                     <p className="mt-1 text-sm font-medium text-slate-900">
@@ -88,7 +88,7 @@ export function ServiceProofStrip({ service }: ServiceProofStripProps) {
                   </div>
 
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">
                       Ориентир
                     </p>
                     <p className="mt-1 text-sm font-medium text-slate-900">
