@@ -42,6 +42,19 @@ test.describe("Воронка · стандартный сценарий", () =>
 
     await expect(page.getByText(/Заявка .* принята|Заявка отправлена/)).toBeVisible();
 
+    /**
+     * N-061 (F-20): экран успеха предлагает следующий шаг, а не только
+     * «ждите звонка». Ссылка несёт номер заявки, чтобы присланные фото не
+     * пришлось связывать с ней вручную.
+     */
+    const telegram = modal.getByTestId("success-telegram");
+    await expect(telegram).toBeVisible();
+
+    const href = decodeURIComponent((await telegram.getAttribute("href")) ?? "");
+    expect(href).toContain("t.me/");
+    expect(href).toMatch(/text=.*фото/i);
+    expect(href).toContain("E2E01");
+
     expect(leads).toHaveLength(1);
     const lead = leads[0];
     expect(lead.phone).toBe("+79055219909");

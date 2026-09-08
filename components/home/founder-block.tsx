@@ -2,6 +2,7 @@ import { Picture } from "@/components/ui/picture";
 
 import { homeAssets } from "@/content/home-assets";
 import { homepage } from "@/content/homepage";
+import { getAvailabilityLabel } from "@/content/availability";
 
 const founder = homepage.trust.founder;
 
@@ -10,6 +11,9 @@ const portraitAsset = homeAssets.find(
 );
 
 export function FounderBlock() {
+  /** N-061: ближайшие окна замера; null — календарь устарел, строку не рисуем. */
+  const availabilityLabel = getAvailabilityLabel();
+
   if (!portraitAsset) {
     return null;
   }
@@ -54,6 +58,20 @@ export function FounderBlock() {
             </p>
           ))}
         </div>
+
+        {/*
+          N-061 (F-52): «почему сейчас» на самой странице, а не только в форме.
+          Календарь ручной и с коротким сроком годности — если он протух,
+          getAvailabilityLabel вернёт null и строка исчезнет, а не соврёт.
+        */}
+        {availabilityLabel ? (
+          <p
+            data-testid="founder-availability"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-3.5 py-2 text-sm font-medium text-emerald-900 ring-1 ring-emerald-200"
+          >
+            {availabilityLabel}
+          </p>
+        ) : null}
 
         {founder.microproofLines?.length ? (
           <ul className="mt-6 flex flex-wrap gap-2.5">

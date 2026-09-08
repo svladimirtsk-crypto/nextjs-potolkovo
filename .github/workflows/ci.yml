@@ -72,6 +72,11 @@ jobs:
       - name: Каталог
         run: npm run validate:catalog
 
+      # N-061 (F-21): ручной календарь замеров устаревает молча — страж
+      # напоминает обновить его, пока даты ещё не начали врать.
+      - name: Календарь замеров
+        run: node scripts/check-availability.mjs
+
   build:
     name: Build · bundle budget
     runs-on: ubuntu-latest

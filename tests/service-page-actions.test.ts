@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   parseAreaLabel,
   serviceCtaLabel,
+  telegramLeadLink,
   proofItemPreset,
   relatedServiceReason,
 } from "../lib/service-page-actions";
@@ -138,5 +139,33 @@ describe("N-060 · подпись кнопки расчёта (F-34)", () => {
     for (const slug of phase2ServiceSlugs) {
       expect(serviceCtaLabel(slug)).not.toMatch(/узел|узл|точк/i);
     }
+  });
+});
+
+describe("N-061 · deep-link в Telegram с номером заявки (F-20)", () => {
+  const TG = "https://t.me/potolkovo_msk";
+
+  it("подставляет номер заявки в текст сообщения", () => {
+    const link = telegramLeadLink(TG, "A-123");
+    expect(link.startsWith(`${TG}?text=`)).toBe(true);
+    expect(decodeURIComponent(link)).toContain("Заявка №A-123");
+  });
+
+  it("без номера ссылка всё равно рабочая", () => {
+    // Заявка могла уйти в офлайн-очередь — код появится позже, а написать
+    // человек хочет сейчас.
+    const link = telegramLeadLink(TG, null);
+    expect(link).toContain("?text=");
+    expect(decodeURIComponent(link)).not.toContain("№");
+  });
+
+  it("не задваивает query, если он уже был в адресе", () => {
+    expect(telegramLeadLink(`${TG}?text=старое`, "B-7").match(/\?/g)).toHaveLength(1);
+  });
+
+  it("кириллица и решётка экранированы — иначе ссылка обрежется", () => {
+    const link = telegramLeadLink(TG, "C-1");
+    expect(link).not.toContain("Заявка");
+    expect(link).not.toContain("№");
   });
 });

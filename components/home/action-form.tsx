@@ -19,6 +19,7 @@ import {
 } from "@/lib/lighting-formulas";
 
 import { calcLeadCeilingTotal } from "@/lib/calculator/pricing";
+import { LeadSuccessNote } from "@/components/home/lead-success-note";
 import { useCalculatorStore } from "@/lib/calculator/store";
 import {
   getCalculatorSummaryLines,
@@ -427,29 +428,11 @@ export function ActionForm({
     >
       {/* T-028: экран успеха — номер заявки, окно перезвона, телефон и Telegram. */}
       {status === "success" ? (
-        <div
-          className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"
-          aria-live="polite"
-        >
-          <p className="font-semibold">
-            {leadResult?.leadId ? `Заявка №${leadResult.leadId} принята` : COPY.successTitle}
-          </p>
-          <p className="mt-2 whitespace-pre-line">{message}</p>
-          <p className="mt-3 flex flex-wrap items-center gap-2">
-            <a href={contacts.phoneHref} className="font-semibold underline underline-offset-2">
-              {contacts.phoneDisplay}
-            </a>
-            <span aria-hidden="true">·</span>
-            <a
-              href={contacts.telegramUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-blue-700 underline underline-offset-2"
-            >
-              Написать в Telegram
-            </a>
-          </p>
-        </div>
+        <LeadSuccessNote
+          leadId={leadResult?.leadId ?? null}
+          title={COPY.successTitle}
+          message={message}
+        />
       ) : null}
 
       {/* T-028: для комплектов света уточняем способ получения и удобное время. */}

@@ -158,3 +158,23 @@ export function serviceCtaLabel(slug: string): string {
   const object = CTA_OBJECT[slug];
   return object ? `Рассчитать ${object}` : "Рассчитать стоимость";
 }
+
+/**
+ * N-061 · Deep-link в Telegram с номером заявки (F-20).
+ *
+ * После отправки формы человек остаётся с «перезвоню завтра» и ничего не
+ * может сделать дальше. При этом самое ценное для сметы — фотографии
+ * помещения: по ним видно геометрию, ниши и высоту, и половина выездов
+ * «просто посмотреть» становится не нужна.
+ *
+ * Ссылка подставляет номер заявки в текст сообщения, чтобы фотографии не
+ * пришлось связывать с заявкой вручную.
+ */
+export function telegramLeadLink(telegramUrl: string, leadCode: string | null): string {
+  const base = telegramUrl.split("?")[0];
+  const text = leadCode
+    ? `Заявка №${leadCode}. Прикладываю фото помещения.`
+    : "Прикладываю фото помещения к заявке.";
+
+  return `${base}?text=${encodeURIComponent(text)}`;
+}

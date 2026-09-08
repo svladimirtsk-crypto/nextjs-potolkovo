@@ -23,6 +23,7 @@ import { useCalculatorModal } from "@/components/calculator-modal/calculator-mod
 
 import { getLightingKitLabel } from "@/lib/calculator-modal-types";
 import { lightingDiscountPercent, pricing } from "@/content/pricing";
+import { TelegramPhotoCta } from "@/components/home/telegram-photo-cta";
 
 type CatalogLightingItem = {
   sku: string;
@@ -538,6 +539,8 @@ export function WizardStep2Summary() {
               Написать в Telegram
             </a>
           </p>
+          <TelegramPhotoCta leadCode={leadPublicCode ?? null} className="mx-auto mt-4 max-w-md" />
+
           <button
             type="button"
             onClick={closeCalculator}
