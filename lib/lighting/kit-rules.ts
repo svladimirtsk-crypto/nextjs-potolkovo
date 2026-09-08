@@ -127,6 +127,35 @@ export function clearIncompatibleSystem(
   return next;
 }
 
+/**
+ * N-051 · Убрать из корзины все трековые позиции.
+ *
+ * Отличается от {@link clearIncompatibleSystem} тем, что система не выбрана
+ * вовсе: человек отказался от трека, и в корзине не должно остаться ни
+ * профиля, ни светильников к нему, ни блоков CLARUS.
+ *
+ * Возвращает прежний объект, если удалять нечего — вызывающий по этому
+ * признаку решает, обновлять ли состояние.
+ */
+export function clearAllTrackProducts(
+  cart: Cart,
+  resolveProduct: (productId: string) => FeedCatalogProduct | undefined
+): Cart {
+  const next: Cart = {};
+  let changed = false;
+
+  for (const [productId, qty] of Object.entries(cart)) {
+    const product = resolveProduct(productId);
+    if (product && (isSystemBoundProduct(product) || isClarusPsu(product))) {
+      changed = true;
+      continue;
+    }
+    next[productId] = qty;
+  }
+
+  return changed ? next : cart;
+}
+
 /* ------------------------------------------------------------------ *
  * T-032 · Автосборка профиля
  * ------------------------------------------------------------------ */

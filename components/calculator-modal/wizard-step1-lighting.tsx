@@ -27,6 +27,7 @@ import { useLightingCart } from "@/lib/lighting/use-lighting-cart";
 import { completeKit } from "@/lib/lighting/kit-rules";
 import {
   autoAssembleProfiles,
+  clearAllTrackProducts,
   clearIncompatibleSystem as clearIncompatibleSystem_,
   fixturesHintForMeters,
   isTrackSystemId,
@@ -516,35 +517,17 @@ export function WizardStep1Lighting() {
   }, [cartItems, options?.source, clearIncompatibleSystem, setCartItems]);
 
   const clearTrackProductsForSystem = useCallback((system: TrackSystemId | null) => {
-    const clarusPsuVendorCodes = new Set<string>(CLARUS_PSU_VENDOR_CODES);
-
-    setCartItems((prev) => {
-      const next = { ...prev };
-      let changed = false;
-
-      for (const id of Object.keys(prev)) {
-        const product = productsById.get(id);
-        if (!product) continue;
-
-        const kind = product.kind;
-        const isTrackProduct =
-          kind === "TRACK_PROFILE" || kind === "TRACK_FIXTURE" || kind === "TRACK_ACCESSORY";
-        const isClarusPsu = clarusPsuVendorCodes.has(toText(product.vendorCode));
-
-        const shouldRemove =
-          system === null
-            ? isTrackProduct || isClarusPsu
-            : (isTrackProduct && product.system !== system) || (isClarusPsu && system !== "CLARUS_48");
-
-        if (shouldRemove) {
-          delete next[id];
-          changed = true;
-        }
-      }
-
-      return changed ? next : prev;
-    });
-  }, [productsById, setCartItems]);
+    /**
+     * N-051: третья копия правила несовместимости жила здесь. Отличие от
+     * остальных — случай `system === null`: человек отказался от трека, и
+     * убрать надо всё трековое, а не только чужую систему.
+     */
+    setCartItems((prev) =>
+      system === null
+        ? clearAllTrackProducts(prev, resolveProduct)
+        : clearIncompatibleSystem_(prev, system, resolveProduct)
+    );
+  }, [resolveProduct, setCartItems]);
 
   const setTrackProfileQty = useCallback((product: FeedCatalogProduct, nextQtyRaw: number) => {
     const system = isTrackSystemId(product.system) ? product.system : null;
@@ -566,30 +549,21 @@ export function WizardStep1Lighting() {
       });
     }
 
-    const clarusPsuVendorCodes = new Set<string>(CLARUS_PSU_VENDOR_CODES);
-
     setCartItems((prev) => {
-      const next = { ...prev };
-
-      for (const key of Object.keys(prev)) {
-        const p = productsById.get(key);
-        if (!p) continue;
-
-        const isTrackProduct =
-          p.kind === "TRACK_PROFILE" || p.kind === "TRACK_FIXTURE" || p.kind === "TRACK_ACCESSORY";
-        const isClarusPsu = clarusPsuVendorCodes.has(toText(p.vendorCode));
-
-        if ((isTrackProduct && p.system !== system) || (isClarusPsu && system !== "CLARUS_48")) {
-          delete next[key];
-        }
-      }
+      /**
+       * N-051: правило несовместимости — общая `clearIncompatibleSystem`.
+       * Здесь была его вторая, инлайн-версия: три вида трековых товаров и
+       * блоки CLARUS перечислялись руками. Совпадала она с оригиналом
+       * случайно — добавление нового вида товара чинилось бы в двух местах.
+       */
+      const next = clearIncompatibleSystem_(prev, system, resolveProduct);
 
       if (nextQty <= 0) delete next[id];
       else next[id] = nextQty;
 
       return next;
     });
-  }, [cartItems, options?.source, productsById, setCartItems, setWSystem]);
+  }, [cartItems, options?.source, resolveProduct, setCartItems, setWSystem]);
 
   const addMountOneToOne = useCallback((fv: string) => {
     const mv = POINT_TO_MOUNT_VENDOR_CODE[toText(fv)]; if (!mv) return;
