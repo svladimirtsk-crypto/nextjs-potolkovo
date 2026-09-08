@@ -84,16 +84,11 @@ import {
   selectOrphanTrackEntries,
 } from "@/lib/lighting/orphan-track";
 import {
-  LampsScreen,
-  KitDoneScreen,
-  ManualPickScreen,
-  TrackSystemScreen,
 } from "@/components/lighting/Step1Screens";
-import { PointsScreen } from "@/components/lighting/PointKindPicker";
 import { CatalogBrowse } from "@/components/lighting/CatalogBrowse";
+import { RecommendationsTab } from "@/components/lighting/RecommendationsTab";
 import { CatalogFilterChipGroup, CatalogFilterChipsRow } from "@/components/lighting/CatalogFilterChips";
 import { SelectedList } from "@/components/lighting/SelectedList";
-import { TrackProfileStep } from "@/components/lighting/TrackProfileStep";
 import { pointProgressBySocket, pointsOfKind, type PointKindId } from "@/lib/lighting/popular-points";
 import { useCalculatorModal } from "./calculator-modal-context";
 import { useCalculatorStore } from "@/lib/calculator/store";
@@ -144,7 +139,6 @@ import {
   OrphanTrackNotice,
   TabBtn,
 } from "@/components/lighting/CatalogPieces";
-import { ProductPickerScreen, WizardFooter } from "@/components/lighting/ProductPickerScreen";
 import { buildStep1FooterAction, resolveStep1FooterAction } from "@/lib/lighting/step1-footer-action";
 
 
@@ -1178,209 +1172,122 @@ export function WizardStep1Lighting() {
           ПОДБОР — Guided Wizard
           ═══════════════════════════════════════════════ */}
       {activeTab === "recommendations" && (
-        <div key="rec-tab" className="animate-fade-in space-y-4">
-
-          {/* ─── STEP: Track System ─── */}
-          {shownWStep === "none" && (
-            <ManualPickScreen
-              onOpenCatalog={() => { markWizardTouched(); setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}
-              onSkipToSummary={() => goToStep(2)}
-            />
-          )}
-
-          {shownWStep === "system" && (
-            wizardSystemOptions.length > 0 ? (
-              <TrackSystemScreen
-                systems={wizardSystemOptions}
-                trackMountType={trackMountType}
-                systemLabel={systemLabel}
-                showNoTrackOption={requiredPointQty > 0}
-                onChoose={chooseWizardSystem}
-                onNoTrack={chooseNoTrackFlow}
-                onSkipToSummary={() => goToStep(2)}
-              />
-            ) : (
-              <ManualPickScreen
-                onOpenCatalog={() => { markWizardTouched(); setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}
-                onSkipToSummary={() => goToStep(2)}
-              />
-            )
-          )}
-
-          {/* ─── STEP: Track Profiles ─── */}
-          {shownWStep === "trackProfile" && (
-            <TrackProfileStep
-              systemLabel={selectedTrackSystem ? systemLabel(selectedTrackSystem) : ""}
-              products={wTrackProfiles}
-              cartItems={cartItems}
-              onQtyChange={setTrackProfileQty}
-              onZoom={setZoomImage}
-              discountPercent={cardDiscountPercent}
-              autoPlan={
-                autoProfilePlan && requiredTrackMeters > 0 && !trackComplete
-                  ? {
-                      pieces: autoProfilePlan.pieces,
-                      totalRub: autoProfilePlan.totalRub,
-                      discountedTotalRub: applyLightingWithCeilingDiscount(autoProfilePlan.totalRub),
-                      totalMeters: autoProfilePlan.totalMeters,
-                    }
-                  : null
-              }
-              requiredMeters={requiredTrackMeters}
-              onApplyAutoPlan={applyAutoProfilePlan}
-              mandatory={kitCompletion.mandatory}
-              recommended={kitCompletion.recommended}
-              psuMissing={kitCompletion.psuMissing}
-              psuAcknowledged={psuAcknowledged}
-              onPsuAcknowledgedChange={setPsuAcknowledged}
-              onAddMandatory={() => applyKitCompletion(kitCompletion.mandatory)}
-              onAddRecommended={() => applyKitCompletion(kitCompletion.recommended)}
-              onBack={() => setWStep("system")}
-              onNext={goAfterTrackProfile}
-              nextDisabled={requiredTrackMeters > 0 && (!selectedTrackSystem || !trackComplete)}
-            />
-          )}
-
-          {/* T-043: экраны включаются ответами Шага 0 и идут после точечных */}
-          {shownWStep === "chandeliers" && (
-            <ProductPickerScreen
-              title="Люстры"
-              hint={`По расчёту нужно ${fmt(toNumber(snapshot?.derivedInputs?.chandeliersQty))} шт. Установка уже посчитана на Шаге 0 — здесь выбираем сами светильники.`}
-              products={wChandeliers}
-              cartItems={cartItems}
-              onQtyChange={setProductQty}
-              onZoom={setZoomImage}
-              discountPercent={cardDiscountPercent}
-              emptyText="Люстры сейчас не найдены в каталоге. Подберу вариант при звонке."
-            />
-          )}
-
-          {shownWStep === "corniceLighting" && (
-            <ProductPickerScreen
-              title="Подсветка карниза"
-              hint={`${fmtM(toNumber(snapshot?.derivedInputs?.corniceLightingMeters))} м по расчёту. Нужны лента, блок питания и управление.`}
-              products={wCorniceLighting}
-              cartItems={cartItems}
-              onQtyChange={setProductQty}
-              onZoom={setZoomImage}
-              discountPercent={cardDiscountPercent}
-              emptyText="Комплектующие для подсветки подберу при звонке."
-            />
-          )}
-
-          {/* ─── STEP: Track Fixtures (spots for track) ─── */}
-          {shownWStep === "trackFixtures" && (
-            <ProductPickerScreen
-              tone="accent"
-              title={`Светильники для трека: ${selectedTrackSystem ? systemLabel(selectedTrackSystem) : ""}`}
-              hint="Показываем все светильники выбранной системы."
-              extraHint={
-                fixturesHint
-                  ? `Ориентир для ${fmtM(selectedTrackMeters || requiredTrackMeters)} м: ${fixturesHint.min}–${fixturesHint.max} светильников`
-                  : undefined
-              }
-              products={wTrackFixtures}
-              cartItems={cartItems}
-              onQtyChange={setProductQty}
-              onZoom={setZoomImage}
-              discountPercent={cardDiscountPercent}
-              emptyText="Нет светильников для этой системы."
-              footer={
-                <WizardFooter onBack={() => setWStep("trackProfile")} onNext={goAfterTrackFixtures} />
-              }
-            />
-          )}
-
-          {/* ─── STEP: Point Fixtures ─── */}
-          {shownWStep === "points" && (
-            <PointsScreen
-              products={products}
-              gridProducts={wPointProducts}
-              required={requiredPointQty}
-              current={selectedPointQty}
-              cartItems={cartItems}
-              onQtyChange={setProductQty}
-              onZoom={setZoomImage}
-              discountPercent={cardDiscountPercent}
-              activeKind={pointKind}
-              onKindChange={(kind) => {
-                setPointKind(kind);
-                // Тип задан — ручной фильтр по цоколю больше не к месту.
-                setManualPointsOpen(false);
-              }}
-              manualOpen={manualPointsOpen}
-              onManualOpen={() => setManualPointsOpen(true)}
-              socketTab={wPointTab}
-              onSocketTabChange={setWPointTab}
-              socketProgress={pointProgressBySubtype}
-              footer={
-                <WizardFooter
-                  onBack={() => setWStep(selectedTrackSystem ? "trackFixtures" : requiredTrackMeters > 0 ? "trackProfile" : "system")}
-                  onNext={goAfterPoints}
-                  nextDisabled={!pointsComplete}
-                />
-              }
-            />
-          )}
-
-          {/* ─── STEP: Lamps ─── */}
-          {shownWStep === "lamps" && (
-            <LampsScreen
-              sockets={lampSocketsToShow}
-              requiredBySocket={lampRequiredBySocket}
-              currentBySocket={lampCurrentBySocket}
-              productsBySocket={wLampProducts}
-              cartItems={cartItems}
-              discountPercent={cardDiscountPercent}
-              onAddCheapest={addCheapestLamps}
-              onQtyChange={setProductQty}
-              onZoom={setZoomImage}
-              footer={
-                <WizardFooter onBack={goBackFromLamps} onNext={goAfterLamps} nextDisabled={!lampsComplete} />
-              }
-            />
-          )}
-
-          {/* ─── STEP: Done ─── */}
-          {shownWStep === "done" && requiredSelectionComplete && (
-            <KitDoneScreen
-              itemsCount={lightingDraft?.items?.length ?? 0}
-              regularTotal={lightingRegularTotal}
-              effectiveTotal={lightingEffectiveTotal}
-              missingMounts={missingMounts}
-              clarusPsuOptions={clarusPsuOptions}
-              onAddMount={addMountOneToOne}
-              onPickClarusPsu={setClarusPsu}
-              onEditInCatalog={() => { setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}
-              onGoToSummary={() => goToStep(2)}
-            />
-          )}
-
-          {shownWStep === "done" && !requiredSelectionComplete && missingAction ? (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-              <p className="font-semibold">Нужно ещё уточнить комплект</p>
-              <p className="mt-1 text-amber-900/80">
-                По параметрам потолка нужно добрать позиции. Верну к следующему действию автоматически.
-              </p>
-              <button
-                type="button"
-                onClick={goToMissingAction}
-                className="mt-3 rounded-xl bg-amber-700 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-800"
-              >
-                {missingAction.label}
-              </button>
-            </div>
-          ) : null}
-
-          {hasRecommendations && shownWStep !== "done" ? (
-            <div className="text-center max-sm:hidden">
-              <button type="button" onClick={() => setActiveTab("catalog")}
-                className="text-sm font-medium text-slate-500 underline decoration-slate-300 underline-offset-4 hover:text-slate-800">
-                Или выберите в каталоге →
-              </button>
-            </div>
-          ) : null}
-        </div>
+        <RecommendationsTab
+          step={shownWStep}
+          cart={{
+            items: cartItems,
+            onQtyChange: setProductQty,
+            onZoom: setZoomImage,
+            discountPercent: cardDiscountPercent,
+          }}
+          products={{
+            all: products,
+            trackProfiles: wTrackProfiles,
+            trackFixtures: wTrackFixtures,
+            chandeliers: wChandeliers,
+            corniceLighting: wCorniceLighting,
+            points: wPointProducts,
+            lampsBySocket: wLampProducts,
+          }}
+          track={{
+            systemOptions: wizardSystemOptions,
+            mountType: trackMountType,
+            selectedSystem: selectedTrackSystem,
+            systemLabel,
+            requiredMeters: requiredTrackMeters,
+            selectedMeters: selectedTrackMeters,
+            complete: trackComplete,
+            fixturesHint,
+            autoPlan:
+              autoProfilePlan && requiredTrackMeters > 0 && !trackComplete
+                ? {
+                    pieces: autoProfilePlan.pieces,
+                    totalRub: autoProfilePlan.totalRub,
+                    discountedTotalRub: applyLightingWithCeilingDiscount(autoProfilePlan.totalRub),
+                    totalMeters: autoProfilePlan.totalMeters,
+                  }
+                : null,
+            onApplyAutoPlan: applyAutoProfilePlan,
+            onChooseSystem: chooseWizardSystem,
+            onNoTrack: chooseNoTrackFlow,
+            onProfileQtyChange: setTrackProfileQty,
+            onConfirmProfile: goAfterTrackProfile,
+            onConfirmFixtures: goAfterTrackFixtures,
+          }}
+          completion={{
+            mandatory: kitCompletion.mandatory,
+            recommended: kitCompletion.recommended,
+            psuMissing: kitCompletion.psuMissing,
+            psuAcknowledged,
+            onPsuAcknowledgedChange: setPsuAcknowledged,
+            onAddMandatory: () => applyKitCompletion(kitCompletion.mandatory),
+            onAddRecommended: () => applyKitCompletion(kitCompletion.recommended),
+          }}
+          points={{
+            required: requiredPointQty,
+            selected: selectedPointQty,
+            activeKind: pointKind,
+            onKindChange: (kind) => {
+              setPointKind(kind);
+              setManualPointsOpen(false);
+            },
+            manualOpen: manualPointsOpen,
+            onManualOpen: () => setManualPointsOpen(true),
+            socketTab: wPointTab,
+            onSocketTabChange: setWPointTab,
+            socketProgress: pointProgressBySubtype,
+            complete: pointsComplete,
+            onBack: () =>
+              setWStep(
+                selectedTrackSystem
+                  ? "trackFixtures"
+                  : requiredTrackMeters > 0
+                    ? "trackProfile"
+                    : "system"
+              ),
+            onConfirm: goAfterPoints,
+          }}
+          lamps={{
+            sockets: lampSocketsToShow,
+            requiredBySocket: lampRequiredBySocket,
+            currentBySocket: lampCurrentBySocket,
+            complete: lampsComplete,
+            onAddCheapest: addCheapestLamps,
+            onBack: goBackFromLamps,
+            onConfirm: goAfterLamps,
+          }}
+          done={{
+            itemsCount: lightingDraft?.items?.length ?? 0,
+            regularTotal: lightingRegularTotal,
+            effectiveTotal: lightingEffectiveTotal,
+            missingMounts,
+            clarusPsuOptions,
+            onAddMount: addMountOneToOne,
+            onPickClarusPsu: setClarusPsu,
+            selectionComplete: requiredSelectionComplete,
+            missingAction,
+            onGoToMissingAction: goToMissingAction,
+          }}
+          nav={{
+            chandeliersQty: toNumber(snapshot?.derivedInputs?.chandeliersQty),
+            corniceMeters: toNumber(snapshot?.derivedInputs?.corniceLightingMeters),
+            hasRecommendations,
+            onOpenCatalog: () => {
+              setActiveTab("catalog");
+              setCatalogViewAndSync("browse");
+            },
+            onOpenCatalogTouched: () => {
+              markWizardTouched();
+              setActiveTab("catalog");
+              setCatalogViewAndSync("browse");
+            },
+            onGoToSummary: () => goToStep(2),
+            onBackToSystem: () => setWStep("system"),
+            onBackToTrackProfile: () => setWStep("trackProfile"),
+          }}
+          fmt={fmt}
+          fmtMeters={fmtM}
+        />
       )}
 
       {/* ═══════════════════════════════════════════════
