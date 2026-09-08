@@ -10,7 +10,7 @@ import catalogImages from "@/data/catalog-images.json";
 import { ProductCard } from "./CatalogProductCard";
 import { CatalogFreshness } from "./CatalogFreshness";
 import { CatalogWarnings } from "./CatalogWarnings";
-import { CatalogFilterChipGroup, CatalogFilterChipsRow } from "./CatalogFilterChips";
+import { CatalogFilterChipGroup, CatalogFilterChipsRow } from "@/components/lighting/CatalogFilterChips";
 import {
   buildCatalogLightingSnapshot,
   cartToLightingItems,

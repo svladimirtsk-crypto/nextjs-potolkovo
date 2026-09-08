@@ -19,7 +19,6 @@ import {
 import {
   buildProductsIndex,
   detectSocket,
-  getDiscountedPrice,
 } from "@/lib/feed2-products";
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
 import { resolveInitialLightingStep, type WizardStep } from "@/lib/lighting/resolve-initial-step";
@@ -85,16 +84,16 @@ import {
   selectOrphanTrackEntries,
 } from "@/lib/lighting/orphan-track";
 import {
-  AutoProfilePlanCard,
   LampsScreen,
-  RecommendedKitCard,
-  KitCompletionCard,
   KitDoneScreen,
   ManualPickScreen,
   TrackSystemScreen,
 } from "@/components/lighting/Step1Screens";
-import { ProductImage } from "@/components/feed2/ProductImage";
 import { PointsScreen } from "@/components/lighting/PointKindPicker";
+import { CatalogBrowse } from "@/components/lighting/CatalogBrowse";
+import { CatalogFilterChipGroup, CatalogFilterChipsRow } from "@/components/lighting/CatalogFilterChips";
+import { SelectedList } from "@/components/lighting/SelectedList";
+import { TrackProfileStep } from "@/components/lighting/TrackProfileStep";
 import { pointProgressBySocket, pointsOfKind, type PointKindId } from "@/lib/lighting/popular-points";
 import { useCalculatorModal } from "./calculator-modal-context";
 import { useCalculatorStore } from "@/lib/calculator/store";
@@ -143,7 +142,6 @@ function getScrollParent(node: HTMLElement | null): HTMLElement | null {
 import {
   ImageQuickPreview,
   OrphanTrackNotice,
-  ProductCard,
   TabBtn,
 } from "@/components/lighting/CatalogPieces";
 import { ProductPickerScreen, WizardFooter } from "@/components/lighting/ProductPickerScreen";
@@ -1211,83 +1209,36 @@ export function WizardStep1Lighting() {
 
           {/* ─── STEP: Track Profiles ─── */}
           {shownWStep === "trackProfile" && (
-            <div className="space-y-3">
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
-                <p className="text-sm font-semibold text-emerald-950">
-                  Профиль трека: {selectedTrackSystem ? systemLabel(selectedTrackSystem) : ""}
-                </p>
-                <p className="mt-1 text-xs text-emerald-800">Одно нажатие «+» добавляет 1 шт. Можно собрать профиль из разных длин.</p>
-              </div>
-
-              {/* T-032: автосборка под требуемый метраж одним тапом */}
-              {autoProfilePlan && requiredTrackMeters > 0 && !trackComplete ? (
-                <AutoProfilePlanCard
-                  pieces={autoProfilePlan.pieces}
-                  totalRub={autoProfilePlan.totalRub}
-                  discountedTotalRub={applyLightingWithCeilingDiscount(autoProfilePlan.totalRub)}
-                  totalMeters={autoProfilePlan.totalMeters}
-                  requiredMeters={requiredTrackMeters}
-                  onApply={applyAutoProfilePlan}
-                />
-              ) : null}
-
-              {/* T-042: чего не хватает комплекту — с обоснованием каждой строки */}
-              {kitCompletion.mandatory.length > 0 ? (
-                <KitCompletionCard
-                  items={kitCompletion.mandatory.map((item) => ({
-                    productId: toText(item.product.productId),
-                    name: toText(item.product.name),
-                    qty: item.qty,
-                    reason: item.reason,
-                  }))}
-                  psuMissing={kitCompletion.psuMissing}
-                  psuAcknowledged={psuAcknowledged}
-                  onAddAll={() => applyKitCompletion(kitCompletion.mandatory)}
-                  onPsuAcknowledgedChange={setPsuAcknowledged}
-                />
-              ) : null}
-
-              {kitCompletion.recommended.length > 0 ? (
-                <RecommendedKitCard
-                  items={kitCompletion.recommended.map((item) => ({
-                    productId: toText(item.product.productId),
-                    name: toText(item.product.name),
-                    qty: item.qty,
-                    reason: item.reason,
-                  }))}
-                  onAddAll={() => applyKitCompletion(kitCompletion.recommended)}
-                />
-              ) : null}
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {wTrackProfiles.map((p) => {
-                  const id = toText(p.productId);
-                  const qty = toNumber(cartItems[id]);
-                  return (
-                    <ProductCard key={id} product={p} qty={qty}
-                      onInc={() => setTrackProfileQty(p, qty + 1)}
-                      onDec={() => setTrackProfileQty(p, qty - 1)}
-                      onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })}
-                      discountPercent={cardDiscountPercent} />
-                  );
-                })}
-              </div>
-
-              <div className="flex gap-3">
-                <button type="button" onClick={() => setWStep("system")}
-                  className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                  ← Система
-                </button>
-                <button
-                  type="button"
-                  onClick={goAfterTrackProfile}
-                  disabled={requiredTrackMeters > 0 && (!selectedTrackSystem || !trackComplete)}
-                  className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-slate-950"
-                >
-                  Подтвердить →
-                </button>
-              </div>
-            </div>
+            <TrackProfileStep
+              systemLabel={selectedTrackSystem ? systemLabel(selectedTrackSystem) : ""}
+              products={wTrackProfiles}
+              cartItems={cartItems}
+              onQtyChange={setTrackProfileQty}
+              onZoom={setZoomImage}
+              discountPercent={cardDiscountPercent}
+              autoPlan={
+                autoProfilePlan && requiredTrackMeters > 0 && !trackComplete
+                  ? {
+                      pieces: autoProfilePlan.pieces,
+                      totalRub: autoProfilePlan.totalRub,
+                      discountedTotalRub: applyLightingWithCeilingDiscount(autoProfilePlan.totalRub),
+                      totalMeters: autoProfilePlan.totalMeters,
+                    }
+                  : null
+              }
+              requiredMeters={requiredTrackMeters}
+              onApplyAutoPlan={applyAutoProfilePlan}
+              mandatory={kitCompletion.mandatory}
+              recommended={kitCompletion.recommended}
+              psuMissing={kitCompletion.psuMissing}
+              psuAcknowledged={psuAcknowledged}
+              onPsuAcknowledgedChange={setPsuAcknowledged}
+              onAddMandatory={() => applyKitCompletion(kitCompletion.mandatory)}
+              onAddRecommended={() => applyKitCompletion(kitCompletion.recommended)}
+              onBack={() => setWStep("system")}
+              onNext={goAfterTrackProfile}
+              nextDisabled={requiredTrackMeters > 0 && (!selectedTrackSystem || !trackComplete)}
+            />
           )}
 
           {/* T-043: экраны включаются ответами Шага 0 и идут после точечных */}
@@ -1482,82 +1433,21 @@ export function WizardStep1Lighting() {
           ) : null}
 
           {shownCatalogView === "selected" ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              {selectedViewItems.length === 0 ? (
-                <p className="text-sm text-slate-600">Пока ничего не выбрано.</p>
-              ) : (
-                <>
-                  <ul className="space-y-3">
-                    {selectedViewItems.map(({ item, product }) => {
-                      const regular = item.priceRub;
-                      const discounted = getDiscountedPrice(regular, selectedTotals.effectivePercent);
-                      const productId = toText(product.productId);
-                      return (
-                        <li key={toText(item.sku)} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                          <div className="grid grid-cols-[5.5rem_1fr] gap-3">
-                            <ProductImage
-                              productId={toText(product.productId)}
-                              kind={toText(product.kind)}
-                              src={toText(product.coverImage)}
-                              alt={toText(product.name)}
-                            />
-                            <div className="min-w-0">
-                              <p className="break-words text-sm font-semibold text-slate-950">{toText(item.name)}</p>
-                              <p className="mt-2 text-xs text-slate-700">
-                                {item.qty} шт. · {fmt(regular)} ₽/шт · со скидкой −{selectedTotals.effectivePercent}%: {fmt(discounted)} ₽/шт
-                              </p>
-                              <div className="mt-3 flex flex-wrap items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => setProductQty(product, item.qty - (product.unit === "m" ? 0.5 : 1))}
-                                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
-                                  aria-label={`Уменьшить ${item.name}`}
-                                >
-                                  −
-                                </button>
-                                <span className="min-w-[4rem] text-center text-sm font-semibold text-slate-950">
-                                  {product.unit === "m" ? Number(item.qty.toFixed(1)) : item.qty} {product.unit === "m" ? "м" : "шт."}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => setProductQty(product, item.qty + (product.unit === "m" ? 0.5 : 1))}
-                                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-900 hover:bg-slate-50"
-                                  aria-label={`Увеличить ${item.name}`}
-                                >
-                                  +
-                                </button>
-                                <button type="button" onClick={() => setCartItems((prev) => { const n = { ...prev }; delete n[productId]; return n; })}
-                                  aria-label={`Удалить ${item.name}`}
-                                  className="ml-auto rounded-lg border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100">Удалить</button>
-                              </div>
-                            </div>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                  <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-3 text-sm">
-                    <p>Итого: <span className="line-through text-slate-400">{fmt(selectedTotals.regular)} ₽</span></p>
-                    <p className="text-emerald-700">
-                      Сейчас: {fmt(selectedTotals.effective)} ₽ · −{selectedTotals.effectivePercent}% (−{fmt(selectedTotals.effectiveBenefit)} ₽)
-                    </p>
-                    {lightingDiscountMode !== "with-ceiling" ? (
-                      <p className="text-slate-500">
-                        С потолком: {fmt(selectedTotals.withCeiling)} ₽ · −25% (−{fmt(selectedTotals.withCeilingBenefit)} ₽)
-                      </p>
-                    ) : null}
-                    <button
-                      type="button"
-                      onClick={() => goToStep(2)}
-                      disabled={!requiredSelectionComplete}
-                      className="mt-3 w-full rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-emerald-700 max-sm:hidden"
-                    >
-                      К итогу →
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+            <SelectedList
+              items={selectedViewItems}
+              totals={selectedTotals}
+              showWithCeilingHint={lightingDiscountMode !== "with-ceiling"}
+              onQtyChange={setProductQty}
+              onRemove={(productId) =>
+                setCartItems((prev) => {
+                  const next = { ...prev };
+                  delete next[productId];
+                  return next;
+                })
+              }
+              onGoToSummary={() => goToStep(2)}
+              goToSummaryDisabled={!requiredSelectionComplete}
+            />
           ) : (
             <>
               <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar max-sm:-mx-5 max-sm:px-5">
@@ -1570,97 +1460,72 @@ export function WizardStep1Lighting() {
                 ))}
               </div>
 
-              {section === "track-systems" && (
-                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar max-sm:-mx-5 max-sm:px-5">
-                  {TRACK_SYSTEMS.map((sys) => {
-                    const isActive = trackSystem === sys.id;
-                    const isRec = sys.id === "COLIBRI_220";
-                    return (
-                      <button key={sys.id} type="button" onClick={() => { setTrackSystem(sys.id); setQuery(""); }}
-                        className={["whitespace-nowrap rounded-xl border px-3 py-1.5 text-xs transition-colors max-sm:px-2.5",
-                          isActive ? (isRec ? "bg-blue-600 text-white border-blue-600" : "bg-slate-900 text-white border-slate-900")
-                          : (isRec ? "border-blue-300 bg-blue-50 text-blue-800 hover:bg-blue-100" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50")].join(" ")}>
-                        {sys.label}{isRec && !isActive ? <span className="ml-1 text-[10px] opacity-70">● рек.</span> : null}
-                      </button>
-                    );
-                  })}
-                  {TRACK_GROUPS.map((g) => (
-                    <button key={g.id} type="button" onClick={() => { setTrackGroup(g.id); setQuery(""); }}
-                      className={["whitespace-nowrap rounded-xl border border-slate-200 px-3 py-1.5 text-xs max-sm:px-2.5",
-                        trackGroup === g.id ? "bg-slate-900 text-white" : "bg-white text-slate-700"].join(" ")}>
-                      {g.label}
-                    </button>
-                  ))}
-                </div>
-              )}
+              {/* N-051: ленты фильтров — общий компонент со страницей каталога. */}
+              {section === "track-systems" ? (
+                <CatalogFilterChipsRow ariaLabel="Трековые системы и группы">
+                  <CatalogFilterChipGroup
+                    options={TRACK_SYSTEMS}
+                    active={trackSystem}
+                    onSelect={(id) => {
+                      setTrackSystem(id);
+                      setQuery("");
+                    }}
+                  />
+                  <CatalogFilterChipGroup
+                    options={TRACK_GROUPS}
+                    active={trackGroup}
+                    onSelect={(id) => {
+                      setTrackGroup(id);
+                      setQuery("");
+                    }}
+                  />
+                </CatalogFilterChipsRow>
+              ) : null}
 
-              {section === "point-fixtures" && (
-                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar max-sm:-mx-5 max-sm:px-5">
-                  {POINT_SUBTYPES.map((st) => (
-                    <button key={st.id} type="button" onClick={() => { setPointSubtype(st.id); setQuery(""); }}
-                      className={["whitespace-nowrap rounded-xl border border-slate-200 px-3 py-1.5 text-xs max-sm:px-2.5",
-                        pointSubtype === st.id ? "bg-slate-900 text-white" : "bg-white text-slate-700"].join(" ")}>
-                      {st.label}
-                    </button>
-                  ))}
-                </div>
-              )}
+              {section === "point-fixtures" ? (
+                <CatalogFilterChipsRow ariaLabel="Типы точечных светильников">
+                  <CatalogFilterChipGroup
+                    options={POINT_SUBTYPES}
+                    active={pointSubtype}
+                    onSelect={(id) => {
+                      setPointSubtype(id);
+                      setQuery("");
+                    }}
+                  />
+                </CatalogFilterChipsRow>
+              ) : null}
 
-              {section === "lamps" && (
-                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar max-sm:-mx-5 max-sm:px-5">
-                  {(LAMP_SOCKETS).map((s) => (
-                    <button key={s} type="button" onClick={() => { setLampSocket(s); setQuery(""); }}
-                      className={["whitespace-nowrap rounded-xl border border-slate-200 px-3 py-1.5 text-xs max-sm:px-2.5",
-                        lampSocket === s ? "bg-slate-900 text-white" : "bg-white text-slate-700"].join(" ")}>
-                      {s} {lampCurrentBySocket[s] > 0 ? `(${lampCurrentBySocket[s]}/${lampRequiredBySocket[s]})` : ""}
-                    </button>
-                  ))}
-                </div>
-              )}
+              {section === "lamps" ? (
+                <CatalogFilterChipsRow ariaLabel="Цоколи ламп">
+                  <CatalogFilterChipGroup
+                    options={LAMP_SOCKETS.map((socket) => ({
+                      id: socket,
+                      label:
+                        lampCurrentBySocket[socket] > 0
+                          ? `${socket} (${lampCurrentBySocket[socket]}/${lampRequiredBySocket[socket]})`
+                          : socket,
+                    }))}
+                    active={lampSocket}
+                    onSelect={(id) => {
+                      setLampSocket(id);
+                      setQuery("");
+                    }}
+                  />
+                </CatalogFilterChipsRow>
+              ) : null}
 
-              <div className="relative">
-                <span aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
-                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
-                    <circle cx="9" cy="9" r="5.5" />
-                    <path d="M13.5 13.5L17 17" strokeLinecap="round" />
-                  </svg>
-                </span>
-                <input value={query} onChange={(e) => setQuery(e.target.value ?? "")}
-                  placeholder="Поиск в текущем разделе"
-                  className="w-full rounded-2xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-sm text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2" />
-              </div>
-
-              {/* T-044: режим скидки объявляем один раз над сеткой, а не в каждой карточке */}
-              <div
-                className={[
-                  "rounded-2xl border px-4 py-3 text-sm font-semibold",
-                  hasCeilingContext
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-                    : "border-slate-200 bg-slate-50 text-slate-800",
-                ].join(" ")}
-              >
-                {hasCeilingContext
-                  ? `Цены со скидкой −${LIGHTING_WITH_CEILING_DISCOUNT_PERCENT} % при заказе потолка`
-                  : `Цены со скидкой −${LIGHTING_ONLY_DISCOUNT_PERCENT} % — только свет`}
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {scopedProducts.map((p) => {
-                  const id = toText(p.productId);
-                  const qty = toNumber(cartItems[id]);
-                  const step = p.unit === "m" ? 0.5 : 1;
-                  return (
-                    <ProductCard key={id} product={p} qty={qty}
-                      onInc={() => setProductQty(p, qty + step)} onDec={() => setProductQty(p, qty - step)}
-                      onImageClick={() => setZoomImage({ src: toText(p.coverImage), alt: toText(p.name) })}
-                      discountPercent={cardDiscountPercent} />
-                  );
-                })}
-              </div>
-
-              {scopedProducts.length === 0 && (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">Ничего не найдено</div>
-              )}
+              <CatalogBrowse
+                query={query}
+                onQueryChange={setQuery}
+                hasCeilingContext={hasCeilingContext}
+                withCeilingPercent={LIGHTING_WITH_CEILING_DISCOUNT_PERCENT}
+                lightingOnlyPercent={LIGHTING_ONLY_DISCOUNT_PERCENT}
+                products={scopedProducts}
+                cartItems={cartItems}
+                onQtyChange={setProductQty}
+                onZoom={setZoomImage}
+                cardDiscountPercent={cardDiscountPercent}
+              />
             </>
           )}
         </div>
