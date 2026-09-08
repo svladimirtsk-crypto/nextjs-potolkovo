@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ServiceCalculatorPreset } from "@/content/services";
 import type { SolutionScenario, CalculatorFooterAction, CalculatorFooterBackAction } from "@/lib/calculator-modal-types";
 import { useCeilingCalculatorEngine } from "@/lib/calculator/use-calculator-engine";
@@ -29,16 +29,13 @@ import {
   type CalcDraft,
 } from "@/lib/calculator/draft";
 import { useCalculatorModal } from "../../calculator-modal-context";
+import { EMPTY_STEP0_STATE, useCalculatorStore } from "@/lib/calculator/store";
 
 type Props = {
   preset?: ServiceCalculatorPreset;
   /** N-013: "default" — пресет фабрикует контекст, а не страница. */
   presetOrigin?: "page" | "default";
   initialSolutionScenario?: SolutionScenario;
-  onStep0ProgressChange?: (p: {done:number; total:number} | null) => void;
-  onIsStep0SummaryReadyChange?: (ready: boolean) => void;
-  onStep0FooterActionChange?: (a: CalculatorFooterAction | null) => void;
-  onStep0BackActionChange?: (a: CalculatorFooterBackAction) => void;
   onPrimaryCtaClick?: () => void;
   onSecondaryCtaClick?: () => void;
   summaryPrimaryLabel?: string;
@@ -55,10 +52,6 @@ export function PriceCalculatorQuizV2({
   preset,
   presetOrigin,
   initialSolutionScenario = "standard",
-  onStep0ProgressChange,
-  onIsStep0SummaryReadyChange,
-  onStep0FooterActionChange,
-  onStep0BackActionChange,
   onPrimaryCtaClick,
   onSecondaryCtaClick,
   summaryPrimaryLabel,
@@ -81,6 +74,7 @@ export function PriceCalculatorQuizV2({
   const startScreen: Step0Screen = initialSolutionScenario !== "standard"
     ? { t: "roomPicker", mode: "first" }
     : { t: "scenario" };
+  const { setStep0 } = useCalculatorStore();
   const [history, setHistory] = useState<Step0Screen[]>([startScreen]);
   const screen = history[history.length - 1] ?? { t: "scenario" } as Step0Screen;
 
@@ -271,14 +265,9 @@ export function PriceCalculatorQuizV2({
     [screen, engine.solutionScenario, enabledParams]
   );
 
-  useEffect(() => {
-    onStep0ProgressChange?.(progress);
-    onIsStep0SummaryReadyChange?.(isSummary);
-  }, [progress, isSummary, onStep0ProgressChange, onIsStep0SummaryReadyChange]);
-
   /**
-   * T-030: подпись кнопки и видимость «назад» считают селекторы, а эффект лишь
-   * публикует готовый результат в контекст модалки — никакой логики в эффекте.
+   * T-030: подпись кнопки и видимость «назад» считают селекторы — чистые
+   * функции экрана, без обращения к DOM и без ветвлений в разметке.
    */
   const footerSpec = useMemo(
     () => selectFooterAction(screen, { scope: engine.calculationScope }),
@@ -293,38 +282,79 @@ export function PriceCalculatorQuizV2({
     [screen, history.length, initialSolutionScenario]
   );
 
-  useEffect(() => {
-    const action: CalculatorFooterAction | null = footerSpec
-      ? {
-          label: footerSpec.label,
-          disabled: footerSpec.disabled,
-          onClick: () => {
-            if (screen.t === "roomEdit") {
-              pushScreen({ t: "summary" });
-              return;
-            }
-            goNext();
-          },
-        }
-      : null;
+  /**
+   * N-050 · Публикация состояния Шага 0 в стор.
+   *
+   * Кнопки футера рисует модалка, а знает про экран только квиз. Раньше связь
+   * шла через четыре сеттер-колбэка, каждый со своим `useEffect`; теперь это
+   * одна запись готового объекта. Логики здесь нет — всё посчитано
+   * селекторами выше, эффект только доставляет результат.
+   */
+  /**
+   * Команды кнопок держим в ref: подпись публикуется синхронно
+   * (useLayoutEffect ниже), но сами замыкания пересоздаются на каждом рендере,
+   * и без ref каждая смена экрана порождала бы новый объект footerAction —
+   * то есть лишнюю запись в стор и лишний рендер модалки.
+   */
+  const nextRef = useRef({ screen, goNext, pushScreen });
+  nextRef.current = { screen, goNext, pushScreen };
 
-    onStep0FooterActionChange?.(action);
-    onStep0BackActionChange?.({ visible: backVisible, onClick: goBack });
+  const backRef = useRef(goBack);
+  backRef.current = goBack;
+  const runGoBack = useCallback(() => backRef.current(), []);
 
-    return () => {
-      onStep0FooterActionChange?.(null);
-      onStep0BackActionChange?.({ visible: false });
-    };
-  }, [
-    footerSpec,
-    backVisible,
-    screen,
-    goNext,
-    goBack,
-    pushScreen,
-    onStep0FooterActionChange,
-    onStep0BackActionChange,
-  ]);
+  const runFooterAction = useCallback(() => {
+    const current = nextRef.current;
+    if (current.screen.t === "roomEdit") {
+      current.pushScreen({ t: "summary" });
+      return;
+    }
+    current.goNext();
+  }, []);
+
+  const footerAction = useMemo<CalculatorFooterAction | null>(
+    () =>
+      footerSpec
+        ? {
+            label: footerSpec.label,
+            disabled: footerSpec.disabled,
+            onClick: runFooterAction,
+          }
+        : null,
+    [footerSpec, runFooterAction]
+  );
+
+  /**
+   * Публикация — в useLayoutEffect, а не useEffect.
+   *
+   * useEffect выполняется ПОСЛЕ отрисовки, поэтому кадр между сменой экрана и
+   * доставкой новой подписи успевал попасть на экран: заголовок уже «Карнизы»,
+   * а кнопка ещё «Подтвердить тип». Вручную это мелькание почти незаметно, но
+   * быстрый клик попадал в него и подтверждал предыдущий шаг повторно —
+   * сценарий 6 стабильно проваливался.
+   *
+   * useLayoutEffect отрабатывает до отрисовки: модалка получает подпись в том
+   * же кадре, в котором сменился экран.
+   */
+  useLayoutEffect(() => {
+    setStep0({
+      progress,
+      isSummaryReady: isSummary,
+      footerAction,
+      backAction: { visible: backVisible, onClick: runGoBack },
+    });
+  }, [setStep0, progress, isSummary, footerAction, backVisible, runGoBack]);
+
+  /**
+   * Сброс — отдельным эффектом с пустыми зависимостями.
+   *
+   * Держать его как cleanup публикующего эффекта нельзя: React вызывает
+   * cleanup перед КАЖДЫМ повторным запуском, а не только при размонтировании.
+   * Из-за этого на каждой смене экрана футер успевал обнулиться до записи
+   * нового значения — кнопка «Подтвердить» на миг исчезала, и клик по ней
+   * промахивался.
+   */
+  useEffect(() => () => setStep0(EMPTY_STEP0_STATE), [setStep0]);
 
   if (draft && !draftDecided) {
     return (

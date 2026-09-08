@@ -167,20 +167,16 @@ export type CalculatorModalContextValue = {
 
   /** Квиз-флоу: прогресс Step 0 (X из Y шагов). null если compactSections=false или модалка не на Step 0. */
   step0Progress: { done: number; total: number } | null;
-  setStep0Progress: (progress: { done: number; total: number } | null) => void;
 
   /** Квиз-флоу: достигнута ли сводка (все шаги подтверждены). Используется для смены title и dots-индикатора. */
   isStep0SummaryReady: boolean;
-  setIsStep0SummaryReady: (ready: boolean) => void;
 
   step1CatalogView: CatalogViewMode | null;
   setStep1CatalogView: (view: CatalogViewMode | null) => void;
 
   step0FooterAction: CalculatorFooterAction | null;
-  setStep0FooterAction: (action: CalculatorFooterAction | null) => void;
 
   step0BackAction: CalculatorFooterBackAction;
-  setStep0BackAction: (action: CalculatorFooterBackAction) => void;
 
   step1FooterAction: Step1FooterAction | null;
   setStep1FooterAction: (action: Step1FooterAction | null) => void;

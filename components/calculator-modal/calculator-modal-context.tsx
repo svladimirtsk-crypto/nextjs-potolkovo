@@ -123,15 +123,21 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
 
   // Квиз-флоу: прогресс Step 0 (X из Y шагов) и состояние сводки.
   // Обновляется из PriceCalculatorClient через setter. Используется в header модалки.
-  const [step0Progress, setStep0Progress] = useState<{ done: number; total: number } | null>(null);
-  const [isStep0SummaryReady, setIsStep0SummaryReady] = useState(false);
+  /**
+   * N-050: состояние Шага 0 живёт в сторе калькулятора — там же, где снапшот.
+   * Здесь остаётся только UI-состояние самой модалки.
+   */
+  const { step0 } = useCalculatorStore();
+  const step0Progress = step0.progress;
+  const isStep0SummaryReady = step0.isSummaryReady;
+  const step0FooterAction = step0.footerAction;
+  const step0BackAction = step0.backAction;
 
   // скидка с потолком: разрешена только после подтверждения потолка 0->1
   const [lightingDiscountEligible, setLightingDiscountEligible] = useState(false);
 
   const [step1CatalogView, setStep1CatalogView] = useState<"selected" | "browse" | null>(null);
-  const [step0FooterAction, setStep0FooterActionState] = useState<CalculatorFooterAction | null>(null);
-  const [step0BackAction, setStep0BackActionState] = useState<CalculatorFooterBackAction>({ visible: false });
+
   const [step1FooterAction, setStep1FooterActionState] = useState<Step1FooterAction | null>(null);
 
   const { snapshot, setSnapshot, setHasInteracted } = useCalculatorStore();
@@ -150,14 +156,6 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
     // T-008: устаревший grandTotal больше не хранится в snapshot
     setSnapshot((prev) => (prev && prev.grandTotal !== undefined ? { ...prev, grandTotal: undefined } : prev));
   }, [setSnapshot]);
-
-  const setStep0FooterAction = useCallback((action: CalculatorFooterAction | null) => {
-    setStep0FooterActionState(action);
-  }, []);
-
-  const setStep0BackAction = useCallback((action: CalculatorFooterBackAction) => {
-    setStep0BackActionState(action);
-  }, []);
 
   const setStep1FooterAction = useCallback((action: Step1FooterAction | null) => {
     setStep1FooterActionState(action);
@@ -230,16 +228,13 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       setShowResult(false);
       setStep0SessionInteracted(false);
       setStep0AreaConfirmed(false);
-      setStep0Progress(null);
-      setIsStep0SummaryReady(false);
+      // N-050: состояние Шага 0 сбрасывает сам квиз при размонтировании.
 
       // В lighting-first скидка с потолком НЕ применяется сразу: сначала действует −10% на свет.
       const enableDiscountNow = false;
       setLightingDiscountEligible(enableDiscountNow);
 
       setStep1CatalogView(resolvedOpts.initialLightingView ?? null);
-      setStep0FooterActionState(null);
-      setStep0BackActionState({ visible: false });
       setStep1FooterActionState(null);
 
       // скидка и источник: сбрасываем/ставим на snapshot (если он есть)
@@ -427,14 +422,10 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
         markStep0SessionInteracted,
         step0AreaConfirmed,
         step0Progress,
-        setStep0Progress,
         isStep0SummaryReady,
-        setIsStep0SummaryReady,
 
         step0FooterAction,
-        setStep0FooterAction,
         step0BackAction,
-        setStep0BackAction,
 
         step1CatalogView,
         setStep1CatalogView,
@@ -474,9 +465,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       step0Progress,
       isStep0SummaryReady,
       step0FooterAction,
-      setStep0FooterAction,
       step0BackAction,
-      setStep0BackAction,
       step1CatalogView,
       setStep1CatalogView,
       step1FooterAction,

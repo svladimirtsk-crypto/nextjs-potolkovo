@@ -89,10 +89,6 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
     options,
     lightingDraft,
     step0SessionInteracted,
-    setStep0Progress,
-    setIsStep0SummaryReady,
-    setStep0FooterAction,
-    setStep0BackAction,
   } = useCalculatorModal();
 
   const forcePreset = Boolean(options?.forcePreset);
@@ -283,10 +279,6 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
             : null
         }
         prefillFromLightingTrigger={prefillTrigger}
-        onStep0ProgressChange={setStep0Progress}
-        onIsStep0SummaryReadyChange={setIsStep0SummaryReady}
-        onStep0FooterActionChange={setStep0FooterAction}
-        onStep0BackActionChange={setStep0BackAction}
         /* T-022: подписи и переходы сводки считает сам квиз от engine.solutionScenario */
       />
     </div>
