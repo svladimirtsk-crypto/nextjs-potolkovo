@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import {
   trackLightingSearch,
@@ -147,7 +147,7 @@ import {
   TabBtn,
 } from "@/components/lighting/CatalogPieces";
 import { ProductPickerScreen, WizardFooter } from "@/components/lighting/ProductPickerScreen";
-import { resolveStep1FooterAction } from "@/lib/lighting/step1-footer-action";
+import { buildStep1FooterAction, resolveStep1FooterAction } from "@/lib/lighting/step1-footer-action";
 
 
 /* ─── MAIN COMPONENT ─── */
@@ -1074,41 +1074,32 @@ export function WizardStep1Lighting() {
     ]
   );
 
-  useEffect(() => {
-    const { intent, label, disabled } = footerDescriptor;
-
-    if (intent === "missing") {
-      setStep1FooterAction(
-        missingAction
-          ? { label: missingAction.label, onClick: goToMissingAction }
-          : finishAction()
-      );
-      return () => setStep1FooterAction(null);
-    }
-
-    if (intent === "finish") {
-      const base = finishAction();
-      setStep1FooterAction(disabled === undefined ? base : { ...base, disabled });
-      return () => setStep1FooterAction(null);
-    }
-
-    const handlers: Record<string, () => void> = {
-      pickSystem: () => undefined,
-      confirmTrackProfile: goAfterTrackProfile,
-      confirmTrackFixtures: goAfterTrackFixtures,
-      confirmPoints: goAfterPoints,
-      confirmLamps: goAfterLamps,
-      confirmChandeliers: goAfterChandeliers,
-      confirmCornice: () => setWStep("done"),
-    };
-
-    setStep1FooterAction({
-      label: label ?? "",
-      disabled,
-      onClick: handlers[intent] ?? (() => undefined),
-    });
-
-    return () => setStep1FooterAction(null);
+  /**
+   * N-050 · Публикация футера Шага 1 — в useLayoutEffect, как на Шаге 0.
+   *
+   * С useEffect подпись доставлялась после отрисовки, и один кадр экран с
+   * кнопкой не совпадали. Отдельно важен убранный cleanup: React вызывает его
+   * перед КАЖДЫМ повторным запуском эффекта, поэтому `setStep1FooterAction(null)`
+   * успевал обнулить футер между шагами мастера — кнопка мигала и клик мог
+   * промахнуться. Сброс теперь один, при размонтировании.
+   */
+  useLayoutEffect(() => {
+    setStep1FooterAction(
+      buildStep1FooterAction(footerDescriptor, {
+        missingAction,
+        goToMissingAction,
+        finishAction,
+        handlers: {
+          pickSystem: () => undefined,
+          confirmTrackProfile: goAfterTrackProfile,
+          confirmTrackFixtures: goAfterTrackFixtures,
+          confirmPoints: goAfterPoints,
+          confirmLamps: goAfterLamps,
+          confirmChandeliers: goAfterChandeliers,
+          confirmCornice: () => setWStep("done"),
+        },
+      })
+    );
   }, [
     finishAction,
     footerDescriptor,
@@ -1122,6 +1113,9 @@ export function WizardStep1Lighting() {
     setStep1FooterAction,
     setWStep,
   ]);
+
+  /** Шаг 1 ушёл с экрана — его кнопка не должна остаться в футере. */
+  useEffect(() => () => setStep1FooterAction(null), [setStep1FooterAction]);
 
   /* ─── Scoped catalog products ─── */
   const scopedProducts = useMemo(() => {

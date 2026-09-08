@@ -1,3 +1,4 @@
+import type { Step1FooterAction } from "@/lib/calculator-modal-types";
 import type { WizardStep } from "@/lib/lighting/resolve-initial-step";
 
 /**
@@ -106,4 +107,41 @@ export function resolveStep1FooterAction(input: Step1FooterInput): Step1FooterDe
     default:
       return fallback;
   }
+}
+
+/**
+ * N-050 · Сборка действия футера Шага 1 из дескриптора и обработчиков.
+ *
+ * Раньше это ветвление жило прямо в эффекте компонента: три ветки,
+ * словарь обработчиков и вызовы сеттера в каждой. Логика чистая — какой
+ * обработчик соответствует намерению, — и проверять её удобнее тестом,
+ * а не кликами по мастеру.
+ */
+export function buildStep1FooterAction(
+  descriptor: { intent: string; label?: string; disabled?: boolean },
+  deps: {
+    missingAction: { label: string } | null;
+    goToMissingAction: () => void;
+    finishAction: () => Step1FooterAction;
+    handlers: Record<string, () => void>;
+  }
+): Step1FooterAction {
+  const { intent, label, disabled } = descriptor;
+
+  if (intent === "missing") {
+    return deps.missingAction
+      ? { label: deps.missingAction.label, onClick: deps.goToMissingAction }
+      : deps.finishAction();
+  }
+
+  if (intent === "finish") {
+    const base = deps.finishAction();
+    return disabled === undefined ? base : { ...base, disabled };
+  }
+
+  return {
+    label: label ?? "",
+    disabled,
+    onClick: deps.handlers[intent] ?? (() => undefined),
+  };
 }

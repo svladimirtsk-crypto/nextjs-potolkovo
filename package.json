@@ -12,7 +12,7 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "validate:catalog": "node scripts/validate-catalog.mjs",
-    "prebuild": "node scripts/validate-catalog.mjs && node scripts/build-catalog-index.mjs && node scripts/check-images.mjs && node scripts/check-catalog-images.mjs && node scripts/check-file-size.mjs",
+    "prebuild": "node scripts/validate-catalog.mjs && node scripts/build-catalog-index.mjs && node scripts/check-images.mjs && node scripts/check-catalog-images.mjs && node scripts/check-file-size.mjs && node scripts/check-effect-setstate.mjs",
     "build:catalog-index": "node scripts/build-catalog-index.mjs",
     "check:legal": "node scripts/check-legal-fields.mjs",
     "build:images": "node scripts/build-images.mjs",

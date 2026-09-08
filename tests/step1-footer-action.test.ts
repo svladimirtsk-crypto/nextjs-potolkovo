@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildStep1FooterAction,
   resolveStep1FooterAction,
   type Step1FooterInput,
 } from "../lib/lighting/step1-footer-action";
@@ -94,5 +95,73 @@ describe("resolveStep1FooterAction", () => {
 
   it("шаг «none» всегда завершающий, даже при незакрытом пункте", () => {
     expect(at({ shownWStep: "none", hasMissingAction: true }).intent).toBe("finish");
+  });
+});
+
+describe("N-050 · buildStep1FooterAction", () => {
+  const finish = () => ({ label: "К итогу →", onClick: () => {} });
+
+  it("«не хватает позиций» ведёт к недостающему шагу", () => {
+    const action = buildStep1FooterAction(
+      { intent: "missing" },
+      {
+        missingAction: { label: "Выбрать светильники →" },
+        goToMissingAction: () => {},
+        finishAction: finish,
+        handlers: {},
+      }
+    );
+    expect(action.label).toBe("Выбрать светильники →");
+  });
+
+  it("без конкретного пробела «missing» превращается в завершение", () => {
+    // Иначе кнопка осталась бы без подписи и вела в никуда.
+    const action = buildStep1FooterAction(
+      { intent: "missing" },
+      { missingAction: null, goToMissingAction: () => {}, finishAction: finish, handlers: {} }
+    );
+    expect(action.label).toBe("К итогу →");
+  });
+
+  it("«finish» сохраняет блокировку, если она задана", () => {
+    const enabled = buildStep1FooterAction(
+      { intent: "finish" },
+      { missingAction: null, goToMissingAction: () => {}, finishAction: finish, handlers: {} }
+    );
+    expect(enabled.disabled).toBeUndefined();
+
+    const blocked = buildStep1FooterAction(
+      { intent: "finish", disabled: true },
+      { missingAction: null, goToMissingAction: () => {}, finishAction: finish, handlers: {} }
+    );
+    expect(blocked.disabled).toBe(true);
+  });
+
+  it("намерение подтверждения зовёт свой обработчик", () => {
+    const calls: string[] = [];
+    const action = buildStep1FooterAction(
+      { intent: "confirmPoints", label: "Подтвердить светильники →" },
+      {
+        missingAction: null,
+        goToMissingAction: () => {},
+        finishAction: finish,
+        handlers: {
+          confirmPoints: () => calls.push("points"),
+          confirmLamps: () => calls.push("lamps"),
+        },
+      }
+    );
+
+    action.onClick();
+    expect(calls).toEqual(["points"]);
+  });
+
+  it("неизвестное намерение не роняет интерфейс", () => {
+    // Кнопка без обработчика лучше, чем исключение при рендере футера.
+    const action = buildStep1FooterAction(
+      { intent: "нет-такого", label: "Дальше" },
+      { missingAction: null, goToMissingAction: () => {}, finishAction: finish, handlers: {} }
+    );
+    expect(() => action.onClick()).not.toThrow();
   });
 });
