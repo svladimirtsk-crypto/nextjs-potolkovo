@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { pricing } from "@/content/pricing";
 import { calcProgress, maxParamsForScenario, paramPosition } from "@/lib/calculator/fsm";
+import { ALL_PARAMS } from "@/lib/step0-fsm";
 import {
   selectBackVisible,
   selectExtraInstall,
@@ -300,5 +301,77 @@ describe("T-030 - progress s fiksirovannym M", () => {
     expect(paramPosition({ t: "param", roomId: "r1", param: "area" }, { scenario, enabledParams }))
       .toEqual({ index: 1, total: maxParamsForScenario(scenario) });
     expect(paramPosition({ t: "summary" }, { scenario, enabledParams })).toBeNull();
+  });
+});
+
+/**
+ * N-050 · Приёмка выноса состояния Шага 0 в стор.
+ *
+ * Модалка рисует футер по опубликованному состоянию, поэтому подпись обязана
+ * определяться экраном однозначно и целиком — любая «дырка» в селекторе
+ * превращается в кнопку без текста или в чужую подпись на экране.
+ */
+describe("N-050 · футер Шага 0 определяется экраном", () => {
+  it("у каждого параметра есть своя подпись кнопки", () => {
+    const labels = new Map<string, string>();
+
+    for (const param of ALL_PARAMS) {
+      const spec = selectFooterAction({ t: "param", roomId: "r1", param }, { scope: "room" });
+      expect(spec, param).not.toBeNull();
+      expect(spec!.label.trim().length, param).toBeGreaterThan(0);
+      labels.set(param, spec!.label);
+    }
+
+    /**
+     * Подписи не обязаны быть уникальными все, но «Подтвердить» без уточнения
+     * на каждом шаге — это тот самый случай, когда человек не понимает, что
+     * именно подтверждает.
+     */
+    expect(new Set(labels.values()).size).toBeGreaterThan(1);
+  });
+
+  it("смена экрана меняет подпись — иначе рассинхрон незаметен", () => {
+    /**
+     * Регрессия N-050: подпись публиковалась в useEffect, то есть после
+     * отрисовки, и один кадр экран с кнопкой не совпадали — «Карнизы» с
+     * кнопкой «Подтвердить тип». Playwright кликал быстрее кадра и повторно
+     * подтверждал предыдущий шаг. Тест фиксирует, что сами по себе эти два
+     * экрана селектор различает: если подписи совпадут, e2e-проверка
+     * рассинхрона перестанет что-либо ловить.
+     */
+    const ceiling = selectFooterAction(
+      { t: "param", roomId: "r1", param: "ceiling" },
+      { scope: "room" }
+    );
+    const cornice = selectFooterAction(
+      { t: "param", roomId: "r1", param: "cornice" },
+      { scope: "room" }
+    );
+
+    expect(ceiling?.label).not.toBe(cornice?.label);
+  });
+
+  it("селектор — чистая функция: тот же экран даёт тот же результат", () => {
+    const screen = { t: "param", roomId: "r1", param: "area" } as const;
+    expect(selectFooterAction(screen, { scope: "room" })).toEqual(
+      selectFooterAction(screen, { scope: "room" })
+    );
+  });
+
+  it("«назад» скрыт только там, откуда возвращаться некуда", () => {
+    /**
+     * Кнопка прячется в двух случаях: экран выбора сценария (он первый) и
+     * первый экран, автоматически пропущенный пресетом со страницы услуги —
+     * там «назад» вернуло бы на экран, которого человек не видел.
+     * Во всех остальных случаях она есть, включая historyLength === 1 без
+     * пресета: пользователь пришёл сюда сам и вправе выйти тем же путём.
+     */
+    const screen = { t: "param", roomId: "r1", param: "cornice" } as const;
+    expect(selectBackVisible(screen, { historyLength: 1, scenarioPreselected: false })).toBe(true);
+    expect(selectBackVisible(screen, { historyLength: 1, scenarioPreselected: true })).toBe(false);
+    expect(selectBackVisible(screen, { historyLength: 3, scenarioPreselected: true })).toBe(true);
+    expect(selectBackVisible({ t: "scenario" }, { historyLength: 5, scenarioPreselected: false })).toBe(
+      false
+    );
   });
 });
