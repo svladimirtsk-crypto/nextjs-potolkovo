@@ -42,10 +42,8 @@ import {
   TRACK_GROUPS,
   TRACK_PROFILE_WHITELIST,
   TRACK_SYSTEMS,
-  type CatalogSectionId,
   LAMP_SOCKETS,
   type PointSubtypeId,
-  type TrackGroupId,
   type TrackSystemId,
   type LampSocket,
 } from "@/lib/catalog-ui-config";
@@ -140,6 +138,7 @@ import {
   TabBtn,
 } from "@/components/lighting/CatalogPieces";
 import { buildStep1FooterAction, resolveStep1FooterAction } from "@/lib/lighting/step1-footer-action";
+import { useCatalogFilters } from "@/lib/lighting/use-catalog-filters";
 
 
 /* ─── MAIN COMPONENT ─── */
@@ -199,7 +198,13 @@ export function WizardStep1Lighting() {
   );
 
   /* ─── Catalog filters ─── */
-  const [section, setSection] = useState<CatalogSectionId>("track-systems");
+  /**
+   * N-051: фильтры каталога — тот же хук, что и на странице каталога.
+   * Раньше здесь стояли шесть собственных useState, и правила сброса запроса
+   * успели разойтись с оригиналом.
+   */
+  const catalogFilters = useCatalogFilters();
+  const { section, trackSystem, trackGroup, pointSubtype, lampSocket, query } = catalogFilters;
 
   /**
    * T-043: «Люстры» и «Подсветка карниза» показываются только тем, кто ответил
@@ -216,11 +221,6 @@ export function WizardStep1Lighting() {
       }),
     [snapshot?.derivedInputs?.chandeliersEnabled, snapshot?.derivedInputs?.corniceLightingEnabled]
   );
-  const [trackSystem, setTrackSystem] = useState<TrackSystemId>("COLIBRI_220");
-  const [trackGroup, setTrackGroup] = useState<TrackGroupId>("TRACK_FIXTURE");
-  const [pointSubtype, setPointSubtype] = useState<PointSubtypeId>("GX53");
-  const [lampSocket, setLampSocket] = useState<LampSocket>("GX53");
-  const [query, setQuery] = useState("");
 
   /* ─── Cart state (T-031: общая корзина со страницей каталога) ─── */
 
@@ -946,25 +946,25 @@ export function WizardStep1Lighting() {
   const goAfterLamps = useCallback(() => {
     if (needsChandeliers) {
       setWStep("chandeliers");
-      setSection("chandeliers");
+      catalogFilters.selectSection("chandeliers");
       return;
     }
     if (needsCorniceLighting) {
       setWStep("corniceLighting");
-      setSection("cornice-lighting");
+      catalogFilters.selectSection("cornice-lighting");
       return;
     }
     setWStep("done");
-  }, [needsChandeliers, needsCorniceLighting, setWStep]);
+  }, [catalogFilters, needsChandeliers, needsCorniceLighting, setWStep]);
 
   const goAfterChandeliers = useCallback(() => {
     if (needsCorniceLighting) {
       setWStep("corniceLighting");
-      setSection("cornice-lighting");
+      catalogFilters.selectSection("cornice-lighting");
       return;
     }
     setWStep("done");
-  }, [needsCorniceLighting, setWStep]);
+  }, [catalogFilters, needsCorniceLighting, setWStep]);
 
   const goAfterPoints = useCallback(() => {
     if (lampRequiredTotal > 0 && lampCurrentTotal < lampRequiredTotal) {
@@ -1359,7 +1359,7 @@ export function WizardStep1Lighting() {
             <>
               <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar max-sm:-mx-5 max-sm:px-5">
                 {shownCatalogSections.map((item) => (
-                  <button key={item.id} type="button" onClick={() => { setSection(item.id); setQuery(""); }}
+                  <button key={item.id} type="button" onClick={() => catalogFilters.selectSection(item.id)}
                     className={["whitespace-nowrap rounded-xl border border-slate-200 px-3 py-2 text-sm max-sm:px-2.5 max-sm:py-1.5 max-sm:text-xs",
                       section === item.id ? "bg-slate-950 text-white" : "bg-white text-slate-700 hover:bg-slate-50"].join(" ")}>
                     {item.label}
@@ -1373,18 +1373,12 @@ export function WizardStep1Lighting() {
                   <CatalogFilterChipGroup
                     options={TRACK_SYSTEMS}
                     active={trackSystem}
-                    onSelect={(id) => {
-                      setTrackSystem(id);
-                      setQuery("");
-                    }}
+                    onSelect={catalogFilters.selectTrackSystem}
                   />
                   <CatalogFilterChipGroup
                     options={TRACK_GROUPS}
                     active={trackGroup}
-                    onSelect={(id) => {
-                      setTrackGroup(id);
-                      setQuery("");
-                    }}
+                    onSelect={catalogFilters.selectTrackGroup}
                   />
                 </CatalogFilterChipsRow>
               ) : null}
@@ -1394,10 +1388,7 @@ export function WizardStep1Lighting() {
                   <CatalogFilterChipGroup
                     options={POINT_SUBTYPES}
                     active={pointSubtype}
-                    onSelect={(id) => {
-                      setPointSubtype(id);
-                      setQuery("");
-                    }}
+                    onSelect={catalogFilters.selectPointSubtype}
                   />
                 </CatalogFilterChipsRow>
               ) : null}
@@ -1413,17 +1404,14 @@ export function WizardStep1Lighting() {
                           : socket,
                     }))}
                     active={lampSocket}
-                    onSelect={(id) => {
-                      setLampSocket(id);
-                      setQuery("");
-                    }}
+                    onSelect={catalogFilters.selectLampSocket}
                   />
                 </CatalogFilterChipsRow>
               ) : null}
 
               <CatalogBrowse
                 query={query}
-                onQueryChange={setQuery}
+                onQueryChange={catalogFilters.setQuery}
                 hasCeilingContext={hasCeilingContext}
                 withCeilingPercent={LIGHTING_WITH_CEILING_DISCOUNT_PERCENT}
                 lightingOnlyPercent={LIGHTING_ONLY_DISCOUNT_PERCENT}

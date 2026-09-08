@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { CATALOG_SECTIONS } from "../lib/catalog-ui-config";
 import { searchMatchesBySection, sectionOfProduct } from "../lib/lighting/catalog-filters";
+import { applyCatalogFilterChange } from "../lib/lighting/use-catalog-filters";
 import type { FeedCatalogProduct } from "../lib/eks-feed2-catalog";
 
 const source = readFileSync(
@@ -20,13 +21,28 @@ const product = (over: Partial<FeedCatalogProduct>): FeedCatalogProduct =>
 
 describe("T-065 · глобальный поиск по каталогу", () => {
   it("запрос не сбрасывается при смене раздела", () => {
-    // Обработчик вкладки: от его onClick до закрывающей скобки.
-    const start = source.indexOf('onClick={() => {\n                  // T-065');
-    expect(start).toBeGreaterThan(-1);
-    const tabHandler = source.slice(start, source.indexOf("}}", start));
+    /**
+     * N-051: правило переехало из обработчика вкладки в общий переход
+     * `applyCatalogFilterChange`, поэтому проверяем его напрямую, а не
+     * грепом по разметке — прежний вариант ломался от любого рефакторинга,
+     * хотя поведение оставалось верным.
+     */
+    const searching = {
+      section: "track-systems",
+      trackSystem: "COLIBRI_220",
+      trackGroup: "TRACK_FIXTURE",
+      pointSubtype: "GX53",
+      lampSocket: "GX53",
+      query: "диммер",
+    } as const;
 
-    expect(tabHandler).toContain("setSection(item.id)");
-    expect(tabHandler).not.toContain('setQuery("")');
+    const next = applyCatalogFilterChange({ ...searching }, {
+      type: "section",
+      value: "lamps",
+    });
+
+    expect(next.section).toBe("lamps");
+    expect(next.query).toBe("диммер");
   });
 
   it("совпадения считаются по всему каталогу, а не по активной секции", () => {

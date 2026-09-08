@@ -59,15 +59,12 @@ import {
   POINT_TO_MOUNT_VENDOR_CODE,
   CLARUS_PSU_VENDOR_CODES,
   isRemovedColibriVendorCode,
-  type CatalogSectionId,
-  type PointSubtypeId,
-  type TrackGroupId,
-  type TrackSystemId,
   LAMP_SOCKETS,
   type LampSocket,
 } from "@/lib/catalog-ui-config";
 
 import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
+import { useCatalogFilters } from "@/lib/lighting/use-catalog-filters";
 
 type CartItems = Record<string, number>;
 
@@ -170,14 +167,16 @@ export function CatalogSectionClient({ data }: Props) {
     return map;
   }, [products]);
 
-  const [section, setSection] = useState<CatalogSectionId>("track-systems");
-  const [trackSystem, setTrackSystem] = useState<TrackSystemId>("COLIBRI_220");
-  const [trackGroup, setTrackGroup] = useState<TrackGroupId>("TRACK_FIXTURE");
-  const [pointSubtype, setPointSubtype] = useState<PointSubtypeId>("GX53");
-  const [lampSocket, setLampSocket] = useState<LampSocket>("GX53");
+  /**
+   * N-051: состояние фильтров — общий хук с каталогом внутри модалки.
+   * Правила сброса запроса и пагинации живут там, а не размазаны по
+   * обработчикам каждого чипа.
+   */
+  const catalogFilters = useCatalogFilters({
+    onResultsReset: () => setVisibleCount(CATALOG_PAGE_SIZE),
+  });
+  const { section, trackSystem, trackGroup, pointSubtype, lampSocket, query } = catalogFilters;
   const [smartOnly, setSmartOnly] = useState(false);
-
-  const [query, setQuery] = useState("");
   /**
    * T-031: корзина общая с модалкой (`lightingDraft`), локального состояния нет —
    * счётчики страницы и калькулятора всегда совпадают, комплект не теряется.
@@ -531,8 +530,7 @@ export function CatalogSectionClient({ data }: Props) {
                 onClick={() => {
                   // T-065: запрос сохраняется при смене раздела — человек
                   // ищет «диммер», а не «диммер в разделе Трековые системы».
-                  setSection(item.id);
-                  setVisibleCount(24);
+                  catalogFilters.selectSection(item.id);
                 }}
                 className={[
                   "inline-flex min-h-11 items-center whitespace-nowrap rounded-[var(--radius-sm)] px-3.5 text-sm font-medium",
@@ -553,10 +551,9 @@ export function CatalogSectionClient({ data }: Props) {
               setSmartOnly((prev) => {
                 const next = !prev;
                 trackSmartInterestSelected({ placement: "catalog", enabled: next, source: "track-sale-page" });
-                if (next) setSection("track-systems");
+                if (next) catalogFilters.selectSection("track-systems");
                 return next;
               });
-              setVisibleCount(24);
             }}
             className={[
               "whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium border",
@@ -578,18 +575,12 @@ export function CatalogSectionClient({ data }: Props) {
             <CatalogFilterChipGroup
               options={TRACK_SYSTEMS}
               active={trackSystem}
-              onSelect={(id) => {
-                setTrackSystem(id);
-                setQuery("");
-              }}
+              onSelect={catalogFilters.selectTrackSystem}
             />
             <CatalogFilterChipGroup
               options={TRACK_GROUPS}
               active={trackGroup}
-              onSelect={(id) => {
-                setTrackGroup(id);
-                setQuery("");
-              }}
+              onSelect={catalogFilters.selectTrackGroup}
             />
           </CatalogFilterChipsRow>
         ) : null}
@@ -599,10 +590,7 @@ export function CatalogSectionClient({ data }: Props) {
             <CatalogFilterChipGroup
               options={POINT_SUBTYPES}
               active={pointSubtype}
-              onSelect={(id) => {
-                setPointSubtype(id);
-                setQuery("");
-              }}
+              onSelect={catalogFilters.selectPointSubtype}
             />
           </CatalogFilterChipsRow>
         ) : null}
@@ -612,10 +600,7 @@ export function CatalogSectionClient({ data }: Props) {
             <CatalogFilterChipGroup
               options={LAMP_SOCKETS.map((socket) => ({ id: socket, label: socket }))}
               active={lampSocket}
-              onSelect={(id) => {
-                setLampSocket(id);
-                setQuery("");
-              }}
+              onSelect={catalogFilters.selectLampSocket}
             />
           </CatalogFilterChipsRow>
         ) : null}
@@ -629,7 +614,7 @@ export function CatalogSectionClient({ data }: Props) {
           </span>
           <input
           value={query}
-          onChange={(event) => setQuery(String(event.target.value ?? ""))}
+          onChange={(event) => catalogFilters.setQuery(String(event.target.value ?? ""))}
           placeholder="Поиск по всему каталогу"
           aria-label="Поиск по каталогу"
           className="w-full rounded-[var(--radius-md)] border border-slate-300 bg-white pl-10 pr-10 py-3 text-sm text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-2"
@@ -637,7 +622,7 @@ export function CatalogSectionClient({ data }: Props) {
           {query ? (
             <button
               type="button"
-              onClick={() => setQuery("")}
+              onClick={catalogFilters.resetQuery}
               aria-label="Очистить поиск"
               className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
             >
@@ -658,10 +643,7 @@ export function CatalogSectionClient({ data }: Props) {
               <button
                 key={match.id}
                 type="button"
-                onClick={() => {
-                  setSection(match.id);
-                  setVisibleCount(24);
-                }}
+                onClick={() => catalogFilters.selectSection(match.id)}
                 className="inline-flex min-h-9 items-center rounded-full border border-slate-300 bg-white px-3 text-sm font-medium text-slate-800 hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
               >
                 «{match.label}»: {match.count}
@@ -758,12 +740,9 @@ export function CatalogSectionClient({ data }: Props) {
           }
           sectionId={section}
           searchMatches={searchMatches && searchMatchesBySection.length > 0 ? searchMatches : []}
-          onPickSection={(id) => {
-            setSection(id);
-            setVisibleCount(CATALOG_PAGE_SIZE);
-          }}
+          onPickSection={catalogFilters.selectSection}
           query={query}
-          onResetQuery={() => setQuery("")}
+          onResetQuery={catalogFilters.resetQuery}
         />
 
         {/* Dependencies / warnings */}
@@ -776,9 +755,9 @@ export function CatalogSectionClient({ data }: Props) {
             onAddMount={addMountOneToOne}
             onAddLamp={(socket, cheapestLampId) => {
               addLampOneToOneCheapest(socket, cheapestLampId);
-              setSection("lamps");
-              setLampSocket(socket);
-              setQuery("");
+              // Ведём человека туда, куда только что добавили лампу.
+              catalogFilters.selectSection("lamps");
+              catalogFilters.selectLampSocket(socket);
             }}
           />
         ) : null}

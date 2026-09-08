@@ -24,8 +24,8 @@ const ROOTS = ["components", "app"];
  * уменьшения; при росте страж падает.
  */
 const LEGACY_BUDGET = {
-  "components/calculator-modal/wizard-step1-lighting.tsx": 1444,
-  "app/uslugi/prodazha-trekovogo-osveshcheniya/_components/CatalogSectionClient.tsx": 810,
+  "components/calculator-modal/wizard-step1-lighting.tsx": 1432,
+  "app/uslugi/prodazha-trekovogo-osveshcheniya/_components/CatalogSectionClient.tsx": 789,
   "components/home/action-form.tsx": 658,
   "components/calculator-modal/wizard-step2-summary.tsx": 609,
 };
