@@ -65,6 +65,7 @@ import {
 
 import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
 import { useCatalogFilters } from "@/lib/lighting/use-catalog-filters";
+import { useCatalogIndex } from "@/lib/lighting/use-catalog-index";
 
 type CartItems = Record<string, number>;
 
@@ -151,21 +152,8 @@ export function CatalogSectionClient({ data }: Props) {
       .map((p) => applyVendorOverrides(p));
   }, [data.products]);
 
-  const byProductId = useMemo(() => {
-    const map = new Map<string, FeedCatalogProduct>();
-    for (const product of products) map.set(toText(product.productId), product);
-    return map;
-  }, [products]);
-
-  const productIdByVendorCode = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const product of products) {
-      const vendor = toText(product.vendorCode);
-      const id = toText(product.productId);
-      if (vendor && id) map.set(vendor, id);
-    }
-    return map;
-  }, [products]);
+  /** N-051: индексы каталога — общий хук с каталогом внутри модалки. */
+  const { byProductId, productIdByVendorCode, resolveProduct } = useCatalogIndex(products);
 
   /**
    * N-051: состояние фильтров — общий хук с каталогом внутри модалки.
@@ -181,10 +169,6 @@ export function CatalogSectionClient({ data }: Props) {
    * T-031: корзина общая с модалкой (`lightingDraft`), локального состояния нет —
    * счётчики страницы и калькулятора всегда совпадают, комплект не теряется.
    */
-  const resolveProduct = useCallback(
-    (productId: string) => byProductId.get(productId),
-    [byProductId]
-  );
   const lightingCart = useLightingCart(resolveProduct);
   const cartItems = lightingCart.cart;
 

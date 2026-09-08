@@ -17,7 +17,6 @@ import {
   applyLightingWithCeilingDiscount,
 } from "@/lib/lighting-formulas";
 import {
-  buildProductsIndex,
   detectSocket,
 } from "@/lib/feed2-products";
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
@@ -139,6 +138,7 @@ import {
 } from "@/components/lighting/CatalogPieces";
 import { buildStep1FooterAction, resolveStep1FooterAction } from "@/lib/lighting/step1-footer-action";
 import { useCatalogFilters } from "@/lib/lighting/use-catalog-filters";
+import { useCatalogIndex } from "@/lib/lighting/use-catalog-index";
 
 
 /* ─── MAIN COMPONENT ─── */
@@ -229,29 +229,19 @@ export function WizardStep1Lighting() {
   const { products: catalogProductsFromIndex } = useCatalogProducts();
   const products = catalogProductsFromIndex;
 
-  const productsById = useMemo(() => buildProductsIndex(products), [products]);
-
-  const productIdByVendorCode = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const p of products) { const vc = toText(p.vendorCode); const id = toText(p.productId); if (vc && id) m.set(vc, id); }
-    return m;
-  }, [products]);
+  /**
+   * N-051: индексы каталога — общий хук со страницей. Резолв понимает и
+   * productId, и артикул: форматы в фиде разные, и черновик мог прийти
+   * оттуда, где ключом был артикул.
+   */
+  const { byProductId: productsById, productIdByVendorCode, resolveProduct } =
+    useCatalogIndex(products);
 
   /**
    * T-031: единственный источник корзины — `lightingDraft` через общий хук.
    * Локального состояния и эффектов рехидратации/синхронизации больше нет:
    * позиции, добавленные на странице каталога, здесь уже на месте.
    */
-  const resolveProduct = useCallback(
-    (productId: string) => {
-      const direct = productsById.get(productId);
-      if (direct) return direct;
-      // Черновик мог прийти со страницы каталога, где ключом был артикул.
-      const byVendor = productIdByVendorCode.get(productId);
-      return byVendor ? productsById.get(byVendor) : undefined;
-    },
-    [productIdByVendorCode, productsById]
-  );
   const lightingCart = useLightingCart(resolveProduct);
   const cartItems = lightingCart.cart;
   // Стабильная ссылка — иначе каждый рендер пересоздаёт все зависимые колбэки.
