@@ -5,7 +5,6 @@ import {
   type LampSocket,
 } from "@/lib/catalog-ui-config";
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
-import { detectSocket, getRequiredLampSocket } from "@/lib/feed2-products";
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
 
 /**
@@ -84,28 +83,25 @@ export function calcMissingMounts(
 }
 
 /** Доступные лампы по цоколям, от дешёвых к дорогим — первая и есть «самая доступная». */
-export function groupLampsBySocket(products: readonly FeedCatalogProduct[]): LampsBySocket {
-  const base = products
-    .filter((p) => p.kind === "LAMP" && p.available !== false && toNumber(p.priceRub) > 0)
-    .sort((a, b) => toNumber(a.priceRub) - toNumber(b.priceRub));
+/**
+ * N-051: реализация одна — в `cart-derived.ts`.
+ *
+ * Здесь лежала вторая копия, отличавшаяся тем, что фильтр доступности был
+ * выписан вручную (`kind === "LAMP" && available !== false && priceRub > 0`)
+ * вместо общего предиката `isLamp`. Поведение совпадало, но любая правка
+ * правила доступности чинилась бы только в одном из двух мест.
+ */
+export { groupLampOptionsBySocket as groupLampsBySocket } from "@/lib/lighting/cart-derived";
 
-  const bySocket: LampsBySocket = { GX53: [], MR16: [], GU10: [] };
-  for (const socket of LAMP_SOCKETS) {
-    bySocket[socket] = base.filter((p) => detectSocket(p) === socket);
-  }
-  return bySocket;
-}
-
-/** Сколько ламп каждого цоколя требуют выбранные светильники. */
-export function calcLampRequiredBySocket(entries: readonly CartEntry[]): Record<LampSocket, number> {
-  const required = emptyBySocket();
-  for (const entry of entries) {
-    const socket = getRequiredLampSocket(entry.product);
-    if (!socket) continue;
-    required[socket] += entry.qty;
-  }
-  return required;
-}
+/**
+ * N-051: реализация одна — в `cart-derived.ts`.
+ *
+ * Копия здесь отличалась только отсутствием явной проверки `kind === "LAMP"`.
+ * Разницы в поведении не было (`getRequiredLampSocket` для ламп и так
+ * возвращает null), но два места для одного правила — способ однажды
+ * разойтись.
+ */
+export { calcLampRequiredBySocket } from "@/lib/lighting/cart-derived";
 
 /**
  * Сколько ламп каждого цоколя уже лежит в корзине.

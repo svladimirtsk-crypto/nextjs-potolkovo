@@ -68,7 +68,7 @@ describe("Лампы по цоколям", () => {
   it("предупреждение о нехватке GU10 гаснет, когда лампы добавлены", () => {
     const grouped = groupLampsBySocket(lamps);
     const fixture = product({ productId: "f1", name: "Светильник цоколь GU10", kind: "SPOT_FIXTURE" });
-    const required = calcLampRequiredBySocket([{ product: fixture, qty: 2 }]);
+    const required = calcLampRequiredBySocket([{ productId: "f1", product: fixture, qty: 2 }]);
     expect(required.GU10).toBe(2);
 
     const before = calcMissingLamps(required, calcLampCurrentBySocket({}, grouped), grouped);
@@ -80,7 +80,7 @@ describe("Лампы по цоколям", () => {
   });
 
   it("лампа не требует лампы — бесконечного добивания 1:1 нет", () => {
-    expect(calcLampRequiredBySocket([{ product: lamp("gx-cheap", "GX53", 100), qty: 5 }]).GX53).toBe(0);
+    expect(calcLampRequiredBySocket([{ productId: "gx-cheap", product: lamp("gx-cheap", "GX53", 100), qty: 5 }]).GX53).toBe(0);
   });
 
   it("без подходящей лампы в каталоге отдаёт null вместо кнопки", () => {
