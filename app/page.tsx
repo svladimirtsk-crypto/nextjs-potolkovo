@@ -21,16 +21,18 @@ export const metadata: Metadata = {
     title: homepage.metadata.ogTitle ?? homepage.metadata.title,
     description: homepage.metadata.ogDescription ?? homepage.metadata.description,
     url: homepage.metadata.canonicalPath,
-    images: ogAsset
-      ? [
-          {
-            url: ogAsset.src,
-            width: ogAsset.width,
-            height: ogAsset.height,
-            alt: ogAsset.alt,
-          },
-        ]
-      : undefined,
+    /**
+     * N-062: первым идёт кадр 1200×630 — соцсети берут первую подходящую
+     * картинку, и обрезать её им уже не придётся.
+     */
+    images: [
+      {
+        url: homepage.metadata.ogImageSrc,
+        width: homepage.metadata.ogImageWidth,
+        height: homepage.metadata.ogImageHeight,
+        alt: ogAsset?.alt ?? homepage.metadata.title,
+      },
+    ],
   },
 };
 

@@ -1,8 +1,24 @@
 import type { MetadataRoute } from "next";
 
+import pageDates from "@/data/page-dates.json";
 import { phase2Services } from "@/content/services";
 
 const BASE_URL = "https://potolkovo-msk.ru";
+
+/**
+ * N-062 (F-30): дата правки страницы, а не дата сборки.
+ *
+ * Раньше главная и privacy получали `new Date()`, и поисковик видел
+ * «изменилось» при каждом деплое. Если меняется всё и всегда — значит
+ * ничего. Даты собирает `scripts/build-page-dates.mjs` из истории git.
+ */
+function pageDate(route: string, fallback: Date): Date {
+  const raw = (pageDates as Record<string, string | undefined>)[route];
+  if (!raw) return fallback;
+
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? fallback : parsed;
+}
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
@@ -15,19 +31,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const staticPages: MetadataRoute.Sitemap = [
     {
       url: BASE_URL,
-      lastModified: now,
+      lastModified: pageDate("/", now),
       changeFrequency: "weekly",
       priority: 1,
     },
     {
       url: `${BASE_URL}/uslugi`,
-      lastModified: latestServiceUpdate,
+      // Хаб свежий настолько, насколько свежее из двух: правка кода или контента.
+      lastModified: pageDate("/uslugi", latestServiceUpdate),
       changeFrequency: "monthly",
       priority: 0.9,
     },
     {
       url: `${BASE_URL}/privacy`,
-      lastModified: now,
+      lastModified: pageDate("/privacy", now),
       changeFrequency: "yearly",
       priority: 0.2,
     },
