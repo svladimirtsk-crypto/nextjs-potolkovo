@@ -7,7 +7,7 @@ import { useCalculatorStore } from "@/lib/calculator/store";
 import type { CalculatorLeadSnapshot } from "@/lib/calculator/snapshot-types";
 import { normalizeQty } from "@/lib/lighting/product-predicates";
 import catalogImages from "@/data/catalog-images.json";
-import { ProductCard } from "./CatalogProductCard";
+import { CATALOG_PAGE_SIZE, CatalogGrid } from "@/components/lighting/CatalogGrid";
 import { CatalogFreshness } from "./CatalogFreshness";
 import { CatalogWarnings } from "./CatalogWarnings";
 import { CatalogFilterChipGroup, CatalogFilterChipsRow } from "@/components/lighting/CatalogFilterChips";
@@ -741,90 +741,30 @@ export function CatalogSectionClient({ data }: Props) {
         */}
         <CatalogFreshness updatedAt={toText(data.updatedAt)} />
 
-        {/* Products grid with "Показать ещё" */}
-        <div
-          id="catalog-panel"
-          role="tabpanel"
-          aria-labelledby={`catalog-tab-${section}`}
-          className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
-        >
-          {filteredProducts.slice(0, visibleCount).map((product) => {
-            const id = toText(product.productId);
-            const qty = toNumber(cartItems[id]);
-            const step = product.unit === "m" ? 0.5 : 1;
-
-            return (
-              <ProductCard
-                key={id}
-                product={product}
-                qty={qty}
-                onDec={() =>
-                  setCartItems((prev) => {
-                    const next = { ...prev };
-                    const nextQty = normalizeQty(qty - step, product.unit);
-                    if (nextQty <= 0) delete next[id];
-                    else next[id] = nextQty;
-                    return next;
-                  })
-                }
-                onInc={() => void incrementProduct(product, qty + step)}
-              />
-            );
-          })}
-        </div>
-
-        {/* "Показать ещё" button */}
-        {filteredProducts.length > visibleCount ? (
-          <div className="mt-6 text-center">
-            <button
-              type="button"
-              onClick={() => setVisibleCount((c) => c + 24)}
-              className="rounded-2xl border border-slate-300 bg-white px-8 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 hover:border-slate-400"
-            >
-              Показать ещё ({filteredProducts.length - visibleCount} из {filteredProducts.length})
-            </button>
-          </div>
-        ) : null}
-
-        {filteredProducts.length === 0 ? (
-          <div className="mt-6 rounded-[var(--radius-lg)] border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-            {searchMatches && searchMatchesBySection.length > 0 ? (
-              <>
-                <p className="font-semibold text-slate-950">
-                  В этом разделе ничего нет, но есть в других
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {searchMatches.map((match) => (
-                    <button
-                      key={match.id}
-                      type="button"
-                      onClick={() => {
-                        setSection(match.id);
-                        setVisibleCount(24);
-                      }}
-                      className="inline-flex min-h-11 items-center rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-4 text-sm font-semibold text-white hover:bg-[var(--color-accent-hover)]"
-                    >
-                      {match.label} ({match.count})
-                    </button>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <>
-                <p>Ничего не найдено.</p>
-                {query ? (
-                  <button
-                    type="button"
-                    onClick={() => setQuery("")}
-                    className="mt-3 inline-flex min-h-11 items-center rounded-[var(--radius-sm)] border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-800 hover:bg-slate-100"
-                  >
-                    Сбросить поиск
-                  </button>
-                ) : null}
-              </>
-            )}
-          </div>
-        ) : null}
+        <CatalogGrid
+          products={filteredProducts}
+          visibleCount={visibleCount}
+          onShowMore={() => setVisibleCount((c) => c + CATALOG_PAGE_SIZE)}
+          cartItems={cartItems}
+          onIncrement={(product, qty) => void incrementProduct(product, qty)}
+          onDecrement={(product, qty) =>
+            setCartItems((prev) => {
+              const next = { ...prev };
+              const id = toText(product.productId);
+              if (qty <= 0) delete next[id];
+              else next[id] = qty;
+              return next;
+            })
+          }
+          sectionId={section}
+          searchMatches={searchMatches && searchMatchesBySection.length > 0 ? searchMatches : []}
+          onPickSection={(id) => {
+            setSection(id);
+            setVisibleCount(CATALOG_PAGE_SIZE);
+          }}
+          query={query}
+          onResetQuery={() => setQuery("")}
+        />
 
         {/* Dependencies / warnings */}
         {selectedEntries.length > 0 ? (
