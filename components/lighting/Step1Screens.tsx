@@ -1,0 +1,509 @@
+"use client";
+
+import type { ReactNode } from "react";
+
+import { ThinProgress } from "@/components/lighting/CatalogPieces";
+import { ProductGrid } from "@/components/lighting/ProductPickerScreen";
+import type { LampSocket, TrackSystemId } from "@/lib/catalog-ui-config";
+import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
+import { toNumber } from "@/lib/feed2-snapshot-normalize";
+
+/**
+ * N-051 · Экраны Шага 1, вынесенные из `wizard-step1-lighting.tsx`.
+ *
+ * Компонент мастера был одним `return` с девятью инлайн-условиями на 750
+ * строк JSX. Разметка экранов не зависит от внутреннего состояния мастера —
+ * только от переданных данных, поэтому её можно держать отдельно.
+ */
+
+/**
+ * Экран «нет данных с Шага 0»: трек и точки не заданы, подбирать нечего.
+ *
+ * Раньше эта разметка была продублирована дословно в двух ветках — для шага
+ * `none` и для случая, когда у выбранного типа монтажа нет ни одной системы.
+ * Копии успели разойтись: в одной из них клик по «Открыть каталог» не помечал
+ * мастер тронутым, из-за чего подсказки комплектующих потом вели себя иначе.
+ */
+export function ManualPickScreen({
+  onOpenCatalog,
+  onSkipToSummary,
+}: {
+  onOpenCatalog: () => void;
+  onSkipToSummary: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+      <p className="font-semibold text-slate-950">Освещение можно подобрать вручную</p>
+      <p className="mt-1 leading-5">
+        На шаге потолка не задан трек или количество точечных светильников. Откройте каталог,
+        если хотите добавить свет, или сразу переходите к итогу.
+      </p>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={onOpenCatalog}
+          className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+        >
+          Открыть каталог
+        </button>
+        <button
+          type="button"
+          onClick={onSkipToSummary}
+          className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          К итогу →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Подпись под названием системы: чем она отличается на практике. */
+function systemHint(system: TrackSystemId): string {
+  if (system === "COLIBRI_220") return "220V · проще в подборе";
+  if (system === "CLARUS_48") return "48V · нужен блок питания";
+  return "Накладной · 220V";
+}
+
+/** Пояснение к выбору системы под тип монтажа с Шага 0. */
+function mountHint(trackMountType: "built-in" | "surface" | "none"): string {
+  if (trackMountType === "built-in") return "Для встроенного трека подойдут COLIBRI или CLARUS.";
+  if (trackMountType === "surface") return "Для накладного трека используем ART 220V.";
+  return "Система определит подходящие профили и светильники.";
+}
+
+export function TrackSystemScreen({
+  systems,
+  trackMountType,
+  systemLabel,
+  showNoTrackOption,
+  onChoose,
+  onNoTrack,
+  onSkipToSummary,
+}: {
+  systems: TrackSystemId[];
+  trackMountType: "built-in" | "surface" | "none";
+  systemLabel: (system: TrackSystemId) => string;
+  showNoTrackOption: boolean;
+  onChoose: (system: TrackSystemId) => void;
+  onNoTrack: () => void;
+  onSkipToSummary: () => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="rounded-2xl bg-slate-950 p-4 text-white">
+        <p className="text-sm font-semibold">Сначала выберите систему трека</p>
+        <p className="mt-1 text-xs text-white/70">{mountHint(trackMountType)}</p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        {systems.map((system) => {
+          // COLIBRI проще в монтаже, поэтому для встроенного трека советуем её.
+          const isRecommended = system === "COLIBRI_220" && trackMountType === "built-in";
+          return (
+            <button
+              key={system}
+              type="button"
+              onClick={() => onChoose(system)}
+              className={[
+                "rounded-2xl border-2 p-4 text-left transition-colors",
+                isRecommended
+                  ? "border-blue-400 bg-blue-50 hover:border-blue-600"
+                  : "border-slate-200 bg-white hover:border-slate-400",
+              ].join(" ")}
+            >
+              <p
+                className={
+                  isRecommended
+                    ? "text-sm font-semibold text-blue-900"
+                    : "text-sm font-semibold text-slate-950"
+                }
+              >
+                {systemLabel(system)}
+              </p>
+              <p className={isRecommended ? "mt-1 text-xs text-blue-700" : "mt-1 text-xs text-slate-500"}>
+                {systemHint(system)}
+                {isRecommended ? " · рекомендуется" : ""}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+
+      {showNoTrackOption ? (
+        <button
+          type="button"
+          onClick={onNoTrack}
+          className="w-full rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3 text-sm text-slate-600 hover:bg-slate-100"
+        >
+          Без трека — только точечные →
+        </button>
+      ) : null}
+
+      <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
+        <p className="font-medium text-slate-700">У меня уже есть освещение</p>
+        <p className="mt-1">Если всё куплено — можно пропустить подбор.</p>
+        <button
+          type="button"
+          onClick={onSkipToSummary}
+          className="mt-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+        >
+          Пропустить, к итогу →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Форматирование рублей для экранов подбора. */
+const fmtRub = (v: number): string => new Intl.NumberFormat("ru-RU").format(Math.round(v));
+
+/**
+ * Итоговый экран подбора: комплект собран, но перед переходом к смете
+ * показываем то, без чего свет не заработает.
+ */
+export function KitDoneScreen({
+  itemsCount,
+  regularTotal,
+  effectiveTotal,
+  missingMounts,
+  clarusPsuOptions,
+  onAddMount,
+  onPickClarusPsu,
+  onEditInCatalog,
+  onGoToSummary,
+}: {
+  itemsCount: number;
+  regularTotal: number;
+  effectiveTotal: number;
+  missingMounts: Array<{
+    fixtureVendorCode: string;
+    mountVendorCode: string;
+    fixtureName: string;
+    mountName: string;
+  }>;
+  /** Пусто, если блок питания уже выбран или CLARUS в наборе нет. */
+  clarusPsuOptions: Array<{ productId: string; name: string }>;
+  onAddMount: (fixtureVendorCode: string) => void;
+  onPickClarusPsu: (productId: string) => void;
+  onEditInCatalog: () => void;
+  onGoToSummary: () => void;
+}) {
+  const hasDiscount = regularTotal > 0 && regularTotal > effectiveTotal;
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+        <p className="text-sm font-semibold text-emerald-950">✓ Комплект собран</p>
+        <p className="mt-1 text-xs text-emerald-800">
+          {itemsCount} поз.
+          {regularTotal > 0 ? (
+            hasDiscount ? (
+              <>
+                {" · "}
+                <span className="line-through text-emerald-700/50">{fmtRub(regularTotal)} ₽</span>{" "}
+                <span className="font-semibold">{fmtRub(effectiveTotal)} ₽</span>
+              </>
+            ) : (
+              <> · {fmtRub(regularTotal)} ₽</>
+            )
+          ) : (
+            ""
+          )}
+        </p>
+      </div>
+
+      {missingMounts.map((item) => (
+        <div
+          key={`${item.fixtureVendorCode}-${item.mountVendorCode}`}
+          className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
+        >
+          <p className="font-semibold">Не хватает закладных</p>
+          <p className="mt-1 text-amber-900/80">
+            Для <span className="font-semibold">{item.fixtureName}</span> нужна{" "}
+            <span className="font-semibold">{item.mountName}</span>.
+          </p>
+          <button
+            type="button"
+            onClick={() => onAddMount(item.fixtureVendorCode)}
+            className="mt-2 rounded-xl bg-amber-700 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-800"
+          >
+            Добавить 1:1
+          </button>
+        </div>
+      ))}
+
+      {clarusPsuOptions.length > 0 ? (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-950">
+          <p className="font-semibold">Для CLARUS обязателен блок питания.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {clarusPsuOptions.map((psu) => (
+              <button
+                key={psu.productId}
+                type="button"
+                onClick={() => onPickClarusPsu(psu.productId)}
+                className="rounded-xl bg-rose-700 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-800"
+              >
+                {psu.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={onEditInCatalog}
+          className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          Изменить в каталоге
+        </button>
+        <button
+          type="button"
+          onClick={onGoToSummary}
+          className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+        >
+          К итогу →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Метры с одним знаком после запятой: «2,5 м», но «3 м». */
+const fmtMeters = (v: number): string =>
+  new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 }).format(v);
+
+/**
+ * T-032 · Автосборка профиля под требуемый метраж.
+ *
+ * Собрать трек из кусков разной длины вручную — задача, в которой легко
+ * ошибиться, поэтому предлагаем готовый план одним тапом и сразу показываем,
+ * сколько метров он перекрывает.
+ */
+export function AutoProfilePlanCard({
+  pieces,
+  totalRub,
+  discountedTotalRub,
+  totalMeters,
+  requiredMeters,
+  onApply,
+}: {
+  pieces: Array<{ pieceMeters: number; qty: number }>;
+  totalRub: number;
+  discountedTotalRub: number;
+  totalMeters: number;
+  requiredMeters: number;
+  onApply: () => void;
+}) {
+  const plan = pieces.map((p) => `${fmtMeters(p.pieceMeters)} м × ${p.qty}`).join(" + ");
+
+  return (
+    <div className="rounded-2xl border border-slate-300 bg-white p-4">
+      <p className="text-sm font-semibold text-slate-950">
+        Собрать автоматически: {plan} = {fmtRub(totalRub)} ₽
+      </p>
+      <p className="mt-1 text-xs text-slate-600">
+        С потолком: {fmtRub(discountedTotalRub)} ₽ · перекроет {fmtMeters(totalMeters)} м из{" "}
+        {fmtMeters(requiredMeters)} м
+      </p>
+      <button
+        type="button"
+        onClick={onApply}
+        className="mt-3 min-h-11 w-full rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800"
+      >
+        Собрать автоматически
+      </button>
+      <p className="mt-2 text-xs text-slate-500">Ниже можно поправить количество вручную.</p>
+    </div>
+  );
+}
+
+/**
+ * T-042 · Обязательные комплектующие с обоснованием каждой строки.
+ *
+ * Блок питания для CLARUS выделен отдельно: без него свет не включится, но
+ * запрещать переход нельзя — даём явно согласиться на «подберём при звонке».
+ */
+export function KitCompletionCard({
+  items,
+  psuMissing,
+  psuAcknowledged,
+  onAddAll,
+  onPsuAcknowledgedChange,
+}: {
+  items: Array<{ productId: string; name: string; qty: number; reason: string }>;
+  psuMissing: boolean;
+  psuAcknowledged: boolean;
+  onAddAll: () => void;
+  onPsuAcknowledgedChange: (value: boolean) => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4">
+      <p className="text-sm font-semibold text-amber-950">Комплектующие</p>
+      <p className="mt-1 text-xs text-amber-900">
+        Без этих позиций комплект не соберётся — добавил расчёт, количество можно поправить.
+      </p>
+      <ul className="mt-3 space-y-2">
+        {items.map((item) => (
+          <li key={item.productId} className="text-xs text-amber-950">
+            <span className="font-semibold">
+              {item.name} × {item.qty}
+            </span>
+            <span className="block text-amber-800">{item.reason}</span>
+          </li>
+        ))}
+      </ul>
+      <button
+        type="button"
+        onClick={onAddAll}
+        className="mt-3 min-h-11 w-full rounded-xl bg-amber-600 px-4 text-sm font-semibold text-white hover:bg-amber-700"
+      >
+        Добавить всё
+      </button>
+
+      {psuMissing ? (
+        <label className="mt-3 flex min-h-11 items-center gap-2 text-xs text-amber-950">
+          <input
+            type="checkbox"
+            checked={psuAcknowledged}
+            onChange={(e) => onPsuAcknowledgedChange(e.target.checked)}
+            className="h-4 w-4 accent-amber-600"
+          />
+          Блок питания подберём при звонке — идти к итогу без него
+        </label>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Необязательные дополнения к комплекту.
+ *
+ * Отличается от {@link KitCompletionCard} не только цветом: эти позиции ничего
+ * не блокируют, поэтому подаются нейтрально и без чекбоксов-исключений.
+ */
+export function RecommendedKitCard({
+  items,
+  onAddAll,
+}: {
+  items: Array<{ productId: string; name: string; qty: number; reason: string }>;
+  onAddAll: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-300 bg-white p-4">
+      <p className="text-sm font-semibold text-slate-950">Может пригодиться</p>
+      <ul className="mt-2 space-y-2">
+        {items.map((item) => (
+          <li key={item.productId} className="text-xs text-slate-700">
+            <span className="font-semibold">
+              {item.name} × {item.qty}
+            </span>
+            <span className="block text-slate-600">{item.reason}</span>
+          </li>
+        ))}
+      </ul>
+      <button
+        type="button"
+        onClick={onAddAll}
+        className="mt-3 min-h-11 w-full rounded-xl border border-slate-300 px-4 text-sm font-semibold text-slate-900 hover:border-slate-500"
+      >
+        Добавить всё
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Экран «Лампы» — по одной сетке на цоколь.
+ *
+ * Лампы считаются отдельно от светильников: один цоколь может требовать больше
+ * ламп, чем куплено корпусов, поэтому у каждой группы свой прогресс и своя
+ * кнопка «добить недостающие самыми доступными».
+ */
+export function LampsScreen({
+  sockets,
+  requiredBySocket,
+  currentBySocket,
+  productsBySocket,
+  cartItems,
+  discountPercent,
+  onAddCheapest,
+  onQtyChange,
+  onZoom,
+  footer,
+}: {
+  sockets: readonly LampSocket[];
+  requiredBySocket: Partial<Record<LampSocket, number>>;
+  currentBySocket: Partial<Record<LampSocket, number>>;
+  productsBySocket: Partial<Record<LampSocket, readonly FeedCatalogProduct[]>>;
+  cartItems: Record<string, number>;
+  discountPercent: number;
+  onAddCheapest: (socket: LampSocket) => void;
+  onQtyChange: (product: FeedCatalogProduct, qty: number) => void;
+  onZoom: (image: { src: string; alt: string }) => void;
+  footer: ReactNode;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3">
+        <p className="text-sm font-semibold text-amber-950">Лампы к светильникам</p>
+      </div>
+
+      {sockets.length === 0 ? (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+          Для выбранных светильников отдельные лампы не требуются.
+        </div>
+      ) : null}
+
+      {sockets.map((socket) => {
+        const required = toNumber(requiredBySocket[socket]);
+        const current = toNumber(currentBySocket[socket]);
+        const missing = Math.max(0, required - current);
+
+        return (
+          <div key={socket} className="space-y-2">
+            <div className="rounded-2xl border border-slate-200 bg-white p-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-950">Лампы {socket}</p>
+                  <p className="text-xs text-slate-600">
+                    Нужно {fmtRub(required)} шт., выбрано {fmtRub(current)} шт.
+                  </p>
+                </div>
+                {missing > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => onAddCheapest(socket)}
+                    className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                  >
+                    +{fmtRub(missing)} шт. доступных
+                  </button>
+                ) : (
+                  <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                    Готово
+                  </span>
+                )}
+              </div>
+              <div className="mt-2">
+                <ThinProgress current={current} required={required} unit="шт." />
+              </div>
+            </div>
+
+            <ProductGrid
+              products={productsBySocket[socket] ?? []}
+              cartItems={cartItems}
+              onQtyChange={onQtyChange}
+              onZoom={onZoom}
+              discountPercent={discountPercent}
+              emptyText="Подходящие лампы сейчас не найдены в каталоге. Я уточню вариант при звонке."
+            />
+          </div>
+        );
+      })}
+
+      {footer}
+    </div>
+  );
+}

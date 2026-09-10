@@ -1,0 +1,80 @@
+import { servicePriceAnchor } from "@/content/pricing";
+import Link from "next/link";
+import type { ServicePageContent } from "@/content/services";
+import { getRelatedServiceLinks, servicePageContent } from "@/content/services";
+import { Container } from "@/components/ui/container";
+import { relatedServiceReason } from "@/lib/service-page-actions";
+
+type ServiceRelatedServicesProps = {
+  service: ServicePageContent;
+};
+
+export function ServiceRelatedServices({
+  service,
+}: ServiceRelatedServicesProps) {
+  const related = getRelatedServiceLinks(service.slug);
+
+  if (!related.length) {
+    return null;
+  }
+
+  return (
+    <section
+      aria-labelledby={`${service.slug}-related-title`}
+      className="bg-white py-16 sm:py-20"
+    >
+      <Container>
+        <div className="rounded-[2rem] border border-slate-200 bg-slate-50 p-6 sm:p-8">
+          <div className="max-w-3xl">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Другие услуги
+            </p>
+
+            <h2
+              id={`${service.slug}-related-title`}
+              className="mt-4 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl"
+            >
+              Что ещё часто выбирают вместе с этой услугой
+            </h2>
+
+            <p className="mt-4 text-base leading-7 text-slate-600 sm:text-lg">
+              Если вы сравниваете решения или хотите собрать комплексный вариант,
+              посмотрите смежные услуги ниже.
+            </p>
+          </div>
+
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {related.map((item) => (
+              <Link
+                key={item.slug}
+                href={item.href}
+                className="group rounded-[1.5rem] border border-slate-200 bg-white p-5 transition-colors hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+              >
+                <p className="text-lg font-semibold text-slate-950">
+                  {item.label}
+                </p>
+                {/* T-046: ценовой якорь и живое описание вместо общей заглушки */}
+                <p className="mt-1 text-sm font-semibold text-slate-700">
+                  {servicePriceAnchor(item.slug).label}
+                </p>
+                {/* N-032 (F-37): зачем это берут вместе — под ценой. */}
+                {relatedServiceReason(service.slug, item.slug) ? (
+                  <p className="mt-2 rounded-xl bg-slate-50 px-3 py-2 text-sm leading-6 text-slate-700">
+                    {relatedServiceReason(service.slug, item.slug)}
+                  </p>
+                ) : (
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    {item.shortDescription}
+                  </p>
+                )}
+                <span className="mt-4 inline-flex text-sm font-semibold text-slate-950 transition-transform group-hover:translate-x-1">
+                  Открыть →
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </Container>
+    </section>
+  );
+}

@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +40,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# N-020: локальные превью каталога (public/catalog, ~12 МБ) КОММИТЯТСЯ.
+# Иначе прод собирается без фото: сборка намеренно не ходит на хост
+# поставщика, а 34 из 547 обложек у него отдают 404.
+# Обновление — `npm run build:catalog-images` вместе с обновлением фида.
+# Если каталог вырастет за ~100 МБ — переходить на Git LFS.
+test-results/
+playwright-report/
+
+# N-041: отчёт о дельте цен — только для тела PR, в репозиторий не едет.
+feed-diff.md

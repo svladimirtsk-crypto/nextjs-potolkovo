@@ -1,0 +1,377 @@
+import { describe, expect, it } from "vitest";
+
+import { pricing } from "@/content/pricing";
+import { calcProgress, maxParamsForScenario, paramPosition } from "@/lib/calculator/fsm";
+import { ALL_PARAMS } from "@/lib/step0-fsm";
+import {
+  selectBackVisible,
+  selectExtraInstall,
+  selectFooterAction,
+  selectOrderIntent,
+  selectRequirements,
+  selectRequirementsFromBreakdown,
+  selectSummaryReady,
+  selectTotals,
+  type LightingSelection,
+  type SelectorRoom,
+} from "@/lib/calculator/selectors";
+import { getEnabledParams } from "@/lib/step0-fsm";
+
+function makeRoom(id: string, patch: Partial<SelectorRoom> = {}): SelectorRoom {
+  return {
+    id,
+    label: `Комната ${id}`,
+    area: 18,
+    ceilingType: "standard",
+    shadowEnabled: false,
+    shadowLength: 18,
+    floatingEnabled: false,
+    floatingLength: 18,
+    lightLinesEnabled: false,
+    lightLinesLength: 2,
+    corniceType: "none",
+    corniceLength: 2,
+    corniceLightingEnabled: false,
+    corniceLightingLength: 2,
+    corniceLightingPowerSupplies: 1,
+    trackType: "none",
+    trackLength: 2,
+    chandeliersEnabled: false,
+    chandeliersCount: 1,
+    lightsEnabled: false,
+    lightsCount: 6,
+    ...patch,
+  };
+}
+
+const NO_LIGHTING: LightingSelection = {
+  regularTotalRub: 0,
+  effectiveTotalRub: 0,
+  itemsCount: 0,
+  selectedPointsQty: 0,
+  selectedTrackMeters: 0,
+  discountMode: "none",
+};
+
+describe("T-030 - selectRequirements", () => {
+  it("summiruet trek i tochki po komnatam", () => {
+    const requirements = selectRequirements([
+      makeRoom("r1", { trackType: "built-in", trackLength: 10, lightsEnabled: true, lightsCount: 6 }),
+      makeRoom("r2", { trackType: "surface", trackLength: 4, lightsEnabled: true, lightsCount: 4 }),
+    ]);
+
+    expect(requirements.trackMeters).toBe(14);
+    expect(requirements.points).toBe(10);
+    expect(requirements.lamps).toBe(10);
+    expect(requirements.rooms).toHaveLength(2);
+  });
+
+  it("trackMountType: vstroennyy silnee nakladnogo", () => {
+    expect(
+      selectRequirements([
+        makeRoom("r1", { trackType: "surface", trackLength: 4 }),
+        makeRoom("r2", { trackType: "built-in", trackLength: 4 }),
+      ]).trackMountType
+    ).toBe("built-in");
+
+    expect(
+      selectRequirements([makeRoom("r1", { trackType: "surface", trackLength: 4 })]).trackMountType
+    ).toBe("surface");
+
+    expect(selectRequirements([makeRoom("r1")]).trackMountType).toBe("none");
+  });
+
+  it("vyklyuchennyy svet i trek ne popadayut v trebovaniya", () => {
+    const requirements = selectRequirements([
+      makeRoom("r1", { trackType: "none", trackLength: 10, lightsEnabled: false, lightsCount: 8 }),
+    ]);
+
+    expect(requirements.trackMeters).toBe(0);
+    expect(requirements.points).toBe(0);
+  });
+
+  it("trekovye svetilniki - orientir-diapazon, a ne tochnoe chislo", () => {
+    const { trackFixtures } = selectRequirements([
+      makeRoom("r1", { trackType: "built-in", trackLength: 10 }),
+    ]);
+
+    expect(trackFixtures.min).toBeLessThan(trackFixtures.max);
+    expect(trackFixtures.min).toBeGreaterThan(0);
+  });
+
+  it("iz roomBreakdown poluchaetsya to zhe, chto iz komnat", () => {
+    const fromRooms = selectRequirements([
+      makeRoom("r1", { trackType: "built-in", trackLength: 10, lightsEnabled: true, lightsCount: 6 }),
+    ]);
+    const fromBreakdown = selectRequirementsFromBreakdown([
+      {
+        id: "r1",
+        label: "Комната r1",
+        area: 18,
+        totalRub: 0,
+        ceilingTypeLabel: "Простой потолок",
+        trackLabel: "Встроенный трек",
+        trackLength: 10,
+        lightsCount: 6,
+      },
+    ]);
+
+    expect(fromBreakdown.trackMeters).toBe(fromRooms.trackMeters);
+    expect(fromBreakdown.points).toBe(fromRooms.points);
+    expect(fromBreakdown.trackMountType).toBe("built-in");
+  });
+});
+
+describe("T-030 - doschet montazha", () => {
+  const requirements = selectRequirements([
+    makeRoom("r1", { trackType: "built-in", trackLength: 10, lightsEnabled: true, lightsCount: 6 }),
+    makeRoom("r2", { lightsEnabled: true, lightsCount: 6 }),
+  ]);
+
+  it("12 korpusov na 12 zalozhennyh tochek -> 0", () => {
+    const extra = selectExtraInstall(requirements, { ...NO_LIGHTING, selectedPointsQty: 12 });
+    expect(extra.rub).toBe(0);
+    expect(extra.lines).toEqual([]);
+  });
+
+  it("14 korpusov -> 2 x 750 = 1500", () => {
+    const extra = selectExtraInstall(requirements, { ...NO_LIGHTING, selectedPointsQty: 14 });
+    expect(extra.rub).toBe(2 * pricing.spotInstall);
+    expect(extra.lines[0]).toContain("2 светильников");
+  });
+
+  it("menshe korpusov, chem zalozheno -> ne vychitaem", () => {
+    expect(selectExtraInstall(requirements, { ...NO_LIGHTING, selectedPointsQty: 4 }).rub).toBe(0);
+  });
+
+  it("lishnie metry treka schitayutsya po stavke montazha", () => {
+    const extra = selectExtraInstall(requirements, { ...NO_LIGHTING, selectedTrackMeters: 13 });
+    expect(extra.rub).toBe(3 * pricing.track.builtInPerM);
+  });
+});
+
+describe("T-030 - selectTotals", () => {
+  it("minimalnyy zakaz podnimaet malenkiy raschet", () => {
+    const totals = selectTotals([makeRoom("r1", { area: 5 })]);
+
+    expect(totals.ceilingRaw).toBeLessThan(pricing.minimumOrderRub);
+    expect(totals.ceilingApplied).toBe(pricing.minimumOrderRub);
+    expect(totals.minimumApplied).toBe(true);
+  });
+
+  it("multi-room summiruetsya", () => {
+    const one = selectTotals([makeRoom("r1", { area: 30 })]).ceilingRaw;
+    const two = selectTotals([makeRoom("r1", { area: 30 }), makeRoom("r2", { area: 30 })]).ceilingRaw;
+
+    expect(two).toBe(one * 2);
+  });
+
+  it("invariant: grand = potolok + doschet + svet so skidkoy", () => {
+    const lighting: LightingSelection = {
+      regularTotalRub: 20000,
+      effectiveTotalRub: 15000,
+      itemsCount: 3,
+      selectedPointsQty: 20,
+      selectedTrackMeters: 0,
+      discountMode: "with-ceiling",
+    };
+    const rooms = [makeRoom("r1", { area: 30, lightsEnabled: true, lightsCount: 6 })];
+    const totals = selectTotals(rooms, lighting);
+
+    expect(totals.grand).toBe(
+      totals.ceilingApplied + totals.extraInstallRub + totals.lightingEffective
+    );
+    expect(totals.discountPct).toBe(pricing.lightingDiscount.withCeilingPct);
+    // 20 корпусов против 6 заложенных → досчёт за 14 светильников.
+    expect(totals.extraInstallRub).toBe(14 * pricing.spotInstall);
+  });
+
+  it("pustoy raschet daet nuli", () => {
+    const totals = selectTotals([]);
+    expect(totals).toMatchObject({ ceilingRaw: 0, ceilingApplied: 0, grand: 0 });
+  });
+
+  it("skidka lighting-only - 10 procentov", () => {
+    const totals = selectTotals([], { ...NO_LIGHTING, itemsCount: 1, discountMode: "lighting-only" });
+    expect(totals.discountPct).toBe(pricing.lightingDiscount.lightingOnlyPct);
+  });
+});
+
+describe("T-030 - gotovnost i intent", () => {
+  it("summary gotov, esli est komnaty ili svet", () => {
+    expect(selectSummaryReady([], NO_LIGHTING)).toBe(false);
+    expect(selectSummaryReady([makeRoom("r1")], NO_LIGHTING)).toBe(true);
+    expect(selectSummaryReady([], { ...NO_LIGHTING, itemsCount: 2 })).toBe(true);
+  });
+
+  it("intent vyvoditsya iz sostava rascheta", () => {
+    expect(selectOrderIntent([makeRoom("r1")], NO_LIGHTING)).toBe("ceiling_only");
+    expect(selectOrderIntent([], { ...NO_LIGHTING, itemsCount: 2 })).toBe("lighting_only");
+    expect(selectOrderIntent([makeRoom("r1")], { ...NO_LIGHTING, itemsCount: 2 })).toBe(
+      "lighting_with_ceiling"
+    );
+  });
+});
+
+describe("T-030 - futer Shaga 0", () => {
+  it("podpisi knopki po ekranam", () => {
+    expect(selectFooterAction({ t: "scenario" }, { scope: null })?.label).toBe(
+      "Выберите вариант выше"
+    );
+    expect(selectFooterAction({ t: "roomPicker", mode: "first" }, { scope: null })).toEqual({
+      label: "Выберите помещение выше",
+      disabled: true,
+    });
+    expect(
+      selectFooterAction({ t: "param", roomId: "r1", param: "area" }, { scope: "room" })?.label
+    ).toBe("Подтвердить площадь →");
+    // На сводке кнопки задаёт сам экран.
+    expect(selectFooterAction({ t: "summary" }, { scope: "room" })).toBeNull();
+  });
+
+  it("nazad skryta na scenarii i na pervom avtoproskochennom ekrane", () => {
+    expect(
+      selectBackVisible({ t: "scenario" }, { historyLength: 1, scenarioPreselected: false })
+    ).toBe(false);
+    expect(
+      selectBackVisible({ t: "roomPicker", mode: "first" }, { historyLength: 1, scenarioPreselected: true })
+    ).toBe(false);
+    expect(
+      selectBackVisible({ t: "roomPicker", mode: "first" }, { historyLength: 2, scenarioPreselected: true })
+    ).toBe(true);
+  });
+});
+
+describe("T-030 - progress s fiksirovannym M", () => {
+  it("znamenatel ne zavisit ot vklyuchennyh opciy", () => {
+    const scenario = "modern" as const;
+    const short = getEnabledParams({
+      scenario,
+      shadowEnabled: false,
+      floatingEnabled: false,
+      showModernOptions: true,
+    });
+    const long = getEnabledParams({
+      scenario,
+      shadowEnabled: true,
+      floatingEnabled: true,
+      showModernOptions: true,
+    });
+
+    const a = calcProgress({ t: "roomPicker", mode: "first" }, { scenario, enabledParams: short });
+    const b = calcProgress({ t: "roomPicker", mode: "first" }, { scenario, enabledParams: long });
+
+    // Включение теневого профиля не должно менять знаменатель полоски.
+    expect(a.total).toBe(b.total);
+  });
+
+  it("standard koroche modern", () => {
+    expect(maxParamsForScenario("standard")).toBeLessThan(maxParamsForScenario("modern"));
+  });
+
+  it("progress rastet po hodu kviza i ne prevyshaet total", () => {
+    const scenario = "standard" as const;
+    const enabledParams = getEnabledParams({
+      scenario,
+      shadowEnabled: false,
+      floatingEnabled: false,
+      showModernOptions: false,
+    });
+    const ctx = { scenario, enabledParams };
+
+    const start = calcProgress({ t: "scenario" }, ctx);
+    const middle = calcProgress({ t: "param", roomId: "r1", param: "cornice" }, ctx);
+    const end = calcProgress({ t: "summary" }, ctx);
+
+    expect(start.done).toBe(0);
+    expect(middle.done).toBeGreaterThan(start.done);
+    expect(end.done).toBeGreaterThan(middle.done);
+    expect(end.done).toBeLessThanOrEqual(end.total);
+  });
+
+  it("paramPosition daet nomer voprosa", () => {
+    const scenario = "standard" as const;
+    const enabledParams = getEnabledParams({
+      scenario,
+      shadowEnabled: false,
+      floatingEnabled: false,
+      showModernOptions: false,
+    });
+
+    expect(paramPosition({ t: "param", roomId: "r1", param: "area" }, { scenario, enabledParams }))
+      .toEqual({ index: 1, total: maxParamsForScenario(scenario) });
+    expect(paramPosition({ t: "summary" }, { scenario, enabledParams })).toBeNull();
+  });
+});
+
+/**
+ * N-050 · Приёмка выноса состояния Шага 0 в стор.
+ *
+ * Модалка рисует футер по опубликованному состоянию, поэтому подпись обязана
+ * определяться экраном однозначно и целиком — любая «дырка» в селекторе
+ * превращается в кнопку без текста или в чужую подпись на экране.
+ */
+describe("N-050 · футер Шага 0 определяется экраном", () => {
+  it("у каждого параметра есть своя подпись кнопки", () => {
+    const labels = new Map<string, string>();
+
+    for (const param of ALL_PARAMS) {
+      const spec = selectFooterAction({ t: "param", roomId: "r1", param }, { scope: "room" });
+      expect(spec, param).not.toBeNull();
+      expect(spec!.label.trim().length, param).toBeGreaterThan(0);
+      labels.set(param, spec!.label);
+    }
+
+    /**
+     * Подписи не обязаны быть уникальными все, но «Подтвердить» без уточнения
+     * на каждом шаге — это тот самый случай, когда человек не понимает, что
+     * именно подтверждает.
+     */
+    expect(new Set(labels.values()).size).toBeGreaterThan(1);
+  });
+
+  it("смена экрана меняет подпись — иначе рассинхрон незаметен", () => {
+    /**
+     * Регрессия N-050: подпись публиковалась в useEffect, то есть после
+     * отрисовки, и один кадр экран с кнопкой не совпадали — «Карнизы» с
+     * кнопкой «Подтвердить тип». Playwright кликал быстрее кадра и повторно
+     * подтверждал предыдущий шаг. Тест фиксирует, что сами по себе эти два
+     * экрана селектор различает: если подписи совпадут, e2e-проверка
+     * рассинхрона перестанет что-либо ловить.
+     */
+    const ceiling = selectFooterAction(
+      { t: "param", roomId: "r1", param: "ceiling" },
+      { scope: "room" }
+    );
+    const cornice = selectFooterAction(
+      { t: "param", roomId: "r1", param: "cornice" },
+      { scope: "room" }
+    );
+
+    expect(ceiling?.label).not.toBe(cornice?.label);
+  });
+
+  it("селектор — чистая функция: тот же экран даёт тот же результат", () => {
+    const screen = { t: "param", roomId: "r1", param: "area" } as const;
+    expect(selectFooterAction(screen, { scope: "room" })).toEqual(
+      selectFooterAction(screen, { scope: "room" })
+    );
+  });
+
+  it("«назад» скрыт только там, откуда возвращаться некуда", () => {
+    /**
+     * Кнопка прячется в двух случаях: экран выбора сценария (он первый) и
+     * первый экран, автоматически пропущенный пресетом со страницы услуги —
+     * там «назад» вернуло бы на экран, которого человек не видел.
+     * Во всех остальных случаях она есть, включая historyLength === 1 без
+     * пресета: пользователь пришёл сюда сам и вправе выйти тем же путём.
+     */
+    const screen = { t: "param", roomId: "r1", param: "cornice" } as const;
+    expect(selectBackVisible(screen, { historyLength: 1, scenarioPreselected: false })).toBe(true);
+    expect(selectBackVisible(screen, { historyLength: 1, scenarioPreselected: true })).toBe(false);
+    expect(selectBackVisible(screen, { historyLength: 3, scenarioPreselected: true })).toBe(true);
+    expect(selectBackVisible({ t: "scenario" }, { historyLength: 5, scenarioPreselected: false })).toBe(
+      false
+    );
+  });
+});

@@ -5,22 +5,46 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "check:bundle": "node scripts/check-bundle-budget.mjs",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:flow": "node scripts/test-calculator-flow.mjs",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "validate:catalog": "node scripts/validate-catalog.mjs",
+    "prebuild": "node scripts/validate-catalog.mjs && node scripts/build-catalog-index.mjs && node scripts/check-images.mjs && node scripts/check-catalog-images.mjs && node scripts/check-file-size.mjs && node scripts/check-effect-setstate.mjs && node scripts/check-availability.mjs && node scripts/build-og-image.mjs && node scripts/build-page-dates.mjs",
+    "build:catalog-index": "node scripts/build-catalog-index.mjs",
+    "check:legal": "node scripts/check-legal-fields.mjs",
+    "build:images": "node scripts/build-images.mjs",
+    "build:catalog-images": "node scripts/build-catalog-images.mjs",
+    "check:images": "node scripts/check-images.mjs",
+    "check:env": "node scripts/check-env.mjs",
+    "test:e2e:ui": "playwright test --ui",
+    "check:catalog-images": "node scripts/check-catalog-images.mjs",
+    "check:file-size": "node scripts/check-file-size.mjs"
   },
   "dependencies": {
+    "drizzle-orm": "^0.45.2",
     "next": "16.1.6",
+    "pg": "^8.23.0",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "lefthook": "^2.1.12",
+    "sharp": "^0.35.4",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.11",
+    "zod": "^4.5.4"
   }
 }

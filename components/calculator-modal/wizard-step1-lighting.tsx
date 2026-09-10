@@ -1,0 +1,1395 @@
+"use client";
+
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+
+import {
+  trackLightingSearch,
+  trackLightingStepView,
+  trackLightingSystemSelected,
+} from "@/lib/analytics";
+
+import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
+import { trackLightingCartChanged } from "@/lib/analytics";
+import {
+  LIGHTING_ONLY_DISCOUNT_PERCENT,
+  LIGHTING_WITH_CEILING_DISCOUNT_PERCENT,
+  applyLightingOnlyDiscount,
+  applyLightingWithCeilingDiscount,
+} from "@/lib/lighting-formulas";
+import {
+  detectSocket,
+} from "@/lib/feed2-products";
+import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
+import { resolveInitialLightingStep, type WizardStep } from "@/lib/lighting/resolve-initial-step";
+import { pricing } from "@/content/pricing";
+import { useCatalogProducts } from "@/lib/lighting/use-catalog-products";
+import { useLightingCart } from "@/lib/lighting/use-lighting-cart";
+import { completeKit } from "@/lib/lighting/kit-rules";
+import {
+  autoAssembleProfiles,
+  clearAllTrackProducts,
+  clearIncompatibleSystem as clearIncompatibleSystem_,
+  fixturesHintForMeters,
+  isTrackSystemId,
+} from "@/lib/lighting/kit-rules";
+
+import {
+  visibleCatalogSections,
+  POINT_SUBTYPES,
+  POINT_TO_MOUNT_VENDOR_CODE,
+  CLARUS_PSU_VENDOR_CODES,
+  REMOVED_COLIBRI_VENDOR_CODES,
+  TRACK_GROUPS,
+  TRACK_PROFILE_WHITELIST,
+  TRACK_SYSTEMS,
+  LAMP_SOCKETS,
+  type PointSubtypeId,
+  type TrackSystemId,
+  type LampSocket,
+} from "@/lib/catalog-ui-config";
+
+import {
+  ART_TRACK_PROFILE_VENDOR_WHITELIST,
+} from "@/lib/vendor-code-overrides";
+import { inferPieceLengthMeters } from "@/lib/product-length-meters";
+
+import {
+  isLamp,
+  isMountsOrGrilles,
+  isPanelProduct,
+  matchesPointSubtype,
+  normalizeQty,
+} from "@/lib/lighting/product-predicates";
+import {
+  buildAccessorySuggestions,
+  buildCartEntries,
+  calcClarusPsuQty,
+  calcLampCurrentBySocket,
+  calcLampCurrentTotal,
+  calcLampRequiredBySocket,
+  calcLampRequiredTotal,
+  calcLampSocketsToShow,
+  calcMissingLamps,
+  calcMissingMounts,
+  calcSelectedPointQty,
+  calcSelectedTrackMeters,
+  groupLampOptionsBySocket,
+  hasClarusInCart as hasClarusInCartFn,
+} from "@/lib/lighting/cart-derived";
+import {
+  calcOrphanTrackMeters,
+  decideOrphanTrackAction,
+  selectOrphanTrackEntries,
+} from "@/lib/lighting/orphan-track";
+import {
+} from "@/components/lighting/Step1Screens";
+import { CatalogBrowse } from "@/components/lighting/CatalogBrowse";
+import { RecommendationsTab } from "@/components/lighting/RecommendationsTab";
+import { CatalogFilterChipGroup, CatalogFilterChipsRow } from "@/components/lighting/CatalogFilterChips";
+import { SelectedList } from "@/components/lighting/SelectedList";
+import { pointProgressBySocket, pointsOfKind, type PointKindId } from "@/lib/lighting/popular-points";
+import { useCalculatorModal } from "./calculator-modal-context";
+import { useCalculatorStore } from "@/lib/calculator/store";
+
+/* ─── helpers ─── */
+
+type Tab = "recommendations" | "catalog";
+type CatalogView = "selected" | "browse";
+type CartItems = Record<string, number>;
+
+function fmt(v: number): string { return new Intl.NumberFormat("ru-RU").format(Math.round(v)); }
+function fmtM(v: number): string { return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 }).format(v); }
+
+
+
+
+
+
+
+
+function pickAttrs(p: FeedCatalogProduct): { label: string; value: string }[] {
+  const a = p.keyAttributes?.length ? p.keyAttributes : p.params;
+  return (a ?? []).slice(0, 4).map((x) => ({ label: toText(x.label), value: toText(x.value) }));
+}
+
+function getScrollParent(node: HTMLElement | null): HTMLElement | null {
+  if (!node || typeof window === "undefined") return null;
+
+  let parent = node.parentElement;
+  while (parent) {
+    const style = window.getComputedStyle(parent);
+    const overflowY = style.overflowY;
+    const canScroll =
+      (overflowY === "auto" || overflowY === "scroll") &&
+      parent.scrollHeight > parent.clientHeight;
+
+    if (canScroll) return parent;
+    parent = parent.parentElement;
+  }
+
+  return (document.scrollingElement as HTMLElement | null) ?? null;
+}
+
+/* ─── small UI components ─── */
+
+import {
+  ImageQuickPreview,
+  OrphanTrackNotice,
+  TabBtn,
+} from "@/components/lighting/CatalogPieces";
+import { buildStep1FooterAction, resolveStep1FooterAction } from "@/lib/lighting/step1-footer-action";
+import { useCatalogFilters } from "@/lib/lighting/use-catalog-filters";
+import { useCatalogIndex } from "@/lib/lighting/use-catalog-index";
+
+
+/* ─── MAIN COMPONENT ─── */
+
+export function WizardStep1Lighting() {
+  const { snapshot } = useCalculatorStore();
+  const {
+    lightingDraft, options,
+    step1CatalogView, setStep1CatalogView,
+    setStep1FooterAction,
+    goToStep, showCeilingInUi,
+    lightingDiscountMode, lightingEffectiveTotal, lightingRegularTotal,
+  } = useCalculatorModal();
+  const hasCeilingContext = Boolean(showCeilingInUi || toNumber(snapshot?.total) > 0 || (snapshot?.roomBreakdown?.length ?? 0) > 0);
+
+  /**
+   * T-031: вкладка и режим каталога больше не синхронизируются эффектами.
+   * Базовое значение выводится из `options` и `step1CatalogView` (общий контекст),
+   * а ручной выбор пользователя хранится как override и сбрасывается, когда
+   * меняется сам базис — то есть при новом открытии или переходе шага.
+   */
+  const baseTab = useMemo<Tab>(() => {
+    if (step1CatalogView) return "catalog";
+    if (options?.initialLightingTab === "catalog") return "catalog";
+    if (options?.initialLightingTab === "recommendations") return "recommendations";
+    return options?.entryMode === "lighting-first" ? "catalog" : "recommendations";
+  }, [options?.entryMode, options?.initialLightingTab, step1CatalogView]);
+
+  const baseCatalogView = useMemo<CatalogView>(() => {
+    if (step1CatalogView) return step1CatalogView;
+    return options?.initialLightingView === "selected" ? "selected" : "browse";
+  }, [options?.initialLightingView, step1CatalogView]);
+
+  const [tabOverride, setTabOverride] = useState<{ base: string; tab: Tab; view: CatalogView } | null>(null);
+  const baseKey = `${baseTab}|${baseCatalogView}`;
+  const override = tabOverride?.base === baseKey ? tabOverride : null;
+
+  const activeTab = override?.tab ?? baseTab;
+  const catalogView = override?.view ?? baseCatalogView;
+
+  const setActiveTab = useCallback(
+    (tab: Tab) => setTabOverride((prev) => ({
+      base: baseKey,
+      tab,
+      view: prev?.base === baseKey ? prev.view : baseCatalogView,
+    })),
+    [baseCatalogView, baseKey]
+  );
+
+  const setCatalogView = useCallback(
+    (view: CatalogView) => setTabOverride((prev) => ({
+      base: baseKey,
+      tab: prev?.base === baseKey ? prev.tab : baseTab,
+      view,
+    })),
+    [baseKey, baseTab]
+  );
+
+  /* ─── Catalog filters ─── */
+  /**
+   * N-051: фильтры каталога — тот же хук, что и на странице каталога.
+   * Раньше здесь стояли шесть собственных useState, и правила сброса запроса
+   * успели разойтись с оригиналом.
+   */
+  const catalogFilters = useCatalogFilters();
+  const { section, trackSystem, trackGroup, pointSubtype, lampSocket, query } = catalogFilters;
+
+  /**
+   * T-043: «Люстры» и «Подсветка карниза» показываются только тем, кто ответил
+   * «да» на Шаге 0 — остальным они лишний шум в и без того длинном каталоге.
+   */
+  const needsChandeliers = Boolean(snapshot?.derivedInputs?.chandeliersEnabled);
+  const needsCorniceLighting = Boolean(snapshot?.derivedInputs?.corniceLightingEnabled);
+
+  const shownCatalogSections = useMemo(
+    () =>
+      visibleCatalogSections({
+        chandeliersEnabled: Boolean(snapshot?.derivedInputs?.chandeliersEnabled),
+        corniceLightingEnabled: Boolean(snapshot?.derivedInputs?.corniceLightingEnabled),
+      }),
+    [snapshot?.derivedInputs?.chandeliersEnabled, snapshot?.derivedInputs?.corniceLightingEnabled]
+  );
+
+  /* ─── Cart state (T-031: общая корзина со страницей каталога) ─── */
+
+  /* ─── Products index ─── */
+  // T-029: каталог приезжает отдельным чанком, а не из фида в бандле.
+  const { products: catalogProductsFromIndex } = useCatalogProducts();
+  const products = catalogProductsFromIndex;
+
+  /**
+   * N-051: индексы каталога — общий хук со страницей. Резолв понимает и
+   * productId, и артикул: форматы в фиде разные, и черновик мог прийти
+   * оттуда, где ключом был артикул.
+   */
+  const { byProductId: productsById, productIdByVendorCode, resolveProduct } =
+    useCatalogIndex(products);
+
+  /**
+   * T-031: единственный источник корзины — `lightingDraft` через общий хук.
+   * Локального состояния и эффектов рехидратации/синхронизации больше нет:
+   * позиции, добавленные на странице каталога, здесь уже на месте.
+   */
+  const lightingCart = useLightingCart(resolveProduct);
+  const cartItems = lightingCart.cart;
+  // Стабильная ссылка — иначе каждый рендер пересоздаёт все зависимые колбэки.
+  const setCartItems = lightingCart.update;
+
+  /**
+   * T-031: входящий `options.initialLighting` больше не переливается в корзину
+   * эффектом — провайдер уже кладёт его в `lightingDraft` при открытии.
+   * Здесь остаётся только вывести подсказку про снятые с продажи позиции.
+   */
+  const removedHint = useMemo(() => {
+    const inc = options?.initialLighting;
+    if (!inc || inc.mode !== "catalog") return false;
+    return (inc.items ?? []).some((item) => {
+      const product = resolveProduct(toText(item.sku));
+      return !product || REMOVED_COLIBRI_VENDOR_CODES.has(toText(product.vendorCode));
+    });
+  }, [options?.initialLighting, resolveProduct]);
+
+  /* ─── Derived cart data ─── */
+  const cartEntries = useMemo(
+    () => buildCartEntries(cartItems, resolveProduct),
+    [cartItems, resolveProduct]
+  );
+
+  const selectedTrackMeters = useMemo(() => calcSelectedTrackMeters(cartEntries), [cartEntries]);
+  const selectedPointQty = useMemo(() => calcSelectedPointQty(cartEntries), [cartEntries]);
+
+  const requiredTrackMeters = showCeilingInUi ? toNumber(snapshot?.derivedInputs?.trackLengthMeters) : 0;
+  const requiredPointQty = showCeilingInUi ? toNumber(snapshot?.derivedInputs?.pointSpotsQty) : 0;
+  const trackMountType = (snapshot?.derivedInputs?.trackMountType ?? "none") as "built-in" | "surface" | "none";
+
+  // T-010: шаги подбора, включая состояние "нет данных с Шага 0"
+  type WStep = WizardStep;
+  /**
+   * T-031: шаг подбора и выбранная система выводятся из резолвера, а ручной
+   * выбор живёт как override поверх него. Раньше это делали три эффекта с
+   * `setState`, из-за чего экран мог «прыгать» лишним рендером.
+   */
+  const [wOverride, setWOverride] = useState<{ step: WStep; system: TrackSystemId | null } | null>(null);
+  const setWStep = useCallback(
+    (step: WStep) => setWOverride((prev) => ({ step, system: prev?.system ?? null })),
+    []
+  );
+  const setWSystem = useCallback(
+    (system: TrackSystemId | null) =>
+      setWOverride((prev) => ({ step: prev?.step ?? "none", system })),
+    []
+  );
+  const [wPointTab, setWPointTab] = useState<PointSubtypeId>("GX53");
+  /** N-021: выбранный тип светильника (вид, а не цоколь). */
+  const [pointKind, setPointKind] = useState<PointKindId>("recessed");
+  /** N-021: ручной выбор по цоколю свёрнут, пока человек не попросил. */
+  const [manualPointsOpen, setManualPointsOpen] = useState(false);
+
+  /* ─── Recommendations ─── */
+  const recommendedTrackProfiles = useMemo(() => {
+    if (!showCeilingInUi || requiredTrackMeters <= 0) return [];
+    const targetSystems: TrackSystemId[] = trackMountType === "built-in" ? ["COLIBRI_220", "CLARUS_48"]
+      : trackMountType === "surface" ? ["TRACK_220"] : [];
+    return targetSystems.map((system) => {
+      const base = TRACK_PROFILE_WHITELIST[system] ?? [];
+      const allowed = system === "TRACK_220" ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST]) : new Set(base);
+      const profiles = products.filter((p) => p.kind === "TRACK_PROFILE" && p.system === system && p.priceRub > 0 && allowed.has(toText(p.vendorCode)));
+      if (!profiles.length) return null;
+      profiles.sort((a, b) => a.priceRub - b.priceRub);
+      const best = profiles[0];
+      const pieceM = inferPieceLengthMeters(best);
+      if (!pieceM || pieceM <= 0) return null;
+      const qty = Math.ceil(requiredTrackMeters / pieceM);
+      return { product: best, system, qty, totalMeters: qty * pieceM };
+    }).filter(Boolean) as Array<{ product: FeedCatalogProduct; system: TrackSystemId; qty: number; totalMeters: number }>;
+  }, [showCeilingInUi, requiredTrackMeters, trackMountType, products]);
+
+  const hasRecommendations = recommendedTrackProfiles.length > 0 || requiredPointQty > 0;
+
+  /* ─── Lamps / mounts deps ─── */
+  const lampOptionsBySocket = useMemo(() => groupLampOptionsBySocket(products), [products]);
+
+  const lampRequiredBySocket = useMemo(() => calcLampRequiredBySocket(cartEntries), [cartEntries]);
+
+  const lampCurrentBySocket = useMemo(
+    () => calcLampCurrentBySocket(cartItems, lampOptionsBySocket),
+    [cartItems, lampOptionsBySocket]
+  );
+
+  const mountRequiredByVendor = useMemo(() => {
+    const required: Record<string, number> = {};
+    for (const entry of cartEntries) {
+      const mountVendor = POINT_TO_MOUNT_VENDOR_CODE[toText(entry.product.vendorCode)];
+      if (mountVendor) required[mountVendor] = (required[mountVendor] ?? 0) + entry.qty;
+    }
+    return required;
+  }, [cartEntries]);
+
+  const missingLamps = useMemo(
+    () => calcMissingLamps(lampRequiredBySocket, lampCurrentBySocket),
+    [lampCurrentBySocket, lampRequiredBySocket]
+  );
+
+  const lampRequiredTotal = useMemo(
+    () => calcLampRequiredTotal(lampRequiredBySocket),
+    [lampRequiredBySocket]
+  );
+
+  const lampCurrentTotal = useMemo(
+    () => calcLampCurrentTotal(lampRequiredBySocket, lampCurrentBySocket),
+    [lampCurrentBySocket, lampRequiredBySocket]
+  );
+
+  const lampSocketsToShow = useMemo(
+    () => calcLampSocketsToShow(lampRequiredBySocket, lampCurrentBySocket),
+    [lampCurrentBySocket, lampRequiredBySocket]
+  );
+
+  const missingMounts = useMemo(
+    () => calcMissingMounts({ cartItems, productIdByVendorCode, productsById }),
+    [cartItems, productIdByVendorCode, productsById]
+  );
+
+  const hasClarusInCart = useMemo(() => hasClarusInCartFn(cartEntries), [cartEntries]);
+  const clarusPsuQty = useMemo(() => calcClarusPsuQty(cartEntries), [cartEntries]);
+
+  /** Варианты БП для CLARUS; пусто — если блок уже выбран или CLARUS нет. */
+  const clarusPsuOptions = useMemo(() => {
+    if (!hasClarusInCart || clarusPsuQty >= 1) return [];
+    return CLARUS_PSU_VENDOR_CODES.map((vendorCode) => {
+      const productId = productIdByVendorCode.get(vendorCode);
+      const product = productId ? productsById.get(productId) : undefined;
+      return productId && product ? { productId, name: toText(product.name) } : null;
+    }).filter((option): option is { productId: string; name: string } => option !== null);
+  }, [hasClarusInCart, clarusPsuQty, productIdByVendorCode, productsById]);
+
+  /* ─── T-024: трек выключен, но в корзине есть трековые позиции ───
+   * Раньше эффект молча вычищал корзину. Если набор собран в каталоге
+   * (lighting-first, origin: "page"), удалять нельзя — показываем предупреждение
+   * и даём клиенту решить самому. */
+  const isLightingFirst = options?.entryMode === "lighting-first";
+
+  const orphanTrackEntries = useMemo(
+    () => selectOrphanTrackEntries(cartEntries, requiredTrackMeters),
+    [cartEntries, requiredTrackMeters]
+  );
+
+  const orphanTrackMeters = useMemo(
+    () => calcOrphanTrackMeters(orphanTrackEntries),
+    [orphanTrackEntries]
+  );
+
+  const orphanTrackCount = orphanTrackEntries.length;
+
+  const dropOrphanTrackItems = useCallback(() => {
+    const ids = new Set(orphanTrackEntries.map((entry) => toText(entry.product.productId)));
+    if (ids.size === 0) return;
+    setCartItems((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const id of Object.keys(prev)) {
+        if (ids.has(id)) {
+          delete next[id];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [orphanTrackEntries, setCartItems]);
+
+  /**
+   * N-051: чистим корзину только когда трек действительно «выключили» на
+   * Шаге 0. Раньше условием был сам факт `requiredTrackMeters === 0`, и
+   * автоочистка съедала позиции, которые клиент добавлял руками, — «+» на
+   * трековом светильнике не работал без единого объяснения.
+   *
+   * Решение принимается внутри эффекта: прошлое значение метража живёт в ref,
+   * а читать ref во время рендера нельзя.
+   */
+  const prevRequiredTrackMetersRef = useRef(requiredTrackMeters);
+
+  useEffect(() => {
+    const decision = decideOrphanTrackAction({
+      requiredTrackMeters,
+      previousRequiredTrackMeters: prevRequiredTrackMetersRef.current,
+      orphanCount: orphanTrackCount,
+      isLightingFirst,
+    });
+    prevRequiredTrackMetersRef.current = requiredTrackMeters;
+    if (decision === "drop") dropOrphanTrackItems();
+  }, [requiredTrackMeters, orphanTrackCount, isLightingFirst, dropOrphanTrackItems]);
+
+  /**
+   * Предупреждение показываем всегда, когда трековые позиции есть, а трек не
+   * заказан: если их только что удалили автоматически, счётчик обнулится и
+   * блок исчезнет сам.
+   */
+  const showOrphanTrackWarning = orphanTrackCount > 0 && requiredTrackMeters <= 0;
+
+  // T-025: выбранная система трека
+  const lastSystemRef = useRef<string>("");
+  useEffect(() => {
+    if (lastSystemRef.current === trackSystem) return;
+    lastSystemRef.current = trackSystem;
+    trackLightingSystemSelected({ system: trackSystem });
+  }, [trackSystem]);
+
+  /* ─── T-012: предложения по комплектующим (без принуждения) ─── */
+  const accessorySuggestions = useMemo(() => {
+    const suggestions = buildAccessorySuggestions({
+      lampRequiredBySocket,
+      lampCurrentBySocket,
+      lampOptionsBySocket,
+      missingMounts,
+      productIdByVendorCode,
+      productsById,
+    });
+    return suggestions.map((suggestion) => ({
+      ...suggestion,
+      apply: () =>
+        setCartItems((prev) => ({
+          ...prev,
+          [suggestion.productId]: toNumber(prev[suggestion.productId]) + suggestion.qty,
+        })),
+    }));
+  }, [
+    lampCurrentBySocket,
+    lampOptionsBySocket,
+    lampRequiredBySocket,
+    missingMounts,
+    productIdByVendorCode,
+    productsById,
+    setCartItems,
+  ]);
+
+  // T-031: единственная реализация — в lib/lighting/kit-rules.ts
+  const clearIncompatibleSystem = useCallback(
+    (next: CartItems, targetSystem: string) => {
+      const cleaned = clearIncompatibleSystem_(next, targetSystem, resolveProduct);
+      for (const key of Object.keys(next)) {
+        if (!(key in cleaned)) delete next[key];
+      }
+    },
+    [resolveProduct]
+  );
+
+  /* ─── setProductQty ─── */
+  const setProductQty = useCallback((product: FeedCatalogProduct, nextQtyRaw: number) => {
+    const id = toText(product.productId);
+    const nextQty = normalizeQty(nextQtyRaw, product.unit);
+    const prevQty = toNumber(cartItems[id]);
+    if (prevQty !== nextQty) {
+      trackLightingCartChanged({
+        action: prevQty <= 0 && nextQty > 0 ? "add" : prevQty > 0 && nextQty <= 0 ? "remove" : "change",
+        sku: id, productKind: String(product.kind), qty: nextQty, source: String(options?.source ?? "unknown"),
+      });
+    }
+    setCartItems((prev) => {
+      const n = { ...prev };
+      if (nextQty <= 0) {
+        delete n[id];
+      } else {
+        const system = product.system;
+        if (system && isTrackSystemId(system)) {
+          clearIncompatibleSystem(n, system);
+        }
+        const clarusPsuVendorCodes = new Set<string>(CLARUS_PSU_VENDOR_CODES);
+        if (clarusPsuVendorCodes.has(toText(product.vendorCode))) {
+          clearIncompatibleSystem(n, "CLARUS_48");
+        }
+        n[id] = nextQty;
+      }
+      return n;
+    });
+  }, [cartItems, options?.source, clearIncompatibleSystem, setCartItems]);
+
+  const clearTrackProductsForSystem = useCallback((system: TrackSystemId | null) => {
+    /**
+     * N-051: третья копия правила несовместимости жила здесь. Отличие от
+     * остальных — случай `system === null`: человек отказался от трека, и
+     * убрать надо всё трековое, а не только чужую систему.
+     */
+    setCartItems((prev) =>
+      system === null
+        ? clearAllTrackProducts(prev, resolveProduct)
+        : clearIncompatibleSystem_(prev, system, resolveProduct)
+    );
+  }, [resolveProduct, setCartItems]);
+
+  const setTrackProfileQty = useCallback((product: FeedCatalogProduct, nextQtyRaw: number) => {
+    const system = isTrackSystemId(product.system) ? product.system : null;
+    if (!system) return;
+
+    const id = toText(product.productId);
+    const nextQty = normalizeQty(nextQtyRaw, product.unit);
+    const prevQty = toNumber(cartItems[id]);
+
+    setWSystem(system);
+
+    if (prevQty !== nextQty) {
+      trackLightingCartChanged({
+        action: prevQty <= 0 && nextQty > 0 ? "add" : prevQty > 0 && nextQty <= 0 ? "remove" : "change",
+        sku: id,
+        productKind: String(product.kind),
+        qty: nextQty,
+        source: String(options?.source ?? "unknown"),
+      });
+    }
+
+    setCartItems((prev) => {
+      /**
+       * N-051: правило несовместимости — общая `clearIncompatibleSystem`.
+       * Здесь была его вторая, инлайн-версия: три вида трековых товаров и
+       * блоки CLARUS перечислялись руками. Совпадала она с оригиналом
+       * случайно — добавление нового вида товара чинилось бы в двух местах.
+       */
+      const next = clearIncompatibleSystem_(prev, system, resolveProduct);
+
+      if (nextQty <= 0) delete next[id];
+      else next[id] = nextQty;
+
+      return next;
+    });
+  }, [cartItems, options?.source, resolveProduct, setCartItems, setWSystem]);
+
+  const addMountOneToOne = useCallback((fv: string) => {
+    const mv = POINT_TO_MOUNT_VENDOR_CODE[toText(fv)]; if (!mv) return;
+    const mid = productIdByVendorCode.get(mv); if (!mid) return;
+    const rq = toNumber(mountRequiredByVendor[mv]); if (rq <= 0) return;
+    setCartItems((prev) => ({ ...prev, [mid]: rq }));
+  }, [mountRequiredByVendor, productIdByVendorCode, setCartItems]);
+
+  const addCheapestLamps = useCallback((socket: LampSocket) => {
+    const rq = toNumber(lampRequiredBySocket[socket]); if (rq <= 0) return;
+    const c = toNumber(lampCurrentBySocket[socket]); const miss = Math.max(0, rq - c); if (miss <= 0) return;
+    const cheapest = lampOptionsBySocket[socket][0]; if (!cheapest) return;
+    const id = toText(cheapest.productId); if (!id) return;
+    setCartItems((prev) => ({ ...prev, [id]: toNumber(prev[id]) + miss }));
+  }, [lampRequiredBySocket, lampCurrentBySocket, lampOptionsBySocket, setCartItems]);
+
+  const setClarusPsu = useCallback((pid: string) => {
+    setCartItems((prev) => {
+      const n = { ...prev };
+      for (const v of CLARUS_PSU_VENDOR_CODES) { const id = productIdByVendorCode.get(v); if (id && id !== pid) delete n[id]; }
+      n[pid] = Math.max(1, toNumber(n[pid])); return n;
+    });
+  }, [productIdByVendorCode, setCartItems]);
+
+  /* ─── Navigation helpers ─── */
+  const setCatalogViewAndSync = useCallback((view: CatalogView) => {
+    setCatalogView(view);
+    setStep1CatalogView(view);
+  }, [setStep1CatalogView, setCatalogView]);
+
+  /* ─── Selected view ─── */
+  const selectedViewItems = useMemo(() =>
+    cartEntries.map((e) => ({ product: e.product, item: { sku: toText(e.productId), name: toText(e.product.name), qty: e.qty, priceRub: toNumber(e.product.priceRub) } })),
+    [cartEntries]);
+
+  // Пустое «Выбранное» показывать нечем — молча показываем каталог.
+  const shownCatalogView: CatalogView =
+    catalogView === "selected" && selectedViewItems.length === 0 ? "browse" : catalogView;
+
+  const selectedTotals = useMemo(() => {
+    const regular = selectedViewItems.reduce((sum, x) => sum + x.item.qty * x.item.priceRub, 0);
+    const standalone = applyLightingOnlyDiscount(regular);
+    const withCeiling = applyLightingWithCeilingDiscount(regular);
+    const effective = hasCeilingContext ? withCeiling : standalone;
+    const effectivePercent = hasCeilingContext
+      ? LIGHTING_WITH_CEILING_DISCOUNT_PERCENT
+      : LIGHTING_ONLY_DISCOUNT_PERCENT;
+    return {
+      regular,
+      standalone,
+      withCeiling,
+      effective,
+      effectivePercent,
+      effectiveBenefit: Math.max(0, regular - effective),
+      withCeilingBenefit: Math.max(0, regular - withCeiling),
+    };
+  }, [hasCeilingContext, selectedViewItems]);
+
+  const cardDiscountPercent = hasCeilingContext
+    ? LIGHTING_WITH_CEILING_DISCOUNT_PERCENT
+    : LIGHTING_ONLY_DISCOUNT_PERCENT;
+
+  /* ─── Image zoom state ─── */
+  const [zoomImage, setZoomImage] = useState<{ src: string; alt: string } | null>(null);
+
+  /* ═══════════════════════════════════════════════════
+     WIZARD (Подбор tab) — step-by-step guided flow
+     ═══════════════════════════════════════════════════ */
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  // T-010: стартовый экран пересчитывается резолвером, пока пользователь не тронул подбор.
+  const wizardTouchedRef = useRef(false);
+  const markWizardTouched = useCallback(() => {
+    wizardTouchedRef.current = true;
+  }, []);
+
+  const chooseWizardSystem = useCallback((system: TrackSystemId) => {
+    wizardTouchedRef.current = true;
+    setWSystem(system);
+    clearTrackProductsForSystem(system);
+    setWStep("trackProfile");
+  }, [clearTrackProductsForSystem, setWStep, setWSystem]);
+
+  const chooseNoTrackFlow = useCallback(() => {
+    wizardTouchedRef.current = true;
+    setWSystem(null);
+    clearTrackProductsForSystem(null);
+    setWStep(requiredPointQty > 0 ? "points" : "done");
+  }, [clearTrackProductsForSystem, requiredPointQty, setWStep, setWSystem]);
+
+  const resolvedInitialStep = useMemo(
+    () =>
+      resolveInitialLightingStep({
+        requiredTrackMeters,
+        requiredPointQty,
+        cart: {
+          hasTrackProfile: cartEntries.some((e) => e.product.kind === "TRACK_PROFILE"),
+          hasTrackFixture: cartEntries.some((e) => e.product.kind === "TRACK_FIXTURE"),
+          hasPoints: cartEntries.some(
+            (e) => e.product.kind === "SPOT_FIXTURE" || isPanelProduct(e.product)
+          ),
+          hasMissingLamps: missingLamps.length > 0,
+          isEmpty: cartEntries.length === 0,
+        },
+      }),
+    [cartEntries, missingLamps.length, requiredPointQty, requiredTrackMeters]
+  );
+
+  // Система, вычитанная из корзины: чем пользователь уже начал комплектоваться.
+  const cartTrackSystem = useMemo<TrackSystemId | null>(() => {
+    const trackEntry = cartEntries.find(
+      (e) => e.product.kind === "TRACK_PROFILE" || e.product.kind === "TRACK_FIXTURE"
+    );
+    const system = trackEntry?.product.system;
+    return isTrackSystemId(system ?? "") ? (system as TrackSystemId) : null;
+  }, [cartEntries]);
+
+  // Итоговые шаг и система: override пользователя поверх резолвера.
+  const wStep: WStep = wOverride?.step ?? resolvedInitialStep;
+  const wSystem: TrackSystemId | null =
+    requiredTrackMeters > 0 ? (wOverride ? wOverride.system : cartTrackSystem) : null;
+
+  // При смене внутреннего шага/таба пользователь всегда видит начало следующего действия.
+  const didMountScrollRef = useRef(false);
+  useEffect(() => {
+    if (!didMountScrollRef.current) {
+      didMountScrollRef.current = true;
+      return;
+    }
+
+    const parent = getScrollParent(rootRef.current);
+    parent?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [activeTab, shownCatalogView, wStep]);
+
+  useEffect(() => {
+    if (!zoomImage) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setZoomImage(null);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [zoomImage]);
+
+  const systemLabel = (id: TrackSystemId) =>
+    id === "COLIBRI_220" ? "COLIBRI 220V" : id === "CLARUS_48" ? "CLARUS 48V" : "ART 220V";
+
+  const wizardSystemOptions = useMemo<TrackSystemId[]>(() => {
+    if (requiredTrackMeters <= 0) return [];
+    if (trackMountType === "built-in") return ["COLIBRI_220", "CLARUS_48"];
+    if (trackMountType === "surface") return ["TRACK_220"];
+    return ["COLIBRI_220", "CLARUS_48", "TRACK_220"];
+  }, [requiredTrackMeters, trackMountType]);
+
+  const selectedTrackSystem = useMemo<TrackSystemId | null>(() => {
+    if (wSystem) return wSystem;
+
+    const trackEntry = cartEntries.find((e) =>
+      e.product.kind === "TRACK_PROFILE" || e.product.kind === "TRACK_FIXTURE" || e.product.kind === "TRACK_ACCESSORY"
+    );
+
+    const system = trackEntry?.product.system ?? "";
+    return isTrackSystemId(system) ? system : null;
+  }, [cartEntries, wSystem]);
+
+
+
+  // Products for each wizard step
+  const wTrackProfiles = useMemo(() => {
+    const systems: TrackSystemId[] = selectedTrackSystem
+      ? [selectedTrackSystem]
+      : recommendedTrackProfiles.length > 0
+        ? recommendedTrackProfiles.map((r) => r.system)
+        : trackMountType === "built-in"
+          ? ["COLIBRI_220", "CLARUS_48"]
+          : trackMountType === "surface"
+            ? ["TRACK_220"]
+            : ["COLIBRI_220", "CLARUS_48", "TRACK_220"];
+
+    const uniqueSystems = Array.from(new Set(systems));
+    const result: FeedCatalogProduct[] = [];
+
+    for (const sys of uniqueSystems) {
+      const base = TRACK_PROFILE_WHITELIST[sys] ?? [];
+      const allowed = sys === "TRACK_220" ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST]) : new Set(base);
+      result.push(
+        ...products.filter((p) =>
+          p.kind === "TRACK_PROFILE" &&
+          p.system === sys &&
+          p.priceRub > 0 &&
+          allowed.has(toText(p.vendorCode))
+        )
+      );
+    }
+
+    return result.sort((a, b) => {
+      const systemDiff = systemLabel(a.system as TrackSystemId).localeCompare(systemLabel(b.system as TrackSystemId), "ru");
+      return systemDiff || a.priceRub - b.priceRub;
+    });
+  }, [products, recommendedTrackProfiles, selectedTrackSystem, trackMountType]);
+
+  /* ─── T-032: автосборка профиля и ориентир по светильникам ─── */
+
+  /** План автосборки под требуемый метраж из профилей выбранной системы. */
+  const autoProfilePlan = useMemo(
+    () => autoAssembleProfiles(requiredTrackMeters, wTrackProfiles),
+    [requiredTrackMeters, wTrackProfiles]
+  );
+
+  /** Одним тапом кладём подобранные куски в корзину. */
+  const applyAutoProfilePlan = useCallback(() => {
+    if (!autoProfilePlan) return;
+
+    markWizardTouched();
+    const system = autoProfilePlan.pieces[0]?.product.system;
+    if (system && isTrackSystemId(system)) setWSystem(system);
+
+    setCartItems((prev) => {
+      const next = { ...prev };
+      for (const piece of autoProfilePlan.pieces) {
+        next[toText(piece.product.productId)] = piece.qty;
+      }
+      return next;
+    });
+  }, [autoProfilePlan, markWizardTouched, setCartItems, setWSystem]);
+
+  /** Товары для экранов T-043. */
+  const wChandeliers = useMemo(
+    () => products.filter((p) => p.kind === "CHANDELIER"),
+    [products]
+  );
+  const wCorniceLighting = useMemo(
+    () => products.filter((p) => p.kind === "LED_STRIP" || p.kind === "PSU" || p.kind === "CONTROL"),
+    [products]
+  );
+
+  /* ─── T-042: дособирание комплекта (питание, стыки, БП, лампы) ─── */
+
+  /** Чего не хватает выбранному свету, чтобы он заработал. */
+  const kitCompletion = useMemo(
+    () => completeKit(cartItems, resolveProduct, products),
+    [cartItems, products, resolveProduct]
+  );
+
+  /** «Добавить всё» — кладём обязательные позиции одним действием. */
+  const applyKitCompletion = useCallback(
+    (suggestions: readonly { product: FeedCatalogProduct; qty: number }[]) => {
+      if (suggestions.length === 0) return;
+      markWizardTouched();
+      setCartItems((prev) => {
+        const next = { ...prev };
+        for (const suggestion of suggestions) {
+          const id = toText(suggestion.product.productId);
+          next[id] = (next[id] ?? 0) + suggestion.qty;
+        }
+        return next;
+      });
+    },
+    [markWizardTouched, setCartItems]
+  );
+
+  /**
+   * T-042: CLARUS без блока питания не запустится. Не прячем кнопку совсем —
+   * даём явно согласиться на «подберём при звонке», иначе счёт уедет неполным.
+   */
+  const [psuAcknowledged, setPsuAcknowledged] = useState(false);
+  const psuBlocks = kitCompletion.psuMissing && !psuAcknowledged;
+
+  /** Кнопка «К итогу» с учётом блокировки по БП. */
+  const finishAction = useCallback(
+    (): { label: string; disabled?: boolean; onClick: () => void } =>
+      psuBlocks
+        ? { label: "Нужен блок питания", disabled: true, onClick: () => undefined }
+        : { label: "К итогу →", onClick: () => goToStep(2) },
+    [goToStep, psuBlocks]
+  );
+
+  /** «Ориентир для 10 м: 8–12 светильников» — вилка ±20 %. */
+  const fixturesHint = useMemo(
+    () => fixturesHintForMeters(selectedTrackMeters || requiredTrackMeters, pricing.trackSpotsPerMeter),
+    [requiredTrackMeters, selectedTrackMeters]
+  );
+
+  const wTrackFixtures = useMemo(() => {
+    if (!selectedTrackSystem) return [];
+    return products.filter((p) => p.kind === "TRACK_FIXTURE" && p.system === selectedTrackSystem && p.priceRub > 0)
+      .sort((a, b) => a.priceRub - b.priceRub);
+  }, [selectedTrackSystem, products]);
+
+  /**
+   * N-021: сетка следует за выбранным типом. Цоколь сужает её дальше, но
+   * только когда человек сам открыл ручной выбор — иначе тип и цоколь
+   * противоречили бы друг другу (панели не имеют цоколя вовсе).
+   */
+  const wPointProducts = useMemo(() => {
+    if (manualPointsOpen) {
+      return products.filter((p) => matchesPointSubtype(p, wPointTab) && p.priceRub > 0)
+        .sort((a, b) => a.priceRub - b.priceRub);
+    }
+    return pointsOfKind(products, pointKind);
+  }, [manualPointsOpen, wPointTab, pointKind, products]);
+
+  const wLampProducts = useMemo(() => {
+    return lampOptionsBySocket; // use as-is, already sorted
+  }, [lampOptionsBySocket]);
+
+  const pointProgressBySubtype = useMemo(
+    () => pointProgressBySocket(cartEntries, requiredPointQty, isPanelProduct, detectSocket),
+    [cartEntries, requiredPointQty]
+  );
+
+  const goAfterTrackProfile = useCallback(() => {
+    if (requiredTrackMeters > 0 && (!selectedTrackSystem || selectedTrackMeters < requiredTrackMeters)) return;
+
+    if (wTrackFixtures.length > 0) {
+      setWStep("trackFixtures");
+      return;
+    }
+    if (requiredPointQty > 0 && selectedPointQty < requiredPointQty) {
+      setWStep("points");
+      return;
+    }
+    if (lampRequiredTotal > 0 && lampCurrentTotal < lampRequiredTotal) {
+      setWStep("lamps");
+      return;
+    }
+    setWStep("done");
+  }, [lampCurrentTotal, lampRequiredTotal, requiredPointQty, requiredTrackMeters, selectedPointQty, selectedTrackMeters, selectedTrackSystem, wTrackFixtures.length, setWStep]);
+
+  const goAfterTrackFixtures = useCallback(() => {
+    if (requiredPointQty > 0 && selectedPointQty < requiredPointQty) {
+      setWStep("points");
+      return;
+    }
+    if (lampRequiredTotal > 0 && lampCurrentTotal < lampRequiredTotal) {
+      setWStep("lamps");
+      return;
+    }
+    setWStep("done");
+  }, [lampCurrentTotal, lampRequiredTotal, requiredPointQty, selectedPointQty, setWStep]);
+
+  /** T-043: следующий экран после ламп — люстры, затем подсветка карниза. */
+  const goAfterLamps = useCallback(() => {
+    if (needsChandeliers) {
+      setWStep("chandeliers");
+      catalogFilters.selectSection("chandeliers");
+      return;
+    }
+    if (needsCorniceLighting) {
+      setWStep("corniceLighting");
+      catalogFilters.selectSection("cornice-lighting");
+      return;
+    }
+    setWStep("done");
+  }, [catalogFilters, needsChandeliers, needsCorniceLighting, setWStep]);
+
+  const goAfterChandeliers = useCallback(() => {
+    if (needsCorniceLighting) {
+      setWStep("corniceLighting");
+      catalogFilters.selectSection("cornice-lighting");
+      return;
+    }
+    setWStep("done");
+  }, [catalogFilters, needsCorniceLighting, setWStep]);
+
+  const goAfterPoints = useCallback(() => {
+    if (lampRequiredTotal > 0 && lampCurrentTotal < lampRequiredTotal) {
+      setWStep("lamps");
+      return;
+    }
+    goAfterLamps();
+  }, [goAfterLamps, lampCurrentTotal, lampRequiredTotal, setWStep]);
+
+  const goBackFromLamps = useCallback(() => {
+    if (requiredPointQty > 0) {
+      setWStep("points");
+      return;
+    }
+    if (selectedTrackSystem) {
+      setWStep("trackFixtures");
+      return;
+    }
+    if (requiredTrackMeters > 0) {
+      setWStep("trackProfile");
+      return;
+    }
+    setWStep("system");
+  }, [requiredPointQty, requiredTrackMeters, selectedTrackSystem, setWStep]);
+
+
+  const trackComplete = requiredTrackMeters <= 0 || selectedTrackMeters >= requiredTrackMeters;
+  const pointsComplete = requiredPointQty <= 0 || selectedPointQty >= requiredPointQty;
+  const lampsComplete = lampRequiredTotal <= 0 || lampCurrentTotal >= lampRequiredTotal;
+  const requiredSelectionComplete = trackComplete && pointsComplete && lampsComplete;
+
+  const missingTrackMeters = Math.max(0, requiredTrackMeters - selectedTrackMeters);
+  const missingPointQty = Math.max(0, requiredPointQty - selectedPointQty);
+  const missingLampQty = Math.max(0, lampRequiredTotal - lampCurrentTotal);
+
+  const missingAction = useMemo(() => {
+    if (missingTrackMeters > 0) {
+      return { label: selectedTrackSystem ? "Добрать профиль →" : "Выбрать систему →", step: selectedTrackSystem ? "trackProfile" : "system" } as const;
+    }
+    if (missingPointQty > 0) return { label: "Выбрать светильники →", step: "points" } as const;
+    if (missingLampQty > 0) return { label: "Добавить лампы →", step: "lamps" } as const;
+    return null;
+  }, [missingLampQty, missingPointQty, missingTrackMeters, selectedTrackSystem]);
+
+  const goToMissingAction = useCallback(() => {
+    if (!missingAction) return;
+    setActiveTab("recommendations");
+    setCatalogViewAndSync("browse");
+    setWStep(missingAction.step);
+  }, [missingAction, setCatalogViewAndSync, setActiveTab, setWStep]);
+
+  // «Готово» с незакрытыми требованиями — показываем недостающий шаг, а не тупик.
+  // T-025: показ экрана мастера освещения (после того, как шаг посчитан).
+  const lastWStepRef = useRef<string>("");
+  useEffect(() => {
+    if (lastWStepRef.current === wStep) return;
+    lastWStepRef.current = wStep;
+    trackLightingStepView({
+      wstep: wStep,
+      requiredTrackM: requiredTrackMeters,
+      requiredPoints: requiredPointQty,
+    });
+  }, [wStep, requiredTrackMeters, requiredPointQty]);
+
+  const shownWStep: WStep =
+    wStep === "done" && !requiredSelectionComplete && missingAction ? missingAction.step : wStep;
+
+  /**
+   * N-050: выбор кнопки футера — чистая функция resolveStep1FooterAction,
+   * здесь остаётся только привязка обработчиков к намерению.
+   */
+  const footerDescriptor = useMemo(
+    () =>
+      resolveStep1FooterAction({
+        activeTab,
+        shownWStep,
+        hasMissingAction: Boolean(missingAction),
+        hasSystemOptions: wizardSystemOptions.length > 0,
+        psuBlocks,
+        requiredSelectionComplete,
+        requiredTrackMeters,
+        hasTrackSystem: Boolean(selectedTrackSystem),
+        trackComplete,
+        pointsComplete,
+        lampsComplete,
+      }),
+    [
+      activeTab,
+      lampsComplete,
+      missingAction,
+      pointsComplete,
+      psuBlocks,
+      requiredSelectionComplete,
+      requiredTrackMeters,
+      selectedTrackSystem,
+      shownWStep,
+      trackComplete,
+      wizardSystemOptions.length,
+    ]
+  );
+
+  /**
+   * N-050 · Публикация футера Шага 1 — в useLayoutEffect, как на Шаге 0.
+   *
+   * С useEffect подпись доставлялась после отрисовки, и один кадр экран с
+   * кнопкой не совпадали. Отдельно важен убранный cleanup: React вызывает его
+   * перед КАЖДЫМ повторным запуском эффекта, поэтому `setStep1FooterAction(null)`
+   * успевал обнулить футер между шагами мастера — кнопка мигала и клик мог
+   * промахнуться. Сброс теперь один, при размонтировании.
+   */
+  useLayoutEffect(() => {
+    setStep1FooterAction(
+      buildStep1FooterAction(footerDescriptor, {
+        missingAction,
+        goToMissingAction,
+        finishAction,
+        handlers: {
+          pickSystem: () => undefined,
+          confirmTrackProfile: goAfterTrackProfile,
+          confirmTrackFixtures: goAfterTrackFixtures,
+          confirmPoints: goAfterPoints,
+          confirmLamps: goAfterLamps,
+          confirmChandeliers: goAfterChandeliers,
+          confirmCornice: () => setWStep("done"),
+        },
+      })
+    );
+  }, [
+    finishAction,
+    footerDescriptor,
+    goAfterChandeliers,
+    goAfterLamps,
+    goAfterPoints,
+    goAfterTrackFixtures,
+    goAfterTrackProfile,
+    goToMissingAction,
+    missingAction,
+    setStep1FooterAction,
+    setWStep,
+  ]);
+
+  /** Шаг 1 ушёл с экрана — его кнопка не должна остаться в футере. */
+  useEffect(() => () => setStep1FooterAction(null), [setStep1FooterAction]);
+
+  /* ─── Scoped catalog products ─── */
+  const scopedProducts = useMemo(() => {
+    let scoped: FeedCatalogProduct[] = [];
+    if (shownCatalogView === "selected") { scoped = selectedViewItems.map((i) => i.product); }
+    else if (section === "track-systems") {
+      if (trackGroup === "TRACK_PROFILE") {
+        const base = TRACK_PROFILE_WHITELIST[trackSystem] ?? [];
+        const allowed = trackSystem === "TRACK_220" ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST]) : new Set(base);
+        scoped = products.filter((p) => p.system === trackSystem && p.kind === "TRACK_PROFILE" && allowed.has(toText(p.vendorCode)));
+      } else { scoped = products.filter((p) => p.system === trackSystem && p.kind === trackGroup); }
+    } else if (section === "point-fixtures") { scoped = products.filter((p) => matchesPointSubtype(p, pointSubtype)); }
+    else if (section === "chandeliers") { scoped = products.filter((p) => p.kind === "CHANDELIER"); }
+    else if (section === "cornice-lighting") {
+      // Для подсветки карниза нужны лента, питание и управление ей.
+      scoped = products.filter(
+        (p) => p.kind === "LED_STRIP" || p.kind === "PSU" || p.kind === "CONTROL"
+      );
+    }
+    else if (section === "lamps") { scoped = products.filter((p) => isLamp(p) && detectSocket(p) === lampSocket); }
+    else { scoped = products.filter(isMountsOrGrilles); }
+    const q = toText(query).toLowerCase();
+    if (!q) return scoped;
+    return scoped.filter((p) => {
+      const h = `${toText(p.name)} ${toText(p.vendorCode)} ${toText(p.categoryPath)} ${pickAttrs(p).map((a) => `${a.label} ${a.value}`).join(" ")}`.toLowerCase();
+      return h.includes(q);
+    });
+  }, [shownCatalogView, lampSocket, pointSubtype, products, query, section, selectedViewItems, trackGroup, trackSystem]);
+
+  // T-025: поиск по каталогу (дебаунс 800 мс внутри обёртки)
+  useEffect(() => {
+    const q = toText(query).trim();
+    if (q.length < 2) return;
+    trackLightingSearch({ q, section, results: scopedProducts.length });
+  }, [query, section, scopedProducts.length]);
+
+  /* ═══════════════════════════════════════════════════
+     RENDER
+     ═══════════════════════════════════════════════════ */
+  return (
+    <div ref={rootRef} className="space-y-4">
+
+      {/* ─── Compact image preview — not fullscreen ─── */}
+      <ImageQuickPreview image={zoomImage} onClose={() => setZoomImage(null)} />
+
+      {/* ─── Tabs ─── */}
+      <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar max-sm:-mx-5 max-sm:px-5">
+        <TabBtn active={activeTab === "recommendations"} onClick={() => setActiveTab("recommendations")}>Подбор</TabBtn>
+        <TabBtn active={activeTab === "catalog" && shownCatalogView === "browse"} onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("browse"); }}>Каталог</TabBtn>
+        <TabBtn active={activeTab === "catalog" && shownCatalogView === "selected"} onClick={() => { setActiveTab("catalog"); setCatalogViewAndSync("selected"); }}>
+          Выбранное ({selectedViewItems.length})
+        </TabBtn>
+      </div>
+
+      {removedHint && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          Некоторые позиции удалены из ассортимента и автоматически убраны из выбранного.
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════
+          ПОДБОР — Guided Wizard
+          ═══════════════════════════════════════════════ */}
+      {activeTab === "recommendations" && (
+        <RecommendationsTab
+          step={shownWStep}
+          cart={{
+            items: cartItems,
+            onQtyChange: setProductQty,
+            onZoom: setZoomImage,
+            discountPercent: cardDiscountPercent,
+          }}
+          products={{
+            all: products,
+            trackProfiles: wTrackProfiles,
+            trackFixtures: wTrackFixtures,
+            chandeliers: wChandeliers,
+            corniceLighting: wCorniceLighting,
+            points: wPointProducts,
+            lampsBySocket: wLampProducts,
+          }}
+          track={{
+            systemOptions: wizardSystemOptions,
+            mountType: trackMountType,
+            selectedSystem: selectedTrackSystem,
+            systemLabel,
+            requiredMeters: requiredTrackMeters,
+            selectedMeters: selectedTrackMeters,
+            complete: trackComplete,
+            fixturesHint,
+            autoPlan:
+              autoProfilePlan && requiredTrackMeters > 0 && !trackComplete
+                ? {
+                    pieces: autoProfilePlan.pieces,
+                    totalRub: autoProfilePlan.totalRub,
+                    discountedTotalRub: applyLightingWithCeilingDiscount(autoProfilePlan.totalRub),
+                    totalMeters: autoProfilePlan.totalMeters,
+                  }
+                : null,
+            onApplyAutoPlan: applyAutoProfilePlan,
+            onChooseSystem: chooseWizardSystem,
+            onNoTrack: chooseNoTrackFlow,
+            onProfileQtyChange: setTrackProfileQty,
+            onConfirmProfile: goAfterTrackProfile,
+            onConfirmFixtures: goAfterTrackFixtures,
+          }}
+          completion={{
+            mandatory: kitCompletion.mandatory,
+            recommended: kitCompletion.recommended,
+            psuMissing: kitCompletion.psuMissing,
+            psuAcknowledged,
+            onPsuAcknowledgedChange: setPsuAcknowledged,
+            onAddMandatory: () => applyKitCompletion(kitCompletion.mandatory),
+            onAddRecommended: () => applyKitCompletion(kitCompletion.recommended),
+          }}
+          points={{
+            required: requiredPointQty,
+            selected: selectedPointQty,
+            activeKind: pointKind,
+            onKindChange: (kind) => {
+              setPointKind(kind);
+              setManualPointsOpen(false);
+            },
+            manualOpen: manualPointsOpen,
+            onManualOpen: () => setManualPointsOpen(true),
+            socketTab: wPointTab,
+            onSocketTabChange: setWPointTab,
+            socketProgress: pointProgressBySubtype,
+            complete: pointsComplete,
+            onBack: () =>
+              setWStep(
+                selectedTrackSystem
+                  ? "trackFixtures"
+                  : requiredTrackMeters > 0
+                    ? "trackProfile"
+                    : "system"
+              ),
+            onConfirm: goAfterPoints,
+          }}
+          lamps={{
+            sockets: lampSocketsToShow,
+            requiredBySocket: lampRequiredBySocket,
+            currentBySocket: lampCurrentBySocket,
+            complete: lampsComplete,
+            onAddCheapest: addCheapestLamps,
+            onBack: goBackFromLamps,
+            onConfirm: goAfterLamps,
+          }}
+          done={{
+            itemsCount: lightingDraft?.items?.length ?? 0,
+            regularTotal: lightingRegularTotal,
+            effectiveTotal: lightingEffectiveTotal,
+            missingMounts,
+            clarusPsuOptions,
+            onAddMount: addMountOneToOne,
+            onPickClarusPsu: setClarusPsu,
+            selectionComplete: requiredSelectionComplete,
+            missingAction,
+            onGoToMissingAction: goToMissingAction,
+          }}
+          nav={{
+            chandeliersQty: toNumber(snapshot?.derivedInputs?.chandeliersQty),
+            corniceMeters: toNumber(snapshot?.derivedInputs?.corniceLightingMeters),
+            hasRecommendations,
+            onOpenCatalog: () => {
+              setActiveTab("catalog");
+              setCatalogViewAndSync("browse");
+            },
+            onOpenCatalogTouched: () => {
+              markWizardTouched();
+              setActiveTab("catalog");
+              setCatalogViewAndSync("browse");
+            },
+            onGoToSummary: () => goToStep(2),
+            onBackToSystem: () => setWStep("system"),
+            onBackToTrackProfile: () => setWStep("trackProfile"),
+          }}
+          fmt={fmt}
+          fmtMeters={fmtM}
+        />
+      )}
+
+      {/* ═══════════════════════════════════════════════
+          КАТАЛОГ tab
+          ═══════════════════════════════════════════════ */}
+      {activeTab === "catalog" && (
+        <div key="catalog-tab" className="animate-fade-in space-y-4">
+          {/* Lamp reminder */}
+          {missingLamps.length > 0 && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+              <p className="font-semibold">Не хватает ламп</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {missingLamps.map((m) => (
+                  <button key={m.socket} type="button" onClick={() => addCheapestLamps(m.socket)}
+                    className="rounded-xl bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-800">
+                    +{m.requiredQty - m.currentQty} ламп {m.socket}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {showOrphanTrackWarning ? (
+            <OrphanTrackNotice
+              meters={orphanTrackMeters}
+              isLightingFirst={isLightingFirst}
+              onDrop={dropOrphanTrackItems}
+            />
+          ) : null}
+
+          {shownCatalogView === "selected" && accessorySuggestions.length > 0 ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+              <p className="text-sm font-semibold text-amber-950">Комплектующие</p>
+              <p className="mt-1 text-xs text-amber-900">
+                Это предложения — можно не добавлять или удалить позже.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {accessorySuggestions.map((suggestion) => (
+                  <button
+                    key={suggestion.key}
+                    type="button"
+                    onClick={() => { markWizardTouched(); suggestion.apply(); }}
+                    className="min-h-11 rounded-2xl border border-amber-300 bg-white px-3 text-xs font-semibold text-amber-950 hover:bg-amber-100"
+                  >
+                    {suggestion.title} ({fmt(suggestion.priceRub)} ₽)
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {shownCatalogView === "selected" ? (
+            <SelectedList
+              items={selectedViewItems}
+              totals={selectedTotals}
+              showWithCeilingHint={lightingDiscountMode !== "with-ceiling"}
+              onQtyChange={setProductQty}
+              onRemove={(productId) =>
+                setCartItems((prev) => {
+                  const next = { ...prev };
+                  delete next[productId];
+                  return next;
+                })
+              }
+              onGoToSummary={() => goToStep(2)}
+              goToSummaryDisabled={!requiredSelectionComplete}
+            />
+          ) : (
+            <>
+              <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar max-sm:-mx-5 max-sm:px-5">
+                {shownCatalogSections.map((item) => (
+                  <button key={item.id} type="button" onClick={() => catalogFilters.selectSection(item.id)}
+                    className={["whitespace-nowrap rounded-xl border border-slate-200 px-3 py-2 text-sm max-sm:px-2.5 max-sm:py-1.5 max-sm:text-xs",
+                      section === item.id ? "bg-slate-950 text-white" : "bg-white text-slate-700 hover:bg-slate-50"].join(" ")}>
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* N-051: ленты фильтров — общий компонент со страницей каталога. */}
+              {section === "track-systems" ? (
+                <CatalogFilterChipsRow ariaLabel="Трековые системы и группы">
+                  <CatalogFilterChipGroup
+                    options={TRACK_SYSTEMS}
+                    active={trackSystem}
+                    onSelect={catalogFilters.selectTrackSystem}
+                  />
+                  <CatalogFilterChipGroup
+                    options={TRACK_GROUPS}
+                    active={trackGroup}
+                    onSelect={catalogFilters.selectTrackGroup}
+                  />
+                </CatalogFilterChipsRow>
+              ) : null}
+
+              {section === "point-fixtures" ? (
+                <CatalogFilterChipsRow ariaLabel="Типы точечных светильников">
+                  <CatalogFilterChipGroup
+                    options={POINT_SUBTYPES}
+                    active={pointSubtype}
+                    onSelect={catalogFilters.selectPointSubtype}
+                  />
+                </CatalogFilterChipsRow>
+              ) : null}
+
+              {section === "lamps" ? (
+                <CatalogFilterChipsRow ariaLabel="Цоколи ламп">
+                  <CatalogFilterChipGroup
+                    options={LAMP_SOCKETS.map((socket) => ({
+                      id: socket,
+                      label:
+                        lampCurrentBySocket[socket] > 0
+                          ? `${socket} (${lampCurrentBySocket[socket]}/${lampRequiredBySocket[socket]})`
+                          : socket,
+                    }))}
+                    active={lampSocket}
+                    onSelect={catalogFilters.selectLampSocket}
+                  />
+                </CatalogFilterChipsRow>
+              ) : null}
+
+              <CatalogBrowse
+                query={query}
+                onQueryChange={catalogFilters.setQuery}
+                hasCeilingContext={hasCeilingContext}
+                withCeilingPercent={LIGHTING_WITH_CEILING_DISCOUNT_PERCENT}
+                lightingOnlyPercent={LIGHTING_ONLY_DISCOUNT_PERCENT}
+                products={scopedProducts}
+                cartItems={cartItems}
+                onQtyChange={setProductQty}
+                onZoom={setZoomImage}
+                cardDiscountPercent={cardDiscountPercent}
+              />
+            </>
+          )}
+        </div>
+      )}
+
+    </div>
+  );
+}
