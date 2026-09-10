@@ -44,15 +44,37 @@ describe("публикация реквизитов", () => {
     expect(isLegalFieldFilled("770123456789")).toBe(true);
   });
 
-  it("реквизиты заполнены либо все, либо ни одного", () => {
-    /**
-     * Тест намеренно не требует заполненности: данные даёт владелец, а
-     * выдуманный ИНН хуже отсутствующего (правило 5 ТЗ). Но частично
-     * заполненный набор — почти наверняка ошибка: в документе появится
-     * наименование без ИНН, и это выглядит как попытка что-то скрыть.
-     */
-    const filled = [contacts.legalName, contacts.inn, contacts.ogrnip].filter(isLegalFieldFilled);
+  it("обязательные реквизиты заполнены: наименование и ИНН", () => {
+    // PT-006: заполнены владельцем 10.09.2026.
+    expect(isLegalFieldFilled(contacts.legalName)).toBe(true);
+    expect(isLegalFieldFilled(contacts.inn)).toBe(true);
+  });
 
-    expect(filled.length === 0 || filled.length === 3).toBe(true);
+  it("ИНН проходит проверку контрольных сумм ФНС", () => {
+    /**
+     * Опечатка в одной цифре даёт технически «похожий» номер, который
+     * невозможно заметить глазами, но по которому оператора не найти.
+     * Алгоритм для 12-значного ИНН физлица/самозанятого.
+     */
+    const digits = [...contacts.inn].map(Number);
+    expect(digits).toHaveLength(12);
+
+    const w11 = [7, 2, 4, 10, 3, 5, 9, 4, 6, 8];
+    const w12 = [3, 7, 2, 4, 10, 3, 5, 9, 4, 6, 8];
+    const check11 = (w11.reduce((s, w, i) => s + w * digits[i], 0) % 11) % 10;
+    const check12 = (w12.reduce((s, w, i) => s + w * digits[i], 0) % 11) % 10;
+
+    expect(check11).toBe(digits[10]);
+    expect(check12).toBe(digits[11]);
+  });
+
+  it("ОГРНИП пуст осознанно — у самозанятого его не существует", () => {
+    /**
+     * Номер присваивается только при регистрации ИП. Если он однажды
+     * появится — значит владелец сменил статус, и это должно быть
+     * осознанным изменением, а не случайно вписанной строкой.
+     */
+    expect(isLegalFieldFilled(contacts.ogrnip)).toBe(false);
+    expect(contacts.legalStatus).toContain("самозанятый");
   });
 });

@@ -23,6 +23,9 @@ function buildRequisites(): string {
     requisiteLine("Наименование", contacts.legalName),
     requisiteLine("ИНН", contacts.inn),
     requisiteLine("ОГРНИП", contacts.ogrnip),
+    // У самозанятого ОГРНИП нет — вместо него называем правовой статус,
+    // иначе в документе останется пробел на месте важного факта.
+    contacts.legalStatus ? `• Статус: ${contacts.legalStatus}` : null,
   ].filter((line): line is string => line !== null);
 
   const contactLines = [

@@ -5,7 +5,10 @@ meta:
     version: 20
 
 build:
-  additionalCommands: npm run build
+  # PT-006: RELEASE=1 включает блокирующую проверку реквизитов (check:legal
+  # в prebuild). Без флага сборка выкатывала бы политику с незаполненным
+  # оператором персональных данных, как это уже произошло.
+  additionalCommands: RELEASE=1 npm run build
 
 run:
   command: npm run start
