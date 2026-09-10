@@ -20,6 +20,7 @@
 import { NextResponse } from "next/server";
 
 import { getEnv } from "@/lib/env";
+import { isLeadStorageReady } from "@/lib/lead/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,7 +44,11 @@ export async function GET() {
     web3forms: Boolean(env.WEB3FORMS_ACCESS_KEY),
   };
 
-  const ready = storage === "db";
+  /**
+   * PT-002: то же правило, что применяет `/api/lead`, а не своя копия.
+   * Иначе health однажды скажет «готов», пока форма отдаёт 503.
+   */
+  const ready = isLeadStorageReady();
 
   return NextResponse.json(
     {

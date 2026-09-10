@@ -115,6 +115,27 @@ export class InMemoryLeadStore implements LeadStore {
 let store: LeadStore | null = null;
 let warned = false;
 
+/**
+ * PT-002 · Можно ли принимать заявки прямо сейчас.
+ *
+ * In-memory хранилище теряет заявки при рестарте процесса. В разработке это
+ * нормально, а в проде означает, что клиент видит «Заявка №A-123 принята»,
+ * хотя записи уже нет — и узнать об этом некому: предупреждение уходит в
+ * логи, которые никто не читает.
+ *
+ * Владелец выбрал деградацию вместо остановки: сайт остаётся в сети (каталог,
+ * цены, телефон, Telegram работают), а форма честно отказывает. Так человек
+ * хотя бы может дозвониться, вместо того чтобы увидеть пустоту и уйти.
+ */
+export function isLeadStorageReady(): boolean {
+  const { DATABASE_URL, NODE_ENV } = getEnv();
+
+  // Разработка и тесты живут на in-memory намеренно — их не трогаем.
+  if (NODE_ENV !== "production") return true;
+
+  return Boolean(DATABASE_URL);
+}
+
 export function getLeadStore(): LeadStore {
   if (store) return store;
 

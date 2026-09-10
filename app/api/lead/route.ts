@@ -1,7 +1,8 @@
 /**
  * T-027 · POST /api/lead — единственная точка приёма заявок.
  *
- * Порядок: honeypot → rate-limit → zod → дедуп → запись → доставка
+ * Порядок: honeypot → готовность хранилища → rate-limit → zod → дедуп →
+ * запись → доставка
  * (Telegram основной, Web3Forms дубль). Ошибка доставки не роняет ответ:
  * заявка уже сохранена, неудачные каналы уходят в ретрай (`/api/lead/retry`).
  */
@@ -17,7 +18,7 @@ import {
   RATE_LIMIT_WINDOW_MS,
 } from "@/lib/lead/rate-limit";
 import { LeadPayloadSchema } from "@/lib/lead/schema";
-import { getLeadStore } from "@/lib/lead/store";
+import { getLeadStore, isLeadStorageReady } from "@/lib/lead/store";
 import { getEnv } from "@/lib/env";
 
 export const runtime = "nodejs";
@@ -51,6 +52,23 @@ export async function POST(request: Request) {
   // Honeypot: боты заполняют скрытое поле — отвечаем как успехом, но ничего не пишем.
   if (typeof raw === "object" && raw !== null && String((raw as Record<string, unknown>).botcheck ?? "")) {
     return NextResponse.json({ ok: true, leadId: null, callbackWindow: resolveCallbackWindow() });
+  }
+
+  /**
+   * PT-002 · Хранилище недоступно — отказываем честно, до любой обработки.
+   *
+   * Раньше при пустом DATABASE_URL в проде заявка уходила в память процесса и
+   * исчезала при первом же рестарте, а клиент видел «Заявка принята». Молчание
+   * здесь опаснее отказа: человек уверен, что ему перезвонят, и не звонит сам.
+   *
+   * Проверка стоит перед rate-limit и валидацией намеренно: если принять
+   * заявку всё равно некуда, нет смысла тратить лимит и разбирать payload.
+   */
+  if (!isLeadStorageReady()) {
+    return NextResponse.json(
+      { ok: false, error: "storage_unavailable" },
+      { status: 503, headers: { "Retry-After": "300" } }
+    );
   }
 
   const ip = clientIp(request);

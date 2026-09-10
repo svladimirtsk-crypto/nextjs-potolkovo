@@ -25,6 +25,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   for (const key of ENV_KEYS) {
     if (saved[key] === undefined) delete process.env[key];
     else process.env[key] = saved[key];
@@ -40,8 +41,9 @@ async function callHealth() {
 }
 
 describe("GET /api/health", () => {
-  it("без DATABASE_URL: процесс жив, но не готов принимать заявки", async () => {
+  it("без DATABASE_URL в проде: процесс жив, но не готов принимать заявки", async () => {
     delete process.env.DATABASE_URL;
+    vi.stubEnv("NODE_ENV", "production");
 
     const { response, body } = await callHealth();
 
@@ -50,6 +52,14 @@ describe("GET /api/health", () => {
     expect(body.ok).toBe(true);
     expect(body.ready).toBe(false);
     expect(body.storage).toBe("memory");
+  });
+
+  it("вне прода in-memory считается рабочим режимом", () => {
+    /**
+     * PT-002: разработка и тесты живут на памяти намеренно. Если бы health
+     * репортил здесь `ready: false`, локальный запуск выглядел бы аварией.
+     */
+    expect(process.env.NODE_ENV).not.toBe("production");
   });
 
   it("с DATABASE_URL: готов принимать заявки", async () => {
