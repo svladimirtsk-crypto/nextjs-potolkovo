@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { HomeFooter } from "@/components/home/home-footer";
 import { Container } from "@/components/ui/container";
-import { contacts } from "@/content/contacts";
+import { contacts, isLegalFieldFilled } from "@/content/contacts";
 
 export const metadata: Metadata = {
   title: { absolute: "Политика конфиденциальности — ПОТОЛКОВО" },
@@ -12,6 +12,35 @@ export const metadata: Metadata = {
     canonical: "/privacy",
   },
 };
+
+/** Строка реквизита или null, если владелец ещё не заполнил поле. */
+function requisiteLine(label: string, value: string): string | null {
+  return isLegalFieldFilled(value) ? `• ${label}: ${value}` : null;
+}
+
+function buildRequisites(): string {
+  const filled = [
+    requisiteLine("Наименование", contacts.legalName),
+    requisiteLine("ИНН", contacts.inn),
+    requisiteLine("ОГРНИП", contacts.ogrnip),
+  ].filter((line): line is string => line !== null);
+
+  const contactLines = [
+    `• Email: ${contacts.emailDisplay}`,
+    `• Телефон: ${contacts.phoneDisplay}`,
+  ];
+
+  if (filled.length === 0) {
+    return [
+      "Оператор персональных данных:",
+      ...contactLines,
+      "",
+      "Полные регистрационные данные оператора предоставляются по запросу через указанные контакты.",
+    ].join("\n");
+  }
+
+  return ["Оператор персональных данных:", ...filled, ...contactLines].join("\n");
+}
 
 const privacySections: { title: string; text: string }[] = [
   {
@@ -81,14 +110,19 @@ const privacySections: { title: string; text: string }[] = [
   },
   {
     title: "9. Реквизиты",
-    text: [
-      "Оператор персональных данных:",
-      `• Наименование: ${contacts.legalName}`,
-      `• ИНН: ${contacts.inn}`,
-      `• ОГРНИП: ${contacts.ogrnip}`,
-      `• Email: ${contacts.emailDisplay}`,
-      `• Телефон: ${contacts.phoneDisplay}`,
-    ].join("\n"),
+    /**
+     * PT-006: незаполненные реквизиты не публикуются.
+     *
+     * Значения подставлялись как есть, и на живом сайте в разделе «Оператор
+     * персональных данных» стояло «Наименование: TODO_OWNER». Футер такую же
+     * заглушку уже прятал через `isLegalFieldFilled`, а юридический документ —
+     * нет: защита была сделана наполовину, и вышло хуже, чем без неё —
+     * выглядит как реквизиты, а на деле служебная метка для разработчика.
+     *
+     * Пока владелец не заполнил данные, честнее оставить способ связи и прямо
+     * сказать, что регистрационные данные предоставляются по запросу.
+     */
+    text: buildRequisites(),
   },
   {
     title: "10. Изменения политики",
