@@ -49,15 +49,24 @@ describe("T-027 - POST /api/lead", () => {
       ok: boolean;
       leadId: string;
       callbackWindow: string;
-      delivered: { telegram: boolean; web3forms: boolean };
+      status: string;
     };
     expect(json.ok).toBe(true);
     expect(json.leadId).toMatch(/^[A-Z2-9]{5}$/);
     expect(json.callbackWindow).toBeTruthy();
-    expect(json.delivered).toEqual({ telegram: true, web3forms: true });
 
-    expect(deliverToTelegram).toHaveBeenCalledTimes(1);
-    expect(deliverToWeb3Forms).toHaveBeenCalledTimes(1);
+    /**
+     * PT-003: ответ больше не сообщает `delivered`. На момент ответа доставка
+     * ещё идёт, и обещать «доставлено мастеру» значит врать: заявка принята и
+     * поставлена в очередь — это всё, что известно достоверно.
+     */
+    expect(json.status).toBe("queued");
+
+    // Доставка всё же запускается, просто ответ её не ждёт.
+    await vi.waitFor(() => {
+      expect(deliverToTelegram).toHaveBeenCalledTimes(1);
+      expect(deliverToWeb3Forms).toHaveBeenCalledTimes(1);
+    });
 
     const stored = await getLeadStore().getLead(1);
     expect(stored?.payload.phone).toBe("+79055219909");
@@ -111,13 +120,18 @@ describe("T-027 - POST /api/lead", () => {
 
     const response = await POST(makeRequest(payload));
     expect(response.status).toBe(201);
-    const json = (await response.json()) as { delivered: { telegram: boolean } };
-    expect(json.delivered.telegram).toBe(false);
+    // Ответ успешен независимо от исхода доставки: заявка уже в хранилище.
+    const json = (await response.json()) as { ok: boolean; status: string };
+    expect(json.ok).toBe(true);
+    expect(json.status).toBe("queued");
 
-    const failed = await getLeadStore().listFailedDeliveries(10);
-    expect(failed).toHaveLength(1);
-    expect(failed[0].channel).toBe("telegram");
-    expect(failed[0].lastError).toBe("HTTP 500");
+    // Исход канала записывается асинхронно, после ответа клиенту.
+    await vi.waitFor(async () => {
+      const failed = await getLeadStore().listFailedDeliveries(10);
+      expect(failed).toHaveLength(1);
+      expect(failed[0].channel).toBe("telegram");
+      expect(failed[0].lastError).toBe("HTTP 500");
+    });
   });
 
   it("rescue-lead sohranyaetsya so statusom rescue", async () => {

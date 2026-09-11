@@ -96,6 +96,37 @@ export class InMemoryLeadStore implements LeadStore {
     return record;
   }
 
+  /**
+   * PT-003 · Тот же контракт, что у PgLeadStore.
+   *
+   * Настоящей транзакции в памяти нет и быть не может, но контракт обязан
+   * совпадать: тесты гоняются именно на этой реализации, и если она позволит
+   * создать лид без заданий — дыра вернётся незамеченной.
+   */
+  async createLeadWithDeliveries(
+    input: Omit<LeadRecord, "id" | "createdAt" | "publicCode">,
+    channels: readonly DeliveryChannel[]
+  ): Promise<LeadRecord> {
+    const lead = await this.createLead(input);
+
+    for (const channel of channels) {
+      this.deliveries.push({
+        id: this.deliverySeq++,
+        leadId: lead.id,
+        channel,
+        status: "pending",
+        attempts: 0,
+        createdAt: Date.now(),
+      });
+    }
+
+    return lead;
+  }
+
+  async listPendingDeliveries(limit: number): Promise<DeliveryRecord[]> {
+    return this.deliveries.filter((d) => d.status === "pending").slice(0, limit);
+  }
+
   async listFailedDeliveries(limit: number, maxAttempts = 5): Promise<DeliveryRecord[]> {
     return this.deliveries
       .filter((d) => d.status === "failed" && d.attempts < maxAttempts)
