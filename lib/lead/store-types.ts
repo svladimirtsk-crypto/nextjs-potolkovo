@@ -43,6 +43,31 @@ export interface LeadStore {
     status: DeliveryStatus,
     error?: string
   ): Promise<DeliveryRecord>;
+  /**
+   * PT-003 · Заявка и задания на доставку создаются одной транзакцией.
+   *
+   * Раньше лид записывался, затем шли сетевые вызовы в Telegram/Web3Forms и
+   * только потом — `recordDelivery`. Остановка процесса между этими шагами
+   * оставляла заявку вообще без записи о доставке: крон ретрая ищет строки со
+   * статусом `failed`, а строки не существовало. Заявка молча выпадала.
+   *
+   * Теперь задания создаются в статусе `pending` вместе с самим лидом, до
+   * любой попытки отправки. Даже если процесс умрёт сразу после ответа
+   * клиенту — крон подхватит задание.
+   */
+  createLeadWithDeliveries(
+    input: Omit<LeadRecord, "id" | "createdAt" | "publicCode">,
+    channels: readonly DeliveryChannel[]
+  ): Promise<LeadRecord>;
+
+  /**
+   * Задания, ожидающие отправки или уже упавшие.
+   *
+   * PT-003: раньше крон видел только `failed`. Теперь и `pending` — иначе
+   * задание, созданное до обрыва, никто бы не забрал.
+   */
+  listPendingDeliveries(limit: number): Promise<DeliveryRecord[]>;
+
   listFailedDeliveries(limit: number): Promise<DeliveryRecord[]>;
   getLead(leadId: number): Promise<LeadRecord | null>;
   /** Поиск по короткому коду — менеджер ищет заявку, названную клиентом. */

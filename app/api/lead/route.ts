@@ -1,7 +1,8 @@
 /**
  * T-027 · POST /api/lead — единственная точка приёма заявок.
  *
- * Порядок: honeypot → rate-limit → zod → дедуп → запись → доставка
+ * Порядок: honeypot → готовность хранилища → rate-limit → zod → дедуп →
+ * запись → доставка
  * (Telegram основной, Web3Forms дубль). Ошибка доставки не роняет ответ:
  * заявка уже сохранена, неудачные каналы уходят в ретрай (`/api/lead/retry`).
  */
@@ -9,15 +10,14 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { resolveCallbackWindow } from "@/lib/lead/callback-window";
-import { deliverToTelegram } from "@/lib/lead/deliver-telegram";
-import { deliverToWeb3Forms } from "@/lib/lead/deliver-web3forms";
+import { DELIVERY_CHANNELS, deliverAll } from "@/lib/lead/deliver-all";
 import {
   checkRateLimit,
   RATE_LIMIT_MAX,
   RATE_LIMIT_WINDOW_MS,
 } from "@/lib/lead/rate-limit";
 import { LeadPayloadSchema } from "@/lib/lead/schema";
-import { getLeadStore } from "@/lib/lead/store";
+import { getLeadStore, isLeadStorageReady } from "@/lib/lead/store";
 import { getEnv } from "@/lib/env";
 
 export const runtime = "nodejs";
@@ -51,6 +51,23 @@ export async function POST(request: Request) {
   // Honeypot: боты заполняют скрытое поле — отвечаем как успехом, но ничего не пишем.
   if (typeof raw === "object" && raw !== null && String((raw as Record<string, unknown>).botcheck ?? "")) {
     return NextResponse.json({ ok: true, leadId: null, callbackWindow: resolveCallbackWindow() });
+  }
+
+  /**
+   * PT-002 · Хранилище недоступно — отказываем честно, до любой обработки.
+   *
+   * Раньше при пустом DATABASE_URL в проде заявка уходила в память процесса и
+   * исчезала при первом же рестарте, а клиент видел «Заявка принята». Молчание
+   * здесь опаснее отказа: человек уверен, что ему перезвонят, и не звонит сам.
+   *
+   * Проверка стоит перед rate-limit и валидацией намеренно: если принять
+   * заявку всё равно некуда, нет смысла тратить лимит и разбирать payload.
+   */
+  if (!isLeadStorageReady()) {
+    return NextResponse.json(
+      { ok: false, error: "storage_unavailable" },
+      { status: 503, headers: { "Retry-After": "300" } }
+    );
   }
 
   const ip = clientIp(request);
@@ -107,38 +124,54 @@ export async function POST(request: Request) {
   const grandTotal =
     payload.snapshot?.totals.grand ?? payload.totals?.grand ?? payload.grandTotal ?? 0;
 
-  const lead = await store.createLead({
-    status: payload.leadKind === "rescue" ? "rescue" : "new",
-    payload,
-    grandTotal,
-    ipHash,
-    userAgent: request.headers.get("user-agent") ?? undefined,
-  });
-
-  const [telegram, web3forms] = await Promise.all([
-    deliverToTelegram(payload, lead.publicCode),
-    deliverToWeb3Forms(payload, lead.publicCode),
-  ]);
-
-  await store.recordDelivery(
-    lead.id,
-    "telegram",
-    telegram.ok ? "sent" : "failed",
-    telegram.ok ? undefined : telegram.error
+  /**
+   * PT-003 · Заявка и задания на доставку — одной транзакцией.
+   *
+   * Раньше здесь шло: createLead → await двух сетевых вызовов →
+   * recordDelivery. Две проблемы разом:
+   *
+   * 1. Остановка процесса между записью лида и recordDelivery оставляла
+   *    заявку без единой строки о доставке. Крон ретрая ищет `failed`, а
+   *    строки не было вовсе — заявка молча выпадала навсегда.
+   * 2. Клиент физически ждал ответа Telegram и Web3Forms. При их
+   *    деградации форма «висела», хотя заявка уже сохранена.
+   *
+   * Теперь задания создаются в статусе `pending` вместе с лидом, до любой
+   * попытки отправки. Даже если процесс умрёт сразу после ответа — крон
+   * подхватит задание.
+   */
+  const lead = await store.createLeadWithDeliveries(
+    {
+      status: payload.leadKind === "rescue" ? "rescue" : "new",
+      payload,
+      grandTotal,
+      ipHash,
+      userAgent: request.headers.get("user-agent") ?? undefined,
+    },
+    DELIVERY_CHANNELS
   );
-  await store.recordDelivery(
-    lead.id,
-    "web3forms",
-    web3forms.ok ? "sent" : "failed",
-    web3forms.ok ? undefined : web3forms.error
-  );
+
+  /**
+   * Доставка запускается, но ответ её НЕ ждёт: заявка уже в базе, а
+   * «сохранено» честнее и быстрее, чем «доставлено мастеру».
+   *
+   * Ошибки проглатываются намеренно — статусы пишет сама deliverAll, а
+   * необработанный reject здесь уронил бы процесс после успешного ответа.
+   */
+  void deliverAll(store, lead.id, payload, lead.publicCode).catch(() => {});
 
   return NextResponse.json(
     {
       ok: true,
       leadId: lead.publicCode,
       callbackWindow,
-      delivered: { telegram: telegram.ok, web3forms: web3forms.ok },
+      /**
+       * PT-003: раньше здесь стоял `delivered` с результатами отправки.
+       * Теперь ответ уходит до её завершения, и честный статус — «принято
+       * и поставлено в очередь», а не «доставлено мастеру». Обещать второе,
+       * не дождавшись ответа Telegram, значит врать клиенту.
+       */
+      status: "queued",
     },
     { status: 201 }
   );

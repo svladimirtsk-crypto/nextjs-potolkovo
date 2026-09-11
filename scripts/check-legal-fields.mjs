@@ -8,7 +8,12 @@
 import { readFileSync } from "node:fs";
 
 const source = readFileSync(new URL("../content/contacts.ts", import.meta.url), "utf8");
-const required = ["legalName", "inn", "ogrnip"];
+/**
+ * PT-006: ОГРНИП не обязателен — владелец самозанятый, и такого номера у него
+ * нет. Требовать его значило бы вынудить вписать выдуманный: гейт, который
+ * нельзя пройти честно, обходят, а не соблюдают.
+ */
+const required = ["legalName", "inn"];
 
 const missing = required.filter((field) => {
   const match = source.match(new RegExp(`${field}:\\s*"([^"]*)"`));

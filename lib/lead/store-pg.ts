@@ -82,7 +82,12 @@ export class PgLeadStore implements LeadStore {
     this.db = getDb(connectionString);
   }
 
-  async createLead(
+  /**
+   * Вставка лида. Принимает исполнителя запроса, поэтому работает и сама по
+   * себе, и внутри транзакции (PT-003) — без второй копии кода.
+   */
+  private async insertLead(
+    executor: Db | Parameters<Parameters<Db["transaction"]>[0]>[0],
     input: Omit<LeadRecord, "id" | "createdAt" | "publicCode">
   ): Promise<LeadRecord> {
     const { payload } = input;
@@ -94,7 +99,7 @@ export class PgLeadStore implements LeadStore {
       const publicCode = generatePublicCode();
 
       try {
-        const [row] = await this.db
+        const [row] = await executor
           .insert(leads)
           .values({
             publicCode,
@@ -127,6 +132,64 @@ export class PgLeadStore implements LeadStore {
     }
 
     throw new Error("не удалось подобрать уникальный public_code");
+  }
+
+  async createLead(
+    input: Omit<LeadRecord, "id" | "createdAt" | "publicCode">
+  ): Promise<LeadRecord> {
+    return this.insertLead(this.db, input);
+  }
+
+
+  /**
+   * PT-003 · Лид и задания на доставку — одной транзакцией.
+   *
+   * Ключевое отличие от `createLead`: если вставка заданий упадёт, откатится
+   * и сам лид. Половинчатого состояния «заявка есть, доставлять её некому»
+   * больше не существует.
+   *
+   * Задания создаются в статусе `pending` ДО первой попытки отправки. Именно
+   * это чинит исходную дыру: раньше при обрыве процесса между записью лида и
+   * `recordDelivery` строки не появлялось вовсе, и крон, который ищет
+   * `failed`, такую заявку не видел никогда.
+   */
+  async createLeadWithDeliveries(
+    input: Omit<LeadRecord, "id" | "createdAt" | "publicCode">,
+    channels: readonly DeliveryChannel[]
+  ): Promise<LeadRecord> {
+    return this.db.transaction(async (tx) => {
+      const lead = await this.insertLead(tx, input);
+
+      if (channels.length > 0) {
+        await tx.insert(leadDeliveries).values(
+          channels.map((channel) => ({
+            leadId: lead.id,
+            channel,
+            status: "pending" as DeliveryStatus,
+            attempts: 0,
+          }))
+        );
+      }
+
+      return lead;
+    });
+  }
+
+  /**
+   * Задания, которые ещё никто не отправил.
+   *
+   * Отдаются вместе с упавшими (`listFailedDeliveries`), потому что для крона
+   * это один и тот же вопрос: что осталось доставить.
+   */
+  async listPendingDeliveries(limit: number): Promise<DeliveryRecord[]> {
+    const rows = await this.db
+      .select()
+      .from(leadDeliveries)
+      .where(eq(leadDeliveries.status, "pending"))
+      .orderBy(leadDeliveries.createdAt)
+      .limit(limit);
+
+    return rows.map(toDeliveryRecord);
   }
 
   async findRecentByPhone(phone: string, windowMs: number): Promise<LeadRecord | null> {

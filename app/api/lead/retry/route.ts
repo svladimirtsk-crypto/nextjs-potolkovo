@@ -24,7 +24,21 @@ export async function POST(request: Request) {
   }
 
   const store = getLeadStore();
-  const failed = await store.listFailedDeliveries(BATCH_SIZE);
+
+  /**
+   * PT-003 · Крон забирает и `pending`, и `failed`.
+   *
+   * Раньше он смотрел только на `failed`. Задание в статусе `pending`
+   * появляется теперь сразу вместе с лидом — и если процесс умер до первой
+   * попытки отправки, такое задание не попало бы сюда никогда, а заявка
+   * осталась бы недоставленной навсегда.
+   *
+   * Порядок важен: сначала ни разу не отправленные, потом повторные. Свежая
+   * заявка ценнее ретрая, который уже несколько раз не прошёл.
+   */
+  const pending = await store.listPendingDeliveries(BATCH_SIZE);
+  const failedOnes = await store.listFailedDeliveries(Math.max(0, BATCH_SIZE - pending.length));
+  const failed = [...pending, ...failedOnes];
 
   let retried = 0;
   let recovered = 0;

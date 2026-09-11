@@ -608,6 +608,20 @@
     ],
     "system": "OTHER"
   },
+  "eks-0-00004814": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
+  "eks-0-00004815": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "OTHER"
+  },
   "eks-0-00006001": {
     "widths": [
       256,
@@ -1105,6 +1119,34 @@
     ],
     "system": "TRACK_220"
   },
+  "eks-0-00004816": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00004817": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00004818": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
+  "eks-0-00004819": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "TRACK_220"
+  },
   "eks-0-00006341": {
     "widths": [
       256,
@@ -1139,6 +1181,41 @@
       512
     ],
     "system": "TRACK_220"
+  },
+  "eks-0-00001335": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00001336": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00001337": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00001338": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00001339": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
   },
   "eks-0-00001340": {
     "widths": [
@@ -1238,6 +1315,118 @@
     ],
     "system": "COLIBRI_220"
   },
+  "eks-0-00001999": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00002000": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00002001": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00002002": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00002003": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00002005": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00002099": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00002331": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00002332": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00002959": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00004534": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00004535": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00004820": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00005099": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00005100": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00005152": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
   "eks-0-00006092": {
     "widths": [
       256,
@@ -1251,6 +1440,55 @@
       512
     ],
     "system": "COLIBRI_220"
+  },
+  "eks-0-00006094": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00006089": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00006090": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00006091": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00006095": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00006986": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "COLIBRI_220"
+  },
+  "eks-0-00002100": {
+    "widths": [
+      256,
+      512
+    ],
+    "system": "SMART_HOME"
   },
   "eks-0-00002285": {
     "widths": [

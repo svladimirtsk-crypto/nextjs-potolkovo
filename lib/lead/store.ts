@@ -96,6 +96,37 @@ export class InMemoryLeadStore implements LeadStore {
     return record;
   }
 
+  /**
+   * PT-003 · Тот же контракт, что у PgLeadStore.
+   *
+   * Настоящей транзакции в памяти нет и быть не может, но контракт обязан
+   * совпадать: тесты гоняются именно на этой реализации, и если она позволит
+   * создать лид без заданий — дыра вернётся незамеченной.
+   */
+  async createLeadWithDeliveries(
+    input: Omit<LeadRecord, "id" | "createdAt" | "publicCode">,
+    channels: readonly DeliveryChannel[]
+  ): Promise<LeadRecord> {
+    const lead = await this.createLead(input);
+
+    for (const channel of channels) {
+      this.deliveries.push({
+        id: this.deliverySeq++,
+        leadId: lead.id,
+        channel,
+        status: "pending",
+        attempts: 0,
+        createdAt: Date.now(),
+      });
+    }
+
+    return lead;
+  }
+
+  async listPendingDeliveries(limit: number): Promise<DeliveryRecord[]> {
+    return this.deliveries.filter((d) => d.status === "pending").slice(0, limit);
+  }
+
   async listFailedDeliveries(limit: number, maxAttempts = 5): Promise<DeliveryRecord[]> {
     return this.deliveries
       .filter((d) => d.status === "failed" && d.attempts < maxAttempts)
@@ -114,6 +145,27 @@ export class InMemoryLeadStore implements LeadStore {
 
 let store: LeadStore | null = null;
 let warned = false;
+
+/**
+ * PT-002 · Можно ли принимать заявки прямо сейчас.
+ *
+ * In-memory хранилище теряет заявки при рестарте процесса. В разработке это
+ * нормально, а в проде означает, что клиент видит «Заявка №A-123 принята»,
+ * хотя записи уже нет — и узнать об этом некому: предупреждение уходит в
+ * логи, которые никто не читает.
+ *
+ * Владелец выбрал деградацию вместо остановки: сайт остаётся в сети (каталог,
+ * цены, телефон, Telegram работают), а форма честно отказывает. Так человек
+ * хотя бы может дозвониться, вместо того чтобы увидеть пустоту и уйти.
+ */
+export function isLeadStorageReady(): boolean {
+  const { DATABASE_URL, NODE_ENV } = getEnv();
+
+  // Разработка и тесты живут на in-memory намеренно — их не трогаем.
+  if (NODE_ENV !== "production") return true;
+
+  return Boolean(DATABASE_URL);
+}
 
 export function getLeadStore(): LeadStore {
   if (store) return store;
