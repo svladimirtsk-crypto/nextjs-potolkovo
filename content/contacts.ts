@@ -11,6 +11,16 @@ export const contacts = {
   telegramDisplay: "Написать в Telegram",
   telegramUrl: "https://t.me/potolkovo_msk",
 
+  /**
+   * WhatsApp по отдельному номеру: у владельца телефон для звонков и
+   * мессенджер разведены, поэтому ссылку нельзя собирать из `phoneHref`.
+   *
+   * Формат wa.me требует номер без «+», пробелов и скобок — иначе диалог
+   * не откроется, а человек увидит пустой экран.
+   */
+  whatsappDisplay: "Написать в WhatsApp",
+  whatsappUrl: "https://wa.me/79032764693",
+
   emailDisplay: "potolkovo_msk@mail.ru",
   emailHref: "mailto:potolkovo_msk@mail.ru",
 

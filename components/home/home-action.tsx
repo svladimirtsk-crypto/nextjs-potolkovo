@@ -86,6 +86,17 @@ export function HomeAction() {
               <Divider />
 
               <div>
+                <p className="text-sm text-slate-500">WhatsApp</p>
+                <div className="mt-2">
+                  <TextLink href={contacts.whatsappUrl} className="text-base font-medium">
+                    {contacts.whatsappDisplay}
+                  </TextLink>
+                </div>
+              </div>
+
+              <Divider />
+
+              <div>
                 <p className="text-sm text-slate-500">Email</p>
                 <div className="mt-2">
                   <TextLink href={contacts.emailHref} className="text-base font-medium">

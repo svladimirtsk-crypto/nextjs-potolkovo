@@ -52,6 +52,15 @@ export function HomeFooter() {
               </div>
 
               <div>
+                <p className="text-xs font-medium text-slate-500">WhatsApp</p>
+                <div className="mt-1">
+                  <TextLink href={contacts.whatsappUrl} className="text-base font-medium">
+                    {contacts.whatsappDisplay}
+                  </TextLink>
+                </div>
+              </div>
+
+              <div>
                 <p className="text-xs font-medium text-slate-500">Email</p>
                 <div className="mt-1">
                   <TextLink href={contacts.emailHref} className="text-base font-medium">
