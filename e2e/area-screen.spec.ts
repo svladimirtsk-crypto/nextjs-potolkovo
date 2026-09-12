@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { MODAL } from "./helpers";
+import { MODAL, clearCalcDraftStorage } from "./helpers";
 
 /**
  * N-013 · Экран «Площадь потолка» (F-08–F-11, F-13).
@@ -70,7 +70,14 @@ test.describe("Шаг 0 · экран площади", () => {
     // На главной пресета нет: контекст подставляет заглушку, и сообщать не о чем.
     await expect(modal.getByText(/со страницы/)).toHaveCount(0);
 
+    /**
+     * PT-007: первое открытие уже сохранило черновик, а с ним вход со страницы
+     * услуги показывает экран выбора «продолжить / начать новый» — плашки
+     * предзаполнения за ним не видно. Черновик убираем: предмет теста F-10 —
+     * сама плашка, а сценарий с черновиком покрыт в `draft-restore.spec.ts`.
+     */
     await page.reload();
+    await clearCalcDraftStorage(page);
     await page.goto("/uslugi/tenevoy-profil");
     await page.getByRole("button", { name: "Рассчитать теневой потолок" }).first().click();
     await modal.waitFor();
