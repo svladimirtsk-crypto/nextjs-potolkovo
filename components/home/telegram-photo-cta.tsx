@@ -29,17 +29,33 @@ export function TelegramPhotoCta({
     >
       <p className="text-sm font-semibold text-emerald-950">Хотите быстрее?</p>
       <p className="mt-1 text-sm text-emerald-900">
-        Пришлите 2–3 фото помещения в Telegram — уточню смету ещё до выезда.
+        Пришлите 2–3 фото помещения — уточню смету ещё до выезда.
       </p>
-      <a
-        href={telegramLeadLink(contacts.telegramUrl, leadCode)}
-        target="_blank"
-        rel="noopener noreferrer"
-        data-testid="success-telegram"
-        className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800"
-      >
-        Отправить фото в Telegram
-      </a>
+      {/*
+        Два мессенджера рядом: человек пришлёт фото туда, где у него уже
+        открыт чат, а не туда, где удобнее нам. Оба ведут в один и тот же
+        разговор с мастером и несут номер заявки в тексте.
+      */}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <a
+          href={telegramLeadLink(contacts.telegramUrl, leadCode)}
+          target="_blank"
+          rel="noopener noreferrer"
+          data-testid="success-telegram"
+          className="inline-flex min-h-11 items-center rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800"
+        >
+          Фото в Telegram
+        </a>
+        <a
+          href={telegramLeadLink(contacts.whatsappUrl, leadCode)}
+          target="_blank"
+          rel="noopener noreferrer"
+          data-testid="success-whatsapp"
+          className="inline-flex min-h-11 items-center rounded-xl bg-white px-4 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-300 transition hover:bg-emerald-50"
+        >
+          Фото в WhatsApp
+        </a>
+      </div>
     </div>
   );
 }

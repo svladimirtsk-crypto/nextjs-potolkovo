@@ -12,6 +12,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 import type { LeadPayload } from "@/lib/lead/schema";
@@ -43,12 +44,36 @@ export const leads = pgTable(
     grandTotal: integer("grand_total"),
     ipHash: text("ip_hash"),
     userAgent: text("user_agent"),
+    /**
+     * PT-009 · Ключ идемпотентности: один на попытку отправки.
+     *
+     * Колонка nullable, и это принципиально: в PostgreSQL unique-индекс
+     * считает NULL-значения различными, поэтому уже накопленные заявки (все с
+     * NULL) не мешают наложить ограничение. Миграция проходит по схеме
+     * `expand → migrate → switch → contract` (раздел 3.8) без блокирующей
+     * перезаписи существующих строк.
+     */
+    requestId: text("request_id"),
+    /** PT-009 · sha256 канонического payload: отличить дубль от другой заявки. */
+    payloadHash: text("payload_hash"),
   },
   (table) => [
     index("leads_created_at_idx").on(table.createdAt.desc()),
     index("leads_phone_created_idx").on(table.phone, table.createdAt.desc()),
     // Серверный rate-limit считает заявки с одного IP за окно.
     index("leads_ip_created_idx").on(table.ipHash, table.createdAt.desc()),
+    /**
+     * PT-009 · Повтор того же requestId не должен создавать вторую заявку даже
+     * при одновременной вставке двумя параллельными запросами: гонку ловит
+     * ограничение, а не проверка «сначала прочитали, потом вставили».
+     */
+    uniqueIndex("leads_request_id_key").on(table.requestId),
+    // PT-009: дедуп ищет недавнюю заявку с тем же телефоном И тем же содержимым.
+    index("leads_phone_hash_created_idx").on(
+      table.phone,
+      table.payloadHash,
+      table.createdAt.desc()
+    ),
   ]
 );
 

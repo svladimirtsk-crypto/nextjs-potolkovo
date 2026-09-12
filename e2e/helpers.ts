@@ -12,10 +12,35 @@ import type { Locator, Page, Route } from "@playwright/test";
 export type CapturedLead = Record<string, unknown>;
 
 /**
+ * PT-004 · Как отвечать на `POST /api/lead`.
+ *
+ * Объект читается в момент запроса, поэтому его можно менять по ходу теста —
+ * это единственный способ проверить сценарий «отказ → повтор → успех», не
+ * поднимая второй перехват.
+ */
+export type LeadApiStub = {
+  /** HTTP-статус ответа. По умолчанию 201. */
+  status?: number;
+  /** Тело ответа. По умолчанию успешная заявка. */
+  body?: Record<string, unknown>;
+  /** Имитировать обрыв связи: запрос не получает ответа вовсе. */
+  abort?: boolean;
+  /** Задержка перед ответом, мс. */
+  delayMs?: number;
+};
+
+const DEFAULT_LEAD_SUCCESS_BODY = {
+  ok: true,
+  leadId: "E2E01",
+  callbackWindow: "сегодня до 21:00",
+  status: "queued",
+} satisfies Record<string, unknown>;
+
+/**
  * Перехватывает POST /api/lead, возвращает успешный ответ и копит payload'ы.
  * Возвращает массив, который наполняется по ходу теста.
  */
-export async function interceptLeadApi(page: Page): Promise<CapturedLead[]> {
+export async function interceptLeadApi(page: Page, stub: LeadApiStub = {}): Promise<CapturedLead[]> {
   const captured: CapturedLead[] = [];
 
   await page.route("**/api/lead", async (route: Route) => {
@@ -30,15 +55,17 @@ export async function interceptLeadApi(page: Page): Promise<CapturedLead[]> {
       captured.push({ __unparsable: route.request().postData() });
     }
 
+    if (stub.delayMs) await new Promise((resolve) => setTimeout(resolve, stub.delayMs));
+
+    if (stub.abort) {
+      await route.abort("failed");
+      return;
+    }
+
     await route.fulfill({
-      status: 201,
+      status: stub.status ?? 201,
       contentType: "application/json",
-      body: JSON.stringify({
-        ok: true,
-        leadId: "E2E01",
-        callbackWindow: "сегодня до 21:00",
-        delivered: true,
-      }),
+      body: JSON.stringify(stub.body ?? DEFAULT_LEAD_SUCCESS_BODY),
     });
   });
 

@@ -59,6 +59,8 @@ function toLeadRecord(row: LeadRow): LeadRecord {
     grandTotal: row.grandTotal ?? 0,
     ipHash: row.ipHash ?? undefined,
     userAgent: row.userAgent ?? undefined,
+    requestId: row.requestId ?? undefined,
+    payloadHash: row.payloadHash ?? undefined,
   };
 }
 
@@ -82,7 +84,12 @@ export class PgLeadStore implements LeadStore {
     this.db = getDb(connectionString);
   }
 
-  async createLead(
+  /**
+   * Вставка лида. Принимает исполнителя запроса, поэтому работает и сама по
+   * себе, и внутри транзакции (PT-003) — без второй копии кода.
+   */
+  private async insertLead(
+    executor: Db | Parameters<Parameters<Db["transaction"]>[0]>[0],
     input: Omit<LeadRecord, "id" | "createdAt" | "publicCode">
   ): Promise<LeadRecord> {
     const { payload } = input;
@@ -94,7 +101,7 @@ export class PgLeadStore implements LeadStore {
       const publicCode = generatePublicCode();
 
       try {
-        const [row] = await this.db
+        const [row] = await executor
           .insert(leads)
           .values({
             publicCode,
@@ -115,6 +122,8 @@ export class PgLeadStore implements LeadStore {
             grandTotal: input.grandTotal,
             ipHash: input.ipHash ?? null,
             userAgent: input.userAgent ?? null,
+            requestId: input.requestId ?? null,
+            payloadHash: input.payloadHash ?? null,
           })
           .returning();
 
@@ -129,15 +138,103 @@ export class PgLeadStore implements LeadStore {
     throw new Error("не удалось подобрать уникальный public_code");
   }
 
-  async findRecentByPhone(phone: string, windowMs: number): Promise<LeadRecord | null> {
+  async createLead(
+    input: Omit<LeadRecord, "id" | "createdAt" | "publicCode">
+  ): Promise<LeadRecord> {
+    return this.insertLead(this.db, input);
+  }
+
+
+  /**
+   * PT-003 · Лид и задания на доставку — одной транзакцией.
+   *
+   * Ключевое отличие от `createLead`: если вставка заданий упадёт, откатится
+   * и сам лид. Половинчатого состояния «заявка есть, доставлять её некому»
+   * больше не существует.
+   *
+   * Задания создаются в статусе `pending` ДО первой попытки отправки. Именно
+   * это чинит исходную дыру: раньше при обрыве процесса между записью лида и
+   * `recordDelivery` строки не появлялось вовсе, и крон, который ищет
+   * `failed`, такую заявку не видел никогда.
+   */
+  async createLeadWithDeliveries(
+    input: Omit<LeadRecord, "id" | "createdAt" | "publicCode">,
+    channels: readonly DeliveryChannel[]
+  ): Promise<LeadRecord> {
+    return this.db.transaction(async (tx) => {
+      const lead = await this.insertLead(tx, input);
+
+      if (channels.length > 0) {
+        await tx.insert(leadDeliveries).values(
+          channels.map((channel) => ({
+            leadId: lead.id,
+            channel,
+            status: "pending" as DeliveryStatus,
+            attempts: 0,
+          }))
+        );
+      }
+
+      return lead;
+    });
+  }
+
+  /**
+   * Задания, которые ещё никто не отправил.
+   *
+   * Отдаются вместе с упавшими (`listFailedDeliveries`), потому что для крона
+   * это один и тот же вопрос: что осталось доставить.
+   */
+  async listPendingDeliveries(limit: number): Promise<DeliveryRecord[]> {
+    const rows = await this.db
+      .select()
+      .from(leadDeliveries)
+      .where(eq(leadDeliveries.status, "pending"))
+      .orderBy(leadDeliveries.createdAt)
+      .limit(limit);
+
+    return rows.map(toDeliveryRecord);
+  }
+
+  async findRecentDuplicate(
+    phone: string,
+    payloadHash: string | null,
+    windowMs: number
+  ): Promise<LeadRecord | null> {
     // Окно считаем часами БД (`now() - interval`), а не `Date.now()` приложения:
     // на managed-провайдерах инстанс и БД расходятся на десятки миллисекунд, и
     // смешивание двух часов давало плавающий результат дедупа.
+    //
+    // PT-009: к телефону добавлен отпечаток payload. Прежний поиск по одному
+    // телефону возвращал любую недавнюю заявку с этим номером, поэтому полная
+    // заявка, отправленная после rescue, молча получала код короткой
+    // rescue-заявки, а её состав не сохранялся нигде.
+    const conditions = [eq(leads.phone, phone), gt(leads.createdAt, windowStart(windowMs))];
+    // `payloadHash === null` — аварийный откат флагом: сравниваем только телефон.
+    if (payloadHash !== null) conditions.push(eq(leads.payloadHash, payloadHash));
+
     const [row] = await this.db
       .select()
       .from(leads)
-      .where(and(eq(leads.phone, phone), gt(leads.createdAt, windowStart(windowMs))))
+      .where(and(...conditions))
       .orderBy(desc(leads.createdAt))
+      .limit(1);
+
+    return row ? toLeadRecord(row) : null;
+  }
+
+  /**
+   * PT-009: заявка по клиентскому ключу идемпотентности.
+   *
+   * `request_id` покрыт unique-индексом, поэтому здесь достаточно точечного
+   * поиска — гонку двух параллельных вставок ловит само ограничение, а не этот
+   * запрос.
+   */
+  async findLeadByRequestId(requestId: string): Promise<LeadRecord | null> {
+    const [row] = await this.db
+      .select()
+      .from(leads)
+      .where(eq(leads.requestId, requestId))
       .limit(1);
 
     return row ? toLeadRecord(row) : null;

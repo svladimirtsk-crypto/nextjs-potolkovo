@@ -170,8 +170,12 @@ export function serviceCtaLabel(slug: string): string {
  * Ссылка подставляет номер заявки в текст сообщения, чтобы фотографии не
  * пришлось связывать с заявкой вручную.
  */
-export function telegramLeadLink(telegramUrl: string, leadCode: string | null): string {
-  const base = telegramUrl.split("?")[0];
+export function telegramLeadLink(messengerUrl: string, leadCode: string | null): string {
+  /**
+   * Годится и для WhatsApp: `wa.me` принимает тот же параметр `text`, что и
+   * `t.me`. Имя оставлено прежним, чтобы не переписывать вызовы и тесты.
+   */
+  const base = messengerUrl.split("?")[0];
   const text = leadCode
     ? `Заявка №${leadCode}. Прикладываю фото помещения.`
     : "Прикладываю фото помещения к заявке.";

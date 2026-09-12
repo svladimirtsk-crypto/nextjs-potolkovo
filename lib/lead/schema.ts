@@ -6,14 +6,16 @@
  */
 import { z } from "zod";
 
-import { normalizePhone } from "@/lib/normalize-phone";
+import { isValidPhone, normalizePhone } from "@/lib/normalize-phone";
 
-/** Телефон валиден, если это +7 и 10 цифр либо международный +… 11-15 цифр. */
-export function isValidPhone(value: string): boolean {
-  const digits = value.replace(/\D/g, "");
-  if (digits.length === 11 && (digits.startsWith("7") || digits.startsWith("8"))) return true;
-  return digits.length >= 11 && digits.length <= 15;
-}
+/**
+ * Телефон валиден, если это +7 и 10 цифр либо международный +… 11-15 цифр.
+ *
+ * PT-004: правило переехало в `lib/normalize-phone.ts`, чтобы клиент
+ * (основная форма и rescue-диалог) и сервер проверяли номер одной и той же
+ * функцией. Реэкспорт оставлен — на него ссылается документация схемы.
+ */
+export { isValidPhone };
 
 export const LeadRoomSnapshotSchema = z.object({
   id: z.string().max(64),
@@ -106,6 +108,18 @@ export const LeadPayloadSchema = z.object({
   consent: z.literal(true),
   /** Honeypot: заполнено только ботом. */
   botcheck: z.literal("").optional(),
+
+  /**
+   * PT-009 · Ключ идемпотентности — один на попытку отправки.
+   *
+   * Необязательное намеренно: раздел 3.8 требует совместимости API на время
+   * миграции (`expand → migrate → switch → contract`), а собранный до деплоя
+   * клиентский JS в браузере посетителя ещё какое-то время шлёт запросы без
+   * этого поля. Делать его обязательным сразу — значит получить волну `422` от
+   * живых людей на уже открытых страницах. Без `requestId` работает прежняя
+   * защита: дедуп по телефону и отпечатку payload.
+   */
+  requestId: z.string().trim().min(8).max(64).optional(),
 
   source: z.string().max(64),
   placement: LeadPlacementSchema,

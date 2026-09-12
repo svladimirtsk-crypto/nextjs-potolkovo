@@ -22,6 +22,7 @@ const strict = process.argv.includes("--strict") || process.env.RELEASE === "1";
 /** Серверные переменные схемы `lib/env.ts` (NODE_ENV задаёт рантайм). */
 const SCHEMA_KEYS = [
   "LEAD_API_ENABLED",
+  "LEAD_IDEMPOTENCY_ENABLED",
   "TELEGRAM_LEADS_ENABLED",
   "TELEGRAM_BOT_TOKEN",
   "TELEGRAM_CHAT_ID",
@@ -34,7 +35,11 @@ const SCHEMA_KEYS = [
 ];
 
 /** Публичные переменные, которые тоже обязаны быть в примере. */
-const PUBLIC_KEYS = ["NEXT_PUBLIC_SITE_URL", "NEXT_PUBLIC_CALC_QUIZ_V2"];
+const PUBLIC_KEYS = [
+  "NEXT_PUBLIC_SITE_URL",
+  "NEXT_PUBLIC_CALC_QUIZ_V2",
+  "NEXT_PUBLIC_LEAD_RESCUE_ENABLED",
+];
 
 async function main() {
   const errors = [];
