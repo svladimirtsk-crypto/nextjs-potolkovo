@@ -34,7 +34,11 @@ const SCHEMA_KEYS = [
 ];
 
 /** Публичные переменные, которые тоже обязаны быть в примере. */
-const PUBLIC_KEYS = ["NEXT_PUBLIC_SITE_URL", "NEXT_PUBLIC_CALC_QUIZ_V2"];
+const PUBLIC_KEYS = [
+  "NEXT_PUBLIC_SITE_URL",
+  "NEXT_PUBLIC_CALC_QUIZ_V2",
+  "NEXT_PUBLIC_LEAD_RESCUE_ENABLED",
+];
 
 async function main() {
   const errors = [];

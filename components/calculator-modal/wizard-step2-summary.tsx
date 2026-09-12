@@ -559,7 +559,7 @@ export function WizardStep2Summary() {
               <ActionForm
                 source={String(options?.source ?? "modal")}
                 placement="modal"
-                intent={orderIntent}
+                intent={orderIntent} entryMode={options?.entryMode ?? null}
                 compactCalculationSummary
                 onSuccess={(result) => {
                   setLeadPublicCode(result.leadId);

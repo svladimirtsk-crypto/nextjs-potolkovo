@@ -16,6 +16,14 @@ import {
   trackPhoneValidated,
 } from "@/lib/analytics";
 import {
+  collectLeadAttribution,
+  resolveLeadEntry,
+  resolveOrderIntent,
+  submitLead,
+  toLeadErrorMetricKind,
+} from "@/lib/lead/submit-lead";
+import { isValidPhone, normalizePhone } from "@/lib/normalize-phone";
+import {
 } from "@/lib/lighting-formulas";
 
 import { calcLeadCeilingTotal } from "@/lib/calculator/pricing";
@@ -50,25 +58,6 @@ type FieldErrors = {
   address?: string;
 };
 
-function normalizePhone(value: string): string {
-  const digits = value.replace(/\D/g, "");
-  if (!digits) return "";
-
-  // 10 digits -> +7XXXXXXXXXX
-  if (digits.length === 10) return `+7${digits}`;
-
-  // 8XXXXXXXXXX -> +7XXXXXXXXXX
-  if (digits.startsWith("8") && digits.length === 11) return `+7${digits.slice(1)}`;
-
-  // 7XXXXXXXXXX -> +7XXXXXXXXXX
-  if (digits.startsWith("7") && digits.length === 11) return `+${digits}`;
-
-  // generic +
-  if (digits.length >= 10 && digits.length <= 15) return `+${digits}`;
-
-  return value.trim();
-}
-
 /** T-015: маска +7 (___) ___-__-__ без внешних зависимостей. */
 function formatPhoneInput(value: string): string {
   let digits = value.replace(/\D/g, "");
@@ -85,10 +74,6 @@ function formatPhoneInput(value: string): string {
   if (rest.length > 6) out += `-${rest.slice(6, 8)}`;
   if (rest.length > 8) out += `-${rest.slice(8, 10)}`;
   return out;
-}
-
-function isValidPhone(value: string): boolean {
-  return /^\+\d{10,15}$/.test(value);
 }
 
 function toNumber(value: unknown): number {
@@ -136,6 +121,15 @@ type ActionFormProps = {
   leadKind?: LeadKind;
   /** T-028: интент заказа задаёт копирайт формы (таблица 6.3 ТЗ). */
   intent?: Step2Intent;
+  /**
+   * PT-004: как человек вошёл в калькулятор — попадает в `snapshot.entry`.
+   *
+   * Раньше форма ставила `ceiling-first` всем заявкам из модалки, включая вход
+   * «сначала свет»: в БД поле `entry` переставало описывать реальность. Теперь
+   * правило одно на все формы (`resolveLeadEntry`), и rescue-заявка с основной
+   * формой записывают его одинаково.
+   */
+  entryMode?: string | null;
   /** В модальном итоге подробный состав уже показан выше — в форме оставляем только компактное подтверждение. */
   compactCalculationSummary?: boolean;
   /** P0.8: callback after successful submit. T-028: отдаёт номер заявки и окно перезвона. */
@@ -147,6 +141,7 @@ export function ActionForm({
   placement,
   leadKind,
   intent,
+  entryMode,
   compactCalculationSummary = false,
   onSuccess,
 }: ActionFormProps) {
@@ -174,10 +169,10 @@ export function ActionForm({
               snapshot.lighting?.discountedTotalRub ?? snapshot.lighting?.totalRub
             ),
             source: effectiveSource,
-            entry: placement === "modal" ? "ceiling-first" : "direct",
+            entry: resolveLeadEntry({ placement, entryMode }),
           })
         : undefined,
-    [hasInteracted, snapshot, effectiveSource, placement]
+    [hasInteracted, snapshot, effectiveSource, placement, entryMode]
   );
 
   const [leadResult, setLeadResult] = useState<{
@@ -279,40 +274,17 @@ export function ActionForm({
       return;
     }
 
-    const attribution: Record<string, string> = {};
-    if (typeof window !== "undefined") {
-      const keys = [
-        "utm_source",
-        "utm_medium",
-        "utm_campaign",
-        "utm_content",
-        "utm_term",
-        "yclid",
-        "gclid",
-        "_openstat",
-        "fbclid",
-      ];
-      for (const key of keys) {
-        const v = sessionStorage.getItem(key);
-        if (v && v.trim()) attribution[key] = v.trim();
-      }
-      const firstLanding = sessionStorage.getItem("first_landing");
-      if (firstLanding && firstLanding.trim()) attribution["first_landing"] = firstLanding.trim();
-      const firstReferrer = sessionStorage.getItem("first_referrer");
-      if (firstReferrer && firstReferrer.trim()) attribution["first_referrer"] = firstReferrer.trim();
-    }
+    // PT-004: сбор атрибуции общий с rescue-заявкой (и переживает заблокированный
+    // sessionStorage — полностью эта задача закрыта в PT-012).
+    const attribution = collectLeadAttribution();
 
     // T-027: интент заказа определяем по составу расчёта
     const lightingItemsCount = Number(snapshot?.lighting?.items?.length ?? 0);
-    const discountMode = String(
-      snapshot?.lightingDiscountMode ?? snapshot?.lighting?.discountMode ?? "none"
-    );
-    const orderIntent: "ceiling_only" | "lighting_with_ceiling" | "lighting_only" | "advanced" =
-      discountMode === "with-ceiling"
-        ? "lighting_with_ceiling"
-        : discountMode === "lighting-only" || (lightingItemsCount > 0 && !hasRooms)
-          ? "lighting_only"
-          : "ceiling_only";
+    const orderIntent = resolveOrderIntent({
+      discountMode: snapshot?.lightingDiscountMode ?? snapshot?.lighting?.discountMode ?? "none",
+      lightingItemsCount,
+      hasRooms,
+    });
 
     const orderEstimatedGrandRub = leadSnapshot?.totals.grand ?? 0;
 
@@ -337,81 +309,70 @@ export function ActionForm({
 
     setIsPending(true);
 
-    try {
-      const response = await fetch("/api/lead", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(leadPayload),
-      });
+    /**
+     * PT-004: отправка через общий сервис.
+     *
+     * Поведение основной формы не меняется — она и раньше проверяла
+     * `response.ok && body.ok`. Меняется то, что проверка теперь одна на все
+     * формы: rescue-заявка больше не может «успешно» закрыться после `500`.
+     * `submitLead` не бросает исключений, поэтому `try/catch` вокруг отправки
+     * не нужен — все исходы приходят значением.
+     */
+    const result = await submitLead(leadPayload);
 
-      const result = (await response.json().catch(() => null)) as
-        | { ok?: boolean; leadId?: string | null; callbackWindow?: string }
-        | null;
-
-      if (!response.ok || !result?.ok) {
-        trackFormSubmitError({
-          kind: "provider",
-          formPlacement: metrikaPlacement,
-          source: effectiveSource,
-        });
-        trackLeadError({ kind: response.status === 429 ? "ratelimit" : "server", placement });
-
-        setStatus("error");
-        setMessage(
-          `Не получилось отправить — позвоните ${contacts.phoneDisplay} или напишите в Telegram.`
-        );
-        return;
-      }
-
-      trackFormSubmitSuccess(effectiveSource);
-
-      // T-025: единая цель лида + параметр визита lead_total
-      trackLeadSubmit({
-        placement,
-        leadKind: effectiveLeadKind,
-        orderIntent,
-        grandTotal: orderEstimatedGrandRub,
-        rooms: Number(snapshot?.roomBreakdown?.length ?? 0),
-        lightingItems: lightingItemsCount,
-        source: effectiveSource,
-        pagePath: typeof window !== "undefined" ? window.location.pathname : "",
-        leadId: result?.leadId ?? null,
-      });
-
-      // P0.8: callback для WizardStep2Summary
-      onSuccess?.({
-        leadId: result?.leadId ?? null,
-        callbackWindow: String(result?.callbackWindow ?? ""),
-      });
-
-      setLeadResult({
-        leadId: result?.leadId ?? null,
-        callbackWindow: String(result?.callbackWindow ?? ""),
-      });
-      setStatus("success");
-      setMessage(
-        result?.callbackWindow
-          ? `Заявка принята. Перезвоню ${result.callbackWindow}.`
-          : COPY.successMessage
-      );
-
-      setName("");
-      setPhone("");
-      setAddress("");
-      setFieldErrors({});
-    } catch {
+    if (!result.ok) {
       trackFormSubmitError({
-        kind: "network",
+        kind: result.kind === "network" || result.kind === "timeout" ? "network" : "provider",
         formPlacement: metrikaPlacement,
         source: effectiveSource,
       });
-      trackLeadError({ kind: "network", placement });
+      trackLeadError({ kind: toLeadErrorMetricKind(result.kind), placement });
 
       setStatus("error");
-      setMessage(COPY.errorMessage);
-    } finally {
+      setMessage(
+        `Не получилось отправить — позвоните ${contacts.phoneDisplay} или напишите в Telegram.`
+      );
       setIsPending(false);
+      return;
     }
+
+    trackFormSubmitSuccess(effectiveSource);
+
+    // T-025: единая цель лида + параметр визита lead_total
+    trackLeadSubmit({
+      placement,
+      leadKind: effectiveLeadKind,
+      orderIntent,
+      grandTotal: orderEstimatedGrandRub,
+      rooms: Number(snapshot?.roomBreakdown?.length ?? 0),
+      lightingItems: lightingItemsCount,
+      source: effectiveSource,
+      pagePath: typeof window !== "undefined" ? window.location.pathname : "",
+      leadId: result.leadId,
+    });
+
+    // P0.8: callback для WizardStep2Summary
+    onSuccess?.({
+      leadId: result.leadId,
+      callbackWindow: result.callbackWindow,
+    });
+
+    setLeadResult({
+      leadId: result.leadId,
+      callbackWindow: result.callbackWindow,
+    });
+    setStatus("success");
+    setMessage(
+      result.callbackWindow
+        ? `Заявка принята. Перезвоню ${result.callbackWindow}.`
+        : COPY.successMessage
+    );
+
+    setName("");
+    setPhone("");
+    setAddress("");
+    setFieldErrors({});
+    setIsPending(false);
   }
 
   return (

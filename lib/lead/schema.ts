@@ -6,14 +6,16 @@
  */
 import { z } from "zod";
 
-import { normalizePhone } from "@/lib/normalize-phone";
+import { isValidPhone, normalizePhone } from "@/lib/normalize-phone";
 
-/** Телефон валиден, если это +7 и 10 цифр либо международный +… 11-15 цифр. */
-export function isValidPhone(value: string): boolean {
-  const digits = value.replace(/\D/g, "");
-  if (digits.length === 11 && (digits.startsWith("7") || digits.startsWith("8"))) return true;
-  return digits.length >= 11 && digits.length <= 15;
-}
+/**
+ * Телефон валиден, если это +7 и 10 цифр либо международный +… 11-15 цифр.
+ *
+ * PT-004: правило переехало в `lib/normalize-phone.ts`, чтобы клиент
+ * (основная форма и rescue-диалог) и сервер проверяли номер одной и той же
+ * функцией. Реэкспорт оставлен — на него ссылается документация схемы.
+ */
+export { isValidPhone };
 
 export const LeadRoomSnapshotSchema = z.object({
   id: z.string().max(64),

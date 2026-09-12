@@ -73,10 +73,10 @@ npm run build           # 18 статических страниц
 | `lighting_cart_changed` | `action`, `sku`, `kind`, `qty` (дебаунс) | каталог освещения |
 | `wizard_step_view` | `step`, `source` | `calculator-modal-context.tsx` |
 | `calculator_close` | `step`, `screen`, `has_data`, `lead_sent` | `calculator-modal.tsx` |
-| `lead_rescue_shown` / `lead_rescue_accepted` | `total` | rescue-диалог (T-026) |
+| `lead_rescue_shown` / `lead_rescue_accepted` | `total` | rescue-диалог (T-026, PT-004) |
 | `form_opened` | `form`, `source` | `action-form.tsx` |
-| `lead_submit` | `placement`, `lead_kind`, `order_intent`, `grand_total`, `rooms`, `lighting_items`, `source`, `page_path`, `lead_id` | `action-form.tsx` |
-| `lead_error` | `kind` (validation/network/server/ratelimit), `placement` | `action-form.tsx` |
+| `lead_submit` | `placement`, `lead_kind`, `order_intent`, `grand_total`, `rooms`, `lighting_items`, `source`, `page_path`, `lead_id` | `action-form.tsx`, `lib/lead/rescue-lead.ts` |
+| `lead_error` | `kind` (validation/network/server/ratelimit), `placement` | `action-form.tsx`, `lib/lead/rescue-lead.ts` |
 | `messenger_click` | `messenger`, `placement`, `with_context` | Шаг 2, страницы услуг |
 
 Параметры визита (`ym(id, "params", …)`): `calc_total` и `calc_scenario` — при каждой сводке
@@ -175,6 +175,53 @@ curl -s https://potolkovo-msk.ru/api/health | jq
 
 Повторная доставка: `curl -X POST -H "Authorization: Bearer $CRON_SECRET" https://<host>/api/lead/retry`
 — берёт до 20 упавших доставок, максимум 5 попыток на каждую.
+
+## Отправка с клиента — один путь на все формы (PT-004)
+
+Единственная клиентская функция отправки — `submitLead()` из `lib/lead/submit-lead.ts`.
+Её используют и основная форма (`components/home/action-form.tsx`), и rescue-диалог
+калькулятора (`components/calculator-modal/use-rescue-lead.ts`).
+
+Контракт: функция **не бросает исключений**. Любой исход — значение
+`LeadSubmitResult`, где успешная ветка существует только при `ok: true`:
+
+```ts
+const result = await submitLead(payload);
+if (!result.ok) {
+  // result.kind: "validation" | "ratelimit" | "unavailable" | "server" | "network" | "timeout"
+  return;
+}
+// здесь result.leadId и result.callbackWindow доступны только после сужения типа
+```
+
+Так «забыть проверить ответ» становится технически невозможным. Именно эта
+проверка отсутствовала в rescue-заявке: `fetch` не бросает исключение на HTTP
+4xx/5xx, поэтому `markLeadSubmitted()` вызывался после `422/429/500`, модалка
+закрывалась, а человек был уверен, что ему перезвонят.
+
+Таймаут запроса — 15 с (`LEAD_SUBMIT_TIMEOUT_MS`). После PT-003 доставка в
+Telegram/Web3Forms не входит в тело запроса, поэтому `/api/lead` отвечает быстро;
+15 секунд — запас на холодный старт контейнера.
+
+### Rescue-заявка
+
+Показывается при закрытии калькулятора, если в нём есть расчёт и заявка ещё не
+отправлена. Отличия от прежней версии:
+
+- **Полный снапшот.** Уходит `LeadSnapshotV2` целиком — все комнаты с длинами
+  профилей и количествами светильников плюс корзина света, а не одна сумма.
+- **Явное согласие.** Чекбокс со ссылкой на `/privacy` из общего `content/legal.ts`;
+  без отметки кнопка «Отправить» неактивна. `consent: true` больше не константа.
+- **Честный статус.** Диалог ждёт ответа сервера: «Отправляю…», при отказе —
+  причина и кнопка «Повторить». Escape и клик по подложке во время запроса
+  игнорируются, иначе человек ушёл бы, не узнав исход.
+- **Аналитика.** `lead_submit` считается только после `201` от сервера,
+  `lead_error` — только после реального отказа.
+
+`NEXT_PUBLIC_LEAD_RESCUE_ENABLED=0` отключает оффер целиком (пересборкой —
+переменная публичная и подставляется на этапе build). Основная форма на Шаге 2
+продолжает работать. Проверка ответа и согласие не флагуемые: их «выключенное»
+состояние и есть тот дефект, который закрыт задачей.
 
 ## База данных (N-001)
 
