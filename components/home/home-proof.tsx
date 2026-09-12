@@ -26,7 +26,15 @@ export function HomeProof() {
     // У части кейсов пресета нет — открываем калькулятор со стандартным потолком.
     const itemPreset = (item as { actionPreset?: ServiceCalculatorPreset }).actionPreset;
     const preset = (itemPreset ?? { ceilingType: "standard" }) as ServiceCalculatorPreset;
-    openCalculator({ preset, forcePreset: true, presetOrigin: "page", source: `${item.slug}:proof-card` });
+    openCalculator({
+      preset,
+      forcePreset: true,
+      // PT-007 (раздел 3.1): у части кейсов есть полный пресет конкретного
+      // кейса — это "explicit". У остальных подставляется стандартный потолок,
+      // то есть частичные данные страницы, — "page".
+      presetOrigin: itemPreset ? "explicit" : "page",
+      source: `${item.slug}:proof-card`,
+    });
   };
 
   const openByIndex = (index: number) => setSelectedIndex(index);

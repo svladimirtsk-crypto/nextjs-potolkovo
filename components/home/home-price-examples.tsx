@@ -24,7 +24,10 @@ export function HomePriceExamples() {
               openCalculator({
                 preset: example.preset,
                 forcePreset: true,
-                presetOrigin: "page",
+                // PT-007 (раздел 3.1): это полный пресет конкретного кейса —
+                // «Спальня 12 м²» с посчитанным составом, а не частичные данные
+                // страницы услуги.
+                presetOrigin: "explicit",
                 source: `homepage:price-example:${example.id}`,
               })
             }

@@ -5,9 +5,11 @@ import {
   CALC_DRAFT_TTL_MS,
   clearCalcDraft,
   describeCalcDraft,
+  inspectCalcDraft,
   readCalcDraft,
   saveCalcDraft,
 } from "@/lib/calculator/draft";
+import type { LightingSnapshot } from "@/lib/calculator-modal-types";
 import type { V2RoomConfig } from "@/lib/calculator/room-snapshot";
 
 function makeStorage(): Storage {
@@ -120,5 +122,117 @@ describe("T-023 - chernovik rascheta", () => {
   it("bitiy JSON ne lomaet chtenie", () => {
     window.sessionStorage.setItem(CALC_DRAFT_STORAGE_KEY, "{not json");
     expect(readCalcDraft()).toBeNull();
+  });
+});
+
+/**
+ * PT-007 · раздел 3.2 ТЗ: «неизвестная версия — безопасный отказ с явным
+ * выбором „начать новый расчёт“, не молчаливая перезапись и не падение UI».
+ *
+ * `readCalcDraft` возвращал `null` и за чужую версию, и за битые данные, и за
+ * отсутствие записи — вызывающий не мог их различить и молча перезаписывал
+ * сохранённое. `inspectCalcDraft` различает.
+ */
+describe("PT-007 · inspectCalcDraft", () => {
+  const cart: LightingSnapshot = {
+    mode: "catalog",
+    kitBaseName: "Для кухни",
+    items: [
+      { sku: "SKU-SPOT-1", name: "Светильник врезной", qty: 6, priceRub: 350 },
+      { sku: "SKU-TRACK-2", name: "Трек 2 м", qty: 2, priceRub: 1890, auto: true },
+    ],
+    totalRub: 5880,
+    discountMode: "with-ceiling",
+    discountPercentApplied: 25,
+    discountAmountRub: 1470,
+    userCustomizedLighting: false,
+  };
+
+  it("пусто — status empty", () => {
+    expect(inspectCalcDraft()).toEqual({ status: "empty" });
+  });
+
+  it("сохранённый черновик — status ok", () => {
+    saveCalcDraft({
+      scenario: "modern",
+      scope: "room",
+      rooms: [room],
+      cart: null,
+      totalArea: 24,
+      totalRub: 24000,
+    });
+    const result = inspectCalcDraft();
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") expect(result.draft.rooms).toHaveLength(1);
+  });
+
+  it("корзина света переживает save → read целиком: SKU, количества, режим скидки", () => {
+    saveCalcDraft({
+      scenario: "modern",
+      scope: "room",
+      rooms: [room],
+      cart,
+      totalArea: 24,
+      totalRub: 29880,
+    });
+    const restored = readCalcDraft()?.cart;
+    expect(restored).toEqual(cart);
+    expect(restored?.items?.map((i) => [i.sku, i.qty])).toEqual([
+      ["SKU-SPOT-1", 6],
+      ["SKU-TRACK-2", 2],
+    ]);
+    expect(restored?.discountMode).toBe("with-ceiling");
+  });
+
+  it("чужая версия — unreadable, а не empty", () => {
+    window.sessionStorage.setItem(
+      CALC_DRAFT_STORAGE_KEY,
+      JSON.stringify({ version: 3, savedAt: Date.now(), rooms: [room] })
+    );
+    expect(inspectCalcDraft()).toEqual({
+      status: "unreadable",
+      reason: "unknown-version",
+    });
+  });
+
+  it("нечитаемый черновик не удаляется сам — стирать его может только выбор пользователя", () => {
+    window.sessionStorage.setItem(
+      CALC_DRAFT_STORAGE_KEY,
+      JSON.stringify({ version: 99, savedAt: Date.now(), rooms: [room] })
+    );
+    expect(readCalcDraft()).toBeNull();
+    expect(inspectCalcDraft().status).toBe("unreadable");
+    // Запись на месте: `readCalcDraft` не очистил её за спиной пользователя.
+    expect(window.sessionStorage.getItem(CALC_DRAFT_STORAGE_KEY)).not.toBeNull();
+    clearCalcDraft();
+    expect(inspectCalcDraft()).toEqual({ status: "empty" });
+  });
+
+  it("битый JSON — unreadable/corrupt, без исключения", () => {
+    window.sessionStorage.setItem(CALC_DRAFT_STORAGE_KEY, "{not json");
+    expect(inspectCalcDraft()).toEqual({ status: "unreadable", reason: "corrupt" });
+    expect(readCalcDraft()).toBeNull();
+  });
+
+  it("версия та же, но комнаты пустые — corrupt", () => {
+    window.sessionStorage.setItem(
+      CALC_DRAFT_STORAGE_KEY,
+      JSON.stringify({ version: 2, savedAt: Date.now(), rooms: [] })
+    );
+    expect(inspectCalcDraft()).toEqual({ status: "unreadable", reason: "corrupt" });
+  });
+
+  it("просроченный — empty и удалён: предлагать продолжить нельзя", () => {
+    saveCalcDraft({
+      scenario: "standard",
+      scope: "room",
+      rooms: [room],
+      cart: null,
+      totalArea: 24,
+      totalRub: 24000,
+    });
+    const later = Date.now() + CALC_DRAFT_TTL_MS + 1000;
+    expect(inspectCalcDraft(later)).toEqual({ status: "empty" });
+    expect(window.sessionStorage.getItem(CALC_DRAFT_STORAGE_KEY)).toBeNull();
   });
 });
