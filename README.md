@@ -450,3 +450,80 @@ FEED_URL="https://…" node scripts/refresh-feed.mjs            # обновит
 Правило на будущее: `useEffect` не используется для синхронизации состояний.
 Проверка — `useEffect` с `set[A-Z]` внутри в `components/calculator-modal/**`
 допустим только для навигации, фокуса и загрузки данных.
+
+## E2E в CI: сборка передаётся тарболом, а не каталогом
+
+Job `build` собирает приложение один раз, job `e2e` переиспользует сборку.
+Передача идёт через артефакт `next-build`.
+
+**Каталоги в `path:` у `actions/upload-artifact@v4` передавать нельзя.**
+Долгое время шаг выглядел так:
+
+```yaml
+path: |
+  .next
+  public/optimized
+  data
+```
+
+v4 молча пропускает каталог, начинающийся с точки, поэтому `.next` в артефакт
+не попадал. Артефакт выходил 3 295 442 байта вместо 8 628 462 — ровно столько
+дают одни `public/optimized` (3,4 МБ) и `data` (1,4 МБ), которые к тому же
+закоммичены и есть в чекауте сами по себе.
+
+Job `e2e` распаковывал артефакт, не находил production-сборки, и `next start`
+завершался с кодом 1:
+
+```
+Error: Could not find a production build in the '.next' directory.
+```
+
+Playwright при этом печатает только
+
+```
+Error: Process from config.webServer was not able to start. Exit code: 1
+```
+
+— без причины. Тесты не запускались вовсе, `playwright-report` не создавался,
+и шаг «Отчёт при падении» рапортовал «No files were found». Со стороны это
+неделями выглядело как «в CI падают e2e», хотя набор был зелёный.
+
+### Как устроено теперь
+
+```yaml
+# build
+- run: tar -czf next-build.tar.gz .next public/optimized data
+- uses: actions/upload-artifact@v4
+  with:
+    path: next-build.tar.gz
+    if-no-files-found: error
+
+# e2e
+- uses: actions/download-artifact@v4
+  with:
+    name: next-build
+- run: |
+    tar -xzf next-build.tar.gz
+    rm -f next-build.tar.gz
+    test -f .next/BUILD_ID
+```
+
+Три свойства, ради которых это сделано:
+
+1. **Один обычный файл вместо точечных каталогов** — поведение glob в
+   upload-artifact больше не влияет на результат.
+2. **`if-no-files-found: error`** — пустой артефакт валит job `build` сразу,
+   а не проявляется непрозрачным падением в `e2e`.
+3. **`test -f .next/BUILD_ID`** отдельным шагом — если сборка снова не доедет,
+   причина будет видна в шаге с внятным именем, а не в логе Playwright.
+
+Побочно `tar` сохраняет симлинки и права доступа, чего v4 не делает. В `.next`
+есть симлинк `.next/node_modules/pg-<hash> -> ../../node_modules/pg`, на него
+ссылаются серверные чанки API-роутов. На старте `next start` он не нужен
+(проверено), но при обращении к `/api/lead` и `/api/health` — нужен.
+
+### Правило на будущее
+
+Если e2e в CI падают с `Process from config.webServer was not able to start`,
+сначала проверяют не тесты, а то, доехала ли сборка: размер артефакта виден в
+`GET /repos/<owner>/<repo>/actions/runs/<run_id>/artifacts` без авторизации.
