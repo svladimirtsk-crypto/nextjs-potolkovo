@@ -186,7 +186,7 @@ export function getParamConfirmLabel(param: ParamId): string {
     cornice: "Подтвердить карниз →",
     track: "Подтвердить трек →",
     chandeliers: "Подтвердить люстры →",
-    lights: "Подтвердить свет →",
+    lights: "Подтвердить светильники →",
   };
   return map[param];
 }

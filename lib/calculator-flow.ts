@@ -7,19 +7,11 @@ import type {
 
 export type CalculatorEntryMode = "default" | "lighting-first";
 
-export const STEP0_CONFIRM_LABELS = {
-  area: "Подтвердить площадь →",
-  ceiling: "Подтвердить тип →",
-  shadowProfile: "Подтвердить профиль →",
-  floatingProfile: "Подтвердить профиль →",
-  lightLines: "Подтвердить линии →",
-  cornice: "Подтвердить карниз →",
-  track: "Подтвердить трек →",
-  chandeliers: "Подтвердить люстры →",
-  lights: "Подтвердить светильники →",
-} as const;
-
-export type Step0ConfirmStepId = keyof typeof STEP0_CONFIRM_LABELS;
+// Подписи кнопок Шага 0 здесь намеренно не живут: единственный источник —
+// `getParamConfirmLabel` в `lib/step0-fsm.ts`. Дубль `STEP0_CONFIRM_LABELS`
+// был мёртвым кодом (его не импортировал никто, включая собственный алиас типа
+// `Step0ConfirmStepId`) и успел разойтись с живым значением для `lights`.
+// Покрытие — `tests/step0-fsm.test.ts`, блок «Подписи кнопок Шага 0».
 
 
 export type Step0SummaryAction = {
