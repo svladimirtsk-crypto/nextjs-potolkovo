@@ -20,6 +20,10 @@ export type LeadRecord = {
   grandTotal: number;
   ipHash?: string;
   userAgent?: string;
+  /** PT-009: ключ идемпотентности попытки отправки. */
+  requestId?: string;
+  /** PT-009: sha256 канонического payload. */
+  payloadHash?: string;
 };
 
 export type DeliveryRecord = {
@@ -35,8 +39,36 @@ export type DeliveryRecord = {
 
 export interface LeadStore {
   createLead(input: Omit<LeadRecord, "id" | "createdAt" | "publicCode">): Promise<LeadRecord>;
-  /** Дедуп: тот же телефон за последние `windowMs`. */
-  findRecentByPhone(phone: string, windowMs: number): Promise<LeadRecord | null>;
+  /**
+   * PT-009 · Анти-спам эвристика: та же заявка за последние `windowMs`.
+   *
+   * Прежний `findRecentByPhone(phone, windowMs)` возвращал ЛЮБУЮ недавнюю
+   * заявку с тем же номером, независимо от состава. Из-за этого полная заявка,
+   * отправленная через минуту после rescue, молча получала код короткой
+   * rescue-заявки, а её состав не сохранялся нигде — то есть терялась ровно та
+   * информация, ради которой человек досчитывал комплектацию.
+   *
+   * Дублем считается только совпадение и телефона, и отпечатка payload.
+   * Содержательно другая заявка с тем же телефоном — новая запись.
+   *
+   * `payloadHash === null` — прежняя семантика «любая недавняя заявка с этим
+   * телефоном». Нужна единственному потребителю: аварийному откату флагом
+   * `LEAD_IDEMPOTENCY_ENABLED=0` (правило 8 раздела 2 ТЗ — новую логику приёма
+   * заявок должно быть можно выключить без деплоя).
+   */
+  findRecentDuplicate(
+    phone: string,
+    payloadHash: string | null,
+    windowMs: number
+  ): Promise<LeadRecord | null>;
+
+  /**
+   * PT-009 · Заявка по клиентскому ключу идемпотентности.
+   *
+   * Основа повтора: тот же `requestId` с тем же `payloadHash` возвращает
+   * прежний результат без побочных эффектов, с другим хешем — конфликт.
+   */
+  findLeadByRequestId(requestId: string): Promise<LeadRecord | null>;
   recordDelivery(
     leadId: number,
     channel: DeliveryChannel,

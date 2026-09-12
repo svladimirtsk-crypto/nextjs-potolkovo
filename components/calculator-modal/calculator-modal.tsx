@@ -13,12 +13,9 @@ import { WizardStep1Lighting } from "./wizard-step1-lighting";
 import { WizardStep2Summary } from "./wizard-step2-summary";
 
 import { useCalculatorStore } from "@/lib/calculator/store";
-import { showConfirmDialog } from "@/components/ui/confirm-dialog";
-import {
-  trackCalculatorClose,
-  trackLeadRescueAccepted,
-  trackLeadRescueShown,
-} from "@/lib/analytics";
+import { trackCalculatorClose } from "@/lib/analytics";
+import { isConfirmDialogOpen } from "@/components/ui/confirm-dialog";
+import { useRescueOffer } from "./use-rescue-lead";
 
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
   const selector = [
@@ -127,8 +124,6 @@ export function CalculatorModal() {
     isStep0SummaryReady,
     sessionId,
     leadSubmittedAt,
-    markLeadSubmitted,
-    grandTotal,
   } = useCalculatorModal();
   const { snapshot } = useCalculatorStore();
 
@@ -136,7 +131,6 @@ export function CalculatorModal() {
   const contentRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
-  const lastConfirmTimeRef = useRef(0);
 
   const [mounted, setMounted] = useState(false);
   const [isActionFormVisible, setIsActionFormVisible] = useState(false);
@@ -225,75 +219,74 @@ export function CalculatorModal() {
     return false;
   }, [snapshot, lightingDraft]);
 
-  /** T-026: короткая заявка «спасения» — только телефон и текущий расчёт. */
-  const submitRescueLead = async (phone: string) => {
-      try {
-        await fetch("/api/lead", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            phone,
-            consent: true,
-            source: String(options?.source ?? "modal"),
-            placement: "rescue",
-            leadKind: "rescue",
-            pagePath: typeof window !== "undefined" ? window.location.pathname : "",
-            grandTotal,
-          }),
-        });
-        markLeadSubmitted();
-      } catch {
-        // rescue не должен мешать закрытию модалки
-      }
-  };
+  /**
+   * PT-004: rescue-оффер вынесен в `use-rescue-lead.ts`.
+   *
+   * Здесь раньше жил `submitRescueLead` — `fetch` в `try/catch`, который
+   * вызывал `markLeadSubmitted()` после любого ответа сервера, слал
+   * `consent: true` константой и терял состав расчёта. Логика стала общей с
+   * основной формой (`lib/lead/submit-lead.ts`) и покрыта тестами.
+   */
+  const rescueOffer = useRescueOffer();
+  const closeInFlightRef = useRef(false);
 
   const requestClose = useCallback(async () => {
-    const now = Date.now();
-    if (now - lastConfirmTimeRef.current < 300) {
-      return; // Skip if we recently closed a confirm dialog to prevent double execution
-    }
+    /**
+     * PT-004: защита от повторного входа вместо прежнего окна в 300 мс.
+     *
+     * Раньше здесь стояло `if (now - lastConfirmTimeRef.current < 300) return`.
+     * Окно защищало от двойного Escape поверх rescue-диалога, но решало две
+     * разные задачи одним приёмом и обе плохо:
+     *
+     *  - отправка заявки теперь длится до 15 с (таймаут `submitLead`), то есть
+     *    300 мс перестали покрывать время, пока диалог открыт;
+     *  - законный клик по «Закрыть» сразу после диалога проглатывался, и
+     *    модалка не реагировала на первое нажатие.
+     *
+     * Флаг «закрытие уже идёт» покрывает ровно то, что нужно: ни второго
+     * оффера, ни дубля `calculator_close`, ни проглоченного клика.
+     */
+    if (closeInFlightRef.current) return;
 
-    // T-023/T-026: после отправленной заявки ничего не спрашиваем — расчёт уже у мастера
-    if (hasAnyData && !leadSubmittedAt && typeof window !== "undefined") {
-      lastConfirmTimeRef.current = now;
+    /**
+     * Открыт чужой диалог подтверждения (например, подтверждение смены системы
+     * света в каталоге). `showConfirmDialog` держит один резолвер на модуль, и
+     * rescue-оффер поверх него оставил бы первый промис неразрешённым навсегда.
+     */
+    if (isConfirmDialogOpen()) return;
 
-      // T-026: rescue-оффер — предлагаем сохранить расчёт и прислать его на телефон
-      trackLeadRescueShown({ total: grandTotal });
-      const result = await showConfirmDialog({
-        title: "Сохранить расчёт и получить его на телефон?",
-        message:
-          "Пришлю расчёт и отвечу на вопросы. Если не нужно — просто закройте, ничего не отправится.",
-        confirmLabel: "Отправить",
-        cancelLabel: "Просто закрыть",
-        variant: "info",
-        phoneField: {
-          label: "Телефон",
-          hint: "Перезвоню в удобное время, спама не будет.",
-        },
-      });
-      lastConfirmTimeRef.current = Date.now();
-
-      if (typeof result === "string" && result.trim()) {
-        trackLeadRescueAccepted({ total: grandTotal });
-        void submitRescueLead(result.trim());
+    closeInFlightRef.current = true;
+    try {
+      // T-023/T-026: после отправленной заявки ничего не спрашиваем — расчёт уже у мастера
+      let rescueSubmitted = false;
+      if (hasAnyData && !leadSubmittedAt && rescueOffer.enabled && typeof window !== "undefined") {
+        rescueSubmitted = await rescueOffer.request();
       }
-    }
-    // T-025: закрытие калькулятора
-    trackCalculatorClose({
-      step: currentStep,
-      screen:
-        typeof document !== "undefined"
-          ? String(
-              document.querySelector("[data-quiz-v2]")?.getAttribute("data-active-screen") ?? "unknown"
-            )
-          : "unknown",
-      hasData: hasAnyData,
-      leadSent: Boolean(leadSubmittedAt),
-    });
 
-    closeCalculator();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [closeCalculator, hasAnyData, leadSubmittedAt, currentStep, grandTotal]);
+      // T-025: закрытие калькулятора
+      trackCalculatorClose({
+        step: currentStep,
+        screen:
+          typeof document !== "undefined"
+            ? String(
+                document.querySelector("[data-quiz-v2]")?.getAttribute("data-active-screen") ??
+                  "unknown"
+              )
+            : "unknown",
+        hasData: hasAnyData,
+        /**
+         * PT-004: `leadSubmittedAt` в этом замыкании ещё прежний — состояние
+         * обновится только на следующем рендере. Без `rescueSubmitted` событие
+         * рапортовало бы `lead_sent: 0` сразу после успешно сохранённой заявки.
+         */
+        leadSent: Boolean(leadSubmittedAt) || rescueSubmitted,
+      });
+
+      closeCalculator();
+    } finally {
+      closeInFlightRef.current = false;
+    }
+  }, [closeCalculator, currentStep, hasAnyData, leadSubmittedAt, rescueOffer]);
 
   useEffect(() => {
     if (!isOpen) return;

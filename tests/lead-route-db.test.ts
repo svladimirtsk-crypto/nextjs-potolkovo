@@ -139,6 +139,99 @@ describe.skipIf(!TEST_DATABASE_URL)("N-001 · POST /api/lead с PostgreSQL", () 
     expect(json.error).toBe("rate_limited");
   });
 
+  /**
+   * PT-009 · Идемпотентность на реальной БД.
+   *
+   * In-memory тесты (`tests/lead-idempotency.test.ts`) покрывают логику роута,
+   * но уникальность `request_id` гарантирует именно индекс PostgreSQL — его и
+   * проверяем здесь, включая гонку двух параллельных вставок.
+   */
+  it("PT-009: повтор requestId возвращает прежний код и не создаёт вторую строку", async () => {
+    const { POST } = await import("@/app/api/lead/route");
+    const body = { ...leadBody("+79167778899"), requestId: "db-req-repeat" };
+
+    const first = await POST(request(body));
+    expect(first.status).toBe(201);
+    const firstJson = (await first.json()) as { leadId: string };
+
+    // Холодный старт: памяти процесса нет, идемпотентность держится только на БД.
+    resetRateLimitForTests();
+
+    const second = await POST(request(body));
+    const secondJson = (await second.json()) as {
+      leadId: string;
+      idempotentReplay?: boolean;
+      deduped?: boolean;
+    };
+
+    expect(second.status).toBe(200);
+    expect(secondJson.idempotentReplay).toBe(true);
+    expect(secondJson.leadId).toBe(firstJson.leadId);
+
+    const stored = await store.findLeadByRequestId("db-req-repeat");
+    expect(stored?.payloadHash).toBeTruthy();
+  });
+
+  it("PT-009: тот же requestId с другим payload → 409", async () => {
+    const { POST } = await import("@/app/api/lead/route");
+
+    const first = await POST(request({ ...leadBody("+79167770011"), requestId: "db-req-conflict" }));
+    expect(first.status).toBe(201);
+
+    const conflict = await POST(
+      request({ ...leadBody("+79167770011"), name: "Пётр", requestId: "db-req-conflict" })
+    );
+    expect(conflict.status).toBe(409);
+
+    const json = (await conflict.json()) as { error: string };
+    expect(json.error).toBe("request_id_conflict");
+  });
+
+  it("PT-009: unique-индекс ловит параллельную вставку с одним requestId", async () => {
+    const { POST } = await import("@/app/api/lead/route");
+    const body = { ...leadBody("+79167772233"), requestId: "db-req-race" };
+
+    const responses = await Promise.all([POST(request(body)), POST(request(body))]);
+    const statuses = responses.map((response) => response.status).sort();
+    const bodies = await Promise.all(
+      responses.map(async (response) => (await response.json()) as { ok: boolean; leadId: string })
+    );
+
+    // Один запрос создал заявку, второй получил повтор — но оба успешны.
+    expect(statuses).toEqual([200, 201]);
+    expect(bodies.every((body) => body.ok)).toBe(true);
+    expect(bodies[0].leadId).toBe(bodies[1].leadId);
+  });
+
+  it("PT-009: rescue → полная заявка с тем же телефоном создаёт вторую запись", async () => {
+    const { POST } = await import("@/app/api/lead/route");
+
+    const rescue = await POST(
+      request({
+        leadKind: "rescue",
+        orderIntent: "ceiling_only",
+        phone: "+79167774455",
+        consent: true,
+        source: "calculator",
+        placement: "rescue",
+        grandTotal: 62000,
+        requestId: "db-req-rescue",
+      })
+    );
+    expect(rescue.status).toBe(201);
+    const rescueJson = (await rescue.json()) as { leadId: string };
+
+    const full = await POST(request({ ...leadBody("+79167774455"), requestId: "db-req-full" }));
+    expect(full.status).toBe(201);
+    const fullJson = (await full.json()) as { leadId: string };
+
+    expect(fullJson.leadId).not.toBe(rescueJson.leadId);
+
+    const fullLead = await store.getLeadByPublicCode(fullJson.leadId);
+    expect(fullLead?.payload.name).toBe("Иван");
+    expect(fullLead?.payload.snapshot).toBeTruthy();
+  });
+
   it("GET /api/lead/:code находит заявку по коду с CRON_SECRET", async () => {
     const { POST } = await import("@/app/api/lead/route");
     const created = await POST(request(leadBody("+79165556677")));

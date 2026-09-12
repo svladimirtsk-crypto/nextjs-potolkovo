@@ -72,6 +72,24 @@ jobs:
         # временно не в фокусе, и падать из-за них посреди работы незачем.
         env:
           RELEASE: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/quizv2ver1') && '1' || '' }}
+          # CI не владеет боевыми секретами, и это нормально: здесь объявлена
+          # СОГЛАСОВАННАЯ конфигурация «Telegram выключен, есть запасной канал,
+          # БД — локальная тестовая». Значения заведомо не секретные.
+          #
+          # Без этого `check:env` в strict-режиме падал на каждом пуше в main и
+          # quizv2ver1 (то есть сразу после мержа), а так как build и e2e
+          # зависят от static — сборка, бюджет бандла и Playwright для слитого
+          # кода не выполнялись вовсе. На pull_request этого не было видно:
+          # там github.ref = refs/pull/N/merge, RELEASE пуст и режим мягкий.
+          #
+          # Проверка при этом НЕ ослаблена: расхождение .env.example со схемой
+          # по-прежнему безусловно фатально, а несогласованная комбинация
+          # (TELEGRAM_LEADS_ENABLED=1 без токена) по-прежнему даёт ошибку.
+          # Строгими остаются и реквизиты — именно их касается PT-006.
+          TELEGRAM_LEADS_ENABLED: "0"
+          WEB3FORMS_ACCESS_KEY: ci-not-a-secret
+          CRON_SECRET: ci-not-a-secret
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
         run: |
           npm run check:env
           npm run check:legal
@@ -105,14 +123,27 @@ jobs:
         run: npm run check:bundle
 
       # Сборку переиспользует job e2e — второй раз собирать незачем.
+      #
+      # Пакуем в tar, а не отдаём каталоги upload-artifact напрямую. v4 молча
+      # пропускает каталоги, начинающиеся с точки, поэтому `.next` в артефакт не
+      # попадал: выходило 3 295 442 байта вместо 8 628 462 — ровно столько же,
+      # сколько дают одни `public/optimized` + `data`. Job e2e оставался без
+      # сборки, `next start` падал с «Could not find a production build in the
+      # '.next' directory» (exit 1), а Playwright выдавал непрозрачное «Process
+      # from config.webServer was not able to start. Exit code: 1». Ни один
+      # e2e-тест в CI не выполнялся, и недели это выглядело как «падают e2e».
+      # tar заодно сохраняет симлинки (.next/node_modules/pg-*) и права доступа.
+      - name: Упаковать сборку
+        run: tar -czf next-build.tar.gz .next public/optimized data
+
       - name: Сохранить сборку
         uses: actions/upload-artifact@v4
         with:
           name: next-build
-          path: |
-            .next
-            public/optimized
-            data
+          path: next-build.tar.gz
+          # Молчаливый пропуск файлов больше не должен быть возможен:
+          # пустой артефакт обязан валить job, а не ждать падения в e2e.
+          if-no-files-found: error
           retention-days: 1
 
   e2e:
@@ -133,6 +164,16 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: next-build
+
+      # Проверяем, что сборка действительно на месте. Без .next `next start`
+      # падает с exit 1 ещё до первого теста, а причина остаётся невидимой —
+      # Playwright сообщает только «webServer was not able to start».
+      - name: Распаковать сборку
+        run: |
+          tar -xzf next-build.tar.gz
+          rm -f next-build.tar.gz
+          test -f .next/BUILD_ID
+          echo "Сборка восстановлена, BUILD_ID=$(cat .next/BUILD_ID)"
 
       - name: Установить браузеры
         run: npx playwright install --with-deps chromium
