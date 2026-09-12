@@ -72,6 +72,24 @@ jobs:
         # временно не в фокусе, и падать из-за них посреди работы незачем.
         env:
           RELEASE: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/quizv2ver1') && '1' || '' }}
+          # CI не владеет боевыми секретами, и это нормально: здесь объявлена
+          # СОГЛАСОВАННАЯ конфигурация «Telegram выключен, есть запасной канал,
+          # БД — локальная тестовая». Значения заведомо не секретные.
+          #
+          # Без этого `check:env` в strict-режиме падал на каждом пуше в main и
+          # quizv2ver1 (то есть сразу после мержа), а так как build и e2e
+          # зависят от static — сборка, бюджет бандла и Playwright для слитого
+          # кода не выполнялись вовсе. На pull_request этого не было видно:
+          # там github.ref = refs/pull/N/merge, RELEASE пуст и режим мягкий.
+          #
+          # Проверка при этом НЕ ослаблена: расхождение .env.example со схемой
+          # по-прежнему безусловно фатально, а несогласованная комбинация
+          # (TELEGRAM_LEADS_ENABLED=1 без токена) по-прежнему даёт ошибку.
+          # Строгими остаются и реквизиты — именно их касается PT-006.
+          TELEGRAM_LEADS_ENABLED: "0"
+          WEB3FORMS_ACCESS_KEY: ci-not-a-secret
+          CRON_SECRET: ci-not-a-secret
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
         run: |
           npm run check:env
           npm run check:legal
