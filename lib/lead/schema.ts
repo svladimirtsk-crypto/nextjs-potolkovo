@@ -109,6 +109,18 @@ export const LeadPayloadSchema = z.object({
   /** Honeypot: заполнено только ботом. */
   botcheck: z.literal("").optional(),
 
+  /**
+   * PT-009 · Ключ идемпотентности — один на попытку отправки.
+   *
+   * Необязательное намеренно: раздел 3.8 требует совместимости API на время
+   * миграции (`expand → migrate → switch → contract`), а собранный до деплоя
+   * клиентский JS в браузере посетителя ещё какое-то время шлёт запросы без
+   * этого поля. Делать его обязательным сразу — значит получить волну `422` от
+   * живых людей на уже открытых страницах. Без `requestId` работает прежняя
+   * защита: дедуп по телефону и отпечатку payload.
+   */
+  requestId: z.string().trim().min(8).max(64).optional(),
+
   source: z.string().max(64),
   placement: LeadPlacementSchema,
   pagePath: z.string().max(200).default(""),

@@ -59,6 +59,8 @@ function toLeadRecord(row: LeadRow): LeadRecord {
     grandTotal: row.grandTotal ?? 0,
     ipHash: row.ipHash ?? undefined,
     userAgent: row.userAgent ?? undefined,
+    requestId: row.requestId ?? undefined,
+    payloadHash: row.payloadHash ?? undefined,
   };
 }
 
@@ -120,6 +122,8 @@ export class PgLeadStore implements LeadStore {
             grandTotal: input.grandTotal,
             ipHash: input.ipHash ?? null,
             userAgent: input.userAgent ?? null,
+            requestId: input.requestId ?? null,
+            payloadHash: input.payloadHash ?? null,
           })
           .returning();
 
@@ -192,15 +196,45 @@ export class PgLeadStore implements LeadStore {
     return rows.map(toDeliveryRecord);
   }
 
-  async findRecentByPhone(phone: string, windowMs: number): Promise<LeadRecord | null> {
+  async findRecentDuplicate(
+    phone: string,
+    payloadHash: string | null,
+    windowMs: number
+  ): Promise<LeadRecord | null> {
     // Окно считаем часами БД (`now() - interval`), а не `Date.now()` приложения:
     // на managed-провайдерах инстанс и БД расходятся на десятки миллисекунд, и
     // смешивание двух часов давало плавающий результат дедупа.
+    //
+    // PT-009: к телефону добавлен отпечаток payload. Прежний поиск по одному
+    // телефону возвращал любую недавнюю заявку с этим номером, поэтому полная
+    // заявка, отправленная после rescue, молча получала код короткой
+    // rescue-заявки, а её состав не сохранялся нигде.
+    const conditions = [eq(leads.phone, phone), gt(leads.createdAt, windowStart(windowMs))];
+    // `payloadHash === null` — аварийный откат флагом: сравниваем только телефон.
+    if (payloadHash !== null) conditions.push(eq(leads.payloadHash, payloadHash));
+
     const [row] = await this.db
       .select()
       .from(leads)
-      .where(and(eq(leads.phone, phone), gt(leads.createdAt, windowStart(windowMs))))
+      .where(and(...conditions))
       .orderBy(desc(leads.createdAt))
+      .limit(1);
+
+    return row ? toLeadRecord(row) : null;
+  }
+
+  /**
+   * PT-009: заявка по клиентскому ключу идемпотентности.
+   *
+   * `request_id` покрыт unique-индексом, поэтому здесь достаточно точечного
+   * поиска — гонку двух параллельных вставок ловит само ограничение, а не этот
+   * запрос.
+   */
+  async findLeadByRequestId(requestId: string): Promise<LeadRecord | null> {
+    const [row] = await this.db
+      .select()
+      .from(leads)
+      .where(eq(leads.requestId, requestId))
       .limit(1);
 
     return row ? toLeadRecord(row) : null;

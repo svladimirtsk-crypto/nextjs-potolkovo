@@ -22,6 +22,7 @@ const strict = process.argv.includes("--strict") || process.env.RELEASE === "1";
 /** Серверные переменные схемы `lib/env.ts` (NODE_ENV задаёт рантайм). */
 const SCHEMA_KEYS = [
   "LEAD_API_ENABLED",
+  "LEAD_IDEMPOTENCY_ENABLED",
   "TELEGRAM_LEADS_ENABLED",
   "TELEGRAM_BOT_TOKEN",
   "TELEGRAM_CHAT_ID",

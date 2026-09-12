@@ -35,6 +35,8 @@ type CapturedRescue = {
     version?: number;
     rooms?: Array<{ area?: number; ceilingTypeLabel?: string }>;
   };
+  /** PT-009: ключ идемпотентности, который подставляет общий сервис отправки. */
+  requestId?: string;
 };
 
 /** Открыть rescue-диалог и вернуть локаторы, которыми он управляется. */
@@ -192,6 +194,70 @@ test.describe("Rescue и черновик", () => {
     const second = leads[1] as CapturedRescue;
     expect(second.leadKind).toBe("rescue");
     expect(second.snapshot?.version).toBe(2);
+  });
+
+  /**
+   * PT-009 · Ключ идемпотентности в реальном браузере.
+   *
+   * Юнит-тесты проверяют `submitLead` напрямую; здесь проверяется то, что до
+   * сервиса нельзя достать из теста: что форма действительно вызывает его на
+   * каждом нажатии и что ключ живёт между попытками, а не создаётся заново.
+   */
+  test("PT-009: повтор после сбоя уходит с тем же requestId", async ({ page }) => {
+    const stub: LeadApiStub = { abort: true };
+    const leads = await interceptLeadApi(page, stub);
+
+    await reachCalculatedState(page);
+    const dialog = await openRescueDialog(page);
+
+    await dialog.phone.fill("9161234567");
+    await dialog.consent.check();
+    await dialog.submit.click();
+    await expect(dialog.error).toBeVisible();
+
+    stub.abort = false;
+    stub.status = 201;
+    stub.body = { ok: true, leadId: "K7F3Q", callbackWindow: "сегодня до 21:00" };
+
+    await dialog.submit.click();
+    await expect.poll(() => leads.length).toBe(2);
+
+    const [first, second] = leads as CapturedRescue[];
+    expect(first.requestId).toBeTruthy();
+    /**
+     * Именно это свойство позволяет серверу не создавать вторую заявку: человек
+     * не знает, дошёл первый запрос или нет, и состав он не менял.
+     */
+    expect(second.requestId).toBe(first.requestId);
+  });
+
+  test("PT-009: правка данных после сбоя меняет requestId", async ({ page }) => {
+    const stub: LeadApiStub = { status: 500, body: { ok: false, error: "internal" } };
+    const leads = await interceptLeadApi(page, stub);
+
+    await reachCalculatedState(page);
+    const dialog = await openRescueDialog(page);
+
+    await dialog.phone.fill("9161234567");
+    await dialog.consent.check();
+    await dialog.submit.click();
+    await expect(dialog.error).toBeVisible();
+
+    /**
+     * Человек исправил номер. Это уже другая заявка, и ключ обязан смениться:
+     * с прежним сервер ответил бы `409`, и форма встала бы намертво.
+     */
+    await dialog.phone.fill("9167654321");
+    stub.status = 201;
+    stub.body = { ok: true, leadId: "M2P4R", callbackWindow: "сегодня до 21:00" };
+
+    await dialog.submit.click();
+    await expect.poll(() => leads.length).toBe(2);
+
+    const [first, second] = leads as CapturedRescue[];
+    expect(second.requestId).not.toBe(first.requestId);
+    // Номер нормализуется ещё на клиенте (PT-004), в запрос уходит +7…
+    expect(second.phone).toBe("+79167654321");
   });
 
   test("PT-004: «Закрыть без отправки» после отказа не плодит запрос", async ({ page }) => {

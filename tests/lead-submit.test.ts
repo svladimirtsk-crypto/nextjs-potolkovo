@@ -8,6 +8,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { releaseRequestId } from "@/lib/lead/request-id";
 import {
   LEAD_API_PATH,
   collectLeadAttribution,
@@ -41,6 +42,9 @@ function stubFetch(response: Response | (() => Response)) {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  // PT-009: ключ идемпотентности живёт в модуле, а не в тесте. Без сброса
+  // порядок тестов начал бы влиять на результат.
+  releaseRequestId();
 });
 
 describe("PT-004 - submitLead: uspeh", () => {
@@ -61,7 +65,15 @@ describe("PT-004 - submitLead: uspeh", () => {
     // Контракт транспорта: тот же путь, метод и JSON-заголовок, что и раньше.
     expect(calls[0].url).toBe(LEAD_API_PATH);
     expect(calls[0].init?.method).toBe("POST");
-    expect(JSON.parse(String(calls[0].init?.body))).toEqual(PAYLOAD);
+
+    /**
+     * PT-009: сервис сам подставляет ключ идемпотентности, поэтому тело — это
+     * payload плюс `requestId`. Поля payload обязаны доехать без изменений.
+     */
+    const sentBody = JSON.parse(String(calls[0].init?.body)) as Record<string, unknown>;
+    expect(sentBody).toMatchObject(PAYLOAD);
+    expect(typeof sentBody.requestId).toBe("string");
+    expect(sentBody.requestId).toMatch(/^[0-9a-f-]{36}$/);
   });
 
   it("dedup: ok:true + deduped:true остаётся успехом", async () => {

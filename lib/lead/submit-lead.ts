@@ -21,6 +21,7 @@
  * Модуль клиентский и не импортирует ничего серверного: ни `lib/env.ts`,
  * ни zod-схему, ни `content/*` — иначе он утянет их в бандл главной.
  */
+import { acquireRequestId, releaseRequestId } from "./request-id";
 
 /** Почему отправка не удалась. От вида зависит и текст пользователю, и аналитика. */
 export type LeadSubmitFailureKind =
@@ -86,6 +87,27 @@ export type SubmitLeadOptions = {
   fetchImpl?: typeof fetch;
 };
 
+/**
+ * PT-009 · Ключ идемпотентности в тело запроса.
+ *
+ * Сервис подставляет его сам, а не требует от формы: отправка теперь одна на
+ * все формы (PT-004), значит и защита от двойной записи должна быть одна. Форма,
+ * которая «забудет» передать ключ, не сможет потерять идемпотентность.
+ *
+ * Явно переданный `requestId` уважаем — это путь для PT-013, где повтор после
+ * таймаута обязан уйти с тем же ключом.
+ */
+function withRequestId(payload: unknown): unknown {
+  if (typeof payload !== "object" || payload === null || Array.isArray(payload)) {
+    return payload;
+  }
+
+  const record = payload as Record<string, unknown>;
+  const existing = typeof record.requestId === "string" ? record.requestId.trim() : "";
+
+  return { ...record, requestId: existing || acquireRequestId(record) };
+}
+
 function classify(response: Response, body: LeadApiBody | null): LeadSubmitFailureKind {
   const error = typeof body?.error === "string" ? body.error : "";
 
@@ -132,7 +154,7 @@ export async function submitLead(
     const response = await doFetch(LEAD_API_PATH, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(withRequestId(payload)),
       signal: controller.signal,
     });
 
@@ -140,6 +162,11 @@ export async function submitLead(
     const body = (await response.json().catch(() => null)) as LeadApiBody | null;
 
     if (response.ok && body?.ok === true) {
+      // PT-009: попытка завершена — ключ больше не нужен. Следующая отправка
+      // того же состава (человек реально шлёт вторую заявку) должна создать
+      // новую запись, а не получить код первой.
+      releaseRequestId();
+
       return {
         ok: true,
         status: response.status,
@@ -147,6 +174,17 @@ export async function submitLead(
         callbackWindow: typeof body.callbackWindow === "string" ? body.callbackWindow : "",
         deduped: body.deduped === true,
       };
+    }
+
+    /**
+     * PT-009 · `409` — ключ скомпрометирован (тот же `requestId` с другим
+     * содержимым). При корректной работе `acquireRequestId` не случается, но
+     * если случилось, повтор с тем же ключом дал бы тот же `409` навсегда:
+     * форма встала бы намертво. Сбрасываем ключ, чтобы следующая попытка ушла
+     * с новым.
+     */
+    if (response.status === 409) {
+      releaseRequestId();
     }
 
     return {

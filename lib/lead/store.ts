@@ -37,6 +37,25 @@ export class InMemoryLeadStore implements LeadStore {
   async createLead(
     input: Omit<LeadRecord, "id" | "createdAt" | "publicCode">
   ): Promise<LeadRecord> {
+    /**
+     * PT-009: повтор requestId — ошибка ограничения, как в PostgreSQL.
+     *
+     * Роут обязан уметь обрабатывать эту гонку: два параллельных запроса с
+     * одним ключом проходят проверку «существует ли заявка» одновременно, и
+     * ловит их не проверка, а unique-индекс. Отрабатывать это поведение нужно
+     * на обеих реализациях хранилища, иначе in-memory тесты закрепляли бы
+     * поведение, которого в боевой БД нет.
+     *
+     * `requestId` и `payloadHash` в запись попадают через `...input` —
+     * отдельные поля перечислять не нужно.
+     */
+    if (input.requestId && this.leads.some((lead) => lead.requestId === input.requestId)) {
+      throw Object.assign(
+        new Error('duplicate key value violates unique constraint "leads_request_id_key"'),
+        { code: "23505" }
+      );
+    }
+
     const record: LeadRecord = {
       ...input,
       id: this.leadSeq++,
@@ -49,7 +68,11 @@ export class InMemoryLeadStore implements LeadStore {
     return record;
   }
 
-  async findRecentByPhone(phone: string, windowMs: number): Promise<LeadRecord | null> {
+  async findRecentDuplicate(
+    phone: string,
+    payloadHash: string | null,
+    windowMs: number
+  ): Promise<LeadRecord | null> {
     // Строгое `>`, как в SQL-версии (`created_at > now() - interval`):
     // при нестрогом сравнении заявка, созданная в ту же миллисекунду, что и
     // граница окна, считалась свежей — и две реализации расходились.
@@ -57,9 +80,19 @@ export class InMemoryLeadStore implements LeadStore {
     for (let i = this.leads.length - 1; i >= 0; i -= 1) {
       const lead = this.leads[i];
       if (lead.createdAt <= threshold) break;
-      if (lead.payload.phone === phone) return lead;
+      // PT-009: дубль — это тот же телефон И то же содержимое. Заявка с тем же
+      // номером, но другим составом заказа, обязана стать новой записью.
+      // `payloadHash === null` — аварийный откат флагом: сравниваем только телефон.
+      if (lead.payload.phone !== phone) continue;
+      if (payloadHash !== null && lead.payloadHash !== payloadHash) continue;
+      return lead;
     }
     return null;
+  }
+
+  async findLeadByRequestId(requestId: string): Promise<LeadRecord | null> {
+    const match = this.leads.find((lead) => lead.requestId === requestId);
+    return match ?? null;
   }
 
   async countRecentByIpHash(ipHash: string, windowMs: number): Promise<number> {

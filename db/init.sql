@@ -38,8 +38,35 @@ CREATE TABLE IF NOT EXISTS leads (
   totals         jsonb,
   grand_total    integer,
   ip_hash        text,
-  user_agent     text
+  user_agent     text,
+  -- PT-009: ключ идемпотентности, один на попытку отправки.
+  request_id     text,
+  -- PT-009: sha256 канонического payload заявки.
+  payload_hash   text
 );
+
+-- ============================================================
+-- МИГРАЦИЯ PT-009 · идемпотентность вместо дедупа по телефону
+--
+-- Для базы, которая уже существует (создана предыдущей версией
+-- скрипта): там `CREATE TABLE IF NOT EXISTS` выше не делает ничего,
+-- и эти две колонки добавляются здесь. Для новой базы они уже есть
+-- в CREATE TABLE, и `IF NOT EXISTS` просто ничего не сделает.
+--
+-- Блок ОБЯЗАН стоять до индексов ниже: индексы `leads_request_id_key`
+-- и `leads_phone_hash_created_idx` строятся по этим колонкам, и на
+-- существующей базе без него они упали бы с
+-- `column "request_id" does not exist`.
+--
+-- Миграция расширяющая (раздел 3.8 ТЗ): колонки nullable и без
+-- DEFAULT, поэтому PostgreSQL меняет только метаданные — существующие
+-- строки не перезаписываются и таблица не блокируется на заметное
+-- время. Откат кода на предыдущую версию безопасен: старые запросы
+-- этих колонок не читают и не пишут.
+-- ============================================================
+
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS request_id   text;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS payload_hash text;
 
 -- Свежие заявки сверху — основной экран мастера.
 CREATE INDEX IF NOT EXISTS leads_created_at_idx
@@ -52,6 +79,17 @@ CREATE INDEX IF NOT EXISTS leads_phone_created_idx
 -- Серверный rate-limit: сколько заявок с одного IP за окно.
 CREATE INDEX IF NOT EXISTS leads_ip_created_idx
   ON leads (ip_hash, created_at DESC);
+
+-- PT-009: повтор того же request_id не создаёт вторую заявку даже при
+-- одновременной вставке двумя запросами — гонку ловит ограничение.
+-- В PostgreSQL NULL-значения в unique-индексе считаются различными, поэтому
+-- уже накопленные заявки (request_id IS NULL) ограничению не мешают.
+CREATE UNIQUE INDEX IF NOT EXISTS leads_request_id_key
+  ON leads (request_id);
+
+-- PT-009: дедуп ищет недавнюю заявку с тем же телефоном И тем же содержимым.
+CREATE INDEX IF NOT EXISTS leads_phone_hash_created_idx
+  ON leads (phone, payload_hash, created_at DESC);
 
 -- Доставка заявки по каналам (Telegram, Web3Forms).
 CREATE TABLE IF NOT EXISTS lead_deliveries (

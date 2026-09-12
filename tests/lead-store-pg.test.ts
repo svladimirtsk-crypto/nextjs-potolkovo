@@ -73,17 +73,106 @@ function describeStoreContract(name: string, makeStore: () => Promise<LeadStore>
     });
 
     it("дедуп: находит заявку с тем же телефоном в окне и не находит вне окна", async () => {
-      await store.createLead({ status: "new", payload: payload(), grandTotal: 0 });
+      await store.createLead({
+        status: "new",
+        payload: payload(),
+        grandTotal: 0,
+        payloadHash: "hash-a",
+      });
 
-      const inWindow = await store.findRecentByPhone("+79161234567", 10 * 60 * 1000);
+      const inWindow = await store.findRecentDuplicate("+79161234567", "hash-a", 10 * 60 * 1000);
       expect(inWindow).not.toBeNull();
 
       // Нулевое окно — заявка заведомо «старше» порога.
-      const outOfWindow = await store.findRecentByPhone("+79161234567", 0);
+      const outOfWindow = await store.findRecentDuplicate("+79161234567", "hash-a", 0);
       expect(outOfWindow).toBeNull();
 
-      const otherPhone = await store.findRecentByPhone("+79990000000", 10 * 60 * 1000);
+      const otherPhone = await store.findRecentDuplicate("+79990000000", "hash-a", 10 * 60 * 1000);
       expect(otherPhone).toBeNull();
+    });
+
+    /**
+     * PT-009 · Ключевое отличие от прежнего `findRecentByPhone`: тот же телефон
+     * при другом составе заказа — НЕ дубль. Иначе полная заявка после rescue
+     * получала код короткой rescue-заявки, а её состав не сохранялся нигде.
+     */
+    it("дедуп: тот же телефон с другим отпечатком payload — не дубль", async () => {
+      await store.createLead({
+        status: "rescue",
+        payload: payload({ leadKind: "rescue", placement: "rescue" }),
+        grandTotal: 0,
+        payloadHash: "hash-rescue",
+      });
+
+      const sameContent = await store.findRecentDuplicate(
+        "+79161234567",
+        "hash-rescue",
+        10 * 60 * 1000
+      );
+      expect(sameContent).not.toBeNull();
+
+      const otherContent = await store.findRecentDuplicate(
+        "+79161234567",
+        "hash-full",
+        10 * 60 * 1000
+      );
+      expect(otherContent).toBeNull();
+    });
+
+    /**
+     * PT-009 · Аварийный откат флагом `LEAD_IDEMPOTENCY_ENABLED=0`.
+     *
+     * `payloadHash === null` обязан возвращать прежнее поведение — любую
+     * недавнюю заявку с этим телефоном, иначе выключенный флаг не откатывал бы
+     * ничего, и смысл рубильника терялся.
+     */
+    it("дедуп с payloadHash=null — прежнее поведение «любая заявка с телефоном»", async () => {
+      await store.createLead({
+        status: "rescue",
+        payload: payload({ leadKind: "rescue" }),
+        grandTotal: 0,
+        payloadHash: "hash-rescue",
+      });
+
+      const legacy = await store.findRecentDuplicate("+79161234567", null, 10 * 60 * 1000);
+      expect(legacy).not.toBeNull();
+      expect(legacy?.payloadHash).toBe("hash-rescue");
+    });
+
+    it("PT-009: заявка находится по requestId и хранит отпечаток payload", async () => {
+      await store.createLead({
+        status: "new",
+        payload: payload(),
+        grandTotal: 0,
+        requestId: "req-1",
+        payloadHash: "hash-1",
+      });
+
+      const found = await store.findLeadByRequestId("req-1");
+      expect(found?.requestId).toBe("req-1");
+      expect(found?.payloadHash).toBe("hash-1");
+
+      expect(await store.findLeadByRequestId("req-unknown")).toBeNull();
+    });
+
+    it("PT-009: повторный requestId отклоняется ограничением, а не плодит запись", async () => {
+      await store.createLead({
+        status: "new",
+        payload: payload(),
+        grandTotal: 0,
+        requestId: "req-dup",
+        payloadHash: "hash-dup",
+      });
+
+      await expect(
+        store.createLead({
+          status: "new",
+          payload: payload(),
+          grandTotal: 0,
+          requestId: "req-dup",
+          payloadHash: "hash-dup",
+        })
+      ).rejects.toThrow();
     });
 
     it("считает заявки с одного IP — на этом держится серверный rate-limit", async () => {
