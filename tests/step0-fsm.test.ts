@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ALL_PARAMS,
   getBackFallback,
   getEnabledParams,
   getFirstUnconfirmed,
   getNextScreen,
+  getParamConfirmLabel,
   isSameScreen,
   screenKey,
   type ParamId,
@@ -179,5 +181,60 @@ describe("N-011 · знаменатель прогресса Шага 0", () => 
     const atSummary = calcProgress({ t: "summary" }, ctx).total;
 
     expect(atSummary).toBe(atStart);
+  });
+});
+
+describe("Подписи кнопок Шага 0", () => {
+  /**
+   * Единственный источник подписей — `getParamConfirmLabel`. Дубль
+   * `STEP0_CONFIRM_LABELS` в `lib/calculator-flow.ts` удалён: он был мёртвым
+   * (его не импортировал никто, включая собственный алиас типа) и разошёлся с
+   * живым значением для `lights`.
+   *
+   * `lights` — «Подтвердить светильники →», а не «Подтвердить свет →». Слово
+   * «свет» не встречалось на этом экране больше нигде, зато «светильники» —
+   * четырежды: заголовок «Монтаж: точечные светильники», опции «Без
+   * светильников» / «Добавить светильники» и поле «Количество светильников»
+   * (`ParamScreen.tsx:362`). На Шаге 1 тот же концепт уже назывался
+   * «Подтвердить светильники →» (`lib/lighting/step1-footer-action.ts`).
+   */
+  const expected: Record<ParamId, string> = {
+    area: "Подтвердить площадь →",
+    ceiling: "Подтвердить тип →",
+    shadowProfile: "Подтвердить профиль →",
+    floatingProfile: "Подтвердить профиль →",
+    lightLines: "Подтвердить линии →",
+    cornice: "Подтвердить карниз →",
+    track: "Подтвердить трек →",
+    chandeliers: "Подтвердить люстры →",
+    lights: "Подтвердить светильники →",
+  };
+
+  it.each(ALL_PARAMS)("«%s» — подпись из единственного источника", (param) => {
+    expect(getParamConfirmLabel(param)).toBe(expected[param]);
+  });
+
+  it("подпись есть у каждого параметра — таблица не расходится со списком", () => {
+    // Защита от добавления нового ParamId без подписи: `Record<ParamId, string>`
+    // выше не скомпилируется, а этот ассерт ловит `undefined` в рантайме.
+    for (const param of ALL_PARAMS) {
+      expect(getParamConfirmLabel(param), param).toBeTypeOf("string");
+      expect(getParamConfirmLabel(param).length, param).toBeGreaterThan(0);
+    }
+    expect(Object.keys(expected).sort()).toEqual([...ALL_PARAMS].sort());
+  });
+
+  it("форма подписи одинаковая: «Подтвердить <что> →»", () => {
+    for (const param of ALL_PARAMS) {
+      const label = getParamConfirmLabel(param);
+      expect(label.startsWith("Подтвердить "), `${param}: ${label}`).toBe(true);
+      expect(label.endsWith(" →"), `${param}: ${label}`).toBe(true);
+    }
+  });
+
+  it("инвариант e2e: в подписи экрана света есть «свет»", () => {
+    // `e2e/step0-footer-sync.spec.ts` требует, чтобы подпись соответствовала
+    // заголовку экрана: «Монтаж: точечные светильники» → /свет/i.
+    expect(getParamConfirmLabel("lights")).toMatch(/свет/i);
   });
 });

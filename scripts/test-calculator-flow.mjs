@@ -29,7 +29,6 @@ const {
   resolveInitialLightingView,
   resolveInitialWizardStep,
   resolveLightingDiscountMode,
-  resolveStep0ConfirmLabel,
   resolveStep0SummaryActions,
 } = compiledModule.exports;
 
@@ -117,17 +116,19 @@ test("initial modal options for default and lighting-first flows", () => {
   assert.equal(resolveInitialLightingView({ entryMode: "lighting-first", initialLightingView: "selected" }), "selected");
 });
 
-test("Step 0 confirm labels are stable", () => {
-  assert.equal(resolveStep0ConfirmLabel("area"), "Подтвердить площадь →");
-  assert.equal(resolveStep0ConfirmLabel("ceiling"), "Подтвердить тип →");
-  assert.equal(resolveStep0ConfirmLabel("shadowProfile"), "Подтвердить профиль →");
-  assert.equal(resolveStep0ConfirmLabel("floatingProfile"), "Подтвердить профиль →");
-  assert.equal(resolveStep0ConfirmLabel("lightLines"), "Подтвердить линии →");
-  assert.equal(resolveStep0ConfirmLabel("cornice"), "Подтвердить карниз →");
-  assert.equal(resolveStep0ConfirmLabel("track"), "Подтвердить трек →");
-  assert.equal(resolveStep0ConfirmLabel("chandeliers"), "Подтвердить люстры →");
-  assert.equal(resolveStep0ConfirmLabel("lights"), "Подтвердить точки →");
-});
+// Подписей кнопок Шага 0 здесь намеренно нет.
+//
+// Этот харнесс транспилирует `lib/calculator-flow.ts` в изолированный модуль
+// через `vm` и не разрешает импорты, поэтому проверить можно только то, что
+// определено в самом этом файле. Подписи живут в `getParamConfirmLabel`
+// (`lib/step0-fsm.ts`) — их проверяет `tests/step0-fsm.test.ts` в vitest, где
+// импорты работают штатно.
+//
+// Раньше здесь был блок «Step 0 confirm labels are stable», который звал
+// `resolveStep0ConfirmLabel` — функцию, которой в `calculator-flow.ts` никогда
+// не было. Тест падал с `TypeError: resolveStep0ConfirmLabel is not a function`
+// и ожидал для `lights` текст «Подтвердить точки →», не совпадавший ни с одним
+// из существовавших значений.
 
 test("90-case combined flow matrix keeps routing and discount invariants", () => {
   const scenarios = ["standard", "modern", "advanced"];
