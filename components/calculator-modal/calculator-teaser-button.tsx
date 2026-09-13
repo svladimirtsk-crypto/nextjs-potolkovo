@@ -2,7 +2,6 @@
 
 import type { ServiceCalculatorPreset } from "@/content/services";
 import { Button } from "@/components/ui/button";
-import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
 import { useCalculatorModal } from "./calculator-modal-context";
 import { useCalculatorPageContext } from "./page-context";
 
@@ -57,19 +56,21 @@ export function CalculatorTeaserButton({
           return;
         }
 
-        const resolvedPreset: ServiceCalculatorPreset =
-          effectivePreset ?? {
-            ceilingType: "standard",
-            areaDefault: DEFAULT_CALCULATOR_AREA,
-          };
-
-        openCalculator({
-          preset: resolvedPreset,
-          // N-013 (F-10): подпись «подставил со страницы» уместна только
-          // когда страница действительно что-то подставила.
-          presetOrigin: effectivePreset ? "page" : "default",
-          source: safeSource,
-        });
+        /**
+         * PT-008: пресет переносится целиком — его разрешает
+         * `resolveEntryPreset` в обёртке Шага 0. Заглушку здесь не собираем:
+         * при `presetOrigin: "default"` её подставляет контекст модалки.
+         *
+         * N-013 (F-10): подпись «подставил со страницы» уместна только когда
+         * страница действительно что-то подставила.
+         */
+        openCalculator(
+          page.optionsFor("teaser", {
+            preset: effectivePreset,
+            presetOrigin: effectivePreset ? "page" : "default",
+            source: safeSource,
+          })
+        );
       }}
     >
       {label}

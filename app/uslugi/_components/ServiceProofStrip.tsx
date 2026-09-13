@@ -98,7 +98,7 @@ export function ServiceProofStrip({ service }: ServiceProofStripProps) {
                 </div>
 
                 {/* N-032 (F-36): вход в расчёт прямо с примера. */}
-                <ServiceProofWantSame slug={service.slug} areaLabel={item.areaLabel} />
+                <ServiceProofWantSame areaLabel={item.areaLabel} />
               </div>
             </article>
           ))}

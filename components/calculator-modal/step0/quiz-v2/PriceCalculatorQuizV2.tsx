@@ -184,9 +184,23 @@ export function PriceCalculatorQuizV2({
     if (!preset) return;
     presetAppliedRef.current = true;
     // N-013 (F-10): у заглушки нет источника — и подписи «со страницы» тоже.
-    engine.initFromPreset(preset, presetOrigin === "default" ? null : undefined);
-    // Пресет уже задал сценарий и комнату — начинаем сразу с площади.
-    const presetRoomId = engine.activeRoomId ?? engine.rooms[0]?.id ?? "object";
+    /**
+     * PT-008: id комнаты берём из `initFromPreset`, а не из состояния движка.
+     *
+     * `engine.activeRoomId ?? engine.rooms[0]?.id ?? "object"` читал состояние
+     * ДО диспатча (пустой `createInitialState`: rooms=[], activeRoomId=null) и
+     * поэтому всегда давал `"object"`. История экранов расходилась с реальной
+     * комнатой `"room-1"`, `enabledParams` не находил комнату по
+     * `screen.roomId` и считал `shadowEnabled`/`floatingEnabled` ложными —
+     * экраны «Длина теневого профиля» и «Длина парящего профиля» не
+     * включались вовсе. Метры профиля при этом молча попадали в сумму: на
+     * странице «Теневой профиль» и в кейсе «18 м² / 19 м теневого / 10 м трека»
+     * человек не мог ни увидеть, ни поправить длину профиля.
+     */
+    const presetRoomId =
+      engine.initFromPreset(preset, presetOrigin === "default" ? null : undefined) ??
+      engine.activeRoomId ??
+      "object";
     setHistory([{ t: "param", roomId: presetRoomId, param: "area" }]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preset, draftSettled]);

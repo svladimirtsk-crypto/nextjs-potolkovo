@@ -36,12 +36,14 @@ export function ymVisitParams(params: YmParams) {
 
 export function trackCalculatorOpen(
   source: string,
-  extra?: { entryMode?: string | null; hasDraft?: boolean }
+  extra?: { entryMode?: string | null; hasDraft?: boolean; pagePath?: string | null }
 ) {
   ymReachGoal("calculator_open", {
     source,
     ...(extra?.entryMode ? { entry_mode: extra.entryMode } : {}),
     ...(typeof extra?.hasDraft === "boolean" ? { has_draft: extra.hasDraft ? 1 : 0 } : {}),
+    // PT-008: страница входа — из EntryContext, а не из разбора строки `source`.
+    ...(extra?.pagePath ? { page_path: extra.pagePath } : {}),
   });
 }
 

@@ -37,8 +37,23 @@ export function defaultPerimeterMeters(area: number): number {
   return Math.max(1, Math.round(4 * Math.sqrt(safeArea)));
 }
 
-/** Страницы, для которых калькулятор пока не считает (нет типа полотна в прайсе). */
-export const DISABLED_PRESET_SLUGS = new Set(["svetoprozrachnye-potolki"]);
+/**
+ * Страницы, для которых типовой калькулятор не считает честно.
+ *
+ * PT-008 (раздел 3.1 ТЗ): для этих услуг **все** точки входа — включая общий
+ * хедер и мобильный стики, а не только hero конкретной страницы — ведут в
+ * «Обсудить проект», а не в калькулятор с обманчиво точной сметой.
+ *
+ * - `svetoprozrachnye-potolki` — в прайсе нет типа полотна (T-021), поэтому
+ *   базовый расчёт не описывает стоимость такого потолка;
+ * - `individualnye-proekty` — смета собирается после замера и обсуждения
+ *   конструктива; типовой пресет на 22 м² выдаёт ориентир, который выглядит
+ *   как готовый расчёт.
+ */
+export const DISABLED_PRESET_SLUGS = new Set([
+  "svetoprozrachnye-potolki",
+  "individualnye-proekty",
+]);
 
 export function resolvePresetScenario(preset: ServiceCalculatorPreset | null | undefined): SolutionScenario {
   if (!preset) return "standard";

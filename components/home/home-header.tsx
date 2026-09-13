@@ -10,6 +10,7 @@ import { scrollToAnchorTarget } from "@/lib/scroll-to-anchor";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
+import { useCalculatorPageContext } from "@/components/calculator-modal/page-context";
 
 
 const priorityRank = {
@@ -28,6 +29,13 @@ const headerServiceLinks = serviceLinks
 
 export function HomeHeader() {
   const { openCalculator } = useCalculatorModal();
+  /**
+   * PT-008: хедер общий для всех страниц, но вход из него — всегда со страницы,
+   * на которой человек сейчас. Раньше здесь был хардкод `source: "home:header"`
+   * и ни пресета, ни слага услуги: на `/uslugi/tenevoy-profil` хедер открывал
+   * типовой расчёт и писал в заявку источник главной.
+   */
+  const page = useCalculatorPageContext();
   const [isDesktopServicesOpen, setIsDesktopServicesOpen] = useState(false);
   const [isMobileServicesOpen, setIsMobileServicesOpen] = useState(false);
 
@@ -199,14 +207,31 @@ export function HomeHeader() {
           </a>
 
           {/* T-040: primary хедера открывает калькулятор напрямую. */}
-          <Button
-            type="button"
-            className="whitespace-nowrap px-4 sm:px-5"
-            onClick={() => openCalculator({ source: "home:header" })}
-          >
-            <span className="sm:hidden">Рассчитать</span>
-            <span className="hidden sm:inline">{homepage.header.primaryCtaLabel}</span>
-          </Button>
+          {page.presetDisabled ? (
+            /**
+             * PT-008: для услуг из `DISABLED_PRESET_SLUGS` типовой расчёт
+             * даёт обманчиво точную смету, поэтому все точки входа — включая
+             * общий хедер — ведут в обсуждение проекта.
+             */
+            <Button
+              href="#action"
+              className="whitespace-nowrap px-4 sm:px-5"
+              data-testid="header-entry"
+            >
+              <span className="sm:hidden">Обсудить</span>
+              <span className="hidden sm:inline">{page.projectCtaLabel}</span>
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              className="whitespace-nowrap px-4 sm:px-5"
+              data-testid="header-entry"
+              onClick={() => openCalculator(page.optionsFor("header"))}
+            >
+              <span className="sm:hidden">Рассчитать</span>
+              <span className="hidden sm:inline">{homepage.header.primaryCtaLabel}</span>
+            </Button>
+          )}
         </div>
       </Container>
     </header>

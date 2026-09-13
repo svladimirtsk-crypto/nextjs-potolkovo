@@ -129,11 +129,8 @@ export function MobileStickyCta() {
   const hasLightingDisplay = displayTotal > (snapshot?.total ?? 0);
 
   const handleCalculatorClick = () => {
-    // T-021: пресет и источник страницы
-    openCalculator({
-      source: page.sourceFor("sticky"),
-      preset: page.preset ?? undefined,
-    });
+    // T-021 · PT-008: пресет, источник и происхождение — из EntryContext.
+    openCalculator(page.optionsFor("sticky"));
   };
 
   // T-026: deep-link с текущим расчётом
@@ -170,13 +167,20 @@ export function MobileStickyCta() {
             </div>
             {/* T-026: после первой сводки — [Рассчитать] [Telegram] [Позвонить] */}
             <div className="flex shrink-0 items-center gap-2">
-              <Button
-                type="button"
-                onClick={handleCalculatorClick}
-                className="justify-center px-3 text-sm"
-              >
-                Рассчитать
-              </Button>
+              {page.presetDisabled ? (
+                /* PT-008: типовой расчёт по этой услуге не считаем честно. */
+                <Button href="#action" className="justify-center px-3 text-sm">
+                  {page.projectCtaLabel}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleCalculatorClick}
+                  className="justify-center px-3 text-sm"
+                >
+                  Рассчитать
+                </Button>
+              )}
               <a
                 href={telegramHref}
                 target="_blank"
@@ -203,11 +207,17 @@ export function MobileStickyCta() {
               </a>
             </div>
           </div>
+        ) : page.presetDisabled ? (
+          /* PT-008: все точки входа такой страницы ведут в обсуждение проекта. */
+          <Button href="#action" className="w-full justify-center" data-testid="sticky-entry">
+            {page.projectCtaLabel}
+          </Button>
         ) : (
           <Button
             type="button"
             onClick={handleCalculatorClick}
             className="w-full justify-center"
+            data-testid="sticky-entry"
           >
             Рассчитать стоимость
           </Button>

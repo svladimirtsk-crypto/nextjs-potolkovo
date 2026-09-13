@@ -8,10 +8,13 @@
  * свою комнату, продолжает расчёт, а не начинает его с пустого экрана.
  */
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
+import { useCalculatorPageContext } from "@/components/calculator-modal/page-context";
 import { homePriceExamples } from "@/lib/home-price-examples";
 
 export function HomePriceExamples() {
   const { openCalculator } = useCalculatorModal();
+  // PT-008: точка входа описана типизированным EntryContext, а не строкой.
+  const page = useCalculatorPageContext();
 
   return (
     <ul className="mt-8 grid gap-3 sm:grid-cols-3" data-testid="price-examples">
@@ -21,15 +24,16 @@ export function HomePriceExamples() {
             type="button"
             data-testid={`price-example-${example.id}`}
             onClick={() =>
-              openCalculator({
-                preset: example.preset,
-                forcePreset: true,
-                // PT-007 (раздел 3.1): это полный пресет конкретного кейса —
-                // «Спальня 12 м²» с посчитанным составом, а не частичные данные
-                // страницы услуги.
-                presetOrigin: "explicit",
-                source: `homepage:price-example:${example.id}`,
-              })
+              openCalculator(
+                page.optionsFor("example", {
+                  preset: example.preset,
+                  // PT-007 (раздел 3.1): это полный пресет конкретного кейса —
+                  // «Спальня 12 м²» с посчитанным составом, а не частичные
+                  // данные страницы услуги.
+                  presetOrigin: "explicit",
+                  source: `homepage:price-example:${example.id}`,
+                })
+              )
             }
             className="flex h-full w-full flex-col rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-slate-400 hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
           >
