@@ -2,7 +2,8 @@
  * T-027 · POST /api/lead — единственная точка приёма заявок.
  *
  * Порядок: honeypot → готовность хранилища → rate-limit → zod →
- * идемпотентность (PT-009) → дедуп → запись → доставка
+ * идемпотентность (PT-009) → дедуп → серверный пересчёт цены (PT-010) →
+ * запись → доставка
  * (Telegram основной, Web3Forms дубль). Ошибка доставки не роняет ответ:
  * заявка уже сохранена, неудачные каналы уходят в ретрай (`/api/lead/retry`).
  */
@@ -18,6 +19,7 @@ import {
 } from "@/lib/lead/rate-limit";
 import { hashLeadPayload } from "@/lib/lead/payload-hash";
 import { LeadPayloadSchema } from "@/lib/lead/schema";
+import { clientGrandTotalOf, recalculateLeadPrice } from "@/lib/lead/server-recalc";
 import { getLeadStore, isLeadStorageReady } from "@/lib/lead/store";
 import { getEnv } from "@/lib/env";
 
@@ -202,8 +204,74 @@ export async function POST(request: Request) {
     return leadAlreadyExists(duplicate.publicCode, callbackWindow, false);
   }
 
-  const grandTotal =
-    payload.snapshot?.totals.grand ?? payload.totals?.grand ?? payload.grandTotal ?? 0;
+  /**
+   * PT-010 · Сервер не доверяет сумме от клиента (ТЗ, стр. 161).
+   *
+   * Раньше здесь было
+   * `payload.snapshot?.totals.grand ?? payload.totals?.grand ?? payload.grandTotal ?? 0`:
+   * число из тела запроса становилось авторитетной ценой в БД и в письме
+   * мастеру. Теперь из снапшота берутся только параметры (тип потолка,
+   * площадь, метраж, SKU и количества), а сумму считает тот же чистый модуль
+   * `pricing`, которым считает клиент.
+   *
+   * Пересчёт стоит ПОСЛЕ идемпотентности и дедупа намеренно: `payloadHash`
+   * обязан считаться от клиентского payload. Считай мы его от
+   * пересобранного снапшота, обновление прайса между двумя одинаковыми
+   * отправками превратило бы повтор в «новую» заявку.
+   *
+   * Отклоняются только составы, которые нельзя пересчитать честно: неизвестный
+   * SKU и дробное количество штучного товара. Расхождение сумм — не отказ:
+   * прайс мог обновиться, пока человек досчитывал комплектацию, а терять
+   * контакт из-за арифметики нельзя. Такое расхождение помечается в снапшоте
+   * (`priceCheck`) и пишется в лог.
+   */
+  const recalcEnabled = getEnv().LEAD_SERVER_RECALC_ENABLED;
+  let storedPayload = payload;
+  let grandTotal = clientGrandTotalOf(payload);
+
+  if (recalcEnabled) {
+    try {
+      const recalc = await recalculateLeadPrice(payload);
+
+      if (!recalc.ok) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "validation",
+            code: recalc.rejection.code,
+            message: recalc.rejection.message,
+            ...(recalc.rejection.sku ? { sku: recalc.rejection.sku } : {}),
+          },
+          { status: 422 }
+        );
+      }
+
+      storedPayload = recalc.payload;
+      grandTotal = recalc.grandTotal;
+
+      const { priceCheck } = recalc;
+      if (priceCheck.status === "mismatch") {
+        console.warn(
+          `[lead] сумма заявки пересчитана сервером: клиент ${Math.round(priceCheck.clientGrand)} ₽ → сервер ${Math.round(priceCheck.serverGrand ?? 0)} ₽`,
+          { phone: payload.phone, issues: priceCheck.issues }
+        );
+      } else if (priceCheck.issues.length > 0) {
+        console.info(`[lead] пересчёт цены: ${priceCheck.status}`, {
+          issues: priceCheck.issues.map((issue) => `${issue.code}: ${issue.message}`),
+        });
+      }
+    } catch (error) {
+      /**
+       * Внутренняя ошибка пересчёта (например, не читается каталог) не должна
+       * ронять заявку: человек свой заказ сделал. Принимаем с суммой клиента и
+       * пишем ошибку — молча принять непроверенную цену нельзя.
+       */
+      console.error(
+        "[lead] серверный пересчёт цены не выполнен — заявка принята с суммой клиента:",
+        error
+      );
+    }
+  }
 
   /**
    * PT-003 · Заявка и задания на доставку — одной транзакцией.
@@ -226,8 +294,10 @@ export async function POST(request: Request) {
     lead = await store.createLeadWithDeliveries(
       {
         status: payload.leadKind === "rescue" ? "rescue" : "new",
-        payload,
-        grandTotal,
+        payload: storedPayload,
+        // Колонка `leads.grand_total` целочисленная: ставки прайса целые, но
+        // площадь и метраж дробные, поэтому сумма может прийти с хвостом.
+        grandTotal: Math.round(grandTotal),
         ipHash,
         userAgent: request.headers.get("user-agent") ?? undefined,
         requestId: requestId ?? undefined,
@@ -262,7 +332,7 @@ export async function POST(request: Request) {
    * Ошибки проглатываются намеренно — статусы пишет сама deliverAll, а
    * необработанный reject здесь уронил бы процесс после успешного ответа.
    */
-  void deliverAll(store, lead.id, payload, lead.publicCode).catch(() => {});
+  void deliverAll(store, lead.id, storedPayload, lead.publicCode).catch(() => {});
 
   return NextResponse.json(
     {

@@ -5,6 +5,7 @@ import { servicePageContent } from "@/content/services";
 import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
 import { DISABLED_PRESET_SLUGS } from "@/lib/calculator/presets";
 import { projectEntryCtaLabel } from "@/lib/entry-context";
+import { LeadPayloadSchema } from "@/lib/lead/schema";
 
 import { MODAL, clearCalcDraftStorage, interceptLeadApi, submitLeadForm } from "./helpers";
 
@@ -309,6 +310,28 @@ test.describe("PT-008 · приёмка: кейс «18 м² / 19 м тенево
       area: 18,
       shadowLength: 19,
       trackLength: 10,
+      /**
+       * PT-010 · серверный пересчёт читает нормализованные параметры, а не
+       * лейблы: без `ceilingType`/`trackType` он не отличил бы теневой профиль
+       * от накладного и пересчитал бы заявку приблизительно.
+       */
+      ceilingType: "shadow",
+      shadowEnabled: true,
+      trackType: "built-in",
     });
+
+    /**
+     * (6) PT-010 · живой payload проходит новую, более строгую схему заявки.
+     *
+     * Сам серверный пересчёт этого тела запроса проверяется в
+     * `tests/lead-server-recalc.test.ts` по фикстуре
+     * `tests/fixtures/lead-payload-browser-case.json` — это тот же payload,
+     * перехваченный этим сценарием. Внутри процесса Playwright его не
+     * пересчитать: `getCatalogIndex()` делает `import()` JSON, а ESM-загрузчик
+     * Playwright требует для этого import-атрибут, которого у Next.js-кода нет.
+     */
+    const parsed = LeadPayloadSchema.safeParse(leads[0]);
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.snapshot?.rooms[0].ceilingType).toBe("shadow");
   });
 });

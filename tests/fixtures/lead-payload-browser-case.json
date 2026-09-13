@@ -1,0 +1,71 @@
+{
+  "name": "Тест",
+  "phone": "+79055219909",
+  "consent": true,
+  "botcheck": "",
+  "source": "shadow-track-apartment:proof-card",
+  "placement": "modal",
+  "pagePath": "/",
+  "leadKind": "calculator",
+  "orderIntent": "lighting_with_ceiling",
+  "attribution": {
+    "first_landing": "/",
+    "first_referrer": "http://127.0.0.1:3100/"
+  },
+  "snapshot": {
+    "version": 2,
+    "scenario": "modern",
+    "scope": "room",
+    "rooms": [
+      {
+        "id": "room-1",
+        "label": "Кухня-гостиная",
+        "area": 18,
+        "totalRub": 57450,
+        "ceilingTypeLabel": "Теневой",
+        "shadowLength": 19,
+        "floatingLength": null,
+        "lightLinesLength": null,
+        "corniceLabel": null,
+        "corniceLength": null,
+        "corniceLightingLength": null,
+        "trackLabel": "Встроенный трек",
+        "trackLength": 10,
+        "lightsCount": null,
+        "chandeliersCount": null,
+        "ceilingType": "shadow",
+        "shadowEnabled": true,
+        "floatingEnabled": false,
+        "lightLinesEnabled": false,
+        "corniceType": "none",
+        "corniceLightingEnabled": false,
+        "corniceLightingPowerSupplies": null,
+        "trackType": "built-in",
+        "chandeliersEnabled": false,
+        "lightsEnabled": false
+      }
+    ],
+    "lighting": null,
+    "totals": {
+      "ceilingRaw": 57450,
+      "minimumApplied": false,
+      "installExtra": 0,
+      "lightingRegular": 0,
+      "lightingEffective": 0,
+      "discountPct": 25,
+      "grand": 57450
+    },
+    "source": "shadow-track-apartment:proof-card",
+    "entry": "ceiling-first"
+  },
+  "totals": {
+    "ceilingRaw": 57450,
+    "minimumApplied": false,
+    "installExtra": 0,
+    "lightingRegular": 0,
+    "lightingEffective": 0,
+    "discountPct": 25,
+    "grand": 57450
+  },
+  "requestId": "b915bf92-11c6-4c12-afbe-82305b8d6069"
+}
