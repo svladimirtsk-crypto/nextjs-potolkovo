@@ -24,17 +24,19 @@ import { resolveStep0SummaryActions } from "@/lib/calculator-flow";
 import {
   clearCalcDraft,
   describeCalcDraft,
-  readCalcDraft,
+  inspectCalcDraft,
   saveCalcDraft,
   type CalcDraft,
 } from "@/lib/calculator/draft";
+import { hasLightingItems } from "@/lib/calculator/snapshot-merge";
+import { DraftRestoreChoice } from "./DraftRestoreChoice";
 import { useCalculatorModal } from "../../calculator-modal-context";
 import { EMPTY_STEP0_STATE, useCalculatorStore } from "@/lib/calculator/store";
 
 type Props = {
   preset?: ServiceCalculatorPreset;
-  /** N-013: "default" — пресет фабрикует контекст, а не страница. */
-  presetOrigin?: "page" | "default";
+  /** PT-007 (раздел 3.1 ТЗ): "default" — пресет фабрикует контекст, а не страница. */
+  presetOrigin?: "default" | "page" | "explicit";
   initialSolutionScenario?: SolutionScenario;
   onPrimaryCtaClick?: () => void;
   onSecondaryCtaClick?: () => void;
@@ -48,6 +50,15 @@ type Props = {
   prefillFromLightingTrigger?: number;
 };
 
+/**
+ * PT-007: что показать до решения пользователя по сохранённому черновику.
+ * `offer` — черновик прочитан и его можно продолжить; `unreadable` — запись
+ * есть, но не читается, и молча затирать её нельзя (раздел 3.2 ТЗ).
+ */
+type PendingDraft =
+  | { kind: "offer"; draft: CalcDraft }
+  | { kind: "unreadable"; reason: "unknown-version" | "corrupt" };
+
 export function PriceCalculatorQuizV2({
   preset,
   presetOrigin,
@@ -60,7 +71,7 @@ export function PriceCalculatorQuizV2({
   prefillFromLightingTrigger = 0,
 }: Props) {
   const engine = useCeilingCalculatorEngine(initialSolutionScenario);
-  const { lightingDraft, goToStep } = useCalculatorModal();
+  const { lightingDraft, setLightingDraft, goToStep } = useCalculatorModal();
 
   // T-022: сводочные CTA считаем от текущего сценария движка,
   // а не от сценария, «застрявшего» в bridge-снапшоте.
@@ -74,7 +85,7 @@ export function PriceCalculatorQuizV2({
   const startScreen: Step0Screen = initialSolutionScenario !== "standard"
     ? { t: "roomPicker", mode: "first" }
     : { t: "scenario" };
-  const { setStep0 } = useCalculatorStore();
+  const { setStep0, setHasInteracted } = useCalculatorStore();
   const [history, setHistory] = useState<Step0Screen[]>([startScreen]);
   const screen = history[history.length - 1] ?? { t: "scenario" } as Step0Screen;
 
@@ -107,21 +118,43 @@ export function PriceCalculatorQuizV2({
     });
   }, [engine.solutionScenario, showModern, currentRoom?.shadowEnabled, currentRoom?.floatingEnabled]);
 
-  // T-023: черновик прошлого расчёта — предлагаем продолжить
-  const [draft, setDraft] = useState<CalcDraft | null>(null);
-  const [draftDecided, setDraftDecided] = useState(false);
+  /**
+   * T-023 · PT-007: черновик прошлого расчёта — предлагаем продолжить.
+   *
+   * Прежняя версия читала черновик только при `!preset` («пресет страницы
+   * важнее черновика»). Но обёртка Step0 (`wizard-step0-calculator.tsx`)
+   * формирует `resolvedPreset` всегда, а контекст подставляет заглушку
+   * `{ ceilingType: "standard", areaDefault }` даже при обычном входе с главной.
+   * То есть `preset` был истиной на любом входе, черновик не читался никогда, а
+   * экран выбора ниже был мёртвым кодом.
+   *
+   * Теперь происхождение пресета различается типизированным `presetOrigin`
+   * (раздел 3.1), а не наличием объекта, и решение всегда остаётся за
+   * пользователем: пока `draftSettled` не установлен, не применяется ни пресет,
+   * ни сохранение нового черновика.
+   */
+  const [pendingDraft, setPendingDraft] = useState<PendingDraft | null>(null);
+  const [draftSettled, setDraftSettled] = useState(false);
   const draftCheckedRef = useRef(false);
   useEffect(() => {
     if (draftCheckedRef.current) return;
     draftCheckedRef.current = true;
-    if (preset) return; // пресет страницы важнее черновика
-    const saved = readCalcDraft();
-    if (saved) setDraft(saved);
-    else setDraftDecided(true);
-  }, [preset]);
+    const result = inspectCalcDraft();
+    if (result.status === "ok") {
+      setPendingDraft({ kind: "offer", draft: result.draft });
+    } else if (result.status === "unreadable") {
+      setPendingDraft({ kind: "unreadable", reason: result.reason });
+    } else {
+      setDraftSettled(true);
+    }
+  }, []);
 
-  // T-023: сохраняем черновик при изменениях расчёта
+  // T-023: сохраняем черновик при изменениях расчёта.
+  // PT-007 (раздел 3.2): не раньше явного решения пользователя. Иначе пресет
+  // страницы, применённый до выбора, успевал создать комнату — и первый же
+  // пересчёт затирал сохранённые комнаты и корзину света.
   useEffect(() => {
+    if (!draftSettled) return;
     if (engine.rooms.length === 0) return;
     saveCalcDraft({
       scenario: engine.solutionScenario,
@@ -132,6 +165,7 @@ export function PriceCalculatorQuizV2({
       totalRub: engine.totalRub,
     });
   }, [
+    draftSettled,
     engine.rooms,
     engine.solutionScenario,
     engine.calculationScope,
@@ -140,10 +174,13 @@ export function PriceCalculatorQuizV2({
     lightingDraft,
   ]);
 
-  // T-021: применяем пресет страницы один раз при старте сессии
+  // T-021: применяем пресет страницы один раз при старте сессии.
+  // PT-007: и только после решения по черновику — явный `entryPreset` со
+  // страницы услуги/кейса подменяет черновик лишь после подтверждения.
   const presetAppliedRef = useRef(false);
   useEffect(() => {
     if (presetAppliedRef.current) return;
+    if (!draftSettled) return;
     if (!preset) return;
     presetAppliedRef.current = true;
     // N-013 (F-10): у заглушки нет источника — и подписи «со страницы» тоже.
@@ -152,7 +189,7 @@ export function PriceCalculatorQuizV2({
     const presetRoomId = engine.activeRoomId ?? engine.rooms[0]?.id ?? "object";
     setHistory([{ t: "param", roomId: presetRoomId, param: "area" }]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [preset]);
+  }, [preset, draftSettled]);
 
   // object-scope auto room — engine.chooseCalcMode already creates "object-1"
   // keep as safety net only if rooms empty after mode switch
@@ -356,45 +393,55 @@ export function PriceCalculatorQuizV2({
    */
   useEffect(() => () => setStep0(EMPTY_STEP0_STATE), [setStep0]);
 
-  if (draft && !draftDecided) {
+  if (pendingDraft && !draftSettled) {
+    const offer = pendingDraft.kind === "offer" ? pendingDraft : null;
     return (
       <div data-quiz-v2 data-active-screen="draft" className="step0-quiz-v2 max-w-3xl mx-auto">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5">
-          <p className="text-base font-semibold text-slate-950">
-            Продолжить прошлый расчёт ({describeCalcDraft(draft)})?
-          </p>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Мы сохранили параметры, которые вы уже указали в этой вкладке.
-          </p>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                engine.restoreFromDraft({
-                  scenario: draft.scenario,
-                  scope: draft.scope,
-                  rooms: draft.rooms as unknown as Parameters<typeof engine.restoreFromDraft>[0]["rooms"],
-                });
-                setHistory([{ t: "summary" }]);
-                setDraftDecided(true);
-              }}
-              className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-slate-950 px-5 text-sm font-semibold text-white hover:bg-slate-800"
-            >
-              Продолжить
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                clearCalcDraft();
-                setDraft(null);
-                setDraftDecided(true);
-              }}
-              className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              Начать заново
-            </button>
-          </div>
-        </div>
+        <DraftRestoreChoice
+          variant={pendingDraft.kind}
+          origin={presetOrigin ?? "default"}
+          summary={offer ? describeCalcDraft(offer.draft) : undefined}
+          lightingItemsCount={offer ? (offer.draft.cart?.items?.length ?? 0) : 0}
+          onContinue={
+            offer
+              ? () => {
+                  const draft = offer.draft;
+                  engine.restoreFromDraft({
+                    scenario: draft.scenario,
+                    scope: draft.scope,
+                    rooms: draft.rooms as unknown as Parameters<
+                      typeof engine.restoreFromDraft
+                    >[0]["rooms"],
+                  });
+                  /**
+                   * PT-007: восстанавливаем корзину света целиком — SKU,
+                   * количества и режим скидки (`discountMode` лежит в том же
+                   * снапшоте), а не только параметры комнат.
+                   */
+                  setLightingDraft(draft.cart);
+                  /**
+                   * N-050: без этого флага ActionForm не прикладывает снапшот к
+                   * заявке — мастер получил бы имя с телефоном без состава
+                   * корзины и без суммы. Тот же флаг контекст ставит при входе
+                   * с готовым набором света.
+                   */
+                  if (hasLightingItems(draft.cart)) setHasInteracted(true);
+                  setHistory([{ t: "summary" }]);
+                  // Пользователь выбрал черновик — пресет страницы применять нельзя.
+                  presetAppliedRef.current = true;
+                  setPendingDraft(null);
+                  setDraftSettled(true);
+                }
+              : undefined
+          }
+          onStartNew={() => {
+            // PT-007 (раздел 3.2): неудаляемый до этого момента черновик
+            // снимается только явным выбором, включая нечитаемую запись.
+            clearCalcDraft();
+            setPendingDraft(null);
+            setDraftSettled(true);
+          }}
+        />
       </div>
     );
   }
