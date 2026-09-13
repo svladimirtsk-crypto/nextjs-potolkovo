@@ -14,6 +14,11 @@ import type {
   SolutionScenario,
 } from "@/lib/calculator-modal-types";
 
+/** PT-010 · идентификаторы тарифов калькулятора: те же union'ы, что в `V2RoomConfig`. */
+export type CalculatorCeilingTypeId = "standard" | "shadow" | "floating" | "shadow-floating";
+export type CalculatorCorniceTypeId = "none" | "built-in" | "hidden-niche" | "surface";
+export type CalculatorTrackTypeId = "none" | "built-in" | "surface";
+
 export type CalculatorRoomBreakdown = {
   id: string;
   label: string;
@@ -30,6 +35,31 @@ export type CalculatorRoomBreakdown = {
   trackLength?: number | null;
   lightsCount?: number | null;
   chandeliersCount?: number | null;
+
+  /**
+   * PT-010 · нормализованные параметры комнаты.
+   *
+   * До этой задачи комната приезжала на сервер только лейблами («Теневой»,
+   * «Встроенный трек») и метражом: сервер не мог честно пересчитать сумму,
+   * потому что лейбл — не тариф, а часть тарифов зависит ещё и от флагов
+   * (`corniceLightingEnabled`, `chandeliersEnabled`, число блоков питания).
+   * Поля ниже — точный обратимый образ `V2RoomConfig`: с ними сервер считает
+   * тем же `calcRoomSnapshotV2`, что и клиент.
+   *
+   * Все поля необязательные: снапшоты старых клиентов (и сохранённые заявки)
+   * их не содержат, сервер в таком случае восстанавливает конфиг по лейблам и
+   * помечает пересчёт как приблизительный.
+   */
+  ceilingType?: CalculatorCeilingTypeId;
+  shadowEnabled?: boolean;
+  floatingEnabled?: boolean;
+  lightLinesEnabled?: boolean;
+  corniceType?: CalculatorCorniceTypeId;
+  corniceLightingEnabled?: boolean;
+  corniceLightingPowerSupplies?: number | null;
+  trackType?: CalculatorTrackTypeId;
+  chandeliersEnabled?: boolean;
+  lightsEnabled?: boolean;
 };
 
 export type CalculatorLeadSnapshot = {

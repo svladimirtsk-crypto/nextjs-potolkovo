@@ -102,6 +102,25 @@ describe.skipIf(!TEST_DATABASE_URL)("N-001 · POST /api/lead с PostgreSQL", () 
     expect(saved).not.toBeNull();
     const rooms = (saved?.payload.snapshot as { rooms?: unknown[] } | undefined)?.rooms;
     expect(rooms).toHaveLength(2);
+
+    /**
+     * PT-010 · в БД лежит серверная сумма, а не присланная клиентом.
+     *
+     * В payload выше `totals.grand: 62000` и `totalRub` комнат 24 000/32 000 —
+     * цифры с потолка. Сервер пересчитывает комнаты по прайсу: две комнаты
+     * «простой потолок» 12 и 18 м² × 1 000 ₽ = 30 000 ₽, света в заявке нет.
+     * Заодно проверяется, что расширенный снапшот (`priceCheck`) помещается в
+     * jsonb, а сумма — в целочисленный `grand_total`.
+     */
+    expect(saved?.grandTotal).toBe(30_000);
+    const priceCheck = (
+      saved?.payload.snapshot as
+        | { priceCheck?: { status: string; clientGrand: number; serverGrand: number | null } }
+        | undefined
+    )?.priceCheck;
+    expect(priceCheck?.status).toBe("mismatch");
+    expect(priceCheck?.clientGrand).toBe(62_000);
+    expect(priceCheck?.serverGrand).toBe(30_000);
   });
 
   it("дедуп по телефону переживает потерю памяти процесса", async () => {

@@ -4,7 +4,9 @@
  * Один текст используется и для Telegram, и для письма — чтобы мастер видел
  * одинаковую структуру независимо от канала.
  */
-import type { LeadPayload } from "./schema";
+import type { LeadPayload, LeadSnapshotV2 } from "./schema";
+// Только типы: рантайм-импорта `server-recalc` здесь нет, письмо не тянет каталог.
+import type { PriceCheck, StoredLeadSnapshot } from "./server-recalc";
 
 function fmt(value: number): string {
   return new Intl.NumberFormat("ru-RU").format(Math.round(value)).replace(/\u00a0/g, " ");
@@ -22,6 +24,17 @@ const PREFERRED_TIME_LABELS: Record<string, string> = {
   tomorrow_morning: "завтра утром",
   telegram: "написать в Telegram",
 };
+
+/**
+ * PT-010 · Результат серверной сверки цены.
+ *
+ * Поле кладёт в снапшот сервер (`lib/lead/server-recalc.ts`), в схеме payload
+ * его нет — значит прислать его из браузера нельзя, и в письме не появится
+ * «проверено», которого на самом деле не было.
+ */
+function priceCheckOf(snapshot: LeadSnapshotV2 | null | undefined): PriceCheck | null {
+  return (snapshot as StoredLeadSnapshot | null | undefined)?.priceCheck ?? null;
+}
 
 const KIND_LABELS: Record<string, string> = {
   direct: "прямая заявка",
@@ -136,6 +149,27 @@ export function formatLeadBody(payload: LeadPayload, leadCode?: string): string 
     lines.push(`Общий ориентир: ~${fmt(payload.grandTotal)} ₽`);
   } else {
     lines.push("Расчёт не приложен — уточнить по телефону.");
+  }
+
+  /**
+   * PT-010 · Служебная пометка для мастера.
+   *
+   * В письме всегда серверная сумма (строки выше собраны из пересчитанного
+   * снапшота). Если клиент видел другое, это нужно знать: либо прайс
+   * обновили, пока человек считал, либо в заявку вмешались. Строка служебная —
+   * она не про деньги в счёте, а про доверие к цифре.
+   */
+  const priceCheck = priceCheckOf(snapshot);
+  if (priceCheck && priceCheck.status === "mismatch" && priceCheck.serverGrand !== null) {
+    lines.push("", "СЛУЖЕБНОЕ");
+    lines.push(
+      `Сумма пересчитана сервером: клиент видел ~${fmt(priceCheck.clientGrand)} ₽ (расхождение ${priceCheck.deltaPct?.toFixed(1) ?? "—"} %)`
+    );
+  }
+  const unavailable = (priceCheck?.issues ?? []).filter((issue) => issue.code === "unavailable-product");
+  if (unavailable.length > 0) {
+    if (!priceCheck || priceCheck.status !== "mismatch") lines.push("", "СЛУЖЕБНОЕ");
+    for (const issue of unavailable) lines.push(`! ${issue.message}`);
   }
 
   return lines.join("\n");
