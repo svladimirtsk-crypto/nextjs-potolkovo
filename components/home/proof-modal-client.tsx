@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { homeAssets } from "@/content/home-assets";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
+import { useCalculatorPageContext } from "@/components/calculator-modal/page-context";
 import type { ServiceCalculatorPreset } from "@/content/services";
 
 type ProofItem = {
@@ -74,6 +75,8 @@ export function ProofModalClient({
   onNext,
 }: ProofModalClientProps) {
   const { openCalculator } = useCalculatorModal();
+  // PT-008: точка входа описана типизированным EntryContext, а не строкой.
+  const page = useCalculatorPageContext();
 
   const isOpen = selectedIndex !== null;
   const item = selectedIndex !== null ? items[selectedIndex] : null;
@@ -139,12 +142,16 @@ export function ProofModalClient({
       ceilingType: "standard",
     }) as ServiceCalculatorPreset;
 
-    openCalculator({
-      preset,
-      forcePreset: true,
-      // T-021: единый формат источника "<slug>:<placement>"
-      source: `${item.slug}:proof`,
-    });
+    openCalculator(
+      page.optionsFor("proof", {
+        preset,
+        // PT-007/PT-008: у части кейсов есть полный пресет — это "explicit",
+        // у остальных подставляется стандартный потолок, то есть "page".
+        presetOrigin: item.actionPreset ? "explicit" : "page",
+        // T-021: единый формат источника "<slug>:<placement>"
+        source: `${item.slug}:proof`,
+      })
+    );
   };
 
   return (

@@ -66,12 +66,17 @@ describe("T-021 - presety stranic uslug", () => {
     }
   });
 
-  it("svetoprozrachnye-potolki: preset otklyuchen", () => {
-    expect(DISABLED_PRESET_SLUGS.has("svetoprozrachnye-potolki")).toBe(true);
-    const result = presetToRoom(preset("svetoprozrachnye-potolki"), {
-      slug: "svetoprozrachnye-potolki",
-    });
-    expect(result.disabled).toBe(true);
+  it("uslugi bez chestnogo rascheta: presety otklyucheny (PT-008)", () => {
+    /**
+     * PT-008: к светопрозрачным полотнам добавлены индивидуальные проекты —
+     * типовой калькулятор по таким задачам даёт обманчиво точную смету,
+     * поэтому все точки входа этих страниц ведут в «Обсудить проект».
+     */
+    for (const slug of ["svetoprozrachnye-potolki", "individualnye-proekty"] as const) {
+      expect(DISABLED_PRESET_SLUGS.has(slug), slug).toBe(true);
+      const result = presetToRoom(preset(slug), { slug });
+      expect(result.disabled, slug).toBe(true);
+    }
   });
 
   it("perimetr po umolchaniyu = round(4*sqrt(area))", () => {

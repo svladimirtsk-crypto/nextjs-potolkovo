@@ -9,6 +9,7 @@
  */
 import { Button } from "@/components/ui/button";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
+import { useCalculatorPageContext } from "@/components/calculator-modal/page-context";
 
 export type HeroCtaProps = {
   label: string;
@@ -17,13 +18,16 @@ export type HeroCtaProps = {
 
 export function HeroCta({ label, secondaryLabel }: HeroCtaProps) {
   const { openCalculator } = useCalculatorModal();
+  // PT-008: источник, путь страницы и пресет — из общего контекста входа.
+  const page = useCalculatorPageContext();
 
   return (
     <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
       <Button
         type="button"
         className="w-full sm:w-auto"
-        onClick={() => openCalculator({ source: "home:hero" })}
+        data-testid="hero-entry"
+        onClick={() => openCalculator(page.optionsFor("hero"))}
       >
         {label}
       </Button>

@@ -104,6 +104,18 @@ export type OpenCalculatorOptions = {
 
   entryMode?: CalculatorEntryMode;
   source?: string;
+  /**
+   * PT-008 (раздел 3.1): слаг услуги, с которой человек вошёл. Типизированный
+   * признак источника — вместо распознавания подстроки в строке `source`.
+   * `null`/`undefined` — вход не со страницы услуги (главная, каталог света).
+   */
+  serviceSlug?: string | null;
+  /**
+   * PT-008 (раздел 3.1): путь страницы, с которой человек вошёл. В заявку
+   * `pagePath` по-прежнему пишется из `window.location` в момент отправки —
+   * это поле нужно атрибуции открытия калькулятора, а не подмене факта.
+   */
+  pagePath?: string;
 };
 
 export type CalculatorModalContextValue = {

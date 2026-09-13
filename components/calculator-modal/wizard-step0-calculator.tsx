@@ -8,7 +8,7 @@ import type { SolutionScenario } from "@/lib/calculator-modal-types";
 import { PriceCalculatorQuizV2 } from "@/components/calculator-modal/step0/quiz-v2/PriceCalculatorQuizV2";
 
 import { caseHint } from "@/lib/calculator/presets";
-import { DEFAULT_CALCULATOR_AREA } from "@/lib/catalog-ui-config";
+import { resolveEntryPreset } from "@/lib/entry-context";
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
@@ -65,17 +65,32 @@ const SERVICE_SLUG_TO_SCENARIO: Array<{
 ];
 
 function resolveInitialSolutionScenario(
+  serviceSlug: string | null | undefined,
   source: unknown,
   preset?: ServiceCalculatorPreset
 ): SolutionScenario {
-  const src = String(source ?? "").toLowerCase();
+  /**
+   * 1. PT-008: слаг услуги из EntryContext — типизированный признак входа.
+   * Раздел 3.1 ТЗ прямо запрещает распознавать источник подстрокой
+   * произвольной строки `source`.
+   */
+  if (serviceSlug) {
+    const bySlug = SERVICE_SLUG_TO_SCENARIO.find(
+      (entry) => serviceSlug === entry.slugPrefix || serviceSlug.startsWith(entry.slugPrefix)
+    );
+    if (bySlug) return bySlug.scenario;
+  }
 
-  // 1. Проверяем по реестру slug'ов
+  /**
+   * 2. Запасной путь для входов, которые не проходят через EntryContext
+   * (каталог света, прямые вызовы `openCalculator` с рукотворным `source`).
+   */
+  const src = String(source ?? "").toLowerCase();
   for (const entry of SERVICE_SLUG_TO_SCENARIO) {
     if (src.includes(entry.slugPrefix)) return entry.scenario;
   }
 
-  // 2. Проверяем по пресету калькулятора
+  // 3. Проверяем по пресету калькулятора
   if (preset?.ceilingType === "shadow" || preset?.ceilingType === "floating") return "modern";
   if (preset?.trackType && preset.trackType !== "none") return "modern";
   if (preset?.lightLinesEnabled) return "modern";
@@ -92,33 +107,27 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
   } = useCalculatorModal();
 
   const forcePreset = Boolean(options?.forcePreset);
+  const presetOrigin = options?.presetOrigin ?? (preset ? "page" : "default");
+
+  /**
+   * PT-008 (раздел 3.1): пресет переносится целиком, а не восемью полями из
+   * девятнадцати. Прежняя ручная сборка теряла `shadowLengthDefault`,
+   * `floatingLengthDefault`, `trackLengthDefault`, `lightLinesEnabled`,
+   * `lightLinesLengthDefault`, `corniceLengthDefault`, `corniceLighting*`,
+   * `roomLabelDefault` и `calculationScopeDefault` — то есть ровно то, ради
+   * чего страница услуги открывает расчёт со своими параметрами.
+   *
+   * Единственный точечный override — площадь при обычном входе
+   * (`presetOrigin: "default"`): там пресет фабрикует контекст модалки.
+   */
   const resolvedPreset: ServiceCalculatorPreset = useMemo(
-    () => ({
-      ceilingType: String(preset?.ceilingType ?? "standard") as ServiceCalculatorPreset["ceilingType"],
-      areaDefault: forcePreset ? Number(preset?.areaDefault ?? DEFAULT_CALCULATOR_AREA) : DEFAULT_CALCULATOR_AREA,
-      corniceType: preset?.corniceType,
-      trackType: preset?.trackType,
-      lightsEnabled: preset?.lightsEnabled,
-      lightsCount: preset?.lightsCount,
-      introNote: preset?.introNote,
-      lightingDefault: preset?.lightingDefault,
-    }),
-    [
-      forcePreset,
-      preset?.areaDefault,
-      preset?.ceilingType,
-      preset?.corniceType,
-      preset?.introNote,
-      preset?.lightingDefault,
-      preset?.lightsCount,
-      preset?.lightsEnabled,
-      preset?.trackType,
-    ]
+    () => resolveEntryPreset(preset, { presetOrigin, forcePreset }),
+    [preset, presetOrigin, forcePreset]
   );
 
   const initialSolutionScenario = useMemo(
-    () => resolveInitialSolutionScenario(options?.source, resolvedPreset),
-    [options?.source, resolvedPreset]
+    () => resolveInitialSolutionScenario(options?.serviceSlug, options?.source, resolvedPreset),
+    [options?.serviceSlug, options?.source, resolvedPreset]
   );
 
   const [prefillTrigger, setPrefillTrigger] = useState(0);
