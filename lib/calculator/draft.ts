@@ -7,6 +7,7 @@
  */
 import type { LightingSnapshot, SolutionScenario } from "@/lib/calculator-modal-types";
 import type { V2RoomConfig } from "@/lib/calculator/room-snapshot";
+import { readWebStorage, removeWebStorage, writeWebStorage } from "@/lib/safe-storage";
 
 export const CALC_DRAFT_STORAGE_KEY = "potolkovo:calc-draft:v2";
 
@@ -26,25 +27,17 @@ export type CalcDraft = {
 
 export type CalcDraftInput = Omit<CalcDraft, "version" | "savedAt">;
 
-function storage(): Storage | null {
-  if (typeof window === "undefined") return null;
-  try {
-    return window.sessionStorage;
-  } catch {
-    return null;
-  }
-}
-
+/**
+ * PT-012 · доступ к хранилищу — через единую обёртку `lib/safe-storage`.
+ *
+ * Поведение то же, что и раньше (черновик не критичен: приватный режим и
+ * переполнение квоты просто оставляют пользователя без «продолжить расчёт»),
+ * но исключение больше не может улететь наружу, а способ отказа один на проект.
+ */
 export function saveCalcDraft(input: CalcDraftInput): void {
-  const store = storage();
-  if (!store) return;
   if (!input.rooms.length) return;
   const draft: CalcDraft = { version: 2, savedAt: Date.now(), ...input };
-  try {
-    store.setItem(CALC_DRAFT_STORAGE_KEY, JSON.stringify(draft));
-  } catch {
-    // приватный режим / переполнение — черновик не критичен
-  }
+  writeWebStorage("session", CALC_DRAFT_STORAGE_KEY, JSON.stringify(draft));
 }
 
 /**
@@ -66,14 +59,7 @@ export type CalcDraftRead =
   | { status: "unreadable"; reason: "unknown-version" | "corrupt" };
 
 export function inspectCalcDraft(now: number = Date.now()): CalcDraftRead {
-  const store = storage();
-  if (!store) return { status: "empty" };
-  let raw: string | null = null;
-  try {
-    raw = store.getItem(CALC_DRAFT_STORAGE_KEY);
-  } catch {
-    return { status: "empty" };
-  }
+  const raw = readWebStorage("session", CALC_DRAFT_STORAGE_KEY);
   if (!raw) return { status: "empty" };
 
   let parsed: Partial<CalcDraft>;
@@ -120,13 +106,7 @@ export function readCalcDraft(now: number = Date.now()): CalcDraft | null {
 }
 
 export function clearCalcDraft(): void {
-  const store = storage();
-  if (!store) return;
-  try {
-    store.removeItem(CALC_DRAFT_STORAGE_KEY);
-  } catch {
-    // ignore
-  }
+  removeWebStorage("session", CALC_DRAFT_STORAGE_KEY);
 }
 
 /** «Продолжить прошлый расчёт (48 м², 72 000 ₽)?» */
