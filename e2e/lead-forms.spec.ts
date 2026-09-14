@@ -16,7 +16,7 @@ test.describe("Формы заявок", () => {
     await page.goto("/uslugi/skrytye-karnizy#action");
     await submitLeadForm(page, { name: "Пётр", phone: "9161234567" });
 
-    await expect(page.getByText(/Заявка .* принята|Заявка отправлена/)).toBeVisible();
+    await expect(page.getByText(/Заявка №\S+ сохранена|Заявка отправлена/)).toBeVisible();
 
     expect(leads).toHaveLength(1);
     const lead = leads[0];

@@ -61,6 +61,16 @@ export type LeadSubmitFailure = {
   issues: string[];
   /** `Retry-After` в секундах, если сервер его отдал. */
   retryAfterSec: number | null;
+  /**
+   * PT-013 · Готовый человеческий текст от сервера, если он его прислал.
+   *
+   * Есть у двух ответов: `422` серверного пересчёта цены (PT-010 — «позиция
+   * недоступна к заказу») и `409` (PT-009 — тот же `requestId` с другим
+   * содержимым). Раньше оба текста выбрасывались, и человек видел «проверьте
+   * номер телефона» при неизвестном SKU. Показывает их не транспорт, а
+   * `describeLeadFailure` — только там, где текст написан для человека.
+   */
+  serverMessage: string | null;
 };
 
 export type LeadSubmitResult = LeadSubmitSuccess | LeadSubmitFailure;
@@ -84,6 +94,7 @@ type LeadApiBody = {
   deduped?: unknown;
   error?: unknown;
   issues?: unknown;
+  message?: unknown;
 };
 
 export type SubmitLeadOptions = {
@@ -131,6 +142,14 @@ function parseRetryAfter(header: string | null): number | null {
   const seconds = Number(header.trim());
   if (!Number.isFinite(seconds) || seconds < 0) return null;
   return Math.round(seconds);
+}
+
+/** Текст сервера, если он короткий и строковый. Всё остальное отбрасывается. */
+function readServerMessage(body: LeadApiBody | null): string | null {
+  if (typeof body?.message !== "string") return null;
+  const message = body.message.trim();
+  if (!message) return null;
+  return message.length > 200 ? `${message.slice(0, 197)}…` : message;
 }
 
 function readIssues(body: LeadApiBody | null): string[] {
@@ -198,6 +217,7 @@ export async function submitLead(
       status: response.status,
       issues: readIssues(body),
       retryAfterSec: parseRetryAfter(response.headers.get("Retry-After")),
+      serverMessage: readServerMessage(body),
     };
   } catch {
     // `controller.signal.aborted` отличает наш таймаут от обрыва связи.
@@ -207,6 +227,7 @@ export async function submitLead(
       status: null,
       issues: [],
       retryAfterSec: null,
+      serverMessage: null,
     };
   } finally {
     clearTimeout(timer);

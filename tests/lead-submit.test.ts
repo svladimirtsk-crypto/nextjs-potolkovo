@@ -144,6 +144,33 @@ describe("PT-004 - submitLead: otkaz ne schitaetsya uspehom", () => {
     expect(leadSubmitFailureReason(result)).toContain("10 мин");
   });
 
+  it("PT-013: 422 prinosit gotovyy tekst servera (otkaz pereschyota ceny)", async () => {
+    const { fetchImpl } = stubFetch(
+      jsonResponse(
+        {
+          ok: false,
+          error: "validation",
+          code: "sku_unavailable",
+          message: "«Профиль PC-26» недоступен к заказу — позиция принята по каталогу.",
+        },
+        { status: 422 }
+      )
+    );
+    const result = await submitLead(PAYLOAD, { fetchImpl });
+    if (result.ok) throw new Error("ожидался отказ");
+    expect(result.serverMessage).toContain("недоступен к заказу");
+    expect(result.issues).toEqual([]);
+  });
+
+  it("PT-013: dlinnyy tekst servera obrezaetsya do 200 simvolov", async () => {
+    const { fetchImpl } = stubFetch(
+      jsonResponse({ ok: false, error: "validation", message: `x${"y".repeat(400)}` }, { status: 422 })
+    );
+    const result = await submitLead(PAYLOAD, { fetchImpl });
+    if (result.ok) throw new Error("ожидался отказ");
+    expect(result.serverMessage?.length).toBeLessThanOrEqual(200);
+  });
+
   it("nevalidnyy Retry-After ne ronjaet razbor", async () => {
     const { fetchImpl } = stubFetch(
       jsonResponse(
@@ -168,6 +195,8 @@ describe("PT-004 - submitLead: otkaz ne schitaetsya uspehom", () => {
       status: null,
       issues: [],
       retryAfterSec: null,
+      // PT-013: в форме отказа появился текст сервера — при обрыве связи его нет.
+      serverMessage: null,
     });
   });
 
