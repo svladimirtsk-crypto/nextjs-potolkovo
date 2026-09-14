@@ -29,6 +29,20 @@ export type ConsentNotice = {
   suffix?: string;
 };
 
+/**
+ * PT-014 · Факт согласия, который диалог передаёт обработчику отправки.
+ *
+ * Раньше rescue-заявка уходила с `consent: true` константой в payload: сервер и
+ * база не могли отличить отмеченный чекбокс от так написанного кода. Теперь
+ * диалог отдаёт и сам факт, и момент клика, а версию политики подставляет
+ * `lib/lead/rescue-lead.ts`.
+ */
+export type ConfirmDialogConsent = {
+  given: boolean;
+  /** ISO-момент, когда чекбокс отметили; `null`, если согласия нет. */
+  at: string | null;
+};
+
 export type ConfirmDialogOptions = {
   title: string;
   message: string;
@@ -66,7 +80,7 @@ export type ConfirmDialogOptions = {
    * иначе человек закроет окно, так и не узнав, ушла заявка или нет.
    */
   submit?: {
-    run: (phone: string) => Promise<ConfirmDialogSubmitOutcome>;
+    run: (phone: string, consent: ConfirmDialogConsent) => Promise<ConfirmDialogSubmitOutcome>;
     pendingLabel?: string;
     retryLabel?: string;
     /** Кнопка «уйти, не отправив» в состоянии ошибки. */

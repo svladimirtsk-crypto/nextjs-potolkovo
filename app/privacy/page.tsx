@@ -4,6 +4,8 @@ import Link from "next/link";
 import { HomeFooter } from "@/components/home/home-footer";
 import { Container } from "@/components/ui/container";
 import { contacts, isLegalFieldFilled } from "@/content/contacts";
+import { PRIVACY_POLICY_VERSION } from "@/content/legal";
+import { formatPolicyVersionDate } from "@/lib/privacy-policy";
 
 export const metadata: Metadata = {
   title: { absolute: "Политика конфиденциальности — ПОТОЛКОВО" },
@@ -184,7 +186,7 @@ export default function PrivacyPage() {
               </p>
 
               <p className="mt-4 text-xs font-medium uppercase tracking-[0.18em] text-slate-600">
-                Дата обновления: {new Date().toLocaleDateString("ru-RU")}
+                Дата обновления: {formatPolicyVersionDate(PRIVACY_POLICY_VERSION)}
               </p>
             </div>
 

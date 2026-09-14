@@ -8,6 +8,8 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ATTRIBUTION_URL_MAX } from "@/lib/attribution";
+import { PRIVACY_POLICY_VERSION } from "@/content/legal";
+import { resetEnvCache } from "@/lib/env";
 import { resetRateLimitForTests } from "@/lib/lead/rate-limit";
 import { setLeadStoreForTests } from "@/lib/lead/store";
 import type { LeadStore } from "@/lib/lead/store-types";
@@ -318,5 +320,143 @@ describe.skipIf(!TEST_DATABASE_URL)("N-001 · POST /api/lead с PostgreSQL", () 
     expect(attribution.first_landing).not.toContain("email");
     expect(attribution.first_landing).not.toContain("#");
     expect(attribution.password).toBeUndefined();
+  });
+  /**
+   * PT-014 · Согласие — это факт с редакцией и моментом, а не `consent: true`.
+   *
+   * До задачи в `leads` не было ни версии политики, ни времени согласия: по базе
+   * нельзя было ответить, с каким текстом человек согласился. Проверяем на
+   * настоящей БД, что значения из запроса доезжают до отдельных колонок.
+   */
+  it("PT-014: версия и момент согласия сохраняются в отдельных колонках", async () => {
+    const { POST } = await import("@/app/api/lead/route");
+
+    const consentAt = new Date(Date.now() - 60_000).toISOString();
+    const response = await POST(
+      request({
+        ...leadBody("+79161110001"),
+        consentVersion: PRIVACY_POLICY_VERSION,
+        consentAt,
+      })
+    );
+
+    expect(response.status).toBe(201);
+
+    const { leadId } = (await response.json()) as { leadId: string };
+    const saved = await store.getLeadByPublicCode(leadId);
+
+    expect(saved?.consentVersion).toBe(PRIVACY_POLICY_VERSION);
+    expect(saved?.consentAt).toBe(Date.parse(consentAt));
+  });
+
+  it("PT-014: без версии клиента — NULL, момент ставит сервер", async () => {
+    const { POST } = await import("@/app/api/lead/route");
+
+    const before = Date.now();
+    const response = await POST(request(leadBody("+79161110002")));
+    const after = Date.now();
+
+    expect(response.status).toBe(201);
+
+    const { leadId } = (await response.json()) as { leadId: string };
+    const saved = await store.getLeadByPublicCode(leadId);
+
+    // Неизвестность честнее подставленной текущей редакции.
+    expect(saved?.consentVersion).toBeNull();
+    expect(saved?.consentAt).toBeGreaterThanOrEqual(before - 1000);
+    expect(saved?.consentAt).toBeLessThanOrEqual(after + 1000);
+  });
+
+  it("PT-014: невозможное время согласия заменяется серверным", async () => {
+    const { POST } = await import("@/app/api/lead/route");
+
+    const before = Date.now();
+    const response = await POST(
+      request({
+        ...leadBody("+79161110003"),
+        consentVersion: "2020-01-01",
+        consentAt: "1999-01-01T00:00:00.000Z",
+      })
+    );
+
+    expect(response.status).toBe(201);
+
+    const { leadId } = (await response.json()) as { leadId: string };
+    const saved = await store.getLeadByPublicCode(leadId);
+
+    // Часы клиента соврали на 27 лет — пишем серверное время.
+    expect(saved?.consentAt).toBeGreaterThanOrEqual(before - 1000);
+    // Старая редакция сохраняется как есть: человек видел именно её.
+    expect(saved?.consentVersion).toBe("2020-01-01");
+  });
+
+  it("PT-014: мусор в consentVersion не доезжает до БД", async () => {
+    const { POST } = await import("@/app/api/lead/route");
+
+    const response = await POST(
+      request({
+        ...leadBody("+79161110004"),
+        consentVersion: "'; DROP TABLE leads;--",
+        consentAt: "вчера",
+      })
+    );
+
+    expect(response.status).toBe(201);
+
+    const { leadId } = (await response.json()) as { leadId: string };
+    const saved = await store.getLeadByPublicCode(leadId);
+    expect(saved?.consentVersion).toBeNull();
+    expect(saved?.consentAt).not.toBeNull();
+  });
+
+  /**
+   * PT-014 · Флаг аварийного отката (правило 8 раздела 2 ТЗ).
+   *
+   * По умолчанию расхождение версий только логируется: деплой новой редакции
+   * политики не должен терять посетителей со старой вкладкой. С флагом `1`
+   * такая заявка отклоняется `422` с человеческим текстом.
+   */
+  it("PT-014: LEAD_CONSENT_VERSION_REQUIRED=1 отклоняет устаревшую версию", async () => {
+    const { POST } = await import("@/app/api/lead/route");
+
+    process.env.LEAD_CONSENT_VERSION_REQUIRED = "1";
+    resetEnvCache();
+
+    try {
+      const stale = await POST(
+        request({ ...leadBody("+79161110005"), consentVersion: "2020-01-01" })
+      );
+      expect(stale.status).toBe(422);
+      const staleBody = (await stale.json()) as { error: string; code?: string; message?: string };
+      expect(staleBody.code).toBe("consent_version_stale");
+      expect(staleBody.message).toMatch(/Политика конфиденциальности обновилась/);
+
+      // Текущая редакция проходит, а заявка без версии — нет: строго значит строго.
+      const current = await POST(
+        request({ ...leadBody("+79161110006"), consentVersion: PRIVACY_POLICY_VERSION })
+      );
+      expect(current.status).toBe(201);
+
+      const missing = await POST(request(leadBody("+79161110007")));
+      expect(missing.status).toBe(422);
+    } finally {
+      delete process.env.LEAD_CONSENT_VERSION_REQUIRED;
+      resetEnvCache();
+    }
+  });
+
+  it("PT-014: по умолчанию устаревшая версия принимается и логируется", async () => {
+    const { POST } = await import("@/app/api/lead/route");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      const response = await POST(
+        request({ ...leadBody("+79161110008"), consentVersion: "2020-01-01" })
+      );
+      expect(response.status).toBe(201);
+      expect(warn.mock.calls.some((call) => String(call[0]).includes("consent") || String(call[0]).includes("политикой"))).toBe(true);
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

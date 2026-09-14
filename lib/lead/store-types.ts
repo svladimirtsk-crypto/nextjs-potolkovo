@@ -24,6 +24,10 @@ export type LeadRecord = {
   requestId?: string;
   /** PT-009: sha256 канонического payload. */
   payloadHash?: string;
+  /** PT-014: версия политики, с которой человек согласился (`null` — неизвестна). */
+  consentVersion?: string | null;
+  /** PT-014: момент согласия, epoch ms (`null` — неизвестен). */
+  consentAt?: number | null;
 };
 
 export type DeliveryRecord = {

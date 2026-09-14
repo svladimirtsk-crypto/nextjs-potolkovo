@@ -61,6 +61,8 @@ function toLeadRecord(row: LeadRow): LeadRecord {
     userAgent: row.userAgent ?? undefined,
     requestId: row.requestId ?? undefined,
     payloadHash: row.payloadHash ?? undefined,
+    consentVersion: row.consentVersion ?? null,
+    consentAt: row.consentAt?.getTime() ?? null,
   };
 }
 
@@ -124,6 +126,8 @@ export class PgLeadStore implements LeadStore {
             userAgent: input.userAgent ?? null,
             requestId: input.requestId ?? null,
             payloadHash: input.payloadHash ?? null,
+            consentVersion: input.consentVersion ?? null,
+            consentAt: input.consentAt ? new Date(input.consentAt) : null,
           })
           .returning();
 
