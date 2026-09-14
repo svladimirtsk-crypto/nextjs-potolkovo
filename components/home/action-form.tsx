@@ -2,7 +2,6 @@
 
 import { useMemo, useRef, useState, type FormEvent } from "react";
 
-import { contacts } from "@/content/contacts";
 import { buildLeadSnapshotV2 } from "@/lib/calculator/types";
 import { resolveStep2Copy, type Step2Intent } from "@/lib/calculator-flow";
 import { legal } from "@/content/legal";
@@ -19,15 +18,29 @@ import {
   collectLeadAttribution,
   resolveLeadEntry,
   resolveOrderIntent,
-  submitLead,
   toLeadErrorMetricKind,
 } from "@/lib/lead/submit-lead";
+import { submitLeadWithRetry } from "@/lib/lead/submit-retry";
+import {
+  describeClientValidation,
+  describeLeadFailure,
+  type LeadFieldErrors,
+  type LeadFailureView,
+} from "@/lib/lead/failure-view";
+import { focusLeadField, leadFieldAriaProps } from "@/lib/lead/focus-lead-field";
+import { formatPhoneInput } from "@/lib/lead/phone-input";
 import { isValidPhone, normalizePhone } from "@/lib/normalize-phone";
 import {
 } from "@/lib/lighting-formulas";
 
 import { calcLeadCeilingTotal } from "@/lib/calculator/pricing";
 import { LeadSuccessNote } from "@/components/home/lead-success-note";
+import { LeadFormAlert } from "@/components/home/lead-form-alert";
+import {
+  LeadFulfilmentFields,
+  type FulfilmentValue,
+  type PreferredTimeValue,
+} from "@/components/home/lead-fulfilment-fields";
 import { useCalculatorStore } from "@/lib/calculator/store";
 import {
   getCalculatorSummaryLines,
@@ -41,8 +54,6 @@ import { TextLink } from "@/components/ui/text-link";
 const COPY = {
   successTitle: "Заявка отправлена",
   successMessage: "Спасибо!\nПерезвоню в ближайшее время — уточню детали и предложу решение.",
-  errorMessage:
-    "Не удалось отправить заявку.\nПроверьте данные и попробуйте ещё раз.",
   submitButtonLabel: "Записаться на бесплатный замер",
   submitButtonLabelPending: "Отправляю...",
   helperText:
@@ -51,30 +62,6 @@ const COPY = {
 } as const;
 
 type FormStatus = "idle" | "success" | "error";
-
-type FieldErrors = {
-  name?: string;
-  phone?: string;
-  address?: string;
-};
-
-/** T-015: маска +7 (___) ___-__-__ без внешних зависимостей. */
-function formatPhoneInput(value: string): string {
-  let digits = value.replace(/\D/g, "");
-  if (!digits) return "";
-  if (digits[0] === "8") digits = `7${digits.slice(1)}`;
-  if (digits[0] !== "7") digits = `7${digits}`;
-  digits = digits.slice(0, 11);
-
-  const rest = digits.slice(1);
-  let out = "+7";
-  if (rest.length > 0) out += ` (${rest.slice(0, 3)}`;
-  if (rest.length >= 3) out += ") ";
-  if (rest.length > 3) out += rest.slice(3, 6);
-  if (rest.length > 6) out += `-${rest.slice(6, 8)}`;
-  if (rest.length > 8) out += `-${rest.slice(8, 10)}`;
-  return out;
-}
 
 function toNumber(value: unknown): number {
   const n = Number(value ?? 0);
@@ -193,13 +180,11 @@ export function ActionForm({
   const copy = resolveStep2Copy(resolvedIntent);
 
   /** Только для комплектов света: как получить и когда удобно. */
-  const [fulfilment, setFulfilment] = useState<"pickup" | "delivery">("pickup");
+  const [fulfilment, setFulfilment] = useState<FulfilmentValue>("pickup");
   /** T-047: согласие на обработку данных — явный чекбокс, а не «по факту отправки». */
   const [consentGiven, setConsentGiven] = useState(false);
   const availabilityLabel = useMemo(() => getAvailabilityLabel(), []);
-  const [preferredTime, setPreferredTime] = useState<"today" | "tomorrow_morning" | "telegram">(
-    "today"
-  );
+  const [preferredTime, setPreferredTime] = useState<PreferredTimeValue>("today");
 
   const ceilingLines = useMemo(
     () => (hasInteracted ? getCalculatorSummaryLines(snapshot) : []),
@@ -225,8 +210,19 @@ export function ActionForm({
 
   const [status, setStatus] = useState<FormStatus>("idle");
   const [message, setMessage] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [fieldErrors, setFieldErrors] = useState<LeadFieldErrors>({});
+  /** PT-013: разбор отказа — из него рисуется плашка и подсветка полей. */
+  const [failure, setFailure] = useState<LeadFailureView | null>(null);
   const [isPending, setIsPending] = useState(false);
+
+  /** PT-013 · Отказ до отправки: те же состояния и та же плашка, что и при ответе сервера. */
+  function failBeforeSubmit(errors: LeadFieldErrors, text: string) {
+    const view = describeClientValidation(errors, text);
+    setFieldErrors(errors);
+    setFailure(view);
+    setStatus("error");
+    focusLeadField(formRef.current, view.invalidFields[0]);
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -234,6 +230,7 @@ export function ActionForm({
     setStatus("idle");
     setMessage("");
     setFieldErrors({});
+    setFailure(null);
 
     const metrikaPlacement = getPlacement();
 
@@ -241,7 +238,7 @@ export function ActionForm({
     const trimmedAddress = address.trim();
     const normalizedPhone = normalizePhone(phone);
 
-    const nextErrors: FieldErrors = {};
+    const nextErrors: LeadFieldErrors = {};
 
     if (!trimmedName) nextErrors.name = "Как к вам обращаться?";
     else if (trimmedName.length > 80) nextErrors.name = "Слишком длинное имя.";
@@ -260,17 +257,17 @@ export function ActionForm({
       });
       trackLeadError({ kind: "validation", placement });
 
-      setFieldErrors(nextErrors);
-      setStatus("error");
-      setMessage("Проверьте имя и телефон — без них не смогу перезвонить.");
+      failBeforeSubmit(nextErrors, "Проверьте имя и телефон — без них не смогу перезвонить.");
       return;
     }
 
     // T-047: без явного согласия заявку не отправляем.
     if (!consentGiven) {
       trackLeadError({ kind: "validation", placement });
-      setStatus("error");
-      setMessage("Отметьте согласие на обработку персональных данных.");
+      failBeforeSubmit(
+        { consent: "Без согласия на обработку данных заявку не отправить." },
+        "Отметьте согласие на обработку персональных данных."
+      );
       return;
     }
 
@@ -318,7 +315,7 @@ export function ActionForm({
      * `submitLead` не бросает исключений, поэтому `try/catch` вокруг отправки
      * не нужен — все исходы приходят значением.
      */
-    const result = await submitLead(leadPayload);
+    const { result } = await submitLeadWithRetry(leadPayload);
 
     if (!result.ok) {
       trackFormSubmitError({
@@ -328,10 +325,13 @@ export function ActionForm({
       });
       trackLeadError({ kind: toLeadErrorMetricKind(result.kind), placement });
 
+      // PT-013 · `422` подсвечивает названное сервером поле, `429` показывает срок
+      // из `Retry-After`, обрыв связи предлагает повтор (один уже выполнен).
+      const view = describeLeadFailure(result);
+      setFieldErrors(view.fieldErrors);
+      setFailure(view);
       setStatus("error");
-      setMessage(
-        `Не получилось отправить — позвоните ${contacts.phoneDisplay} или напишите в Telegram.`
-      );
+      focusLeadField(formRef.current, view.invalidFields[0]);
       setIsPending(false);
       return;
     }
@@ -364,7 +364,7 @@ export function ActionForm({
     setStatus("success");
     setMessage(
       result.callbackWindow
-        ? `Заявка принята. Перезвоню ${result.callbackWindow}.`
+        ? `Заявка сохранена. Перезвоню ${result.callbackWindow}.`
         : COPY.successMessage
     );
 
@@ -398,66 +398,21 @@ export function ActionForm({
 
       {/* T-028: для комплектов света уточняем способ получения и удобное время. */}
       {copy.showFulfilment ? (
-        <div className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2">
-          <fieldset>
-            <legend className="text-sm font-semibold text-slate-950">Получение</legend>
-            <div className="mt-2 space-y-2">
-              {(
-                [
-                  ["pickup", "Самовывоз"],
-                  ["delivery", "Доставка"],
-                ] as const
-              ).map(([value, label]) => (
-                <label key={value} className="flex items-center gap-2 text-sm text-slate-700">
-                  <input
-                    type="radio"
-                    name="fulfilment"
-                    value={value}
-                    checked={fulfilment === value}
-                    onChange={() => setFulfilment(value)}
-                    className="h-4 w-4"
-                  />
-                  {label}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          <fieldset>
-            <legend className="text-sm font-semibold text-slate-950">Когда удобно</legend>
-            {/* T-047: честный ручной календарь — не показываем, если список устарел */}
-            {availabilityLabel ? (
-              <p className="mt-1 text-xs text-slate-600">{availabilityLabel}</p>
-            ) : null}
-            <div className="mt-2 space-y-2">
-              {(
-                [
-                  ["today", "Сегодня до 21:00"],
-                  ["tomorrow_morning", "Завтра утром"],
-                  ["telegram", "Лучше напишите в Telegram"],
-                ] as const
-              ).map(([value, label]) => (
-                <label key={value} className="flex items-center gap-2 text-sm text-slate-700">
-                  <input
-                    type="radio"
-                    name="preferredTime"
-                    value={value}
-                    checked={preferredTime === value}
-                    onChange={() => setPreferredTime(value)}
-                    className="h-4 w-4"
-                  />
-                  {label}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-        </div>
+        <LeadFulfilmentFields
+          fulfilment={fulfilment}
+          onFulfilmentChange={setFulfilment}
+          preferredTime={preferredTime}
+          onPreferredTimeChange={setPreferredTime}
+          availabilityLabel={availabilityLabel}
+        />
       ) : null}
 
-      {status === "error" ? (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-950">
-          <p className="whitespace-pre-line">{message || COPY.errorMessage}</p>
-        </div>
+      {status === "error" && failure ? (
+        <LeadFormAlert
+          view={failure}
+          isPending={isPending}
+          onRetry={() => formRef.current?.requestSubmit()}
+        />
       ) : null}
 
       {(ceilingLines.length > 0 || lightingLines.length > 0) ? (
@@ -516,11 +471,12 @@ export function ActionForm({
             label="Имя"
             name="name"
             data-testid="lead-name"
+            {...leadFieldAriaProps("name", fieldErrors)}
             autoComplete="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-          {fieldErrors.name ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.name}</p> : null}
+          {fieldErrors.name ? <p id="lead-name-error" className="mt-1 text-xs text-rose-600">{fieldErrors.name}</p> : null}
         </div>
 
         <div>
@@ -528,6 +484,7 @@ export function ActionForm({
             label="Телефон"
             name="phone"
             data-testid="lead-phone"
+            {...leadFieldAriaProps("phone", fieldErrors)}
             type="tel"
             inputMode="tel"
             autoComplete="tel"
@@ -544,7 +501,7 @@ export function ActionForm({
             }}
             placeholder="+7 (___) ___-__-__"
           />
-          {fieldErrors.phone ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.phone}</p> : null}
+          {fieldErrors.phone ? <p id="lead-phone-error" className="mt-1 text-xs text-rose-600">{fieldErrors.phone}</p> : null}
         </div>
       </div>
 
@@ -552,12 +509,14 @@ export function ActionForm({
         <Input
           label="Район или метро (необязательно)"
           name="address"
+          data-testid="lead-address"
+          {...leadFieldAriaProps("address", fieldErrors)}
           autoComplete="address-level2"
           value={address}
           onChange={(e) => setAddress(e.target.value)}
         />
         <p className="mt-1 whitespace-pre-line text-xs text-slate-500">{COPY.addressFieldHint}</p>
-        {fieldErrors.address ? <p className="mt-1 text-xs text-rose-600">{fieldErrors.address}</p> : null}
+        {fieldErrors.address ? <p id="lead-address-error" className="mt-1 text-xs text-rose-600">{fieldErrors.address}</p> : null}
       </div>
 
       {/* P2.18: loading state on submit button */}

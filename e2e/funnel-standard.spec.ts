@@ -40,7 +40,7 @@ test.describe("Воронка · стандартный сценарий", () =>
 
     await submitLeadForm(page, { name: "Иван", phone: "9055219909", scope: modal });
 
-    await expect(page.getByText(/Заявка .* принята|Заявка отправлена/)).toBeVisible();
+    await expect(page.getByText(/Заявка №\S+ сохранена|Заявка отправлена/)).toBeVisible();
 
     /**
      * N-061 (F-20): экран успеха предлагает следующий шаг, а не только
@@ -82,7 +82,7 @@ test.describe("Воронка · стандартный сценарий", () =>
     await modal.getByRole("button", { name: /К итогу/ }).first().click();
     await submitLeadForm(page, { name: "Ольга", phone: "9161112233", scope: modal });
 
-    await expect(page.getByText(/Заявка .* принята|Заявка отправлена/)).toBeVisible();
+    await expect(page.getByText(/Заявка №\S+ сохранена|Заявка отправлена/)).toBeVisible();
 
     expect(leads).toHaveLength(1);
     const snapshot = leads[0].snapshot as { rooms?: unknown[] } | undefined;

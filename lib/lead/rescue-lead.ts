@@ -22,16 +22,17 @@ import type { CalculatorLeadSnapshot } from "@/lib/calculator/snapshot-types";
 import { buildLeadSnapshotV2, type LeadSnapshotV2 } from "@/lib/calculator/types";
 import { isValidPhone, normalizePhone } from "@/lib/normalize-phone";
 
+import { fieldErrorsFromIssues } from "./failure-view";
 import {
   collectLeadAttribution,
   leadSubmitFailureReason,
   resolveLeadEntry,
   resolveOrderIntent,
-  submitLead,
   toLeadErrorMetricKind,
   type LeadSubmitFailureKind,
   type SubmitLeadOptions,
 } from "./submit-lead";
+import { submitLeadWithRetry } from "./submit-retry";
 
 export const RESCUE_PLACEMENT = "rescue" as const;
 export const RESCUE_LEAD_KIND = "rescue" as const;
@@ -147,8 +148,21 @@ export type RescueSubmitOutcome =
 export function rescueFailureMessage(failure: {
   kind: LeadSubmitFailureKind;
   retryAfterSec?: number | null;
+  issues?: string[];
+  serverMessage?: string | null;
 }): string {
-  return `${leadSubmitFailureReason(failure)} Позвоните ${contacts.phoneDisplay} — расчёт продиктуете за минуту.`;
+  /**
+   * PT-013 · Серверный текст показываем, когда он про состав заявки, а не про
+   * номер: отказ серверного пересчёта (PT-010) говорит «позиция недоступна к
+   * заказу», и совет «проверьте номер» в этом случае уводит не туда.
+   */
+  const phoneRejected = Boolean(fieldErrorsFromIssues(failure.issues ?? []).phone);
+  const reason =
+    failure.kind === "validation" && failure.serverMessage && !phoneRejected
+      ? failure.serverMessage
+      : leadSubmitFailureReason(failure);
+
+  return `${reason} Позвоните ${contacts.phoneDisplay} — расчёт продиктуете за минуту.`;
 }
 
 export type SubmitRescueLeadOptions = SubmitLeadOptions & {
@@ -180,7 +194,13 @@ export async function submitRescueLead(
   }
 
   const payload = buildRescueLeadPayload({ ...input, phone: normalized });
-  const result = await submitLead(payload, options);
+  /**
+   * PT-013 · Один автоматический повтор при обрыве связи или таймауте — с тем
+   * же `requestId`. Для rescue это важнее обычного: человек закрывает сайт, и
+   * второй попытки у формы может не быть вовсе. Если первая отправка всё-таки
+   * дошла, повтор вернёт код уже сохранённой заявки, а не дубль.
+   */
+  const { result } = await submitLeadWithRetry(payload, options);
 
   if (result.ok) {
     if (!options.silent) {

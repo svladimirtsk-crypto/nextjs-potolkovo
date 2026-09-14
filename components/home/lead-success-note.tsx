@@ -25,7 +25,12 @@ export function LeadSuccessNote({
       className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"
       aria-live="polite"
     >
-      <p className="font-semibold">{leadId ? `Заявка №${leadId} принята` : title}</p>
+      {/*
+        PT-013 · «сохранена», а не «принята»: доставка асинхронная (PT-003), и
+        на момент ответа заявка лежит в базе, но мастер её ещё не видел.
+        Обещать просмотр — значит отвечать за чужой канал.
+      */}
+      <p className="font-semibold">{leadId ? `Заявка №${leadId} сохранена` : title}</p>
       <p className="mt-2 whitespace-pre-line">{message}</p>
 
       <TelegramPhotoCta leadCode={leadId} className="mt-3" />

@@ -45,6 +45,7 @@ const ALLOWED_SETTERS = {
   setHasActiveCartBar: "MutationObserver: наличие бара корзины в DOM",
   setIsHeroVisible: "IntersectionObserver: видимость секции",
   setIsPriceVisible: "IntersectionObserver: видимость секции",
+  setNow: "тик таймера обратного отсчёта Retry-After: значение — текущее время (PT-013)",
   setIsActionVisible: "IntersectionObserver: видимость секции",
 };
 

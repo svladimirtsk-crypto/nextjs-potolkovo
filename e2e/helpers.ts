@@ -25,6 +25,15 @@ export type LeadApiStub = {
   body?: Record<string, unknown>;
   /** Имитировать обрыв связи: запрос не получает ответа вовсе. */
   abort?: boolean;
+  /**
+   * PT-013 · Оборвать ровно первые N запросов, остальные обслужить нормально.
+   *
+   * Так проверяется автоматический повтор после обрыва связи: форма должна
+   * уйти второй раз с тем же `requestId` и увидеть успех.
+   */
+  abortFirstN?: number;
+  /** Заголовки ответа — например `Retry-After` для 429 (PT-013). */
+  headers?: Record<string, string>;
   /** Задержка перед ответом, мс. */
   delayMs?: number;
 };
@@ -42,6 +51,7 @@ const DEFAULT_LEAD_SUCCESS_BODY = {
  */
 export async function interceptLeadApi(page: Page, stub: LeadApiStub = {}): Promise<CapturedLead[]> {
   const captured: CapturedLead[] = [];
+  let requests = 0;
 
   await page.route("**/api/lead", async (route: Route) => {
     if (route.request().method() !== "POST") {
@@ -55,9 +65,10 @@ export async function interceptLeadApi(page: Page, stub: LeadApiStub = {}): Prom
       captured.push({ __unparsable: route.request().postData() });
     }
 
+    requests += 1;
     if (stub.delayMs) await new Promise((resolve) => setTimeout(resolve, stub.delayMs));
 
-    if (stub.abort) {
+    if (stub.abort || (stub.abortFirstN ?? 0) >= requests) {
       await route.abort("failed");
       return;
     }
@@ -65,6 +76,7 @@ export async function interceptLeadApi(page: Page, stub: LeadApiStub = {}): Prom
     await route.fulfill({
       status: stub.status ?? 201,
       contentType: "application/json",
+      ...(stub.headers ? { headers: stub.headers } : {}),
       body: JSON.stringify(stub.body ?? DEFAULT_LEAD_SUCCESS_BODY),
     });
   });

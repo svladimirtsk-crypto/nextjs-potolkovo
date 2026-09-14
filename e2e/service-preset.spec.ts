@@ -94,7 +94,7 @@ test.describe("Страница услуги", () => {
     await page.goto(`${SERVICE}#action`);
     await submitLeadForm(page, { name: "Анна", phone: "9031112233" });
 
-    await expect(page.getByText(/Заявка .* принята|Заявка отправлена/)).toBeVisible();
+    await expect(page.getByText(/Заявка №\S+ сохранена|Заявка отправлена/)).toBeVisible();
     expect(leads).toHaveLength(1);
     expect(String(leads[0].source)).toContain("tenevoy-profil");
   });

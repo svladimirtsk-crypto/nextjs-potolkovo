@@ -27,7 +27,9 @@ const LEGACY_BUDGET = {
   "components/calculator-modal/wizard-step1-lighting.tsx": 1396,
   // PT-011: экран интента вынесен в `ask-checkout-intent.ts` — порог понижен с 773.
   "app/uslugi/prodazha-trekovogo-osveshcheniya/_components/CatalogSectionClient.tsx": 757,
-  "components/home/action-form.tsx": 602,
+  // PT-013: состояния ошибки вынесены в `lead-form-alert.tsx` + `lib/lead/failure-view.ts`,
+  // блок «Получение / Когда удобно» — в `lead-fulfilment-fields.tsx`. Порог понижен с 602.
+  "components/home/action-form.tsx": 561,
   "components/calculator-modal/wizard-step2-summary.tsx": 612,
 };
 
