@@ -193,6 +193,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       trackCalculatorOpen(effectiveSource, {
         entryMode: resolvedOpts.entryMode ?? null,
         hasDraft: Boolean(readCalcDraft()),
+        pagePath: resolvedOpts.pagePath ?? null,
       });
       trackWizardStepView((resolvedOpts.initialStep ?? 0) as 0 | 1 | 2, effectiveSource);
 

@@ -161,3 +161,18 @@ export async function completeAreaScreen(
   await modal.getByRole("button", { name: /Подтвердить свет/ }).click();
   await expect(modal.getByRole("heading", { name: "Проверка" })).toBeVisible();
 }
+
+/**
+ * PT-007 · Ключ черновика калькулятора в sessionStorage.
+ *
+ * Черновик живёт в пределах вкладки и переживает `reload`, поэтому тест,
+ * который открывает калькулятор второй раз, попадает на экран выбора
+ * «продолжить / начать новый». Там, где это не предмет теста, черновик
+ * убирают явно — иначе проверяется уже другой сценарий.
+ */
+export const CALC_DRAFT_KEY = "potolkovo:calc-draft:v2";
+
+/** Убрать сохранённый черновик калькулятора из sessionStorage вкладки. */
+export async function clearCalcDraftStorage(page: Page) {
+  await page.evaluate((key) => window.sessionStorage.removeItem(key), CALC_DRAFT_KEY);
+}

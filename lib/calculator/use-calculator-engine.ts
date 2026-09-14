@@ -184,11 +184,17 @@ export function useCeilingCalculatorEngine(initialScenario: SolutionScenario = "
    * T-021: старт сессии из пресета страницы услуги или кейса главной.
    * Значения помечаются `prefilled` — квиз показывает экран с выбранным значением
    * и подписью, но не считает параметр подтверждённым.
+   *
+   * PT-008: возвращает id созданной комнаты. Диспатч применяется только на
+   * следующем рендере, поэтому вызывающий не может прочитать id из
+   * `activeRoomId`/`rooms` в тот же момент — а он нужен сразу, чтобы первый
+   * экран истории (`{ t: "param", roomId }`) указывал на настоящую комнату.
+   * `null` — пресет отключён (услуга без честного расчёта), комната не создана.
    */
   const initFromPreset = useCallback(
-    (preset: ServiceCalculatorPreset | null | undefined, note?: string | null) => {
+    (preset: ServiceCalculatorPreset | null | undefined, note?: string | null): string | null => {
       const resolved = presetToRoom(preset);
-      if (resolved.disabled) return;
+      if (resolved.disabled) return null;
 
       const id = "room-1";
       const base = newRoom(id, resolved.roomLabel);
@@ -206,6 +212,8 @@ export function useCeilingCalculatorEngine(initialScenario: SolutionScenario = "
             ? note
             : (resolved.introNote ?? (preset ? PREFILL_HINT : null)),
       });
+
+      return id;
     },
     []
   );

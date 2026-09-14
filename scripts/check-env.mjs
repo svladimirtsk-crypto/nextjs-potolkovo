@@ -23,6 +23,7 @@ const strict = process.argv.includes("--strict") || process.env.RELEASE === "1";
 const SCHEMA_KEYS = [
   "LEAD_API_ENABLED",
   "LEAD_IDEMPOTENCY_ENABLED",
+  "LEAD_SERVER_RECALC_ENABLED",
   "TELEGRAM_LEADS_ENABLED",
   "TELEGRAM_BOT_TOKEN",
   "TELEGRAM_CHAT_ID",

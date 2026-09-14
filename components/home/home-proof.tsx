@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
+import { useCalculatorPageContext } from "@/components/calculator-modal/page-context";
 import type { ServiceCalculatorPreset } from "@/content/services";
 
 import { homepage } from "@/content/homepage";
@@ -19,6 +20,8 @@ const proof = homepage.proof;
 
 export function HomeProof() {
   const { openCalculator } = useCalculatorModal();
+  // PT-008: точка входа описана типизированным EntryContext, а не строкой.
+  const page = useCalculatorPageContext();
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   /** T-040: «Хочу так же» открывает калькулятор с пресетом кейса. */
@@ -26,7 +29,16 @@ export function HomeProof() {
     // У части кейсов пресета нет — открываем калькулятор со стандартным потолком.
     const itemPreset = (item as { actionPreset?: ServiceCalculatorPreset }).actionPreset;
     const preset = (itemPreset ?? { ceilingType: "standard" }) as ServiceCalculatorPreset;
-    openCalculator({ preset, forcePreset: true, presetOrigin: "page", source: `${item.slug}:proof-card` });
+    openCalculator(
+      page.optionsFor("proof", {
+        preset,
+        // PT-007 (раздел 3.1): у части кейсов есть полный пресет конкретного
+        // кейса — это "explicit". У остальных подставляется стандартный
+        // потолок, то есть частичные данные страницы, — "page".
+        presetOrigin: itemPreset ? "explicit" : "page",
+        source: `${item.slug}:proof-card`,
+      })
+    );
   };
 
   const openByIndex = (index: number) => setSelectedIndex(index);

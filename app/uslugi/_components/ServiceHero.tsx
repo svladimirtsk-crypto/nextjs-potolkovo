@@ -95,7 +95,7 @@ export function ServiceHero({ service, priceBadgeOverride, availabilityNote }: S
               ) : (
                 <>
                   {/* Primary ведёт в калькулятор с пресетом этой услуги. */}
-                  <ServiceHeroCta slug={service.slug} label={serviceCtaLabel(service.slug)} />
+                  <ServiceHeroCta label={serviceCtaLabel(service.slug)} />
                   <a
                     href="#action"
                     className="min-h-11 text-center text-sm font-semibold text-slate-700 underline underline-offset-4 transition-colors hover:text-slate-950 sm:text-left"

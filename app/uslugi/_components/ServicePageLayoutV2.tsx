@@ -63,7 +63,7 @@ export function ServicePageLayoutV2({
           {price}
           {compare ?? null}
           {/* N-032 (F-33): второй вход в расчёт после сравнения решений. */}
-          <ServiceMidCta slug={service.slug} />
+          <ServiceMidCta />
           {trust}
           {promise}
           {reviews ?? null}
