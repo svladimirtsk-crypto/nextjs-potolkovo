@@ -64,3 +64,39 @@ export function buildCatalogLightingSnapshot(items: LightingItem[]): CatalogLigh
     userCustomizedLighting: true,
   };
 }
+
+/**
+ * PT-011 · Исход экрана интента «Как оформляем комплект?».
+ *
+ * Три значения вместо «да/нет», потому что `boolean` совмещал два разных
+ * смысла: «человек выбрал только оборудование» и «человек закрыл диалог».
+ * Закрытие (Escape, клик по подложке, крестик) — это `dismissed`, и оно не
+ * должно ни менять корзину, ни уводить в оформление.
+ */
+export type CheckoutIntentChoice = "with-ceiling" | "lighting-only";
+
+export type CheckoutIntentOutcome = CheckoutIntentChoice | "dismissed";
+
+/** Куда вести человека после экрана интента. */
+export type CheckoutIntentAction =
+  | "open-ceiling-flow"
+  | "open-lighting-order"
+  | "stay-in-catalog";
+
+/**
+ * Соответствие «исход → действие». `switch` без `default`: если в union
+ * появится четвёртое значение, TypeScript укажет на незакрытую ветку вместо
+ * того, чтобы молча провалиться в «оформление».
+ */
+export function resolveCheckoutIntentAction(
+  outcome: CheckoutIntentOutcome,
+): CheckoutIntentAction {
+  switch (outcome) {
+    case "with-ceiling":
+      return "open-ceiling-flow";
+    case "lighting-only":
+      return "open-lighting-order";
+    case "dismissed":
+      return "stay-in-catalog";
+  }
+}

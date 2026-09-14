@@ -41,6 +41,7 @@ import { trackLightingCartCheckout, trackSmartInterestSelected } from "@/lib/ana
 import { useLightingCart } from "@/lib/lighting/use-lighting-cart";
 import { clearIncompatibleSystem } from "@/lib/lighting/kit-rules";
 import { showConfirmDialog } from "@/components/ui/confirm-dialog";
+import { askCheckoutIntent } from "./ask-checkout-intent";
 import { LightingCartDrawer } from "@/components/lighting/LightingCartDrawer";
 
 import {
@@ -366,31 +367,14 @@ export function CatalogSectionClient({ data }: Props) {
     });
   };
 
-  /**
-   * T-045 · Экран интента перед оформлением.
-   *
-   * Режим скидки определяет весь дальнейший путь: «только оборудование» ведёт
-   * сразу к заявке (Шаг 2), «с потолком» — в расчёт потолка (Шаг 0). Спрашиваем
-   * это один раз явным вопросом, а не двумя кнопками в липком баре.
-   */
+  /** PT-011 · Экран интента вынесен в `askCheckoutIntent`: три исхода вместо «да/нет». */
   const openCheckoutIntent = async () => {
     if (selectedEntries.length === 0) return;
 
-    const withCeiling = await showConfirmDialog({
-      title: "Как оформляем комплект?",
-      message:
-        "Только оборудование — скидка 10 %, пришлю счёт после проверки наличия. " +
-        "С натяжным потолком — скидка на свет 25 %, сначала посчитаем потолок.",
-      confirmLabel: "С потолком −25 %",
-      cancelLabel: "Только оборудование −10 %",
-      variant: "info",
-    });
-
-    if (withCeiling === true) {
-      openWithCeiling();
-      return;
-    }
-    openLightingOrder();
+    const action = await askCheckoutIntent();
+    if (action === "open-ceiling-flow") openWithCeiling();
+    else if (action === "open-lighting-order") openLightingOrder();
+    // "stay-in-catalog": диалог закрыли — корзина не меняется, никуда не идём.
   };
 
   // T-031: «Посмотреть» открывает мини-корзину прямо на странице,
