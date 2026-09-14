@@ -382,3 +382,34 @@ test.describe("Rescue и черновик", () => {
     expect(leads).toHaveLength(1);
   });
 });
+
+/**
+ * PT-014 · Согласие в rescue — факт с редакцией и моментом, а не `consent: true`.
+ *
+ * До задачи проверка `lead.consent === true` в этом спеке была проверкой
+ * константы в коде: диалог физически не отправлял ничего другого.
+ */
+test.describe("Версия согласия в rescue (PT-014)", () => {
+  test("rescue несёт версию политики и момент клика по чекбоксу", async ({ page }) => {
+    const leads = await interceptLeadApi(page);
+
+    await reachCalculatedState(page);
+    const dialog = await openRescueDialog(page);
+
+    const openedAt = Date.now();
+    await dialog.phone.fill("9161234567");
+    await dialog.consent.check();
+    await dialog.submit.click();
+
+    await expect.poll(() => leads.length).toBe(1);
+
+    const lead = leads[0] as Record<string, unknown>;
+    expect(lead.consent).toBe(true);
+    expect(String(lead.consentVersion)).toMatch(/^\d{4}-\d{2}-\d{2}(\.\d+)?$/);
+
+    const consentAt = Date.parse(String(lead.consentAt));
+    expect(Number.isNaN(consentAt)).toBe(false);
+    expect(consentAt).toBeGreaterThanOrEqual(openedAt - 5_000);
+    expect(consentAt).toBeLessThanOrEqual(Date.now() + 5_000);
+  });
+});

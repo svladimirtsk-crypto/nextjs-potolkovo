@@ -71,6 +71,18 @@ const envSchema = z.object({
    */
   LEAD_SERVER_RECALC_ENABLED: boolFlag(true),
 
+  /**
+   * PT-014 · Требовать от клиента текущую версию политики.
+   *
+   * Правило 8 раздела 2 ТЗ: проверка способна отклонять заявки (`422`), поэтому
+   * включается отдельно и по умолчанию выключена. Пока флаг `0`, расхождение
+   * версий пишется в лог и в БД как есть — заявка принимается. Поднимать до `1`
+   * стоит, когда новая сборка разошлась клиентам и в логах нет волны
+   * `consent_version_stale`: иначе заявки начнут терять посетители со старой
+   * вкладкой, открытой до деплоя.
+   */
+  LEAD_CONSENT_VERSION_REQUIRED: boolFlag(false),
+
   TELEGRAM_BOT_TOKEN: optionalSecret,
   TELEGRAM_CHAT_ID: optionalSecret,
   WEB3FORMS_ACCESS_KEY: optionalSecret,

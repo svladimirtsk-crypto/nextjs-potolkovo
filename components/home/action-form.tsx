@@ -4,7 +4,6 @@ import { useMemo, useRef, useState, type FormEvent } from "react";
 
 import { buildLeadSnapshotV2 } from "@/lib/calculator/types";
 import { resolveStep2Copy, type Step2Intent } from "@/lib/calculator-flow";
-import { legal } from "@/content/legal";
 import { getAvailabilityLabel } from "@/content/availability";
 import {
   trackFormOpened,
@@ -29,12 +28,14 @@ import {
 } from "@/lib/lead/failure-view";
 import { focusLeadField, leadFieldAriaProps } from "@/lib/lead/focus-lead-field";
 import { formatPhoneInput } from "@/lib/lead/phone-input";
+import { useConsentCapture } from "@/lib/lead/use-consent-capture";
 import { isValidPhone, normalizePhone } from "@/lib/normalize-phone";
 import {
 } from "@/lib/lighting-formulas";
 
 import { calcLeadCeilingTotal } from "@/lib/calculator/pricing";
 import { LeadSuccessNote } from "@/components/home/lead-success-note";
+import { LeadConsentCheckbox } from "@/components/home/lead-consent-checkbox";
 import { LeadFormAlert } from "@/components/home/lead-form-alert";
 import {
   LeadFulfilmentFields,
@@ -49,7 +50,6 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { TextLink } from "@/components/ui/text-link";
 
 const COPY = {
   successTitle: "Заявка отправлена",
@@ -182,7 +182,11 @@ export function ActionForm({
   /** Только для комплектов света: как получить и когда удобно. */
   const [fulfilment, setFulfilment] = useState<FulfilmentValue>("pickup");
   /** T-047: согласие на обработку данных — явный чекбокс, а не «по факту отправки». */
-  const [consentGiven, setConsentGiven] = useState(false);
+  /**
+   * PT-014 · Согласие — факт, а не константа: хук хранит и момент клика, и
+   * редакцию политики, которая была показана рядом с чекбоксом.
+   */
+  const consent = useConsentCapture();
   const availabilityLabel = useMemo(() => getAvailabilityLabel(), []);
   const [preferredTime, setPreferredTime] = useState<PreferredTimeValue>("today");
 
@@ -262,7 +266,7 @@ export function ActionForm({
     }
 
     // T-047: без явного согласия заявку не отправляем.
-    if (!consentGiven) {
+    if (!consent.given) {
       trackLeadError({ kind: "validation", placement });
       failBeforeSubmit(
         { consent: "Без согласия на обработку данных заявку не отправить." },
@@ -291,7 +295,9 @@ export function ActionForm({
       phone: normalizedPhone,
       address: trimmedAddress || undefined,
       preferredTime: copy.showFulfilment ? preferredTime : undefined,
-      consent: true as const,
+      consent: consent.given,
+      consentVersion: consent.version,
+      consentAt: consent.at ?? undefined,
       botcheck: "" as const,
       source: effectiveSource,
       placement,
@@ -520,7 +526,7 @@ export function ActionForm({
       </div>
 
       {/* P2.18: loading state on submit button */}
-      <Button type="submit" className="w-full" data-testid="lead-submit" disabled={isPending || !consentGiven}>
+      <Button type="submit" className="w-full" data-testid="lead-submit" disabled={isPending || !consent.given}>
         {isPending ? (
           <span className="flex items-center justify-center gap-2">
             <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -534,25 +540,7 @@ export function ActionForm({
         )}
       </Button>
 
-      {/*
-        T-047: согласие стало явным действием. Раньше это была строка мелким
-        шрифтом под кнопкой — формально согласие «по факту отправки», что для
-        персональных данных слабое основание.
-      */}
-      <label className="flex items-start gap-2.5 text-xs leading-5 text-slate-600">
-        <input
-          type="checkbox"
-          data-testid="lead-consent"
-          checked={consentGiven}
-          onChange={(event) => setConsentGiven(event.target.checked)}
-          className="mt-0.5 h-4 w-4 shrink-0 accent-slate-950"
-        />
-        <span>
-          {legal.consentTextPrefix}
-          <TextLink href={legal.privacyHref}>{legal.privacyLabel}</TextLink>
-          {legal.consentTextSuffix}
-        </span>
-      </label>
+      <LeadConsentCheckbox given={consent.given} onChange={consent.onChange} />
 
       <p className="text-xs text-slate-500">{COPY.helperText}</p>
     </form>

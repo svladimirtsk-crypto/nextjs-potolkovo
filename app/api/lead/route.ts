@@ -11,6 +11,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { resolveCallbackWindow } from "@/lib/lead/callback-window";
+import { resolveConsentRecord } from "@/lib/lead/consent";
 import { DELIVERY_CHANNELS, deliverAll } from "@/lib/lead/deliver-all";
 import {
   checkRateLimit,
@@ -22,6 +23,7 @@ import { LeadPayloadSchema } from "@/lib/lead/schema";
 import { clientGrandTotalOf, recalculateLeadPrice } from "@/lib/lead/server-recalc";
 import { getLeadStore, isLeadStorageReady } from "@/lib/lead/store";
 import { getEnv } from "@/lib/env";
+import { PRIVACY_POLICY_VERSION } from "@/content/legal";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -274,6 +276,47 @@ export async function POST(request: Request) {
   }
 
   /**
+   * PT-014 · Версия политики и момент согласия — в отдельные колонки.
+   *
+   * Раньше согласие существовало только как `consent: true` в payload: по базе
+   * нельзя было ответить, с какой редакцией политики человек согласился и когда.
+   * Здесь решается, что именно писать: версия из тела запроса принимается только
+   * распознаваемая (иначе `NULL` — «неизвестно», но не выдуманная текущая), а
+   * момент согласия берётся из клиента лишь в правдоподобном окне.
+   *
+   * Расхождение с текущей редакцией пишется в лог всегда: владелец должен видеть,
+   * что часть заявок приходит со старым текстом согласия. Отклоняются такие
+   * заявки только под флагом `LEAD_CONSENT_VERSION_REQUIRED` (по умолчанию `0`) —
+   * иначе деплой новой редакции начал бы терять посетителей со старой вкладкой.
+   */
+  const consent = resolveConsentRecord(payload);
+  if (!consent.versionCurrent) {
+    console.warn(
+      `[lead] согласие не совпадает с текущей политикой: клиент ${
+        consent.consentVersion ?? "без версии"
+      } ≠ ${PRIVACY_POLICY_VERSION}`,
+      {
+        phone: payload.phone,
+        known: consent.versionKnown,
+        required: getEnv().LEAD_CONSENT_VERSION_REQUIRED,
+      }
+    );
+
+    if (getEnv().LEAD_CONSENT_VERSION_REQUIRED) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "validation",
+          code: "consent_version_stale",
+          message:
+            "Политика конфиденциальности обновилась. Обновите страницу и отметьте согласие ещё раз.",
+        },
+        { status: 422 }
+      );
+    }
+  }
+
+  /**
    * PT-003 · Заявка и задания на доставку — одной транзакцией.
    *
    * Раньше здесь шло: createLead → await двух сетевых вызовов →
@@ -302,6 +345,8 @@ export async function POST(request: Request) {
         userAgent: request.headers.get("user-agent") ?? undefined,
         requestId: requestId ?? undefined,
         payloadHash,
+        consentVersion: consent.consentVersion,
+        consentAt: consent.consentAt,
       },
       DELIVERY_CHANNELS
     );

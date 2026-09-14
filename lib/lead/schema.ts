@@ -169,6 +169,21 @@ export const LeadPayloadSchema = z.object({
   address: z.string().trim().max(160).optional(),
   preferredTime: z.enum(["today", "tomorrow_morning", "telegram"]).optional(),
   consent: z.literal(true),
+  /**
+   * PT-014 · Версия текста политики, которую человек видел, и момент согласия.
+   *
+   * Оба поля необязательные намеренно: собранный до деплоя клиентский JS ещё
+   * какое-то время шлёт заявки без них, а отклонять такие — значит терять живых
+   * людей (та же причина, по которой необязателен `requestId`, раздел 3.8).
+   * Отсутствие пишется в БД как `NULL` («версия неизвестна»), а не как текущая
+   * версия: приписывать человеку согласие с текстом, которого он не видел,
+   * нельзя. Строгость включается флагом `LEAD_CONSENT_VERSION_REQUIRED`.
+   *
+   * Значения проверяются на сервере (`lib/lead/consent.ts`), а не схемой:
+   * строка из тела запроса не обязана быть ни датой, ни известной версией.
+   */
+  consentVersion: z.string().trim().max(40).optional(),
+  consentAt: z.string().trim().max(40).optional(),
   /** Honeypot: заполнено только ботом. */
   botcheck: z.literal("").optional(),
 

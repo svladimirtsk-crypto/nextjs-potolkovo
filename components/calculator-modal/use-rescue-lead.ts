@@ -103,7 +103,7 @@ export function useRescueOffer(): RescueOffer {
         pendingLabel: "Отправляю…",
         retryLabel: "Повторить",
         dismissLabel: "Закрыть без отправки",
-        run: async (phone) => {
+        run: async (phone, consent) => {
           if (!acceptedTracked) {
             acceptedTracked = true;
             trackLeadRescueAccepted({ total });
@@ -111,6 +111,9 @@ export function useRescueOffer(): RescueOffer {
 
           const outcome = await submitRescueLead({
             phone,
+            // PT-014: согласие — факт из диалога, а не константа в payload.
+            consentGiven: consent.given,
+            consentAt: consent.at,
             source,
             entryMode,
             pagePath: typeof window !== "undefined" ? window.location.pathname : "",
