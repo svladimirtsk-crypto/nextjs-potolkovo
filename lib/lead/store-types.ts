@@ -39,6 +39,24 @@ export type DeliveryRecord = {
   lastError?: string;
   sentAt?: number;
   createdAt: number;
+  /** PT-015: время последней попытки, epoch ms (`undefined` — попыток не было). */
+  lastAttemptAt?: number;
+};
+
+/** PT-015 · Запись журнала служебных алертов о деградации доставки. */
+export type DeliveryAlertRecord = {
+  id: number;
+  createdAt: number;
+  trigger: string;
+  streak: number;
+  failures: number;
+  channels: string;
+  windowMinutes: number;
+  message: string;
+  /** Куда ушло уведомление; `null` — ни один канал алерта не сработал. */
+  deliveredVia: string | null;
+  lastError: string | null;
+  oldestFailureAt: number | null;
 };
 
 export interface LeadStore {
@@ -105,6 +123,24 @@ export interface LeadStore {
   listPendingDeliveries(limit: number): Promise<DeliveryRecord[]>;
 
   listFailedDeliveries(limit: number): Promise<DeliveryRecord[]>;
+
+  /**
+   * PT-015 · Последние попытки доставки — от свежих к старым.
+   *
+   * Сортировка по `coalesce(last_attempt_at, created_at)`: алерт считает
+   * серию ПОДРЯД идущих неудач, а серия живёт во времени попыток, не во
+   * времени создания задания. Лимит ограничен сверху (`DELIVERY_ALERT_LOOKBACK`)
+   * — вся таблица не читается.
+   */
+  listRecentDeliveries(limit: number): Promise<DeliveryRecord[]>;
+
+  /** PT-015 · Последний алерт о деградации доставки — основа охлаждения. */
+  findLastDeliveryAlert(): Promise<DeliveryAlertRecord | null>;
+
+  /** PT-015 · Записать алерт в журнал (пишется и неудачная отправка). */
+  recordDeliveryAlert(
+    input: Omit<DeliveryAlertRecord, "id" | "createdAt">
+  ): Promise<DeliveryAlertRecord>;
   getLead(leadId: number): Promise<LeadRecord | null>;
   /** Поиск по короткому коду — менеджер ищет заявку, названную клиентом. */
   getLeadByPublicCode(code: string): Promise<LeadRecord | null>;

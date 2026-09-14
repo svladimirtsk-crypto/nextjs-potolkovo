@@ -13,6 +13,7 @@ import { NextResponse } from "next/server";
 import { resolveCallbackWindow } from "@/lib/lead/callback-window";
 import { resolveConsentRecord } from "@/lib/lead/consent";
 import { DELIVERY_CHANNELS, deliverAll } from "@/lib/lead/deliver-all";
+import { maybeAlertDeliveryDegradation } from "@/lib/lead/delivery-alert";
 import {
   checkRateLimit,
   RATE_LIMIT_MAX,
@@ -377,7 +378,19 @@ export async function POST(request: Request) {
    * Ошибки проглатываются намеренно — статусы пишет сама deliverAll, а
    * необработанный reject здесь уронил бы процесс после успешного ответа.
    */
-  void deliverAll(store, lead.id, storedPayload, lead.publicCode).catch(() => {});
+  void deliverAll(store, lead.id, storedPayload, lead.publicCode)
+    /**
+     * PT-015 · Упал хотя бы один канал — проверить, не лежит ли доставка
+     * систематически (оба канала, серия подряд). Ответ клиенту эту проверку не
+     * ждёт: заявка уже сохранена, алерт — служебное действие, и оно не имеет
+     * права ни задерживать ответ, ни ронять процесс.
+     */
+    .then((result) =>
+      result.failed.length > 0
+        ? maybeAlertDeliveryDegradation(store, { trigger: "lead" })
+        : undefined
+    )
+    .catch(() => {});
 
   return NextResponse.json(
     {

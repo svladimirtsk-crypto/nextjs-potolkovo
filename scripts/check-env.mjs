@@ -24,10 +24,19 @@ const SCHEMA_KEYS = [
   "LEAD_API_ENABLED",
   "LEAD_IDEMPOTENCY_ENABLED",
   "LEAD_SERVER_RECALC_ENABLED",
+  "LEAD_CONSENT_VERSION_REQUIRED",
   "TELEGRAM_LEADS_ENABLED",
   "TELEGRAM_BOT_TOKEN",
   "TELEGRAM_CHAT_ID",
   "WEB3FORMS_ACCESS_KEY",
+  "DELIVERY_ALERT_ENABLED",
+  "DELIVERY_ALERT_THRESHOLD",
+  "DELIVERY_ALERT_WINDOW_MIN",
+  "DELIVERY_ALERT_COOLDOWN_MIN",
+  "DELIVERY_ALERT_LOOKBACK",
+  "DELIVERY_ALERT_WEBHOOK_URL",
+  "DELIVERY_ALERT_TELEGRAM_BOT_TOKEN",
+  "DELIVERY_ALERT_TELEGRAM_CHAT_ID",
   "CRON_SECRET",
   "DATABASE_URL",
   "TEST_DATABASE_URL",
@@ -63,6 +72,13 @@ async function main() {
   }
   if (!value("WEB3FORMS_ACCESS_KEY") && !value("TELEGRAM_BOT_TOKEN")) {
     warnings.push("Не настроен ни один канал доставки заявок.");
+  }
+  if (
+    flag("DELIVERY_ALERT_ENABLED", true) &&
+    !value("DELIVERY_ALERT_WEBHOOK_URL") &&
+    !(value("DELIVERY_ALERT_TELEGRAM_BOT_TOKEN") && value("DELIVERY_ALERT_TELEGRAM_CHAT_ID"))
+  ) {
+    warnings.push("DELIVERY_ALERT_ENABLED=1, но канал алерта не задан — сбой доставки останется незамеченным.");
   }
   if (!value("CRON_SECRET")) warnings.push("CRON_SECRET не задан — /api/lead/retry вернёт 401.");
   if (!value("DATABASE_URL")) warnings.push("DATABASE_URL не задан — лиды хранятся в памяти.");

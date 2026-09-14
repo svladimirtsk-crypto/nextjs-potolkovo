@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 
 import { deliverToTelegram } from "@/lib/lead/deliver-telegram";
 import { deliverToWeb3Forms } from "@/lib/lead/deliver-web3forms";
+import { maybeAlertDeliveryDegradation } from "@/lib/lead/delivery-alert";
 import { getLeadStore } from "@/lib/lead/store";
 import { getEnv } from "@/lib/env";
 
@@ -63,6 +64,16 @@ export async function POST(request: Request) {
     if (result.ok) recovered += 1;
   }
 
+  /**
+   * PT-015 · Крон — второе место проверки, и главное для затяжного сбоя: он
+   * видит серию неудач даже тогда, когда новых заявок нет вообще. Проверка
+   * стоит после цикла, чтобы в серию попали попытки этого же прогона.
+   *
+   * Алерт не влияет на ответ крона: `fired` добавлен отдельным полем, прежние
+   * `retried/sent/failed/recovered` не изменились.
+   */
+  const alert = await maybeAlertDeliveryDegradation(store, { trigger: "retry-cron" });
+
   // ТЗ v2 N-001 п.4: ответ {retried, sent, failed}. `recovered` сохранён
   // для обратной совместимости с существующим тестом и мониторингом.
   return NextResponse.json({
@@ -71,5 +82,8 @@ export async function POST(request: Request) {
     sent: recovered,
     failed: retried - recovered,
     recovered,
+    alert: alert.alerted
+      ? { fired: true, via: alert.deliveredVia }
+      : { fired: false, reason: alert.reason },
   });
 }
