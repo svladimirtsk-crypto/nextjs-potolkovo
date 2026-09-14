@@ -4,129 +4,30 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-/**
- * PT-004 · Результат отправки, который диалог показывает человеку.
- *
- * Диалог намеренно не знает ни про `/api/lead`, ни про zod, ни про Метрику:
- * он умеет только «успех» и «отказ с текстом». Всю работу делает обработчик,
- * переданный в `options.submit.run`.
- */
-export type ConfirmDialogSubmitOutcome =
-  | { ok: true }
-  | { ok: false; message: string };
-
-type ConsentNotice = {
-  prefix: string;
-  href: string;
-  linkLabel: string;
-  suffix?: string;
-};
-
-type ConfirmDialogOptions = {
-  title: string;
-  message: string;
-  confirmLabel?: string;
-  cancelLabel?: string;
-  variant?: "danger" | "warning" | "info";
-  /**
-   * T-026 · rescue-режим: в диалоге появляется поле телефона.
-   * Результат тогда — введённый номер (или `false`, если клиент просто закрыл).
-   */
-  phoneField?: {
-    label: string;
-    placeholder?: string;
-    hint?: string;
-    /**
-     * PT-004 · Согласие на обработку персональных данных.
-     *
-     * Раньше rescue-заявка уходила с `consent: true` как константой: человек
-     * не видел ни чекбокса, ни текста, ни ссылки на политику. Формально это
-     * не согласие, а домысливание за пользователя. С этим блоком кнопка
-     * отправки неактивна, пока чекбокс не отмечен.
-     */
-    consent?: ConsentNotice;
-  };
-  /**
-   * PT-004 · Отправка внутри диалога.
-   *
-   * Без этого обработчика диалог — просто «да/нет»: он закрывается сразу и
-   * ничего не знает о том, что произошло дальше. Именно так rescue-заявка и
-   * терялась: модалка закрывалась с ощущением успеха при любом ответе сервера.
-   *
-   * С обработчиком диалог ждёт ответа, показывает «Отправляю…», а при отказе
-   * остаётся открытым с причиной и кнопкой повтора. Закрыть его в этот момент
-   * можно только явно — Escape и клик по подложке во время запроса игнорируются,
-   * иначе человек закроет окно, так и не узнав, ушла заявка или нет.
-   */
-  submit?: {
-    run: (phone: string) => Promise<ConfirmDialogSubmitOutcome>;
-    pendingLabel?: string;
-    retryLabel?: string;
-    /** Кнопка «уйти, не отправив» в состоянии ошибки. */
-    dismissLabel?: string;
-  };
-};
-
-/** `true`/`false` для обычного confirm; строка с телефоном — для rescue. */
-export type ConfirmDialogResult = boolean | string;
-
-type ConfirmResolver = (value: ConfirmDialogResult) => void;
-
-const EMPTY_OPTIONS: ConfirmDialogOptions = { title: "", message: "" };
-
-let activeResolver: ConfirmResolver | null = null;
-let activeOptions: ConfirmDialogOptions | null = null;
-let setDialogState: ((state: DialogState) => void) | null = null;
-let dialogToken = 0;
-
-type DialogState = {
-  open: boolean;
-  /** PT-004: ключ ремаунта панели — состояние формы не должно протекать между вызовами. */
-  token: number;
-  options: ConfirmDialogOptions;
-};
+import {
+  EMPTY_OPTIONS,
+  closeDialog,
+  registerDialogStateSetter,
+  type ConfirmDialogOptions,
+  type ConfirmDialogSubmitOutcome,
+  type DialogState,
+} from "./confirm-dialog-store";
 
 /**
- * Встроенная альтернатива window.confirm для калькулятора.
- *
- * Заменяет нативный confirm, который блокирует поток, не стилизуется
- * и выглядит чужеродно. Использует React-портал для рендера поверх
- * всех слоёв модалки.
- *
- * Использование:
- *   const confirmed = await showConfirmDialog({
- *     title: "Закрыть калькулятор?",
- *     message: "Ваш расчёт не сохранится.",
- *   });
+ * PT-011 · Публичный API диалога прежний: существующие вызовы
+ * (`use-rescue-lead`, `calculator-modal`, каталог) импортируют его отсюда.
  */
-export function showConfirmDialog(options: ConfirmDialogOptions): Promise<ConfirmDialogResult> {
-  return new Promise<ConfirmDialogResult>((resolve) => {
-    activeResolver = resolve;
-    activeOptions = options;
-    dialogToken += 1;
-    setDialogState?.({ open: true, token: dialogToken, options });
-  });
-}
-
-function closeDialog(result: ConfirmDialogResult) {
-  setDialogState?.({ open: false, token: dialogToken, options: activeOptions ?? EMPTY_OPTIONS });
-  activeResolver?.(result);
-  activeResolver = null;
-  activeOptions = null;
-}
-
-/**
- * PT-004 · Открыт ли сейчас какой-либо диалог подтверждения.
- *
- * `showConfirmDialog` хранит один резолвер на модуль: второй вызов поверх
- * первого перезаписывает его, и прежний промис не разрешается никогда. Модалка
- * калькулятора слушает Escape на `document` так же, как и сам диалог, поэтому
- * без этой проверки Escape поверх чужого диалога (например, подтверждения
- * смены системы света в каталоге) запускал rescue-оффер и «вешал» исходный.
- */
-export function isConfirmDialogOpen(): boolean {
-  return activeResolver !== null;
-}
+export {
+  isConfirmDialogOpen,
+  showChoiceDialog,
+  showConfirmDialog,
+} from "./confirm-dialog-store";
+export type {
+  ChoiceDialogOptions,
+  ChoiceDialogResult,
+  ConfirmDialogResult,
+  ConfirmDialogSubmitOutcome,
+} from "./confirm-dialog-store";
 
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
   const selector = [
@@ -144,15 +45,16 @@ export function ConfirmDialogPortal() {
     open: false,
     token: 0,
     options: EMPTY_OPTIONS,
+    dismissible: false,
   });
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setDialogState = setState;
+    registerDialogStateSetter(setState);
     const frame = requestAnimationFrame(() => setMounted(true));
     return () => {
       cancelAnimationFrame(frame);
-      setDialogState = null;
+      registerDialogStateSetter(null);
     };
   }, []);
 
@@ -165,14 +67,24 @@ export function ConfirmDialogPortal() {
    * `scripts/check-effect-setstate.mjs`.
    */
   return createPortal(
-    <ConfirmDialogPanel key={state.token} options={state.options} />,
+    <ConfirmDialogPanel
+      key={state.token}
+      options={state.options}
+      dismissible={state.dismissible}
+    />,
     document.body
   );
 }
 
 type Phase = "input" | "submitting" | "failed";
 
-function ConfirmDialogPanel({ options }: { options: ConfirmDialogOptions }) {
+function ConfirmDialogPanel({
+  options,
+  dismissible,
+}: {
+  options: ConfirmDialogOptions;
+  dismissible: boolean;
+}) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const retryButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -206,7 +118,8 @@ function ConfirmDialogPanel({ options }: { options: ConfirmDialogOptions }) {
         // ещё неизвестен, и закрыть окно сейчас — значит оставить человека в
         // неведении, ушла заявка или нет.
         if (submit && phase === "submitting") return;
-        closeDialog(false);
+        // PT-011: закрытие — отдельный исход, а не «нет».
+        closeDialog("dismiss");
         return;
       }
 
@@ -235,7 +148,7 @@ function ConfirmDialogPanel({ options }: { options: ConfirmDialogOptions }) {
     (e: React.MouseEvent) => {
       if (e.target !== e.currentTarget) return;
       if (submit && phase === "submitting") return;
-      closeDialog(false);
+      closeDialog("dismiss");
     },
     [phase, submit]
   );
@@ -244,7 +157,7 @@ function ConfirmDialogPanel({ options }: { options: ConfirmDialogOptions }) {
   const runSubmit = useCallback(
     async (value: string) => {
       if (!submit) {
-        closeDialog(hasPhoneField ? value : true);
+        closeDialog("confirm", hasPhoneField ? value : undefined);
         return;
       }
 
@@ -261,7 +174,7 @@ function ConfirmDialogPanel({ options }: { options: ConfirmDialogOptions }) {
       }
 
       if (outcome.ok) {
-        closeDialog(hasPhoneField ? value : true);
+        closeDialog("confirm", hasPhoneField ? value : undefined);
         return;
       }
 
@@ -287,7 +200,13 @@ function ConfirmDialogPanel({ options }: { options: ConfirmDialogOptions }) {
 
   const handleCancelClick = useCallback(() => {
     if (submit && phase === "submitting") return;
-    closeDialog(false);
+    closeDialog("cancel");
+  }, [phase, submit]);
+
+  /** PT-011: крестик — то же закрытие, что Escape и клик по подложке. */
+  const handleDismissClick = useCallback(() => {
+    if (submit && phase === "submitting") return;
+    closeDialog("dismiss");
   }, [phase, submit]);
 
   const variantColors = {
@@ -335,7 +254,7 @@ function ConfirmDialogPanel({ options }: { options: ConfirmDialogOptions }) {
         aria-labelledby="confirm-dialog-title"
         aria-describedby="confirm-dialog-message"
         aria-busy={isSubmitting || undefined}
-        className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl animate-fade-slide-in"
+        className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl animate-fade-slide-in"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-4">
@@ -439,6 +358,26 @@ function ConfirmDialogPanel({ options }: { options: ConfirmDialogOptions }) {
             {confirmLabel}
           </button>
         </div>
+
+        {/*
+          PT-011 · Крестик — видимый способ закрыть диалог выбора.
+
+          В DOM он стоит последним, чтобы первый фокус при открытии доставался
+          кнопке действия, а не «закрыть»; позиция задаётся абсолютно. На
+          мобильном это единственный явный способ уйти: Escape там нет.
+        */}
+        {dismissible ? (
+          <button
+            type="button"
+            data-testid="confirm-dialog-close"
+            aria-label="Закрыть"
+            disabled={isSubmitting}
+            onClick={handleDismissClick}
+            className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full text-lg leading-none text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span aria-hidden="true">✕</span>
+          </button>
+        ) : null}
       </div>
     </div>
   );
