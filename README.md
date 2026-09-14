@@ -1009,3 +1009,150 @@ PostgreSQL); `playwright` — 146 passed, 12 skipped; `next build` — успе�
 необязательные, поэтому заявки, сохранённые с ними, читаются и прежним кодом;
 колонки БД не менялись. `data/page-dates.json` в коммит не включён: файл
 генерируется `scripts/build-page-dates.mjs` по истории git.
+
+## Безопасность зависимостей: Next.js 16.1.6 → 16.3.5 (PT-005)
+
+ТЗ v5, раздел 4 (Фаза 3); источники `A-04`, `T-304`.
+
+### Что было
+
+Проект был зафиксирован на `next@16.1.6` / `react@19.2.3` / `react-dom@19.2.3`.
+`npm audit --omit=dev` показывал **4 уязвимости (1 moderate, 2 high, 1
+critical)** в production-графе: сам `next` (диапазон `9.3.4-canary.0 - 16.3.2`,
+30 advisory) и две его транзитивные зависимости — `postcss@8.4.31` и
+`sharp@0.34.5`, обе в `node_modules/next/node_modules/`.
+
+### Что обновлено
+
+| Пакет | Было | Стало | Почему |
+|---|---|---|---|
+| `next` | 16.1.6 | **16.3.5** | единственный способ закрыть advisory самого next; `16.3.5` — `dist-tags.latest`, не мажор |
+| `eslint-config-next` | 16.1.6 | **16.3.5** | держим в одной версии с `next`, иначе правила линта отстают от рантайма |
+| `postcss` (транзитивно от next) | 8.4.31 | 8.5.23 | next@16.3.5 зависит от `postcss@8.5.23` — закрывает 4 high advisory |
+| `sharp` (optional-транзитивно от next) | 0.34.5 | 0.35.4 | next@16.3.5 зависит от `sharp@^0.35.4` — закрывает libvips/libheif CVE |
+| `baseline-browser-mapping` | 2.9.18 | 2.11.23 | next@16.3.5 зависит от `^2.9.19` → npm ставит 2.11.x, закрывает moderate DoS |
+| 30 пакетов dev-графа (+1 добавлен) | — | — | `npm audit fix` **без** `--force`: babel, browserslist/caniuse-lite, minimatch, brace-expansion, js-yaml, flatted, ajv, @humanfs. Все в пределах своих semver-диапазонов, 0 удалённых пакетов |
+
+`react` и `react-dom` **не обновлялись** (19.2.3): advisories по ним нет, а
+`next@16.3.5` допускает `^19.0.0` в peerDependencies. Решение владельца — не
+вносить в security-PR минорный апгрейд рантайма, который ничего не закрывает.
+
+`package-lock.json` при этом стал короче на ~720 строк — это не потеря
+платформенных бинарников, а дедупликация: next@16.1.6 тянул собственную вложенную
+копию `sharp@0.34.5` вместе с 26 пакетами `node_modules/next/node_modules/@img/*`,
+а next@16.3.5 зависит от `sharp@^0.35.4`, то есть от той же версии, что уже стоит
+в devDependencies проекта, — npm слил их в одну. Проверено по итоговому lock:
+все 8 `@next/swc-*` (включая `linux-x64-gnu@16.3.5`) и все платформенные
+`@img/sharp-*` / `@img/sharp-libvips-*` (включая `linux-x64` и `linuxmusl-x64`,
+нужные Amvera) на месте, 264 optional-записи сохранены.
+
+Исходники менять не пришлось: `@next/codemod upgrade` не потребовался (ни одного
+deprecation-предупреждения в логе сборки, линт и типы зелёные). В коммите только
+`package.json`, `package-lock.json` и этот раздел README.
+
+### Какие advisory применимы к конфигурации проекта
+
+Проверено по фактическому конфигу, а не «на глаз»: `next.config.ts` содержит
+только `images: { unoptimized: true }` (нет `rewrites`, `redirects`,
+`cacheComponents`, `headers()`/CSP, i18n); `middleware.ts`/`proxy.ts` в репо
+нет; каталога `pages/` нет (только App Router); директив `"use server"` нет
+(Server Actions не используются); `next/script` с `beforeInteractive` не
+используется; `amvera.yaml` → `run.command: npm run start` = `next start`,
+то есть self-hosted Node-процесс в Linux-контейнере.
+
+**Критичные**
+
+| Advisory | CVSS | Исправлено в | Суть | Применимость к конфигурации |
+|---|---|---|---|---|
+| `GHSA-p293-qw3h-jr36` | 9.0 | 16.3.3 | RCE на серверах под Windows | **Не применим**: Amvera — Linux-контейнер. Закрыт апгрейдом |
+| `GHSA-2xp9-vwfh-vxw4` | не опубликован | 16.3.3 | RCE в Image Optimization API через AVIF | **Риск снижен**: `images.unoptimized: true`, оптимизатор не вызывается. Закрыт апгрейдом — флаг может измениться |
+
+**Высокие**
+
+| Advisory | CVSS | Исправлено в | Суть | Применимость к конфигурации |
+|---|---|---|---|---|
+| `GHSA-c4j6-fc7j-m34r` | 8.6 | 16.2.5 | SSRF через WebSocket upgrade | **Применим**: self-hosted `next start`. Закрыт апгрейдом |
+| `GHSA-q4gf-8mx6-v5v3` | 7.5 | 16.2.3 | DoS через Server Components | **Применим**: весь сайт на App Router/RSC. Закрыт |
+| `GHSA-8h8q-6873-q5fj` | 7.5 | 16.2.5 | DoS через Server Components | **Применим**: то же. Закрыт |
+| `GHSA-492v-c6pp-mqqv` | 8.1 | 16.2.5 | Обход middleware/proxy через инъекцию параметров динамического маршрута | **Не применим**: `middleware.ts`/`proxy.ts` в репо нет. Закрыт |
+| `GHSA-267c-6grr-h53f` | 7.5 | 16.2.5 | Обход middleware/proxy через segment-prefetch routes | **Не применим**: middleware/proxy нет. Закрыт |
+| `GHSA-26hh-7cqf-hhc6` | 7.5 | 16.2.6 | То же, incomplete-fix follow-up | **Не применим**: middleware/proxy нет. Закрыт |
+| `GHSA-36qx-fr4f-26g5` | 7.5 | 16.2.5 | Обход middleware/proxy в Pages Router с i18n | **Не применим**: `pages/` и i18n нет. Закрыт |
+| `GHSA-6gpp-xcg3-4w24` | не опубликован | 16.2.11 | Обход middleware/proxy при Turbopack и одной локали | **Не применим**: middleware нет, прод-сборка без Turbopack. Закрыт |
+| `GHSA-3g8h-86w9-wvmq` | 3.7 | 16.2.5 | Отравление кэша редиректов middleware/proxy | **Не применим**: middleware нет. Закрыт |
+| `GHSA-mg66-mrh9-m8jx` | 7.5 | 16.2.5 | DoS через исчерпание соединений в Cache Components | **Не применим**: `cacheComponents` не включён. Закрыт |
+| `GHSA-m99w-x7hq-7vfj` | не опубликован | 16.2.11 | DoS в App Router через Server Actions | **Частично**: App Router есть, Server Actions (`"use server"`) — нет. Закрыт |
+| `GHSA-89xv-2m56-2m9x` | не опубликован | 16.2.11 | SSRF в Server Actions на custom servers | **Не применим**: ни Server Actions, ни custom server (стандартный `next start`). Закрыт |
+| `GHSA-p9j2-gv94-2wf4` | не опубликован | 16.2.11 | SSRF в `rewrites` через подконтрольный hostname | **Не применим**: `rewrites` в конфиге нет. Закрыт |
+| `postcss` ≤8.5.22 — 4 advisory: `GHSA-qx2v-qp2m-jg93`, `GHSA-6g55-p6wh-862q`, `GHSA-r28c-9q8g-f849`, `GHSA-fxqj-rqcc-2cmp` | до 7.5 | 8.5.10–8.5.23 | XSS в CSS stringify, чтение произвольных `.map` через `sourceMappingURL` | **Частично**: PostCSS работает на сборке над CSS самого проекта, а не над пользовательским вводом; в рантайме не вызывается. Закрыт (установлен 8.5.23) |
+| `sharp` ≤0.35.4-rc.0 — 2 advisory: `GHSA-f88m-g3jw-g9cj`, `GHSA-rgj7-g3m4-5g8c` | не опубликован | 0.35.0 / 0.35.4 | CVE libvips/libheif, включая `GHSA-g89c-p67h-r497` | **Риск снижен**: при `unoptimized: true` sharp для оптимизации не вызывается. Закрыт (установлен 0.35.4) |
+| `baseline-browser-mapping` <2.11.0 — `GHSA-w5vr-8v7q-w6rv` | medium | 2.11.0 | Завершение процесса на некорректном входе → DoS | **Частично**: пакет резолвится в production-графе через next, но читает только справочник браузеров. Закрыт (установлен 2.11.23) |
+
+**Умеренные и низкие** (закрыты апгрейдом; применимость та же): cache
+poisoning/confusion RSC-ответов и ответов с телом (`GHSA-vfv6-92ff-j949`,
+`GHSA-wfc6-r584-vfw7`, `GHSA-3g8h-86w9-wvmq`, `GHSA-68g3-v927-f742`,
+`GHSA-4633-3j49-mh5q`), XSS при CSP nonces (`GHSA-ffhc-5mcf-pf4q` — CSP не
+настроен) и в `beforeInteractive` (`GHSA-gx5p-jg67-6x7h` — не используется),
+DoS и бесконтрольный рост кэша Image Optimization API
+(`GHSA-h64f-5h5j-jqjh`, `GHSA-q8wf-6r8g-63ch`, `GHSA-3x4c-7xq6-9pq8` — снижено
+`unoptimized`), unbounded postponed resume buffering (`GHSA-h27x-g6w4-24gq`),
+request smuggling в `rewrites` (`GHSA-ggv3-7p47-pfv8` — `rewrites` нет),
+`Origin: null` против CSRF Server Actions (`GHSA-mq59-m269-xvcx` — Server
+Actions нет) и dev-HMR websocket (`GHSA-jcc7-9wpm-mj36` — только dev),
+раскрытие внутренних Server Function endpoint'ов (`GHSA-955p-x3mx-jcvp`),
+unbounded Server Action payload в Edge runtime (`GHSA-4c39-4ccg-62r3` — Edge
+runtime не используется).
+
+### Что осталось и почему
+
+`npm audit --omit=dev` → **0 vulnerabilities**: в production-графе открытых
+advisory нет, приёмка ТЗ выполнена.
+
+Полный `npm audit` (вместе с dev-зависимостями) — **4 moderate**, все в одной
+цепочке `drizzle-kit → @esbuild-kit/esm-loader → @esbuild-kit/core-utils →
+esbuild`:
+
+- в прод-сборку не попадают (это инструмент миграций, `npm run build` его не
+  использует, в `next start` его нет);
+- единственное «исправление», которое предлагает npm, — мажорный **даунгрейд**
+  `drizzle-kit` до 0.18.1 (`isSemVerMajor: true`), то есть откат инструмента
+  миграций на год назад. Это хуже, чем умеренная advisory в dev-инструменте;
+- `npm audit fix --force` не применялся — он запрещён правилом ТЗ вслепую, а
+  здесь он сделал бы ровно этот даунгрейд.
+
+Владелец исключения — владелец репо; срок — обновление `drizzle-kit`, при
+котором он сам перейдёт на неподверженный `esbuild`. До тех пор отклонение
+сознательное и задокументированное.
+
+### Gate (раздел 6 ТЗ) — точный вывод
+
+```
+$ npm ci                       → added 436 packages, audited 437 packages; 4 moderate (только dev-граф)
+$ npm run lint                 → ✖ 19 problems (0 errors, 19 warnings)   ← все 19 предсуществующие
+$ npx tsc --noEmit             → 0 ошибок
+$ npm run validate:catalog     → validate-catalog: ok (48 SKU, 7 профилей)
+$ npx drizzle-kit push --force → [✓] Changes applied / [i] No changes detected
+$ TEST_DATABASE_URL=… CRON_SECRET=… npm run test
+                               → Test Files 65 passed (65); Tests 704 passed (704)
+$ npm run test:flow            → # pass 5 / # fail 0
+$ npm run build                → exit 0, ✓ Compiled successfully
+$ npm run check:bundle         → [bundle] ok — / 222.4 КБ ≤ 300 КБ
+$ npm run test:e2e             → 146 passed, 12 skipped (0 unexpected failures)
+$ npm audit --omit=dev         → found 0 vulnerabilities
+```
+
+Последние два пункта gate (`curl -I https://<прод>/` и `/api/health`) **не
+выполнялись** по решению владельца: прод собирается из `main` (`d8a6faf`), где
+этого апгрейда нет, поэтому проверка показала бы состояние старой сборки.
+
+Бандл главной страницы: **216.4 КБ → 222.4 КБ** gzip First Load JS (+6.0 КБ,
++2.8 %). Замерено честным сравнением: сборка на `16.1.6` и на `16.3.5` одним и
+тем же `npm run check:bundle`. Запас до бюджета 300 КБ — 77.6 КБ.
+
+### Откат
+
+`git revert <этот коммит>` возвращает `next@16.1.6`, `eslint-config-next@16.1.6`
+и прежний lock с уязвимыми `postcss`/`sharp`/`baseline-browser-mapping` в
+production-графе — то есть откат сознательно возвращает 4 advisory (1 из них
+critical). После реверта нужен `npm ci` и повторный gate. Изменений в исходниках
+и в схеме БД нет, поэтому откат не затрагивает ни заявки, ни данные.
