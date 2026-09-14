@@ -37,6 +37,7 @@ import type { CalculatorLeadSnapshot } from "@/lib/calculator/snapshot-types";
 import { hasLightingItems, mergeLightingIntoSnapshot } from "@/lib/calculator/snapshot-merge";
 import { trackCalculatorOpen, trackWizardStepView } from "@/lib/analytics";
 import { readCalcDraft } from "@/lib/calculator/draft";
+import { captureAttributionOnce } from "@/lib/attribution-capture";
 
 
 
@@ -76,29 +77,6 @@ function createLightingOnlySnapshot(): CalculatorLeadSnapshot {
       recommendedTrackSpotsQty: 0,
     },
   };
-}
-
-// P1.10: чтение UTM из sessionStorage при открытии модалки
-function captureUtmIntoSession() {
-  if (typeof window === "undefined") return;
-  const params = new URLSearchParams(window.location.search);
-  const keys = [
-    "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term",
-    "yclid", "gclid", "_openstat", "fbclid",
-  ];
-  for (const key of keys) {
-    const v = params.get(key);
-    // FIRST CLICK ATTRIBUTION: only set if NOT already present in sessionStorage!
-    if (v && !sessionStorage.getItem(key)) {
-      sessionStorage.setItem(key, v);
-    }
-  }
-  if (!sessionStorage.getItem("first_landing")) {
-    sessionStorage.setItem("first_landing", window.location.href);
-  }
-  if (!sessionStorage.getItem("first_referrer")) {
-    sessionStorage.setItem("first_referrer", document.referrer || window.location.href);
-  }
 }
 
 const CalculatorModalContext = createContext<CalculatorModalContextValue | null>(null);
@@ -197,8 +175,14 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       });
       trackWizardStepView((resolvedOpts.initialStep ?? 0) as 0 | 1 | 2, effectiveSource);
 
-      // P1.10: захват UTM при открытии
-      captureUtmIntoSession();
+      /**
+       * P1.10 · захват UTM при открытии модалки.
+       *
+       * PT-012: реализация общая с `app/providers.tsx` и ходит в хранилище
+       * через безопасную обёртку — заблокированный `sessionStorage` больше не
+       * может сорвать открытие калькулятора.
+       */
+      captureAttributionOnce();
 
       setOptions(resolvedOpts);
       setCurrentStep(resolvedOpts.initialStep ?? 0);

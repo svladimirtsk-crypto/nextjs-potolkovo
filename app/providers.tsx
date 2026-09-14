@@ -6,44 +6,22 @@ import { CalculatorStoreProvider } from "@/lib/calculator/store";
 import { CalculatorModalProvider } from "@/components/calculator-modal/calculator-modal-context";
 import { ConfirmDialogPortal } from "@/components/ui/confirm-dialog";
 import { CalculatorModalGate } from "@/components/calculator-modal/calculator-modal-gate";
+import { captureAttributionOnce } from "@/lib/attribution-capture";
 
 export function Providers({ children }: { children: ReactNode }) {
-    useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const params = new URLSearchParams(window.location.search);
-
-    const keys = [
-      "utm_source",
-      "utm_medium",
-      "utm_campaign",
-      "utm_content",
-      "utm_term",
-      "yclid",
-      "gclid",
-      "_openstat",
-      "fbclid",
-    ] as const;
-
-    for (const key of keys) {
-      const value = params.get(key);
-      // FIRST CLICK ATTRIBUTION: only set if NOT already present in sessionStorage!
-      if (value && !sessionStorage.getItem(key)) {
-        sessionStorage.setItem(key, value);
-      }
-    }
-
-    if (!sessionStorage.getItem("first_landing")) {
-      sessionStorage.setItem(
-        "first_landing",
-        `${window.location.pathname}${window.location.search}`
-      );
-    }
-
-    if (!sessionStorage.getItem("first_referrer") && document.referrer) {
-      sessionStorage.setItem("first_referrer", document.referrer);
-    }
+  useEffect(() => {
+    /**
+     * PT-012 · Захват атрибуции первого касания — через единую обёртку.
+     *
+     * Раньше здесь стоял прямой доступ к `sessionStorage` без `try/catch`, и на
+     * заблокированном хранилище (приватный режим Safari, корпоративная
+     * политика, iframe с запрещёнными сторонними cookie) исключение улетало из
+     * `useEffect` — то есть падало всё дерево страницы, а не только атрибуция.
+     * Список ключей и нормализация значений общие с сервером: `lib/attribution`.
+     */
+    captureAttributionOnce();
   }, []);
+
   return (
     <CalculatorStoreProvider>
       <CalculatorModalProvider>

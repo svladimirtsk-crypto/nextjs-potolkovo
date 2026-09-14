@@ -7,6 +7,7 @@
  */
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ATTRIBUTION_URL_MAX } from "@/lib/attribution";
 import { resetRateLimitForTests } from "@/lib/lead/rate-limit";
 import { setLeadStoreForTests } from "@/lib/lead/store";
 import type { LeadStore } from "@/lib/lead/store-types";
@@ -273,5 +274,49 @@ describe.skipIf(!TEST_DATABASE_URL)("N-001 · POST /api/lead с PostgreSQL", () 
 
     const json = (await authorized.json()) as { lead: { phone: string } };
     expect(json.lead.phone).toBe("+79165556677");
+  });
+
+  /**
+   * PT-012 · Атрибуция не должна валить заявку.
+   *
+   * До правки схема требовала `max(200)` на каждое значение, и рекламная ссылка
+   * первого визита (`first_landing` с километровыми UTM) давала `422` на весь
+   * запрос: заявка терялась именно у того, кто пришёл из рекламы. Проверяем на
+   * настоящей БД, что запрос проходит, а в `payload.attribution` лежит
+   * нормализованное значение — без фрагмента, без персональных параметров и в
+   * пределах лимита на URL целиком.
+   */
+  it("PT-012: длинная рекламная ссылка в атрибуции не даёт 422 и нормализуется в БД", async () => {
+    const { POST } = await import("@/app/api/lead/route");
+
+    const longLanding =
+      "/uslugi/tenevye-potolki?utm_source=yandex&utm_medium=cpc&utm_campaign=" +
+      "c".repeat(3000) +
+      "&email=ivan@example.com&phone=%2B79000000000#price";
+    expect(longLanding.length).toBeGreaterThan(ATTRIBUTION_URL_MAX);
+
+    const response = await POST(
+      request({
+        ...leadBody("+79167778899"),
+        attribution: {
+          utm_source: "yandex",
+          first_landing: longLanding,
+          // Ключ вне allowlist: в лид попасть не должен.
+          password: "secret",
+        },
+      })
+    );
+
+    expect(response.status).toBe(201);
+
+    const { leadId } = (await response.json()) as { leadId: string };
+    const saved = await store.getLeadByPublicCode(leadId);
+    const attribution = (saved?.payload.attribution ?? {}) as Record<string, string>;
+
+    expect(attribution.utm_source).toBe("yandex");
+    expect(attribution.first_landing.length).toBeLessThanOrEqual(ATTRIBUTION_URL_MAX);
+    expect(attribution.first_landing).not.toContain("email");
+    expect(attribution.first_landing).not.toContain("#");
+    expect(attribution.password).toBeUndefined();
   });
 });
