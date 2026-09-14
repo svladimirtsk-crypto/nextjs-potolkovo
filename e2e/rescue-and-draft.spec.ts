@@ -166,7 +166,12 @@ test.describe("Rescue и черновик", () => {
     await dialog.submit.click();
 
     await expect(dialog.error).toBeVisible();
-    await expect.poll(() => leads.length).toBe(1);
+    /**
+     * PT-013: обрыв связи повторяется автоматически — один раз и с тем же
+     * `requestId`. Отказ при этом остаётся отказом: молчаливого успеха нет.
+     */
+    await expect.poll(() => leads.length).toBe(2);
+    expect((leads[1] as CapturedRescue).requestId).toBe((leads[0] as CapturedRescue).requestId);
   });
 
   test("PT-004: повтор после отказа доводит заявку", async ({ page }) => {
@@ -220,15 +225,18 @@ test.describe("Rescue и черновик", () => {
     stub.body = { ok: true, leadId: "K7F3Q", callbackWindow: "сегодня до 21:00" };
 
     await dialog.submit.click();
-    await expect.poll(() => leads.length).toBe(2);
+    // PT-013: два запроса на первый клик (обрыв + автоповтор) и один на ручной.
+    await expect.poll(() => leads.length).toBe(3);
 
-    const [first, second] = leads as CapturedRescue[];
+    const [first, second, third] = leads as CapturedRescue[];
     expect(first.requestId).toBeTruthy();
     /**
      * Именно это свойство позволяет серверу не создавать вторую заявку: человек
-     * не знает, дошёл первый запрос или нет, и состав он не менял.
+     * не знает, дошёл первый запрос или нет, и состав он не менял. Автоматический
+     * повтор (PT-013) безопасен ровно по той же причине — ключ у всех один.
      */
     expect(second.requestId).toBe(first.requestId);
+    expect(third.requestId).toBe(first.requestId);
   });
 
   test("PT-009: правка данных после сбоя меняет requestId", async ({ page }) => {
@@ -328,7 +336,7 @@ test.describe("Rescue и черновик", () => {
     await modal.getByRole("button", { name: /К итогу/ }).first().click();
 
     await submitLeadForm(page, { name: "Иван", phone: "9055219909", scope: modal });
-    await expect(page.getByText(/Заявка .* принята|Заявка отправлена/)).toBeVisible();
+    await expect(page.getByText(/Заявка №\S+ сохранена|Заявка отправлена/)).toBeVisible();
     expect(leads).toHaveLength(1);
 
     // T-023: расчёт уже у мастера — второй раз клянчить телефон нельзя.

@@ -522,7 +522,7 @@ export function WizardStep2Summary() {
             ✓
           </div>
           <p className="text-lg font-semibold text-emerald-950">
-            {leadPublicCode ? `Заявка №${leadPublicCode} принята` : "Спасибо!"}
+            {leadPublicCode ? `Заявка №${leadPublicCode} сохранена` : "Спасибо!"}
           </p>
           <p className="mt-1 text-sm text-emerald-800">Перезвоню {callbackWindow}.</p>
           <p className="mt-2 text-sm text-emerald-900">

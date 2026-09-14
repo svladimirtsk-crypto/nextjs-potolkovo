@@ -58,7 +58,7 @@ test.describe("Заблокированное хранилище (PT-012)", () =
     await page.goto("/uslugi/skrytye-karnizy#action");
     await submitLeadForm(page, { name: "Пётр", phone: "9161234567" });
 
-    await expect(page.getByText(/Заявка .* принята|Заявка отправлена/)).toBeVisible();
+    await expect(page.getByText(/Заявка №\S+ сохранена|Заявка отправлена/)).toBeVisible();
 
     expect(leads).toHaveLength(1);
     expect(leads[0].phone).toBe("+79161234567");
