@@ -87,6 +87,11 @@ jobs:
           # (TELEGRAM_LEADS_ENABLED=1 без токена) по-прежнему даёт ошибку.
           # Строгими остаются и реквизиты — именно их касается PT-006.
           TELEGRAM_LEADS_ENABLED: "0"
+          # PT-015: у CI нет независимого канала алерта (вебхук/второй бот) и
+          # заводить его ради проверки бессмысленно — алерт выключен явно.
+          # Согласованность `.env.example` со схемой при этом проверяется
+          # безусловно: расхождение фатально в любом режиме.
+          DELIVERY_ALERT_ENABLED: "0"
           WEB3FORMS_ACCESS_KEY: ci-not-a-secret
           CRON_SECRET: ci-not-a-secret
           DATABASE_URL: ${{ env.TEST_DATABASE_URL }}

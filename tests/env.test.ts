@@ -60,7 +60,77 @@ describe("T-062 · lib/env", () => {
       CRON_SECRET: "s",
       DATABASE_URL: "postgres://localhost/db",
       CATALOG_LIVE_FEED2_STRICT: "0",
+      // PT-015: алерт включён по умолчанию, значит «полная конфигурация»
+      // обязана включать и независимый канал алерта — иначе предупреждение
+      // законно, а тест проверял бы неполный набор.
+      DELIVERY_ALERT_WEBHOOK_URL: "https://alerts.example/hook",
     });
     expect(env.warnings).toEqual([]);
+  });
+
+  describe("PT-015 · алерт о сбоях доставки", () => {
+    const FULL = {
+      TELEGRAM_BOT_TOKEN: "t",
+      TELEGRAM_CHAT_ID: "c",
+      WEB3FORMS_ACCESS_KEY: "k",
+      CRON_SECRET: "s",
+      DATABASE_URL: "postgres://localhost/db",
+      CATALOG_LIVE_FEED2_STRICT: "0",
+    };
+
+    it("включён по умолчанию", () => {
+      expect(withEnv({ DELIVERY_ALERT_ENABLED: undefined }).DELIVERY_ALERT_ENABLED).toBe(true);
+    });
+
+    it("предупреждает, если канал алерта не задан: деградация останется незамеченной", () => {
+      const env = withEnv({
+        ...FULL,
+        DELIVERY_ALERT_ENABLED: undefined,
+        DELIVERY_ALERT_WEBHOOK_URL: undefined,
+        DELIVERY_ALERT_TELEGRAM_BOT_TOKEN: undefined,
+        DELIVERY_ALERT_TELEGRAM_CHAT_ID: undefined,
+      });
+      expect(env.warnings.some((w) => w.includes("DELIVERY_ALERT_WEBHOOK_URL"))).toBe(true);
+    });
+
+    it("второй Telegram-бот — тоже настроенный канал, предупреждения нет", () => {
+      const env = withEnv({
+        ...FULL,
+        DELIVERY_ALERT_WEBHOOK_URL: undefined,
+        DELIVERY_ALERT_TELEGRAM_BOT_TOKEN: "alert-bot",
+        DELIVERY_ALERT_TELEGRAM_CHAT_ID: "-100",
+      });
+      expect(env.warnings).toEqual([]);
+    });
+
+    it("бот без чата каналом не считается", () => {
+      const env = withEnv({
+        ...FULL,
+        DELIVERY_ALERT_WEBHOOK_URL: undefined,
+        DELIVERY_ALERT_TELEGRAM_BOT_TOKEN: "alert-bot",
+        DELIVERY_ALERT_TELEGRAM_CHAT_ID: "  ",
+      });
+      expect(env.warnings.some((w) => w.includes("канал алерта не задан"))).toBe(true);
+    });
+
+    it("выключенный алерт не требует канала", () => {
+      const env = withEnv({ ...FULL, DELIVERY_ALERT_ENABLED: "0" });
+      expect(env.warnings).toEqual([]);
+    });
+
+    it("числовые пороги: по умолчанию, мусор → дефолт, значение не ниже пола", () => {
+      expect(withEnv({}).DELIVERY_ALERT_THRESHOLD).toBe(4);
+      expect(withEnv({}).DELIVERY_ALERT_WINDOW_MIN).toBe(30);
+      expect(withEnv({}).DELIVERY_ALERT_COOLDOWN_MIN).toBe(60);
+      expect(withEnv({}).DELIVERY_ALERT_LOOKBACK).toBe(50);
+
+      // Опечатка не должна ронять старт API: мусор приводится к дефолту.
+      expect(withEnv({ DELIVERY_ALERT_THRESHOLD: "много" }).DELIVERY_ALERT_THRESHOLD).toBe(4);
+      expect(withEnv({ DELIVERY_ALERT_THRESHOLD: "" }).DELIVERY_ALERT_THRESHOLD).toBe(4);
+      expect(withEnv({ DELIVERY_ALERT_THRESHOLD: "7" }).DELIVERY_ALERT_THRESHOLD).toBe(7);
+      // Порог 0 означал бы «алерт на каждую неудачу», поэтому пол — 1.
+      expect(withEnv({ DELIVERY_ALERT_THRESHOLD: "0" }).DELIVERY_ALERT_THRESHOLD).toBe(1);
+      expect(withEnv({ DELIVERY_ALERT_WINDOW_MIN: "-5" }).DELIVERY_ALERT_WINDOW_MIN).toBe(1);
+    });
   });
 });
