@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
-import { interceptLeadApi, submitLeadForm } from "./helpers";
+import { MODAL, interceptLeadApi, submitLeadForm } from "./helpers";
 
 /**
  * T-091 · Сценарий 5 — мобильный checkout со страницы света.
@@ -103,5 +103,95 @@ test.describe("Поиск по каталогу", () => {
     // Переход в подсказанный раздел не должен стирать запрос.
     await page.getByRole("button", { name: /Закладные|решетки/i }).first().click();
     await expect(search).toHaveValue("заклад");
+  });
+});
+
+/**
+ * PT-011 · S08: закрытие экрана интента не должно запускать оформление.
+ *
+ * Диалог «Как оформляем комплект?» возвращал `boolean`, поэтому Escape и клик
+ * по подложке давали тот же результат, что и кнопка «Только оборудование −10 %»:
+ * человек закрывал вопрос, а попадал в форму заявки с режимом скидки, который
+ * он не выбирал. Ниже — три способа закрыть (Escape, подложка, крестик) и
+ * проверка, что корзина и страница остались нетронутыми, плюс явный путь
+ * «с потолком», который раньше не был покрыт.
+ */
+test.describe("Экран интента каталога: закрытие ≠ выбор", () => {
+  /** Открыть диалог выбора так, как это делает человек: товар → «Оформить». */
+  async function openIntentDialog(page: Page) {
+    await page.goto("/uslugi/prodazha-trekovogo-osveshcheniya#price");
+    await page.getByRole("button", { name: "+", exact: true }).first().click();
+
+    const cartBar = page.locator("[data-cart-bar]:visible").last();
+    await expect(cartBar).toBeVisible();
+
+    const checkout = cartBar.getByRole("button", { name: "Оформить" });
+    await checkout.click();
+
+    const dialog = page.getByLabel("Как оформляем комплект?");
+    await expect(dialog).toBeVisible();
+
+    return { cartBar, checkout, dialog };
+  }
+
+  /**
+   * Общее для всех трёх способов закрыть: ничего не открылось и не изменилось.
+   *
+   * Пауза перед проверкой модалки обязательна, а не «на всякий случай»:
+   * калькулятор открывается асинхронно, и мгновенный `toHaveCount(0)` на старом
+   * коде успевал пройти до того, как модалка появлялась, — тест зеленел на баге.
+   * Полсекунды с запасом покрывают открытие, после чего отсутствие модалки уже
+   * осмысленный факт.
+   */
+  async function expectStayedInCatalog(
+    page: Page,
+    cartBar: Locator,
+    checkout: Locator,
+    dialog: Locator,
+  ) {
+    await expect(dialog).toBeHidden();
+    await page.waitForTimeout(500);
+    await expect(page.locator(MODAL)).toHaveCount(0);
+    await expect(cartBar).toBeVisible();
+    await expect(cartBar).toHaveAttribute("data-count", "1");
+    await expect(cartBar).toContainText("Корзина · 1 поз.");
+    // PT-011: фокус возвращается к элементу, открывшему диалог.
+    await expect(checkout).toBeFocused();
+  }
+
+  test("Escape закрывает диалог и оставляет в каталоге", async ({ page }) => {
+    const { cartBar, checkout, dialog } = await openIntentDialog(page);
+
+    await page.keyboard.press("Escape");
+
+    await expectStayedInCatalog(page, cartBar, checkout, dialog);
+  });
+
+  test("клик по подложке закрывает диалог и оставляет в каталоге", async ({ page }) => {
+    const { cartBar, checkout, dialog } = await openIntentDialog(page);
+
+    // Панель центрирована, угол экрана — точно подложка.
+    await page.mouse.click(4, 4);
+
+    await expectStayedInCatalog(page, cartBar, checkout, dialog);
+  });
+
+  test("крестик закрывает диалог и оставляет в каталоге", async ({ page }) => {
+    const { cartBar, checkout, dialog } = await openIntentDialog(page);
+
+    await dialog.getByTestId("confirm-dialog-close").click();
+
+    await expectStayedInCatalog(page, cartBar, checkout, dialog);
+  });
+
+  test("явная кнопка «С потолком −25 %» ведёт в расчёт потолка", async ({ page }) => {
+    const { dialog } = await openIntentDialog(page);
+
+    await dialog.getByRole("button", { name: /С потолком −25 %/ }).click();
+
+    const modal = page.locator(MODAL);
+    await expect(modal).toBeVisible();
+    // Шаг 0 начинается с выбора количества комнат — значит, идём считать потолок.
+    await expect(modal.getByRole("button", { name: /Одну комнату/ })).toBeVisible();
   });
 });
