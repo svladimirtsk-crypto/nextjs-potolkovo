@@ -20,7 +20,12 @@
  *
  * Модуль клиентский и не импортирует ничего серверного: ни `lib/env.ts`,
  * ни zod-схему, ни `content/*` — иначе он утянет их в бандл главной.
+ * `lib/attribution` и `lib/safe-storage` — чистые изоморфные модули без zod
+ * и без env, поэтому правило не нарушают (PT-012).
  */
+import { ATTRIBUTION_ALLOWED_KEYS } from "@/lib/attribution";
+import { readWebStorage } from "@/lib/safe-storage";
+
 import { acquireRequestId, releaseRequestId } from "./request-id";
 
 /** Почему отправка не удалась. От вида зависит и текст пользователю, и аналитика. */
@@ -303,18 +308,11 @@ export function resolveLeadEntry(input: {
   return input.placement === "modal" || input.placement === "rescue" ? "ceiling-first" : "direct";
 }
 
-/** Ключи атрибуции, которые кладём в лид. Всё остальное из storage не берём. */
-const ATTRIBUTION_KEYS = [
-  "utm_source",
-  "utm_medium",
-  "utm_campaign",
-  "utm_content",
-  "utm_term",
-  "yclid",
-  "gclid",
-  "_openstat",
-  "fbclid",
-] as const;
+/**
+ * PT-012 · Ключи атрибуции берём из общего allowlist `lib/attribution`: список
+ * один на клиент и сервер, иначе клиент складывает в лид то, что сервер
+ * выбросит при нормализации.
+ */
 
 /**
  * PT-004 · Общий сбор атрибуции.
@@ -328,19 +326,14 @@ export function collectLeadAttribution(
 ): Record<string, string> {
   const attribution: Record<string, string> = {};
 
-  if (typeof window !== "undefined") {
-    try {
-      for (const key of ATTRIBUTION_KEYS) {
-        const value = window.sessionStorage.getItem(key);
-        if (value && value.trim()) attribution[key] = value.trim();
-      }
-      const firstLanding = window.sessionStorage.getItem("first_landing");
-      if (firstLanding && firstLanding.trim()) attribution.first_landing = firstLanding.trim();
-      const firstReferrer = window.sessionStorage.getItem("first_referrer");
-      if (firstReferrer && firstReferrer.trim()) attribution.first_referrer = firstReferrer.trim();
-    } catch {
-      // Хранилище недоступно — уходим без атрибуции, но с заявкой.
-    }
+  /**
+   * PT-012 · Читаем через `lib/safe-storage`: хранилище может быть недоступно
+   * целиком (SecurityError при обращении) или только на запись (приватный режим
+   * Safari). Заявка при этом уходит — без атрибуции, но уходит.
+   */
+  for (const key of ATTRIBUTION_ALLOWED_KEYS) {
+    const value = readWebStorage("session", key);
+    if (value && value.trim()) attribution[key] = value.trim();
   }
 
   return extra ? { ...attribution, ...extra } : attribution;

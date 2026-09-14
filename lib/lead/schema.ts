@@ -6,6 +6,7 @@
  */
 import { z } from "zod";
 
+import { normalizeAttribution } from "@/lib/attribution";
 import { isValidPhone, normalizePhone } from "@/lib/normalize-phone";
 
 /**
@@ -191,7 +192,21 @@ export const LeadPayloadSchema = z.object({
   leadKind: LeadKindSchema,
   orderIntent: OrderIntentSchema.default("ceiling_only"),
 
-  attribution: z.record(z.string(), z.string().max(200)).default({}),
+  /**
+   * PT-012 · Атрибуция нормализуется мягко, а не отклоняется.
+   *
+   * Прежняя схема `z.record(z.string(), z.string().max(200))` требовала, чтобы
+   * каждое значение уложилось в 200 символов, и длинная рекламная ссылка в
+   * `first_landing`/`first_referrer` валила весь запрос в `422`: заявка терялась
+   * из-за поля, без которого она полноценна. Теперь значение проходит через
+   * `normalizeAttribution` — allowlist ключей, лимит 2048 на URL целиком, снятый
+   * фрагмент и выброшенные не-UTM параметры (включая персональные). Битый клиент
+   * (строка или массив вместо объекта) даёт пустой словарь, а не отказ.
+   */
+  attribution: z
+    .unknown()
+    .default({})
+    .transform((value) => normalizeAttribution(value)),
   snapshot: LeadSnapshotV2Schema.optional(),
   totals: TotalsSchema.optional(),
   /** Короткий rescue-лид присылает только сумму. */
