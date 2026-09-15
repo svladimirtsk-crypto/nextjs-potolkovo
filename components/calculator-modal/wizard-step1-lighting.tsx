@@ -13,7 +13,6 @@ import { trackLightingCartChanged } from "@/lib/analytics";
 import {
   LIGHTING_ONLY_DISCOUNT_PERCENT,
   LIGHTING_WITH_CEILING_DISCOUNT_PERCENT,
-  applyLightingOnlyDiscount,
   applyLightingWithCeilingDiscount,
 } from "@/lib/lighting-formulas";
 import {
@@ -40,7 +39,6 @@ import {
   CLARUS_PSU_VENDOR_CODES,
   REMOVED_COLIBRI_VENDOR_CODES,
   TRACK_GROUPS,
-  TRACK_PROFILE_WHITELIST,
   TRACK_SYSTEMS,
   LAMP_SOCKETS,
   type PointSubtypeId,
@@ -48,18 +46,7 @@ import {
   type LampSocket,
 } from "@/lib/catalog-ui-config";
 
-import {
-  ART_TRACK_PROFILE_VENDOR_WHITELIST,
-} from "@/lib/vendor-code-overrides";
-import { inferPieceLengthMeters } from "@/lib/product-length-meters";
-
-import {
-  isLamp,
-  isMountsOrGrilles,
-  isPanelProduct,
-  matchesPointSubtype,
-  normalizeQty,
-} from "@/lib/lighting/product-predicates";
+import { isPanelProduct, normalizeQty } from "@/lib/lighting/product-predicates";
 import {
   buildAccessorySuggestions,
   buildCartEntries,
@@ -81,13 +68,31 @@ import {
   decideOrphanTrackAction,
   selectOrphanTrackEntries,
 } from "@/lib/lighting/orphan-track";
-import {
-} from "@/components/lighting/Step1Screens";
 import { CatalogBrowse } from "@/components/lighting/CatalogBrowse";
+// PT-018: чистые селекторы Шага 1 (B-F104) — правила выдачи каталога,
+// профили/светильники/системы и итоги «Выбранного» вынесены из компонента.
+import {
+  buildClarusPsuOptions,
+  buildSelectedViewItems,
+  buildTrackProfileRecommendations,
+  calcMountRequiredByVendor,
+  calcSelectedTotals,
+  cardDiscountPercentFor,
+  detectCartTrackSystem,
+  scopeCatalogProducts,
+  selectChandeliers,
+  selectCorniceLighting,
+  selectPointProducts,
+  selectTrackFixtures,
+  selectWizardTrackProfiles,
+  summarizeCartForStep,
+  systemLabelOf,
+  wizardSystemOptionsFor,
+} from "@/lib/lighting/step1-selectors";
 import { RecommendationsTab } from "@/components/lighting/RecommendationsTab";
 import { CatalogFilterChipGroup, CatalogFilterChipsRow } from "@/components/lighting/CatalogFilterChips";
 import { SelectedList } from "@/components/lighting/SelectedList";
-import { pointProgressBySocket, pointsOfKind, type PointKindId } from "@/lib/lighting/popular-points";
+import { pointProgressBySocket, type PointKindId } from "@/lib/lighting/popular-points";
 import { useCalculatorModal } from "./calculator-modal-context";
 import { useCalculatorStore } from "@/lib/calculator/store";
 
@@ -106,11 +111,6 @@ function fmtM(v: number): string { return new Intl.NumberFormat("ru-RU", { maxim
 
 
 
-
-function pickAttrs(p: FeedCatalogProduct): { label: string; value: string }[] {
-  const a = p.keyAttributes?.length ? p.keyAttributes : p.params;
-  return (a ?? []).slice(0, 4).map((x) => ({ label: toText(x.label), value: toText(x.value) }));
-}
 
 function getScrollParent(node: HTMLElement | null): HTMLElement | null {
   if (!node || typeof window === "undefined") return null;
@@ -299,23 +299,16 @@ export function WizardStep1Lighting() {
   const [manualPointsOpen, setManualPointsOpen] = useState(false);
 
   /* ─── Recommendations ─── */
-  const recommendedTrackProfiles = useMemo(() => {
-    if (!showCeilingInUi || requiredTrackMeters <= 0) return [];
-    const targetSystems: TrackSystemId[] = trackMountType === "built-in" ? ["COLIBRI_220", "CLARUS_48"]
-      : trackMountType === "surface" ? ["TRACK_220"] : [];
-    return targetSystems.map((system) => {
-      const base = TRACK_PROFILE_WHITELIST[system] ?? [];
-      const allowed = system === "TRACK_220" ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST]) : new Set(base);
-      const profiles = products.filter((p) => p.kind === "TRACK_PROFILE" && p.system === system && p.priceRub > 0 && allowed.has(toText(p.vendorCode)));
-      if (!profiles.length) return null;
-      profiles.sort((a, b) => a.priceRub - b.priceRub);
-      const best = profiles[0];
-      const pieceM = inferPieceLengthMeters(best);
-      if (!pieceM || pieceM <= 0) return null;
-      const qty = Math.ceil(requiredTrackMeters / pieceM);
-      return { product: best, system, qty, totalMeters: qty * pieceM };
-    }).filter(Boolean) as Array<{ product: FeedCatalogProduct; system: TrackSystemId; qty: number; totalMeters: number }>;
-  }, [showCeilingInUi, requiredTrackMeters, trackMountType, products]);
+  const recommendedTrackProfiles = useMemo(
+    () =>
+      buildTrackProfileRecommendations({
+        showCeiling: showCeilingInUi,
+        requiredTrackMeters,
+        trackMountType,
+        products,
+      }),
+    [showCeilingInUi, requiredTrackMeters, trackMountType, products]
+  );
 
   const hasRecommendations = recommendedTrackProfiles.length > 0 || requiredPointQty > 0;
 
@@ -329,14 +322,7 @@ export function WizardStep1Lighting() {
     [cartItems, lampOptionsBySocket]
   );
 
-  const mountRequiredByVendor = useMemo(() => {
-    const required: Record<string, number> = {};
-    for (const entry of cartEntries) {
-      const mountVendor = POINT_TO_MOUNT_VENDOR_CODE[toText(entry.product.vendorCode)];
-      if (mountVendor) required[mountVendor] = (required[mountVendor] ?? 0) + entry.qty;
-    }
-    return required;
-  }, [cartEntries]);
+  const mountRequiredByVendor = useMemo(() => calcMountRequiredByVendor(cartEntries), [cartEntries]);
 
   const missingLamps = useMemo(
     () => calcMissingLamps(lampRequiredBySocket, lampCurrentBySocket),
@@ -367,14 +353,11 @@ export function WizardStep1Lighting() {
   const clarusPsuQty = useMemo(() => calcClarusPsuQty(cartEntries), [cartEntries]);
 
   /** Варианты БП для CLARUS; пусто — если блок уже выбран или CLARUS нет. */
-  const clarusPsuOptions = useMemo(() => {
-    if (!hasClarusInCart || clarusPsuQty >= 1) return [];
-    return CLARUS_PSU_VENDOR_CODES.map((vendorCode) => {
-      const productId = productIdByVendorCode.get(vendorCode);
-      const product = productId ? productsById.get(productId) : undefined;
-      return productId && product ? { productId, name: toText(product.name) } : null;
-    }).filter((option): option is { productId: string; name: string } => option !== null);
-  }, [hasClarusInCart, clarusPsuQty, productIdByVendorCode, productsById]);
+  const clarusPsuOptions = useMemo(
+    () =>
+      buildClarusPsuOptions({ hasClarusInCart, clarusPsuQty, productIdByVendorCode, productsById }),
+    [hasClarusInCart, clarusPsuQty, productIdByVendorCode, productsById]
+  );
 
   /* ─── T-024: трек выключен, но в корзине есть трековые позиции ───
    * Раньше эффект молча вычищал корзину. Если набор собран в каталоге
@@ -595,36 +578,18 @@ export function WizardStep1Lighting() {
   }, [setStep1CatalogView, setCatalogView]);
 
   /* ─── Selected view ─── */
-  const selectedViewItems = useMemo(() =>
-    cartEntries.map((e) => ({ product: e.product, item: { sku: toText(e.productId), name: toText(e.product.name), qty: e.qty, priceRub: toNumber(e.product.priceRub) } })),
-    [cartEntries]);
+  const selectedViewItems = useMemo(() => buildSelectedViewItems(cartEntries), [cartEntries]);
 
   // Пустое «Выбранное» показывать нечем — молча показываем каталог.
   const shownCatalogView: CatalogView =
     catalogView === "selected" && selectedViewItems.length === 0 ? "browse" : catalogView;
 
-  const selectedTotals = useMemo(() => {
-    const regular = selectedViewItems.reduce((sum, x) => sum + x.item.qty * x.item.priceRub, 0);
-    const standalone = applyLightingOnlyDiscount(regular);
-    const withCeiling = applyLightingWithCeilingDiscount(regular);
-    const effective = hasCeilingContext ? withCeiling : standalone;
-    const effectivePercent = hasCeilingContext
-      ? LIGHTING_WITH_CEILING_DISCOUNT_PERCENT
-      : LIGHTING_ONLY_DISCOUNT_PERCENT;
-    return {
-      regular,
-      standalone,
-      withCeiling,
-      effective,
-      effectivePercent,
-      effectiveBenefit: Math.max(0, regular - effective),
-      withCeilingBenefit: Math.max(0, regular - withCeiling),
-    };
-  }, [hasCeilingContext, selectedViewItems]);
+  const selectedTotals = useMemo(
+    () => calcSelectedTotals(selectedViewItems, hasCeilingContext),
+    [hasCeilingContext, selectedViewItems]
+  );
 
-  const cardDiscountPercent = hasCeilingContext
-    ? LIGHTING_WITH_CEILING_DISCOUNT_PERCENT
-    : LIGHTING_ONLY_DISCOUNT_PERCENT;
+  const cardDiscountPercent = cardDiscountPercentFor(hasCeilingContext);
 
   /* ─── Image zoom state ─── */
   const [zoomImage, setZoomImage] = useState<{ src: string; alt: string } | null>(null);
@@ -659,27 +624,16 @@ export function WizardStep1Lighting() {
       resolveInitialLightingStep({
         requiredTrackMeters,
         requiredPointQty,
-        cart: {
-          hasTrackProfile: cartEntries.some((e) => e.product.kind === "TRACK_PROFILE"),
-          hasTrackFixture: cartEntries.some((e) => e.product.kind === "TRACK_FIXTURE"),
-          hasPoints: cartEntries.some(
-            (e) => e.product.kind === "SPOT_FIXTURE" || isPanelProduct(e.product)
-          ),
-          hasMissingLamps: missingLamps.length > 0,
-          isEmpty: cartEntries.length === 0,
-        },
+        cart: summarizeCartForStep(cartEntries, missingLamps.length),
       }),
     [cartEntries, missingLamps.length, requiredPointQty, requiredTrackMeters]
   );
 
   // Система, вычитанная из корзины: чем пользователь уже начал комплектоваться.
-  const cartTrackSystem = useMemo<TrackSystemId | null>(() => {
-    const trackEntry = cartEntries.find(
-      (e) => e.product.kind === "TRACK_PROFILE" || e.product.kind === "TRACK_FIXTURE"
-    );
-    const system = trackEntry?.product.system;
-    return isTrackSystemId(system ?? "") ? (system as TrackSystemId) : null;
-  }, [cartEntries]);
+  const cartTrackSystem = useMemo<TrackSystemId | null>(
+    () => detectCartTrackSystem(cartEntries),
+    [cartEntries]
+  );
 
   // Итоговые шаг и система: override пользователя поверх резолвера.
   const wStep: WStep = wOverride?.step ?? resolvedInitialStep;
@@ -709,62 +663,30 @@ export function WizardStep1Lighting() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [zoomImage]);
 
-  const systemLabel = (id: TrackSystemId) =>
-    id === "COLIBRI_220" ? "COLIBRI 220V" : id === "CLARUS_48" ? "CLARUS 48V" : "ART 220V";
 
-  const wizardSystemOptions = useMemo<TrackSystemId[]>(() => {
-    if (requiredTrackMeters <= 0) return [];
-    if (trackMountType === "built-in") return ["COLIBRI_220", "CLARUS_48"];
-    if (trackMountType === "surface") return ["TRACK_220"];
-    return ["COLIBRI_220", "CLARUS_48", "TRACK_220"];
-  }, [requiredTrackMeters, trackMountType]);
+  const wizardSystemOptions = useMemo<TrackSystemId[]>(
+    () => wizardSystemOptionsFor({ requiredTrackMeters, trackMountType }),
+    [requiredTrackMeters, trackMountType]
+  );
 
-  const selectedTrackSystem = useMemo<TrackSystemId | null>(() => {
-    if (wSystem) return wSystem;
-
-    const trackEntry = cartEntries.find((e) =>
-      e.product.kind === "TRACK_PROFILE" || e.product.kind === "TRACK_FIXTURE" || e.product.kind === "TRACK_ACCESSORY"
-    );
-
-    const system = trackEntry?.product.system ?? "";
-    return isTrackSystemId(system) ? system : null;
-  }, [cartEntries, wSystem]);
+  const selectedTrackSystem = useMemo<TrackSystemId | null>(
+    () => wSystem ?? detectCartTrackSystem(cartEntries, { withAccessory: true }),
+    [cartEntries, wSystem]
+  );
 
 
 
   // Products for each wizard step
-  const wTrackProfiles = useMemo(() => {
-    const systems: TrackSystemId[] = selectedTrackSystem
-      ? [selectedTrackSystem]
-      : recommendedTrackProfiles.length > 0
-        ? recommendedTrackProfiles.map((r) => r.system)
-        : trackMountType === "built-in"
-          ? ["COLIBRI_220", "CLARUS_48"]
-          : trackMountType === "surface"
-            ? ["TRACK_220"]
-            : ["COLIBRI_220", "CLARUS_48", "TRACK_220"];
-
-    const uniqueSystems = Array.from(new Set(systems));
-    const result: FeedCatalogProduct[] = [];
-
-    for (const sys of uniqueSystems) {
-      const base = TRACK_PROFILE_WHITELIST[sys] ?? [];
-      const allowed = sys === "TRACK_220" ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST]) : new Set(base);
-      result.push(
-        ...products.filter((p) =>
-          p.kind === "TRACK_PROFILE" &&
-          p.system === sys &&
-          p.priceRub > 0 &&
-          allowed.has(toText(p.vendorCode))
-        )
-      );
-    }
-
-    return result.sort((a, b) => {
-      const systemDiff = systemLabel(a.system as TrackSystemId).localeCompare(systemLabel(b.system as TrackSystemId), "ru");
-      return systemDiff || a.priceRub - b.priceRub;
-    });
-  }, [products, recommendedTrackProfiles, selectedTrackSystem, trackMountType]);
+  const wTrackProfiles = useMemo(
+    () =>
+      selectWizardTrackProfiles({
+        products,
+        selectedSystem: selectedTrackSystem,
+        recommendedSystems: recommendedTrackProfiles.map((r) => r.system),
+        trackMountType,
+      }),
+    [products, recommendedTrackProfiles, selectedTrackSystem, trackMountType]
+  );
 
   /* ─── T-032: автосборка профиля и ориентир по светильникам ─── */
 
@@ -792,14 +714,8 @@ export function WizardStep1Lighting() {
   }, [autoProfilePlan, markWizardTouched, setCartItems, setWSystem]);
 
   /** Товары для экранов T-043. */
-  const wChandeliers = useMemo(
-    () => products.filter((p) => p.kind === "CHANDELIER"),
-    [products]
-  );
-  const wCorniceLighting = useMemo(
-    () => products.filter((p) => p.kind === "LED_STRIP" || p.kind === "PSU" || p.kind === "CONTROL"),
-    [products]
-  );
+  const wChandeliers = useMemo(() => selectChandeliers(products), [products]);
+  const wCorniceLighting = useMemo(() => selectCorniceLighting(products), [products]);
 
   /* ─── T-042: дособирание комплекта (питание, стыки, БП, лампы) ─── */
 
@@ -848,24 +764,26 @@ export function WizardStep1Lighting() {
     [requiredTrackMeters, selectedTrackMeters]
   );
 
-  const wTrackFixtures = useMemo(() => {
-    if (!selectedTrackSystem) return [];
-    return products.filter((p) => p.kind === "TRACK_FIXTURE" && p.system === selectedTrackSystem && p.priceRub > 0)
-      .sort((a, b) => a.priceRub - b.priceRub);
-  }, [selectedTrackSystem, products]);
+  const wTrackFixtures = useMemo(
+    () => selectTrackFixtures(products, selectedTrackSystem),
+    [selectedTrackSystem, products]
+  );
 
   /**
    * N-021: сетка следует за выбранным типом. Цоколь сужает её дальше, но
    * только когда человек сам открыл ручной выбор — иначе тип и цоколь
    * противоречили бы друг другу (панели не имеют цоколя вовсе).
    */
-  const wPointProducts = useMemo(() => {
-    if (manualPointsOpen) {
-      return products.filter((p) => matchesPointSubtype(p, wPointTab) && p.priceRub > 0)
-        .sort((a, b) => a.priceRub - b.priceRub);
-    }
-    return pointsOfKind(products, pointKind);
-  }, [manualPointsOpen, wPointTab, pointKind, products]);
+  const wPointProducts = useMemo(
+    () =>
+      selectPointProducts({
+        products,
+        manualOpen: manualPointsOpen,
+        socketTab: wPointTab,
+        pointKind,
+      }),
+    [manualPointsOpen, wPointTab, pointKind, products]
+  );
 
   const wLampProducts = useMemo(() => {
     return lampOptionsBySocket; // use as-is, already sorted
@@ -1074,32 +992,21 @@ export function WizardStep1Lighting() {
   useEffect(() => () => setStep1FooterAction(null), [setStep1FooterAction]);
 
   /* ─── Scoped catalog products ─── */
-  const scopedProducts = useMemo(() => {
-    let scoped: FeedCatalogProduct[] = [];
-    if (shownCatalogView === "selected") { scoped = selectedViewItems.map((i) => i.product); }
-    else if (section === "track-systems") {
-      if (trackGroup === "TRACK_PROFILE") {
-        const base = TRACK_PROFILE_WHITELIST[trackSystem] ?? [];
-        const allowed = trackSystem === "TRACK_220" ? new Set([...base, ...ART_TRACK_PROFILE_VENDOR_WHITELIST]) : new Set(base);
-        scoped = products.filter((p) => p.system === trackSystem && p.kind === "TRACK_PROFILE" && allowed.has(toText(p.vendorCode)));
-      } else { scoped = products.filter((p) => p.system === trackSystem && p.kind === trackGroup); }
-    } else if (section === "point-fixtures") { scoped = products.filter((p) => matchesPointSubtype(p, pointSubtype)); }
-    else if (section === "chandeliers") { scoped = products.filter((p) => p.kind === "CHANDELIER"); }
-    else if (section === "cornice-lighting") {
-      // Для подсветки карниза нужны лента, питание и управление ей.
-      scoped = products.filter(
-        (p) => p.kind === "LED_STRIP" || p.kind === "PSU" || p.kind === "CONTROL"
-      );
-    }
-    else if (section === "lamps") { scoped = products.filter((p) => isLamp(p) && detectSocket(p) === lampSocket); }
-    else { scoped = products.filter(isMountsOrGrilles); }
-    const q = toText(query).toLowerCase();
-    if (!q) return scoped;
-    return scoped.filter((p) => {
-      const h = `${toText(p.name)} ${toText(p.vendorCode)} ${toText(p.categoryPath)} ${pickAttrs(p).map((a) => `${a.label} ${a.value}`).join(" ")}`.toLowerCase();
-      return h.includes(q);
-    });
-  }, [shownCatalogView, lampSocket, pointSubtype, products, query, section, selectedViewItems, trackGroup, trackSystem]);
+  const scopedProducts = useMemo(
+    () =>
+      scopeCatalogProducts({
+        products,
+        selectedMode: shownCatalogView === "selected",
+        selectedProducts: selectedViewItems.map((i) => i.product),
+        section,
+        trackSystem,
+        trackGroup,
+        pointSubtype,
+        lampSocket,
+        query,
+      }),
+    [shownCatalogView, lampSocket, pointSubtype, products, query, section, selectedViewItems, trackGroup, trackSystem]
+  );
 
   // T-025: поиск по каталогу (дебаунс 800 мс внутри обёртки)
   useEffect(() => {
@@ -1157,7 +1064,7 @@ export function WizardStep1Lighting() {
             systemOptions: wizardSystemOptions,
             mountType: trackMountType,
             selectedSystem: selectedTrackSystem,
-            systemLabel,
+            systemLabel: systemLabelOf,
             requiredMeters: requiredTrackMeters,
             selectedMeters: selectedTrackMeters,
             complete: trackComplete,
