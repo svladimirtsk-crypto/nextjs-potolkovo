@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { ProductImageLightbox } from "@/components/feed2/ProductImageLightbox";
+import { PHOTO_PENDING_LABEL, isPhotoPending } from "@/lib/catalog-photo";
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import { getDiscountedPrice } from "@/lib/feed2-products";
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
@@ -42,6 +43,8 @@ export function ProductCard({
   const lightingOnlyBenefit = benefitRub(regular, LIGHTING_ONLY_DISCOUNT_PERCENT);
   const systemBadge = systemBadgeLabel(product);
   const kindBadge = kindBadgeLabel(product);
+  // PT-017 (B-F109): у позиции нет ни локального превью, ни живой обложки.
+  const photoPending = isPhotoPending(product);
 
   const allAttrs = (product.keyAttributes?.length ? product.keyAttributes : product.params)
     .slice(0, 4)
@@ -70,7 +73,7 @@ export function ProductCard({
         </div>
 
         <div className="min-w-0">
-          {(systemBadge || kindBadge || isSmartProduct(product)) ? (
+          {(systemBadge || kindBadge || photoPending || isSmartProduct(product)) ? (
             <div className="mb-2 flex flex-wrap gap-1.5">
               {isSmartProduct(product) ? (
                 <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">SMART</span>
@@ -80,6 +83,15 @@ export function ProductCard({
               ) : null}
               {kindBadge ? (
                 <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">{kindBadge}</span>
+              ) : null}
+              {/* Товар не прячем: говорим прямо, что снимка пока нет. */}
+              {photoPending ? (
+                <span
+                  data-testid="photo-pending-badge"
+                  className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700"
+                >
+                  {PHOTO_PENDING_LABEL}
+                </span>
               ) : null}
             </div>
           ) : null}

@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
+import { PHOTO_RANK, photoRank } from "@/lib/catalog-photo";
 import {
   autoAssembleProfiles,
   completeKit,
@@ -246,5 +248,75 @@ describe("T-042 - completeKit: pitanie, soediniteli, BP, lampy", () => {
     const result = completeKit({}, resolve, kitCatalog);
     expect(result.mandatory).toEqual([]);
     expect(result.psuMissing).toBe(false);
+  });
+});
+
+/**
+ * PT-017 (B-F109) · комплект не зависит от фотографии.
+ *
+ * Требование ТЗ: товары без снимка НЕ скрываются, потому что обязательное
+ * комплектующее без фотографии остаётся обязательным — иначе собранный
+ * комплект технически неполный (трек без ввода питания не подключить).
+ * Понижать такие позиции можно в выдаче и автоподборе, но не в составе.
+ */
+describe("PT-017 - komplekt ne smotrit na fotografiyu", () => {
+  const feedNoPhoto = product({
+    productId: "colibri-feed-nophoto",
+    name: "Ввод питания COLIBRI",
+    system: "COLIBRI_220",
+    kind: "TRACK_ACCESSORY",
+    priceRub: 500,
+  }) as FeedCatalogProduct & { coverImage?: string };
+  feedNoPhoto.coverImage = "";
+
+  const feedWithCover = product({
+    productId: "colibri-feed-remote",
+    name: "Ввод питания COLIBRI",
+    system: "COLIBRI_220",
+    kind: "TRACK_ACCESSORY",
+    priceRub: 900,
+  }) as FeedCatalogProduct & { coverImage?: string };
+  feedWithCover.coverImage = "https://example.test/feed.jpg";
+
+  const kitCatalog = [
+    product({
+      productId: "colibri-profile",
+      system: "COLIBRI_220",
+      kind: "TRACK_PROFILE",
+      priceRub: 2000,
+      pieceLengthMeters: 1,
+    }),
+    // Без фото — и ПЕРВЫМ в каталоге: правила берут его, а не «красивый» дубль.
+    feedNoPhoto,
+    feedWithCover,
+  ];
+  const resolve = (id: string) => kitCatalog.find((p) => p.productId === id) ?? null;
+
+  it("позиции действительно разные по фото", () => {
+    expect(photoRank(feedNoPhoto)).toBe(PHOTO_RANK.none);
+    expect(photoRank(feedWithCover)).toBe(PHOTO_RANK.remote);
+  });
+
+  it("обязательное комплектующее без фото попадает в комплект", () => {
+    const result = completeKit({ "colibri-profile": 1 }, resolve, kitCatalog, { runs: 1 });
+    const feed = result.mandatory.find((s) => s.product.kind === "TRACK_ACCESSORY");
+
+    expect(feed).toBeTruthy();
+    expect(feed!.product.productId).toBe("colibri-feed-nophoto");
+    expect(feed!.qty).toBe(1);
+  });
+
+  it("в правилах комплекта нет ни слова про фотографию", () => {
+    // Страж от будущих правок: если кто-то начнёт фильтровать состав по фото,
+    // тест укажет на файл, где это запрещено требованием PT-017.
+    for (const file of [
+      "lib/lighting/kit-rules.ts",
+      "lib/lighting/kit-offer.ts",
+      "lib/lighting/catalog-kit-gaps.ts",
+    ]) {
+      const source = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
+      expect(source, file).not.toContain("catalog-photo");
+      expect(source, file).not.toContain("photoRank");
+    }
   });
 });

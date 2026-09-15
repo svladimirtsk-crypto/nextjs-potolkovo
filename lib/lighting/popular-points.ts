@@ -10,6 +10,7 @@
  * Здесь только чистые функции: какой товар считать популярным и что показать
  * на карточке типа. Разметка — в компоненте.
  */
+import { sortByPhoto } from "@/lib/catalog-photo";
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import { matchesPointSubtype } from "@/lib/lighting/product-predicates";
 import type { PointSubtypeId } from "@/lib/catalog-ui-config";
@@ -61,7 +62,14 @@ function isOfferable(product: FeedCatalogProduct): boolean {
   return product.available && product.priceRub > 0;
 }
 
-/** Все доступные светильники типа, от дешёвых к дорогим. */
+/**
+ * Все доступные светильники типа: сначала те, у кого с фотографией лучше,
+ * внутри группы — от дешёвых к дорогим.
+ *
+ * PT-017 (B-F109): автоподбор и карточка типа показывают товар лицом, поэтому
+ * позиция без снимка опускается ниже — но не исчезает: её по-прежнему можно
+ * выбрать вручную и найти поиском.
+ */
 export function pointsOfKind(
   products: FeedCatalogProduct[],
   kind: PointKindId
@@ -69,22 +77,33 @@ export function pointsOfKind(
   const spec = POINT_KINDS.find((item) => item.id === kind);
   if (!spec) return [];
 
-  return products
-    .filter(
-      (product) =>
-        isOfferable(product) &&
-        spec.subtypes.some((subtype) => matchesPointSubtype(product, subtype))
-    )
-    .sort((a, b) => a.priceRub - b.priceRub);
+  return sortByPhoto(
+    products
+      .filter(
+        (product) =>
+          isOfferable(product) &&
+          spec.subtypes.some((subtype) => matchesPointSubtype(product, subtype))
+      )
+      .sort((a, b) => a.priceRub - b.priceRub)
+  );
 }
 
-/** Цена «от» для карточки типа. null — предлагать нечего. */
+/**
+ * Цена «от» для карточки типа. null — предлагать нечего.
+ *
+ * PT-017: это ИСТИННЫЙ минимум по типу, а не цена первого товара в списке.
+ * Список теперь упорядочен по фотографии, и брать `[0]` значило бы показывать
+ * цену «от 420 ₽», когда в каталоге есть такой же светильник за 350 ₽ без
+ * снимка. Цена — обязательство, фотографией её двигать нельзя.
+ */
 export function minPriceOfKind(
   products: FeedCatalogProduct[],
   kind: PointKindId
 ): number | null {
-  const cheapest = pointsOfKind(products, kind)[0];
-  return cheapest ? cheapest.priceRub : null;
+  const list = pointsOfKind(products, kind);
+  if (list.length === 0) return null;
+
+  return list.reduce((min, product) => Math.min(min, product.priceRub), Number.POSITIVE_INFINITY);
 }
 
 export type PopularPointsResult = {
@@ -97,10 +116,12 @@ export type PopularPointsResult = {
 /**
  * Готовое предложение «добавить N популярных».
  *
- * Популярный здесь — самый дешёвый доступный товар типа, взятый целиком на всё
- * нужное количество: один SKU вместо набора разных. Смысл в том, что светильники
- * в одной комнате должны быть одинаковыми — набор из шести разных моделей
- * технически возможен, но это не то, что человек имел в виду.
+ * Популярный здесь — самый дешёвый доступный товар типа с фотографией (если
+ * такие есть), взятый целиком на всё нужное количество: один SKU вместо набора
+ * разных. Смысл в том, что светильники в одной комнате должны быть одинаковыми —
+ * набор из шести разных моделей технически возможен, но это не то, что человек
+ * имел в виду. Сумма в кнопке считается от выбранного товара, поэтому предложение
+ * позиции со снимком чуть дороже самой дешёвой никого не обманывает.
  */
 export function popularPoints(
   products: FeedCatalogProduct[],

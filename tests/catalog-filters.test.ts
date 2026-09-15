@@ -59,7 +59,9 @@ describe("Разделы каталога", () => {
 });
 
 describe("Поиск и фильтры", () => {
-  const hasPhoto = (p: FeedCatalogProduct) => p.productId === "st1";
+  // PT-017: ранг фото inject-ится, чтобы тест не зависел от реального манифеста
+  // превью (в нём сейчас все 547 товаров, и различить порядок было бы нечем).
+  const rank = (p: FeedCatalogProduct) => (p.productId === "st1" ? 0 : 2);
 
   it("подсказывает разделы с совпадениями, кроме активного", () => {
     const matches = searchMatchesBySection(all, "блок питания", "chandeliers");
@@ -71,12 +73,33 @@ describe("Поиск и фильтры", () => {
   });
 
   it("товары с фото идут первыми", () => {
-    const got = filterCatalogProducts(all, { ...base, section: "cornice-lighting" }, hasPhoto);
+    const got = filterCatalogProducts(all, { ...base, section: "cornice-lighting" }, rank);
     expect(got[0].productId).toBe("st1");
   });
 
   it("поиск сужает выдачу внутри раздела", () => {
-    const got = filterCatalogProducts(all, { ...base, section: "cornice-lighting", query: "лента" }, hasPhoto);
+    const got = filterCatalogProducts(all, { ...base, section: "cornice-lighting", query: "лента" }, rank);
     expect(got.map((p) => p.productId)).toEqual(["st1"]);
+  });
+
+  /**
+   * PT-017 (B-F109) · товар без фото НЕ скрывается.
+   *
+   * Прямой поиск обязан приводить человека к позиции, даже если снимка нет:
+   * это может быть обязательное комплектующее, без которого комплект неполный.
+   * Понижение в порядке — да, исчезновение — нет.
+   */
+  it("товар без фото находится прямым поиском и остаётся в выдаче", () => {
+    const found = filterCatalogProducts(
+      all,
+      { ...base, section: "cornice-lighting", query: "блок питания" },
+      rank,
+    );
+    expect(found.map((p) => p.productId)).toEqual(["ps1"]);
+  });
+
+  it("без фото товар опускается ниже, но из раздела не выпадает", () => {
+    const got = filterCatalogProducts(all, { ...base, section: "cornice-lighting" }, rank);
+    expect(got.map((p) => p.productId)).toEqual(["st1", "ps1"]);
   });
 });
