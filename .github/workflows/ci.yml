@@ -94,6 +94,10 @@ jobs:
           DELIVERY_ALERT_ENABLED: "0"
           WEB3FORMS_ACCESS_KEY: ci-not-a-secret
           CRON_SECRET: ci-not-a-secret
+          # PT-016: пароль админки календаря. Значение заведомо не секретное —
+          # нужно только чтобы согласованная конфигурация не давала
+          # предупреждение «календарь нельзя обновить без деплоя» в strict-режиме.
+          AVAILABILITY_TOKEN: ci-not-a-secret
           DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
         run: |
           npm run check:env

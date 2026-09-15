@@ -4,7 +4,7 @@ import { useMemo, useRef, useState, type FormEvent } from "react";
 
 import { buildLeadSnapshotV2 } from "@/lib/calculator/types";
 import { resolveStep2Copy, type Step2Intent } from "@/lib/calculator-flow";
-import { getAvailabilityLabel } from "@/content/availability";
+import { useAvailabilityLabel } from "@/lib/availability/use-availability-label";
 import {
   trackFormOpened,
   trackFormSubmitError,
@@ -187,7 +187,7 @@ export function ActionForm({
    * редакцию политики, которая была показана рядом с чекбоксом.
    */
   const consent = useConsentCapture();
-  const availabilityLabel = useMemo(() => getAvailabilityLabel(), []);
+  const availabilityLabel = useAvailabilityLabel();
   const [preferredTime, setPreferredTime] = useState<PreferredTimeValue>("today");
 
   const ceilingLines = useMemo(

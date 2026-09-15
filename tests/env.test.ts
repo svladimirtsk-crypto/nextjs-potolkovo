@@ -58,6 +58,7 @@ describe("T-062 · lib/env", () => {
       TELEGRAM_CHAT_ID: "c",
       WEB3FORMS_ACCESS_KEY: "k",
       CRON_SECRET: "s",
+      AVAILABILITY_TOKEN: "a",
       DATABASE_URL: "postgres://localhost/db",
       CATALOG_LIVE_FEED2_STRICT: "0",
       // PT-015: алерт включён по умолчанию, значит «полная конфигурация»
@@ -74,6 +75,7 @@ describe("T-062 · lib/env", () => {
       TELEGRAM_CHAT_ID: "c",
       WEB3FORMS_ACCESS_KEY: "k",
       CRON_SECRET: "s",
+      AVAILABILITY_TOKEN: "a",
       DATABASE_URL: "postgres://localhost/db",
       CATALOG_LIVE_FEED2_STRICT: "0",
     };
@@ -131,6 +133,57 @@ describe("T-062 · lib/env", () => {
       // Порог 0 означал бы «алерт на каждую неудачу», поэтому пол — 1.
       expect(withEnv({ DELIVERY_ALERT_THRESHOLD: "0" }).DELIVERY_ALERT_THRESHOLD).toBe(1);
       expect(withEnv({ DELIVERY_ALERT_WINDOW_MIN: "-5" }).DELIVERY_ALERT_WINDOW_MIN).toBe(1);
+    });
+  });
+
+  /**
+   * PT-016 · Календарь дат замера.
+   *
+   * Обе переменные обязаны быть в схеме: без `AVAILABILITY_TOKEN` админка
+   * отвечает 503, и даты снова можно поменять только деплоем — то есть задача
+   * не решена, а молча. `check:env` дублирует это правило, и в strict-режиме
+   * (main/quizv2ver1) предупреждение становится ошибкой сборки.
+   */
+  describe("PT-016 · календарь дат замера", () => {
+    /** Та же согласованная конфигурация, что в блоке PT-015: без предупреждений. */
+    const FULL = {
+      TELEGRAM_BOT_TOKEN: "t",
+      TELEGRAM_CHAT_ID: "c",
+      WEB3FORMS_ACCESS_KEY: "k",
+      CRON_SECRET: "s",
+      DATABASE_URL: "postgres://localhost/db",
+      CATALOG_LIVE_FEED2_STRICT: "0",
+      DELIVERY_ALERT_WEBHOOK_URL: "https://alerts.example/hook",
+    };
+
+    it("чтение из БД включено по умолчанию", () => {
+      expect(withEnv({ AVAILABILITY_DB_ENABLED: undefined }).AVAILABILITY_DB_ENABLED).toBe(true);
+      expect(withEnv({ AVAILABILITY_DB_ENABLED: "0" }).AVAILABILITY_DB_ENABLED).toBe(false);
+    });
+
+    it("пустой пароль считается отсутствующим", () => {
+      expect(withEnv({ AVAILABILITY_TOKEN: "   " }).AVAILABILITY_TOKEN).toBeUndefined();
+      expect(withEnv({ AVAILABILITY_TOKEN: "secret" }).AVAILABILITY_TOKEN).toBe("secret");
+    });
+
+    it("предупреждает, если БД есть, а пароля нет: календарь снова правится только деплоем", () => {
+      const env = withEnv({
+        ...FULL,
+        AVAILABILITY_DB_ENABLED: undefined,
+        AVAILABILITY_TOKEN: undefined,
+      });
+      expect(env.warnings.some((w) => w.includes("AVAILABILITY_TOKEN"))).toBe(true);
+    });
+
+    it("откат флага и отсутствие БД не требуют пароля", () => {
+      expect(
+        withEnv({ ...FULL, AVAILABILITY_TOKEN: undefined, AVAILABILITY_DB_ENABLED: "0" }).warnings
+      ).toEqual([]);
+      expect(
+        withEnv({ ...FULL, AVAILABILITY_TOKEN: undefined, DATABASE_URL: undefined }).warnings.some(
+          (w) => w.includes("AVAILABILITY_TOKEN")
+        )
+      ).toBe(false);
     });
   });
 });
