@@ -29,7 +29,8 @@ const LEGACY_BUDGET = {
   "app/uslugi/prodazha-trekovogo-osveshcheniya/_components/CatalogSectionClient.tsx": 757,
   // PT-013: состояния ошибки вынесены в `lead-form-alert.tsx` + `lib/lead/failure-view.ts`,
   // блок «Получение / Когда удобно» — в `lead-fulfilment-fields.tsx`. Порог понижен с 602.
-  "components/home/action-form.tsx": 561,
+  // PT-014: чекбокс согласия вынесен в `lead-consent-checkbox.tsx`. Порог понижен с 561.
+  "components/home/action-form.tsx": 549,
   "components/calculator-modal/wizard-step2-summary.tsx": 612,
 };
 

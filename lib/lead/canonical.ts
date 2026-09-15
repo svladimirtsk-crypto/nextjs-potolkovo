@@ -45,8 +45,15 @@ export function canonicalize(value: unknown): string {
  *
  * `requestId` — это сам ключ идемпотентности: включать его в хеш значит
  * сделать хеш производным от ключа и потерять смысл сравнения.
+ *
+ * `consentAt` (PT-014) — момент, когда человек отметил чекбокс. Поле летучее:
+ * снял и снова отметил — значение изменилось, а заявка та же. Включи его в
+ * хеш, и повтор после таймаута получил бы другой `payloadHash` — сервер
+ * ответил бы `409` вместо кода уже сохранённой заявки, а дедуп перестал бы
+ * ловить дубли. Версия согласия (`consentVersion`) в отпечаток входит: в
+ * пределах одной сборки она неизменна и является частью юридического факта.
  */
-const FINGERPRINT_EXCLUDED_KEYS = new Set(["requestId", "botcheck"]);
+const FINGERPRINT_EXCLUDED_KEYS = new Set(["requestId", "botcheck", "consentAt"]);
 
 /** Отпечаток payload без ключа идемпотентности. */
 export function leadPayloadFingerprint(payload: Record<string, unknown>): string {

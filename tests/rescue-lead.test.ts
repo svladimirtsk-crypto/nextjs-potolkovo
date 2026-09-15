@@ -10,6 +10,7 @@
  * фиксируется, что payload, собранный после явного согласия, проходит
  * серверную zod-схему целиком.
  */
+import { PRIVACY_POLICY_VERSION } from "@/content/legal";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { LightingSnapshot } from "@/lib/calculator-modal-types";
@@ -129,6 +130,9 @@ function fullSnapshot(): CalculatorLeadSnapshot {
 function input(patch: Partial<RescueLeadInput> = {}): RescueLeadInput {
   return {
     phone: "9161234567",
+    // PT-014: согласие — обязательная часть входа, а не домысливаемая константа.
+    consentGiven: true,
+    consentAt: "2026-09-14T10:00:00.000Z",
     source: "tenevoy-profil:hero",
     pagePath: "/uslugi/tenevoy-profil",
     entryMode: "default",
@@ -356,5 +360,42 @@ describe("PT-004 - tekst otkaza", () => {
 
   it("429 pokazyvaet srok iz Retry-After", () => {
     expect(rescueFailureMessage({ kind: "ratelimit", retryAfterSec: 600 })).toContain("10 мин");
+  });
+});
+
+describe("PT-014 · согласие в rescue — факт, а не константа", () => {
+  it("без отметки чекбокса заявка не уходит вовсе", async () => {
+    const { fetchImpl, calls } = stubFetch(jsonResponse({ ok: true, leadId: "K7F3Q" }));
+
+    const outcome = await submitRescueLead(input({ consentGiven: false, consentAt: null }), {
+      fetchImpl,
+      silent: true,
+    });
+
+    expect(outcome.ok).toBe(false);
+    if (outcome.ok) return;
+    expect(outcome.kind).toBe("validation");
+    expect(outcome.message).toMatch(/согласие/i);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("payload несёт факт согласия, редакцию политики и момент клика", async () => {
+    const { fetchImpl, calls } = stubFetch(jsonResponse({ ok: true, leadId: "K7F3Q" }));
+    const consentAt = new Date(Date.now() - 30_000).toISOString();
+
+    const outcome = await submitRescueLead(input({ consentAt }), { fetchImpl, silent: true });
+
+    expect(outcome.ok).toBe(true);
+    expect(calls).toHaveLength(1);
+
+    const body = calls[0].body as Record<string, unknown>;
+    expect(body.consent).toBe(true);
+    expect(body.consentVersion).toBe(PRIVACY_POLICY_VERSION);
+    expect(body.consentAt).toBe(consentAt);
+  });
+
+  it("buildRescueLeadPayload не подставляет true за человека", () => {
+    expect(buildRescueLeadPayload(input({ consentGiven: false })).consent).toBe(false);
+    expect(buildRescueLeadPayload(input({ consentGiven: true })).consent).toBe(true);
   });
 });

@@ -56,6 +56,20 @@ export const leads = pgTable(
     requestId: text("request_id"),
     /** PT-009 · sha256 канонического payload: отличить дубль от другой заявки. */
     payloadHash: text("payload_hash"),
+    /**
+     * PT-014 · Версия текста политики, с которой человек согласился.
+     *
+     * `NULL` у строк до PT-014 и у заявок от клиента, который версию не прислал:
+     * неизвестность честнее, чем подставленная текущая версия. Колонки добавлены
+     * по схеме `expand` (раздел 3.8) — nullable, без перезаписи существующих строк.
+     */
+    consentVersion: text("consent_version"),
+    /**
+     * PT-014 · Момент, когда согласие было дано (клик по чекбоксу), а не момент
+     * записи строки. Сервер принимает время клиента только в правдоподобном
+     * окне, иначе пишет своё — часы посетителя могут спешить на годы.
+     */
+    consentAt: timestamp("consent_at", { withTimezone: true }),
   },
   (table) => [
     index("leads_created_at_idx").on(table.createdAt.desc()),
@@ -90,6 +104,57 @@ export const leadDeliveries = pgTable(
     lastError: text("last_error"),
     sentAt: timestamp("sent_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * PT-015 · Время последней попытки доставки.
+     *
+     * `recordDelivery` обновляет строку на месте, поэтому `created_at` остаётся
+     * временем создания задания: ретрай задания двухдневной давности без этой
+     * колонки не попал бы ни в одно «свежее» окно, и затянувшийся сбой каналов
+     * выглядел бы как тишина. Nullable — фаза `expand` (раздел 3.8): у
+     * существующих строк значение заполнится первой же попыткой, а до тех пор
+     * читается `created_at`.
+     */
+    lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
   },
   (table) => [index("lead_deliveries_status_idx").on(table.status, table.createdAt)]
+);
+
+/**
+ * PT-015 · Журнал служебных алертов о деградации доставки.
+ *
+ * Таблица нужна не для красоты: по ней работает охлаждение (не чаще раза в
+ * `DELIVERY_ALERT_COOLDOWN_MIN`), и она же — единственный след того, что алерт
+ * вообще пробовал отправляться. Без записи каждый прогон крона отправлял бы новое
+ * уведомление, а владелец получил бы шторм вместо сигнала.
+ *
+ * Намеренно БЕЗ персональных данных: в `message` не попадает ни телефон, ни
+ * имя, ни состав заказа — только счётчики, каналы и обрезанный текст ошибки.
+ * Алерт уходит на внешний сервис (вебхук/второй бот), который не является
+ * частью контура обработки персональных данных сайта.
+ */
+export const deliveryAlerts = pgTable(
+  "delivery_alerts",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Что запустило проверку: `lead` (отправка заявки) или `retry-cron`. */
+    trigger: text("trigger").notNull(),
+    /** Подряд идущих неудачных попыток на момент срабатывания. */
+    streak: integer("streak").notNull(),
+    /** Сколько упавших заданий попало в окно наблюдения. */
+    failures: integer("failures").notNull(),
+    /** Какие каналы лежали: `telegram+web3forms`. */
+    channels: text("channels").notNull(),
+    /** Размер окна наблюдения в минутах — для разбора инцидента задним числом. */
+    windowMinutes: integer("window_minutes").notNull(),
+    /** Текст уведомления (без персональных данных). */
+    message: text("message").notNull(),
+    /** Куда реально ушло: `webhook`, `telegram-alert`, `null` — никуда. */
+    deliveredVia: text("delivered_via"),
+    /** Ошибка канала алерта, если уведомление не ушло. */
+    lastError: text("last_error"),
+    /** Когда упала самая старая попытка в серии — начало инцидента. */
+    oldestFailureAt: timestamp("oldest_failure_at", { withTimezone: true }),
+  },
+  (table) => [index("delivery_alerts_created_at_idx").on(table.createdAt)]
 );

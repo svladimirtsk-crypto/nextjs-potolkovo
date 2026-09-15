@@ -8,10 +8,11 @@
 import { and, count, desc, eq, gt, lt, sql } from "drizzle-orm";
 
 import { getDb, type Db } from "@/db";
-import { leadDeliveries, leads } from "@/db/schema";
+import { deliveryAlerts, leadDeliveries, leads } from "@/db/schema";
 
 import type { LeadPayload } from "./schema";
 import type {
+  DeliveryAlertRecord,
   DeliveryChannel,
   DeliveryRecord,
   DeliveryStatus,
@@ -61,6 +62,8 @@ function toLeadRecord(row: LeadRow): LeadRecord {
     userAgent: row.userAgent ?? undefined,
     requestId: row.requestId ?? undefined,
     payloadHash: row.payloadHash ?? undefined,
+    consentVersion: row.consentVersion ?? null,
+    consentAt: row.consentAt?.getTime() ?? null,
   };
 }
 
@@ -74,8 +77,33 @@ function toDeliveryRecord(row: DeliveryRow): DeliveryRecord {
     lastError: row.lastError ?? undefined,
     sentAt: row.sentAt?.getTime(),
     createdAt: row.createdAt.getTime(),
+    lastAttemptAt: row.lastAttemptAt?.getTime(),
   };
 }
+
+type DeliveryAlertRow = typeof deliveryAlerts.$inferSelect;
+
+function toDeliveryAlertRecord(row: DeliveryAlertRow): DeliveryAlertRecord {
+  return {
+    id: row.id,
+    createdAt: row.createdAt.getTime(),
+    trigger: row.trigger,
+    streak: row.streak,
+    failures: row.failures,
+    channels: row.channels,
+    windowMinutes: row.windowMinutes,
+    message: row.message,
+    deliveredVia: row.deliveredVia,
+    lastError: row.lastError,
+    oldestFailureAt: row.oldestFailureAt?.getTime() ?? null,
+  };
+}
+
+/**
+ * PT-015 · Время последней попытки: колонка nullable (фаза `expand`), поэтому
+ * у старых строк берём время создания задания.
+ */
+const lastAttempt = sql`coalesce(${leadDeliveries.lastAttemptAt}, ${leadDeliveries.createdAt})`;
 
 export class PgLeadStore implements LeadStore {
   private readonly db: Db;
@@ -124,6 +152,8 @@ export class PgLeadStore implements LeadStore {
             userAgent: input.userAgent ?? null,
             requestId: input.requestId ?? null,
             payloadHash: input.payloadHash ?? null,
+            consentVersion: input.consentVersion ?? null,
+            consentAt: input.consentAt ? new Date(input.consentAt) : null,
           })
           .returning();
 
@@ -269,6 +299,7 @@ export class PgLeadStore implements LeadStore {
           attempts: sql`${leadDeliveries.attempts} + 1`,
           lastError: error ?? null,
           sentAt: status === "sent" ? new Date() : existing.sentAt,
+          lastAttemptAt: new Date(),
         })
         .where(eq(leadDeliveries.id, existing.id))
         .returning();
@@ -285,6 +316,7 @@ export class PgLeadStore implements LeadStore {
         attempts: 1,
         lastError: error ?? null,
         sentAt: status === "sent" ? new Date() : null,
+        lastAttemptAt: new Date(),
       })
       .returning();
 
@@ -318,5 +350,54 @@ export class PgLeadStore implements LeadStore {
       .limit(1);
 
     return row ? toLeadRecord(row) : null;
+  }
+
+  /**
+   * PT-015 · Последние попытки доставки, от свежих к старым.
+   *
+   * Сортировка — по времени последней попытки, а не по `created_at`: серию
+   * «N подряд неудач» нужно читать в порядке реальных попыток, иначе ретрай
+   * старого задания встанет в хвост и серия окажется разорванной там, где
+   * сбоя нет.
+   */
+  async listRecentDeliveries(limit: number): Promise<DeliveryRecord[]> {
+    const rows = await this.db
+      .select()
+      .from(leadDeliveries)
+      .orderBy(desc(lastAttempt), desc(leadDeliveries.id))
+      .limit(Math.max(0, limit));
+
+    return rows.map(toDeliveryRecord);
+  }
+
+  async findLastDeliveryAlert(): Promise<DeliveryAlertRecord | null> {
+    const [row] = await this.db
+      .select()
+      .from(deliveryAlerts)
+      .orderBy(desc(deliveryAlerts.createdAt), desc(deliveryAlerts.id))
+      .limit(1);
+
+    return row ? toDeliveryAlertRecord(row) : null;
+  }
+
+  async recordDeliveryAlert(
+    input: Omit<DeliveryAlertRecord, "id" | "createdAt">
+  ): Promise<DeliveryAlertRecord> {
+    const [row] = await this.db
+      .insert(deliveryAlerts)
+      .values({
+        trigger: input.trigger,
+        streak: input.streak,
+        failures: input.failures,
+        channels: input.channels,
+        windowMinutes: input.windowMinutes,
+        message: input.message,
+        deliveredVia: input.deliveredVia,
+        lastError: input.lastError,
+        oldestFailureAt: input.oldestFailureAt ? new Date(input.oldestFailureAt) : null,
+      })
+      .returning();
+
+    return toDeliveryAlertRecord(row);
   }
 }

@@ -25,6 +25,25 @@ const boolFlag = (defaultValue: boolean) =>
       return ["1", "true", "yes", "on"].includes(value.trim().toLowerCase());
     });
 
+/**
+ * Целое не меньше `min`; пусто или мусор → значение по умолчанию.
+ *
+ * Мусор не роняет старт намеренно: `DELIVERY_ALERT_THRESHOLD=много` не должно
+ * означать «API не поднимется». Неверное значение приводится к безопасному
+ * умолчанию, а расхождение видно в логе.
+ */
+const intFlag = (defaultValue: number, min = 1) =>
+  z
+    .string()
+    .optional()
+    .transform((value) => {
+      const trimmed = value?.trim() ?? "";
+      if (trimmed === "") return defaultValue;
+      const parsed = Number(trimmed);
+      if (!Number.isFinite(parsed)) return defaultValue;
+      return Math.max(min, Math.round(parsed));
+    });
+
 /** Пустая строка эквивалентна отсутствию — иначе `""` считался бы валидным ключом. */
 const optionalSecret = z
   .string()
@@ -71,9 +90,57 @@ const envSchema = z.object({
    */
   LEAD_SERVER_RECALC_ENABLED: boolFlag(true),
 
+  /**
+   * PT-014 · Требовать от клиента текущую версию политики.
+   *
+   * Правило 8 раздела 2 ТЗ: проверка способна отклонять заявки (`422`), поэтому
+   * включается отдельно и по умолчанию выключена. Пока флаг `0`, расхождение
+   * версий пишется в лог и в БД как есть — заявка принимается. Поднимать до `1`
+   * стоит, когда новая сборка разошлась клиентам и в логах нет волны
+   * `consent_version_stale`: иначе заявки начнут терять посетители со старой
+   * вкладкой, открытой до деплоя.
+   */
+  LEAD_CONSENT_VERSION_REQUIRED: boolFlag(false),
+
   TELEGRAM_BOT_TOKEN: optionalSecret,
   TELEGRAM_CHAT_ID: optionalSecret,
   WEB3FORMS_ACCESS_KEY: optionalSecret,
+
+  /**
+   * PT-015 · Алерт при систематических сбоях доставки.
+   *
+   * Заявки после PT-002/PT-003 сохраняются в БД даже тогда, когда оба канала
+   * доставки лежат, и пользователь видит «Заявка №K7F3Q сохранена». Формально
+   * всё хорошо — но мастер не узнает о заявке, пока сам не заглянет в базу.
+   * Алерт закрывает ровно эту дыру: N подряд неудачных попыток в ОБА канала —
+   * служебное уведомление по каналу, который от Telegram/Web3Forms не зависит.
+   *
+   * Дефолт `1` осознанный: без настроенного канала алерта проверка просто
+   * ничего не отправляет (и говорит об этом предупреждением), а деградация
+   * доставки продолжает оставаться невидимой. Правило 8 раздела 2 ТЗ при этом
+   * соблюдено — `0` выключает всю логику одним значением переменной, без деплоя.
+   */
+  DELIVERY_ALERT_ENABLED: boolFlag(true),
+  /** Сколько неудачных попыток ПОДРЯД считается систематическим сбоем. */
+  DELIVERY_ALERT_THRESHOLD: intFlag(4),
+  /** Окно наблюдения в минутах: старше — уже не «сейчас сломалось». */
+  DELIVERY_ALERT_WINDOW_MIN: intFlag(30),
+  /** Охлаждение в минутах: как часто можно слать повторный алерт. */
+  DELIVERY_ALERT_COOLDOWN_MIN: intFlag(60),
+  /** Сколько последних попыток доставки читать из БД на одну проверку. */
+  DELIVERY_ALERT_LOOKBACK: intFlag(50),
+  /**
+   * Каналы алерта. Оба необязательны, но хотя бы один нужен: уведомление
+   * принципиально НЕ должно идти через Telegram-бот заявок или Web3Forms —
+   * иначе оно умрёт вместе с тем, о чём сообщает.
+   *
+   * `DELIVERY_ALERT_WEBHOOK_URL` — любой HTTP-приёмник JSON (Slack/Discord/
+   * ntfy/Apprise/своя ручка). Второй Telegram-бот или отдельный чат — вариант
+   * из формулировки ТЗ.
+   */
+  DELIVERY_ALERT_WEBHOOK_URL: optionalSecret,
+  DELIVERY_ALERT_TELEGRAM_BOT_TOKEN: optionalSecret,
+  DELIVERY_ALERT_TELEGRAM_CHAT_ID: optionalSecret,
 
   /** Bearer для POST /api/lead/retry. */
   CRON_SECRET: optionalSecret,
@@ -106,6 +173,18 @@ function collectWarnings(env: z.infer<typeof envSchema>): string[] {
   if (!env.WEB3FORMS_ACCESS_KEY && !env.TELEGRAM_BOT_TOKEN) {
     warnings.push(
       "Не настроен ни один канал доставки заявок (WEB3FORMS_ACCESS_KEY / TELEGRAM_BOT_TOKEN)."
+    );
+  }
+
+  if (
+    env.DELIVERY_ALERT_ENABLED &&
+    !env.DELIVERY_ALERT_WEBHOOK_URL &&
+    !(env.DELIVERY_ALERT_TELEGRAM_BOT_TOKEN && env.DELIVERY_ALERT_TELEGRAM_CHAT_ID)
+  ) {
+    warnings.push(
+      "DELIVERY_ALERT_ENABLED=1, но канал алерта не задан (DELIVERY_ALERT_WEBHOOK_URL " +
+        "или DELIVERY_ALERT_TELEGRAM_BOT_TOKEN/CHAT_ID) — сбой обоих каналов доставки " +
+        "останется незамеченным."
     );
   }
 

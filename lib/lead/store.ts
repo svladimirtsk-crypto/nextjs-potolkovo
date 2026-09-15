@@ -11,6 +11,7 @@ import { getEnv } from "@/lib/env";
 import { generatePublicCode } from "./public-code";
 import { PgLeadStore } from "./store-pg";
 import type {
+  DeliveryAlertRecord,
   DeliveryChannel,
   DeliveryRecord,
   DeliveryStatus,
@@ -31,8 +32,10 @@ export type {
 export class InMemoryLeadStore implements LeadStore {
   private leads: LeadRecord[] = [];
   private deliveries: DeliveryRecord[] = [];
+  private alerts: DeliveryAlertRecord[] = [];
   private leadSeq = 1;
   private deliverySeq = 1;
+  private alertSeq = 1;
 
   async createLead(
     input: Omit<LeadRecord, "id" | "createdAt" | "publicCode">
@@ -112,6 +115,9 @@ export class InMemoryLeadStore implements LeadStore {
       existing.status = status;
       existing.attempts += 1;
       existing.lastError = error;
+      // PT-015: как и в Pg-версии — строка обновляется на месте, поэтому
+      // время попытки отдельное и `createdAt` не трогается.
+      existing.lastAttemptAt = Date.now();
       if (status === "sent") existing.sentAt = Date.now();
       return existing;
     }
@@ -124,6 +130,7 @@ export class InMemoryLeadStore implements LeadStore {
       lastError: error,
       sentAt: status === "sent" ? Date.now() : undefined,
       createdAt: Date.now(),
+      lastAttemptAt: Date.now(),
     };
     this.deliveries.push(record);
     return record;
@@ -173,6 +180,28 @@ export class InMemoryLeadStore implements LeadStore {
   async getLeadByPublicCode(code: string): Promise<LeadRecord | null> {
     const normalized = code.toUpperCase();
     return this.leads.find((l) => l.publicCode === normalized) ?? null;
+  }
+
+  /** PT-015 · Тот же порядок, что в Pg-версии: от свежей попытки к старой. */
+  async listRecentDeliveries(limit: number): Promise<DeliveryRecord[]> {
+    const timeOf = (d: DeliveryRecord) => d.lastAttemptAt ?? d.createdAt;
+    return [...this.deliveries]
+      .sort((a, b) => timeOf(b) - timeOf(a) || b.id - a.id)
+      .slice(0, Math.max(0, limit));
+  }
+
+  async findLastDeliveryAlert(): Promise<DeliveryAlertRecord | null> {
+    return this.alerts.length > 0 ? this.alerts[this.alerts.length - 1] : null;
+  }
+
+  async recordDeliveryAlert(
+    input: Omit<DeliveryAlertRecord, "id" | "createdAt">
+  ): Promise<DeliveryAlertRecord> {
+    const record: DeliveryAlertRecord = { ...input, id: this.alertSeq++, createdAt: Date.now() };
+    this.alerts.push(record);
+    // память процесса не должна расти бесконечно
+    if (this.alerts.length > 100) this.alerts = this.alerts.slice(-100);
+    return record;
   }
 }
 

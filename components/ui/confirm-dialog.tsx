@@ -4,6 +4,12 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+/**
+ * PT-014 · Захват согласия общий с основной формой (`lib/lead/use-consent-capture`):
+ * редакция политики и момент клика не должны отличаться от формы на странице.
+ */
+import { useConsentCapture } from "@/lib/lead/use-consent-capture";
+
 import {
   EMPTY_OPTIONS,
   closeDialog,
@@ -25,6 +31,7 @@ export {
 export type {
   ChoiceDialogOptions,
   ChoiceDialogResult,
+  ConfirmDialogConsent,
   ConfirmDialogResult,
   ConfirmDialogSubmitOutcome,
 } from "./confirm-dialog-store";
@@ -89,7 +96,8 @@ function ConfirmDialogPanel({
   const retryButtonRef = useRef<HTMLButtonElement>(null);
 
   const [phone, setPhone] = useState("");
-  const [consentGiven, setConsentGiven] = useState(false);
+  // PT-014: факт согласия, момент клика и редакция политики — одним хуком.
+  const consentCapture = useConsentCapture();
   const [phase, setPhase] = useState<Phase>("input");
   const [failureMessage, setFailureMessage] = useState("");
 
@@ -98,7 +106,7 @@ function ConfirmDialogPanel({
   const submit = options.submit;
 
   const phoneFilled = phone.trim().length >= 6;
-  const consentSatisfied = !consent || consentGiven;
+  const consentSatisfied = !consent || consentCapture.given;
   const canSubmit = !hasPhoneField || (phoneFilled && consentSatisfied);
 
   // Первый фокус — в диалог; дальше работает ловушка Tab.
@@ -166,7 +174,10 @@ function ConfirmDialogPanel({
 
       let outcome: ConfirmDialogSubmitOutcome;
       try {
-        outcome = await submit.run(value);
+        outcome = await submit.run(value, {
+          given: consentCapture.given,
+          at: consentCapture.at,
+        });
       } catch {
         // Обработчик не должен бросать исключений (`submitLead` их глотает),
         // но если бросил — честнее показать отказ, чем зависнуть в «Отправляю…».
@@ -182,7 +193,12 @@ function ConfirmDialogPanel({
       setPhase("failed");
       requestAnimationFrame(() => retryButtonRef.current?.focus());
     },
-    [hasPhoneField, submit]
+    /**
+     * PT-014 · `consentCapture` в зависимостях обязателен: без него замыкание
+     * держит состояние согласия первого рендера, и диалог отправляет
+     * `consentGiven: false` при отмеченном чекбоксе.
+     */
+    [hasPhoneField, submit, consentCapture]
   );
 
   const handleConfirmClick = useCallback(() => {
@@ -299,9 +315,9 @@ function ConfirmDialogPanel({
                     <input
                       type="checkbox"
                       data-testid="rescue-consent"
-                      checked={consentGiven}
+                      checked={consentCapture.given}
                       disabled={isSubmitting}
-                      onChange={(e) => setConsentGiven(e.target.checked)}
+                      onChange={(e) => consentCapture.onChange(e.target.checked)}
                       className="mt-0.5 h-4 w-4 shrink-0 accent-slate-950"
                     />
                     <span>

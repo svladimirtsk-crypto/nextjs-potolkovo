@@ -22,6 +22,8 @@ import type { CalculatorLeadSnapshot } from "@/lib/calculator/snapshot-types";
 import { buildLeadSnapshotV2, type LeadSnapshotV2 } from "@/lib/calculator/types";
 import { isValidPhone, normalizePhone } from "@/lib/normalize-phone";
 
+import { PRIVACY_POLICY_VERSION } from "@/content/legal";
+
 import { fieldErrorsFromIssues } from "./failure-view";
 import {
   collectLeadAttribution,
@@ -38,6 +40,16 @@ export const RESCUE_PLACEMENT = "rescue" as const;
 export const RESCUE_LEAD_KIND = "rescue" as const;
 
 export type RescueLeadInput = {
+  /**
+   * PT-014 · Отмечен ли чекбокс согласия в диалоге.
+   *
+   * Поле обязательное: раньше в payload стояло `consent: true` константой, и
+   * сервер не мог отличить явное согласие от так написанного кода. Тип требует
+   * передать факт, а не домыслить его.
+   */
+  consentGiven: boolean;
+  /** ISO-момент клика по чекбоксу (`null`, если согласия нет). */
+  consentAt?: string | null;
   /** Номер, введённый в rescue-диалоге. Нормализуется здесь же. */
   phone: string;
   source: string;
@@ -54,7 +66,17 @@ export type RescueLeadInput = {
 
 export type RescueLeadPayload = {
   phone: string;
-  consent: true;
+  /**
+   * PT-014 · Факт согласия из диалога, а не константа `true`.
+   *
+   * Без отмеченного чекбокса `submitRescueLead` заявку не отправляет вовсе —
+   * тип здесь честный (`boolean`), а гарантия держится проверкой выше по коду.
+   */
+  consent: boolean;
+  /** PT-014 · Редакция политики, показанная в диалоге. */
+  consentVersion: string;
+  /** PT-014 · ISO-момент клика по чекбоксу. */
+  consentAt?: string;
   botcheck: "";
   source: string;
   placement: typeof RESCUE_PLACEMENT;
@@ -112,7 +134,16 @@ export function buildRescueLeadPayload(input: RescueLeadInput): RescueLeadPayloa
 
   return {
     phone: normalizePhone(input.phone),
-    consent: true,
+    consent: input.consentGiven,
+    /**
+     * PT-014 · Версия и момент согласия.
+     *
+     * Версия — из `content/legal.ts`, того же источника, из которого диалог
+     * показывает ссылку на политику: человек соглашается с конкретной редакцией,
+     * и она записывается вместе с заявкой.
+     */
+    consentVersion: PRIVACY_POLICY_VERSION,
+    consentAt: input.consentAt ?? undefined,
     botcheck: "",
     source: input.source,
     placement: RESCUE_PLACEMENT,
@@ -183,6 +214,19 @@ export async function submitRescueLead(
   input: RescueLeadInput,
   options: SubmitRescueLeadOptions = {}
 ): Promise<RescueSubmitOutcome> {
+  /**
+   * PT-014 · Без явного согласия заявку не отправляем — ни в rescue, ни в
+   * основной форме. Кнопка в диалоге и так заблокирована до отметки чекбокса,
+   * но полагаться на это нельзя: обработчик доступен и программно.
+   */
+  if (input.consentGiven !== true) {
+    return {
+      ok: false,
+      kind: "validation",
+      message: "Отметьте согласие на обработку персональных данных.",
+    };
+  }
+
   const normalized = normalizePhone(input.phone);
 
   if (!isValidPhone(normalized)) {
