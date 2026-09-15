@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import snapshot from "../data/eks-feed2-snapshot.json";
+import { PHOTO_RANK, photoRank } from "../lib/catalog-photo";
 import {
   POINT_KINDS,
   defaultPointKind,
@@ -39,9 +40,37 @@ describe("N-021 · типы светильников", () => {
     expect(prices).toEqual([...prices].sort((a, b) => a - b));
   });
 
-  it("«от» на карточке совпадает с первым товаром списка", () => {
+  /**
+   * PT-017 (B-F109): список теперь сначала группирует по фотографии, а цена
+   * упорядочивает товары внутри группы. На сегодняшнем каталоге покрытие фото
+   * 100 %, поэтому группы одна и порядок целиком ценовой — проверка ниже
+   * остаётся верной и после обновления фида.
+   */
+  it("сначала товары с фото, внутри группы — от дешёвых к дорогим", () => {
     for (const spec of POINT_KINDS) {
-      expect(minPriceOfKind(products, spec.id)).toBe(pointsOfKind(products, spec.id)[0].priceRub);
+      const list = pointsOfKind(products, spec.id);
+      const ranks = list.map((p) => photoRank(p));
+      expect(ranks, spec.title).toEqual([...ranks].sort((a, b) => a - b));
+
+      for (const rankValue of new Set(ranks)) {
+        const prices = list
+          .filter((p) => photoRank(p) === rankValue)
+          .map((p) => p.priceRub);
+        expect(prices, `${spec.title}, группа ${rankValue}`).toEqual(
+          [...prices].sort((a, b) => a - b),
+        );
+      }
+    }
+  });
+
+  it("«от» на карточке — истинный минимум, а не цена первого товара", () => {
+    for (const spec of POINT_KINDS) {
+      const prices = pointsOfKind(products, spec.id).map((p) => p.priceRub);
+      expect(minPriceOfKind(products, spec.id)).toBe(Math.min(...prices));
+      // Первый товар списка — с фото; дешевле него может быть позиция без фото.
+      expect(minPriceOfKind(products, spec.id)!).toBeLessThanOrEqual(
+        pointsOfKind(products, spec.id)[0].priceRub,
+      );
     }
   });
 
@@ -65,11 +94,16 @@ describe("N-021 · типы светильников", () => {
 });
 
 describe("N-021 · popularPoints", () => {
-  it("возвращает 6 штук одного SKU по минимальной цене", () => {
+  it("возвращает 6 штук одного SKU из лучшей по фото группы", () => {
     const result = popularPoints(products, 6, "recessed");
     expect(result).not.toBeNull();
     expect(result!.qty).toBe(6);
     expect(result!.product.available).toBe(true);
+
+    const list = pointsOfKind(products, "recessed");
+    expect(result!.product.productId).toBe(list[0].productId);
+    expect(photoRank(result!.product)).toBe(Math.min(...list.map((p) => photoRank(p))));
+    // Сегодня фото есть у всех, поэтому предложение совпадает с минимальной ценой.
     expect(result!.product.priceRub).toBe(minPriceOfKind(products, "recessed"));
   });
 
@@ -112,5 +146,52 @@ describe("N-021 · тип по умолчанию", () => {
       const price = minPriceOfKind(products, spec.id);
       if (price !== null) expect(chosen).toBeLessThanOrEqual(price);
     }
+  });
+});
+
+/**
+ * PT-017 (B-F109) · автоподбор на товаре без фотографии.
+ *
+ * Проверяется на реальном каталоге, у которого искусственно «отобрана»
+ * обложка у самой дешёвой позиции: именно так выглядит новый SKU из фида,
+ * чью картинку поставщик отдаёт с ошибкой.
+ */
+describe("PT-017 · автоподбор и товар без фото", () => {
+  const recessed = pointsOfKind(products, "recessed");
+  const cheapest = recessed[0];
+  const withPhoto = recessed.find((p) => photoRank(p) === PHOTO_RANK.local && p !== cheapest);
+
+  it("в каталоге есть из чего собрать сценарий", () => {
+    expect(cheapest).toBeTruthy();
+    expect(withPhoto).toBeTruthy();
+  });
+
+  // Та же позиция, но без снимка: ни локального превью, ни обложки.
+  const photoless: FeedCatalogProduct = {
+    ...cheapest,
+    productId: "pt017-no-photo",
+    coverImage: "",
+    images: [],
+  };
+  const list = [photoless, withPhoto!] as FeedCatalogProduct[];
+
+  it("позиция без фото остаётся в подборе — её не прячут", () => {
+    const got = pointsOfKind(list, "recessed");
+    expect(got).toHaveLength(2);
+    expect(got.map((p) => p.productId)).toContain("pt017-no-photo");
+  });
+
+  it("предложение «добавить N популярных» уходит товару с фотографией", () => {
+    const result = popularPoints(list, 6, "recessed")!;
+    expect(result.product.productId).toBe(withPhoto!.productId);
+    expect(result.totalRub).toBe(withPhoto!.priceRub * 6);
+  });
+
+  it("цена «от» не сдвигается: это по-прежнему истинный минимум", () => {
+    // Иначе карточка типа обещала бы «от 420 ₽», когда в каталоге есть 350 ₽.
+    expect(minPriceOfKind(list, "recessed")).toBe(cheapest.priceRub);
+    expect(minPriceOfKind(list, "recessed")).toBeLessThanOrEqual(
+      popularPoints(list, 6, "recessed")!.product.priceRub,
+    );
   });
 });

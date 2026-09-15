@@ -1,3 +1,4 @@
+import { photoRank, sortByPhoto, type PhotoRanker } from "@/lib/catalog-photo";
 import {
   CATALOG_SECTIONS,
   TRACK_PROFILE_WHITELIST,
@@ -110,21 +111,18 @@ export function productsOfSection(
 }
 
 /**
- * Товары с фотографией — вперёд.
+ * PT-017 (B-F109) · Отбор каталога: раздел → фильтры → поиск → фото вперёд.
  *
- * Порядок внутри групп сохраняется — меняется только приоритет показа.
+ * Порядок действий важен: поиск и фильтры работают по ВСЕМ товарам, а сортировка
+ * по фотографии идёт последней. Товар без фото поэтому не исчезает из выдачи —
+ * он находится прямым поиском и остаётся доступным, просто показан ниже.
+ * Скрывать такие позиции нельзя: обязательное комплектующее без фотографии
+ * остаётся обязательным, иначе собранный комплект технически неполный.
  */
-export function withPhotoFirst(
-  list: readonly FeedCatalogProduct[],
-  hasPhoto: (product: FeedCatalogProduct) => boolean,
-): FeedCatalogProduct[] {
-  return [...list].sort((a, b) => Number(hasPhoto(b)) - Number(hasPhoto(a)));
-}
-
 export function filterCatalogProducts(
   products: readonly FeedCatalogProduct[],
   filters: CatalogFilters,
-  hasPhoto: (product: FeedCatalogProduct) => boolean,
+  rank: PhotoRanker<FeedCatalogProduct> = photoRank,
 ): FeedCatalogProduct[] {
   let scoped = productsOfSection(products, filters);
 
@@ -133,7 +131,7 @@ export function filterCatalogProducts(
   const q = toText(filters.query).toLowerCase();
   if (q) scoped = scoped.filter((product) => searchHaystack(product).includes(q));
 
-  return withPhotoFirst(scoped, hasPhoto);
+  return sortByPhoto(scoped, rank);
 }
 
 /**

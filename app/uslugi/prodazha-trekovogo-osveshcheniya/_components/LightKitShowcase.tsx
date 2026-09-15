@@ -1,12 +1,12 @@
 import { Picture } from "@/components/ui/picture";
 
 import snapshotData from "@/data/eks-feed2-snapshot.json";
-import catalogImages from "@/data/catalog-images.json";
 
 import { Container } from "@/components/ui/container";
 import { Heading } from "@/components/ui/heading";
 import { Section } from "@/components/ui/section";
 
+import { hasLocalPhoto, photoRank } from "@/lib/catalog-photo";
 import {
   applyLightingOnlyDiscount,
   applyLightingWithCeilingDiscount,
@@ -127,9 +127,7 @@ type KitCard = {
  */
 function kitImageSrc(product: { productId?: unknown; coverImage?: unknown }): string {
   const id = toText(product.productId);
-  return id && id in (catalogImages as Record<string, unknown>)
-    ? `/catalog/${id}-512.webp`
-    : "/svc-tracksale.jpeg";
+  return hasLocalPhoto(id) ? `/catalog/${id}-512.webp` : "/svc-tracksale.jpeg";
 }
 
 function buildKitKitchen(products: FeedCatalogProduct[]): KitCard | null {
@@ -276,8 +274,12 @@ export function getTrackSaleProductOffers(topProductsLimit = 12): {
       image: kit.imageSrc,
     }));
 
+  // PT-017 (B-F109): в разметку schema.org сначала идут позиции со снимком —
+  // у товара без фото `image` пустой, а без него карточка в поиске не собирается.
   const topProducts = [...products]
-    .sort((a, b) => toNumber(b.priceRub) - toNumber(a.priceRub))
+    .sort(
+      (a, b) => photoRank(a) - photoRank(b) || toNumber(b.priceRub) - toNumber(a.priceRub),
+    )
     .slice(0, topProductsLimit)
     .map((product) => ({
       name: toText(product.name),

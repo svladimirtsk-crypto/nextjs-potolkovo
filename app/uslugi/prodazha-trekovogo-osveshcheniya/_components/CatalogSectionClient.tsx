@@ -6,7 +6,6 @@ import { useCalculatorModal } from "@/components/calculator-modal/calculator-mod
 import { useCalculatorStore } from "@/lib/calculator/store";
 import type { CalculatorLeadSnapshot } from "@/lib/calculator/snapshot-types";
 import { normalizeQty } from "@/lib/lighting/product-predicates";
-import catalogImages from "@/data/catalog-images.json";
 import { CATALOG_PAGE_SIZE, CatalogGrid } from "@/components/lighting/CatalogGrid";
 import { CatalogFreshness } from "./CatalogFreshness";
 import { CatalogWarnings } from "./CatalogWarnings";
@@ -436,27 +435,19 @@ export function CatalogSectionClient({ data }: Props) {
   };
 
   /**
-   * N-020 · Товары с локальным фото — выше.
-   *
-   * У 34 позиций поставщик удалил обложки, и они кучно стоят в начале фида:
-   * первый экран каталога состоял почти из одних заглушек. Сортировка
-   * стабильная, поэтому внутри каждой из двух групп исходный порядок фида
-   * сохраняется — меняется только приоритет показа.
+   * N-020 · PT-017 (B-F109) · порядок показа задаёт `lib/catalog-photo`:
+   * сначала позиции с локальным превью, затем с обложкой поставщика, затем
+   * без фото. Скрывать товары без снимка нельзя — обязательное комплектующее
+   * остаётся обязательным, поэтому они понижаются, а не исчезают.
    */
-  /** Есть ли у товара локальное фото — влияет только на порядок показа. */
-  const hasPhoto = useCallback(
-    (product: FeedCatalogProduct) => toText(product.productId) in (catalogImages as Record<string, unknown>),
-    [],
-  );
-
   const filters = useMemo(
     () => ({ section, trackSystem, trackGroup, pointSubtype, lampSocket, smartOnly, query }),
     [section, trackSystem, trackGroup, pointSubtype, lampSocket, smartOnly, query],
   );
 
   const filteredProducts = useMemo(
-    () => filterCatalogProducts(products, filters, hasPhoto),
-    [products, filters, hasPhoto],
+    () => filterCatalogProducts(products, filters),
+    [products, filters],
   );
 
   const searchMatches = useMemo(
