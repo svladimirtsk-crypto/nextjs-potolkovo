@@ -38,6 +38,8 @@ const SCHEMA_KEYS = [
   "DELIVERY_ALERT_TELEGRAM_BOT_TOKEN",
   "DELIVERY_ALERT_TELEGRAM_CHAT_ID",
   "CRON_SECRET",
+  "AVAILABILITY_DB_ENABLED",
+  "AVAILABILITY_TOKEN",
   "DATABASE_URL",
   "TEST_DATABASE_URL",
   "CATALOG_LIVE_FEED2_ENABLED",
@@ -81,6 +83,12 @@ async function main() {
     warnings.push("DELIVERY_ALERT_ENABLED=1, но канал алерта не задан — сбой доставки останется незамеченным.");
   }
   if (!value("CRON_SECRET")) warnings.push("CRON_SECRET не задан — /api/lead/retry вернёт 401.");
+  // PT-016: без пароля админка календаря отвечает 503, и даты замера снова
+  // можно поменять только деплоем — то есть задача не решена. Предупреждаем
+  // только когда БД есть: без DATABASE_URL календарь в принципе из файла.
+  if (flag("AVAILABILITY_DB_ENABLED", true) && value("DATABASE_URL") && !value("AVAILABILITY_TOKEN")) {
+    warnings.push("AVAILABILITY_TOKEN не задан — /api/admin/availability вернёт 503.");
+  }
   if (!value("DATABASE_URL")) warnings.push("DATABASE_URL не задан — лиды хранятся в памяти.");
 
   // 2. .env.example синхронен схеме.

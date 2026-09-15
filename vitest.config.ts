@@ -22,6 +22,10 @@ const DB_TESTS = [
   "tests/lead-store-pg.test.ts",
   "tests/lead-route-db.test.ts",
   "tests/delivery-alert-db.test.ts",
+  // PT-016: календарь замеров. Таблицы свои (`availability_*`), но файл чистит
+  // их в `beforeEach`, а последовательный прогон проекта дешевле, чем искать
+  // гонку между работниками в CI.
+  "tests/availability-db.test.ts",
 ];
 
 export default defineConfig({
