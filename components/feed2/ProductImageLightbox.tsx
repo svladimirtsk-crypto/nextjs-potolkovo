@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { ProductImage } from "@/components/feed2/ProductImage";
+import { hasLocalPhoto, isPhotoPending } from "@/lib/catalog-photo";
 
 type Props = {
   src: string;
@@ -18,7 +19,18 @@ export function ProductImageLightbox({ src, alt, thumbClassName, productId, kind
   const [open, setOpen] = useState(false);
 
   const safeSrc = String(src ?? "").trim();
-  const hasSrc = safeSrc.length > 0;
+  /**
+   * PT-017 (B-F109): локальное превью важнее ссылки на хост поставщика.
+   * Раньше при пустом `src` рисовалась плашка «нет фото» даже тогда, когда
+   * снимок лежал в `public/catalog` — товар с фотографией выглядел товаром
+   * без фотографии и терял доверие покупателя.
+   */
+  const id = String(productId ?? "").trim();
+  const localSrc = hasLocalPhoto(id) ? `/catalog/${id}-512.webp` : null;
+  const fullSrc = safeSrc || localSrc || "";
+  // PT-017: увеличивать нечего, если снимка нет, — вместо битой картинки
+  // на весь экран показываем заглушку с пометкой «Фото уточняется».
+  const hasSrc = fullSrc.length > 0 && !isPhotoPending({ productId: id, coverImage: safeSrc });
 
   useEffect(() => {
     if (!open) return;
@@ -57,7 +69,7 @@ export function ProductImageLightbox({ src, alt, thumbClassName, productId, kind
           <div className="flex max-h-[86vh] items-center justify-center p-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={safeSrc}
+              src={fullSrc}
               alt={alt}
               className="max-h-[80vh] w-auto max-w-[90vw] object-contain"
             />
@@ -76,18 +88,21 @@ export function ProductImageLightbox({ src, alt, thumbClassName, productId, kind
       </div>,
       document.body
     );
-  }, [alt, open, safeSrc]);
+  }, [alt, open, fullSrc]);
 
   if (!hasSrc) {
+    // Увеличивать нечего, но и прятать товар нельзя: показываем ту же заглушку,
+    // что и во всём каталоге, — иконка типа, название и пометка «Фото уточняется».
     return (
-      <div
-        className={[
-          "flex items-center justify-center rounded-xl bg-slate-100 text-xs text-slate-500",
-          thumbClassName ?? "",
-        ].join(" ")}
-      >
-        нет фото
-      </div>
+      <ProductImage
+        src={null}
+        alt={alt}
+        productId={productId}
+        kind={kind}
+        containerClassName={
+          thumbClassName ? `overflow-hidden rounded-xl ${thumbClassName}` : undefined
+        }
+      />
     );
   }
 
@@ -105,7 +120,7 @@ export function ProductImageLightbox({ src, alt, thumbClassName, productId, kind
         title="Нажмите, чтобы увеличить"
       >
         <ProductImage
-          src={safeSrc}
+          src={fullSrc}
           alt={alt}
           productId={productId}
           kind={kind}

@@ -2,12 +2,17 @@
 
 import { useMemo, useState } from "react";
 
-import catalogImages from "@/data/catalog-images.json";
+import { PHOTO_PENDING_LABEL, hasLocalPhoto, isPhotoPending } from "@/lib/catalog-photo";
 
 /**
  * N-020 · Честная заглушка: вместо безликого «Фото товара» показываем иконку
- * типа и само название. У поставщика 34 обложки отдают 404 — карточка должна
- * оставаться информативной, а не выглядеть сломанной.
+ * типа и само название. Часть обложек поставщик отдаёт с ошибкой — карточка
+ * должна оставаться информативной, а не выглядеть сломанной.
+ *
+ * PT-017 (B-F109): сколько именно таких позиций, решает не комментарий, а
+ * `data/catalog-images-missing.json` — отчёт сборщика превью. Заглушка всегда
+ * несёт пометку «Фото уточняется», чтобы отсутствие снимка не читалось как
+ * ошибка вёрстки.
  */
 const KIND_GLYPH: Record<string, string> = {
   LED_STRIP: "M8 32h48M8 40h48",
@@ -48,15 +53,29 @@ function wrap(text: string, perLine = 22, maxLines = 3): string[] {
   return lines;
 }
 
-function buildFallback(name: string, kind?: string | null): string {
+/**
+ * Заглушка в виде data-URI. Экспортирована ради теста: это единственное место,
+ * где пометка «Фото уточняется» попадает в картинку, и проверять её глазами
+ * на каждой сборке — не метод.
+ */
+export function buildFallback(name: string, kind?: string | null): string {
   const glyph = KIND_GLYPH[String(kind ?? "")] ?? KIND_GLYPH.CEILING_COMPONENT;
-  const lines = wrap(name.trim() || "Фото уточняется");
+  const title = name.trim();
+  const lines = wrap(title || PHOTO_PENDING_LABEL);
   const text = lines
     .map(
       (line, index) =>
         `<text x="50%" y="${300 + index * 34}" text-anchor="middle" font-family="Arial,sans-serif" font-size="26" fill="#475569">${escapeXml(line)}</text>`
     )
     .join("");
+
+  // PT-017: пометка отдельной строкой под названием. Если названия нет,
+  // пометка уже напечатана первой строкой — второй раз её не повторяем.
+  // #64748b на #f8fafc = 4.55:1 — проходит норму WCAG 4.5 для мелкого текста
+  // (N-063), в отличие от slate-400, которым нарисована иконка.
+  const pending = title
+    ? `<text x="50%" y="${300 + lines.length * 34 + 16}" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" fill="#64748b" letter-spacing="0.5">${PHOTO_PENDING_LABEL}</text>`
+    : "";
 
   return (
     "data:image/svg+xml;utf8," +
@@ -66,7 +85,7 @@ function buildFallback(name: string, kind?: string | null): string {
         <g transform="translate(192 140) scale(2)" fill="none" stroke="#94a3b8" stroke-width="3" stroke-linecap="round">
           <path d="${glyph}"/>
         </g>
-        ${text}
+        ${text}${pending}
       </svg>`
     )
   );
@@ -101,12 +120,22 @@ export function ProductImage({
 
   const local = useMemo(() => {
     const id = String(productId ?? "").trim();
-    return id && id in catalogImages ? id : null;
+    return hasLocalPhoto(id) ? id : null;
   }, [productId]);
 
   const fallback = useMemo(() => buildFallback(safeAlt, kind), [safeAlt, kind]);
 
-  const imageSrc = failed
+  /**
+   * PT-017 (B-F109): если сборщик превью уже сходил по этой обложке и получил
+   * не картинку, запрос заведомо обречён — показываем заглушку сразу, без
+   * моргания битой картинки и без лишнего 404 в сети покупателя.
+   */
+  const pending = useMemo(
+    () => isPhotoPending({ productId, coverImage: safeSrc }),
+    [productId, safeSrc],
+  );
+
+  const imageSrc = failed || pending
     ? fallback
     : local
       ? `/catalog/${local}-512.webp`
