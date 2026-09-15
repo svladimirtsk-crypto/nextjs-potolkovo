@@ -7,6 +7,8 @@ import { toText } from "../lib/feed2-snapshot-normalize";
 import { groupLampOptionsBySocket, type CartEntry } from "../lib/lighting/cart-derived";
 import {
   applyClarusPsu,
+  applyKitSuggestions,
+  applyProfilePlan,
   applyProductQty,
   applyTrackProfileQty,
   cheapestLampsAddition,
@@ -279,6 +281,46 @@ describe("PT-018 · снятие осиротевшего трека (T-024)", (
   it("чужих позиций не снимает", () => {
     const cart: Cart = { [idOf(chandelier)]: 1 };
     expect(dropOrphanTrackItems(cart, [entry(colibriProfile, 2)])).toBe(cart);
+  });
+});
+
+describe("PT-018 · автосборка профиля и дособирание комплекта", () => {
+  it("план профиля задаёт количество, а не складывает с уже лежащим (T-032)", () => {
+    const cart: Cart = { [idOf(colibriProfile)]: 2 };
+    const next = applyProfilePlan(cart, [{ product: colibriProfile, qty: 5 }]);
+
+    // Повторное «Собрать автоматически» не должно удваивать метраж.
+    expect(next).toEqual({ [idOf(colibriProfile)]: 5 });
+  });
+
+  it("план не трогает остальные позиции", () => {
+    const cart: Cart = { [idOf(chandelier)]: 1 };
+    const next = applyProfilePlan(cart, [{ product: colibriProfile, qty: 3 }]);
+    expect(next).toEqual({ [idOf(chandelier)]: 1, [idOf(colibriProfile)]: 3 });
+  });
+
+  it("дособирание комплекта складывает количества (T-042)", () => {
+    const cart: Cart = { [idOf(clarusFixture)]: 2 };
+    const next = applyKitSuggestions(cart, [
+      { product: clarusFixture, qty: 3 },
+      { product: chandelier, qty: 1 },
+    ]);
+
+    expect(next[idOf(clarusFixture)]).toBe(5);
+    expect(next[idOf(chandelier)]).toBe(1);
+  });
+
+  it("пустой список не мутирует корзину", () => {
+    const cart: Cart = { [idOf(chandelier)]: 1 };
+    expect(applyKitSuggestions(cart, [])).toEqual(cart);
+    expect(applyProfilePlan(cart, [])).toEqual(cart);
+  });
+
+  it("исходная корзина остаётся нетронутой", () => {
+    const cart: Cart = { [idOf(chandelier)]: 1 };
+    applyKitSuggestions(cart, [{ product: clarusFixture, qty: 1 }]);
+    applyProfilePlan(cart, [{ product: colibriProfile, qty: 4 }]);
+    expect(cart).toEqual({ [idOf(chandelier)]: 1 });
   });
 });
 

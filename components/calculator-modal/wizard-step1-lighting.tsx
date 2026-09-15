@@ -8,29 +8,18 @@ import {
   trackLightingSystemSelected,
 } from "@/lib/analytics";
 
-import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import { applyLightingWithCeilingDiscount } from "@/lib/lighting-formulas";
-import { detectSocket } from "@/lib/feed2-products";
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
 import { type WizardStep } from "@/lib/lighting/resolve-initial-step";
-import { pricing } from "@/content/pricing";
 import { useCatalogProducts } from "@/lib/lighting/use-catalog-products";
 import { useLightingCart } from "@/lib/lighting/use-lighting-cart";
-import {
-  autoAssembleProfiles,
-  completeKit,
-  fixturesHintForMeters,
-  isTrackSystemId,
-} from "@/lib/lighting/kit-rules";
 
 import {
   visibleCatalogSections,
   REMOVED_COLIBRI_VENDOR_CODES,
-  type PointSubtypeId,
   type TrackSystemId,
 } from "@/lib/catalog-ui-config";
 
-import { isPanelProduct } from "@/lib/lighting/product-predicates";
 import { decideOrphanTrackAction } from "@/lib/lighting/orphan-track";
 import { Step1CatalogTab } from "@/components/lighting/Step1CatalogTab";
 // PT-018: чистые селекторы Шага 1 (B-F104) — правила выдачи каталога,
@@ -40,13 +29,9 @@ import {
   calcSelectedTotals,
   cardDiscountPercentFor,
   scopeCatalogProducts,
-  selectChandeliers,
-  selectCorniceLighting,
-  selectPointProducts,
   systemLabelOf,
 } from "@/lib/lighting/step1-selectors";
 import { RecommendationsTab } from "@/components/lighting/RecommendationsTab";
-import { pointProgressBySocket, type PointKindId } from "@/lib/lighting/popular-points";
 import { useCalculatorModal } from "./calculator-modal-context";
 import { useCalculatorStore } from "@/lib/calculator/store";
 
@@ -89,6 +74,7 @@ import { ImageQuickPreview, TabBtn } from "@/components/lighting/CatalogPieces";
 import { buildStep1FooterAction, resolveStep1FooterAction } from "@/lib/lighting/step1-footer-action";
 import { useStep1Cart } from "@/lib/lighting/use-step1-cart";
 import { useStep1Wizard } from "@/lib/lighting/use-step1-wizard";
+import { useStep1Screens } from "@/lib/lighting/use-step1-screens";
 import { useCatalogFilters } from "@/lib/lighting/use-catalog-filters";
 import { useCatalogIndex } from "@/lib/lighting/use-catalog-index";
 
@@ -234,11 +220,6 @@ export function WizardStep1Lighting() {
       setWOverride((prev) => ({ step: prev?.step ?? "none", system })),
     []
   );
-  const [wPointTab, setWPointTab] = useState<PointSubtypeId>("GX53");
-  /** N-021: выбранный тип светильника (вид, а не цоколь). */
-  const [pointKind, setPointKind] = useState<PointKindId>("recessed");
-  /** N-021: ручной выбор по цоколю свёрнут, пока человек не попросил. */
-  const [manualPointsOpen, setManualPointsOpen] = useState(false);
 
   /* ─── Корзина Шага 1: факты и действия (PT-018: `lib/lighting/use-step1-cart`) ───
    * Правила — в `cart-derived`, `kit-rules` и `orphan-track`; хук их только
@@ -356,6 +337,28 @@ export function WizardStep1Lighting() {
     onOpenRecommendations: openRecommendations,
   });
 
+  /* ─── Экраны подбора: товары и комплекты (PT-018: `use-step1-screens`) ─── */
+  const {
+    pointKind, choosePointKind, manualPointsOpen, openManualPoints,
+    pointTab: wPointTab, setPointTab: setWPointTab,
+    pointProducts: wPointProducts, pointProgressBySubtype,
+    autoProfilePlan, applyAutoProfilePlan, fixturesHint,
+    kitCompletion, applyKitCompletion, psuAcknowledged, setPsuAcknowledged,
+    psuBlocks, finishAction, chandeliers: wChandeliers, corniceLighting: wCorniceLighting,
+  } = useStep1Screens({
+    products,
+    cartItems,
+    updateCart: setCartItems,
+    resolveProduct,
+    cartEntries,
+    requiredTrackMeters,
+    requiredPointQty,
+    selectedTrackMeters,
+    trackProfiles: wTrackProfiles,
+    setWSystem,
+    goToStep,
+  });
+
   /* ─── Selected view ─── */
   // Пустое «Выбранное» показывать нечем — молча показываем каталог.
   const shownCatalogView: CatalogView =
@@ -402,105 +405,6 @@ export function WizardStep1Lighting() {
 
 
 
-  /* ─── T-032: автосборка профиля и ориентир по светильникам ─── */
-
-  /** План автосборки под требуемый метраж из профилей выбранной системы. */
-  const autoProfilePlan = useMemo(
-    () => autoAssembleProfiles(requiredTrackMeters, wTrackProfiles),
-    [requiredTrackMeters, wTrackProfiles]
-  );
-
-  /** Одним тапом кладём подобранные куски в корзину. */
-  const applyAutoProfilePlan = useCallback(() => {
-    if (!autoProfilePlan) return;
-
-    const system = autoProfilePlan.pieces[0]?.product.system;
-    if (system && isTrackSystemId(system)) setWSystem(system);
-
-    setCartItems((prev) => {
-      const next = { ...prev };
-      for (const piece of autoProfilePlan.pieces) {
-        next[toText(piece.product.productId)] = piece.qty;
-      }
-      return next;
-    });
-  }, [autoProfilePlan, setCartItems, setWSystem]);
-
-  /** Товары для экранов T-043. */
-  const wChandeliers = useMemo(() => selectChandeliers(products), [products]);
-  const wCorniceLighting = useMemo(() => selectCorniceLighting(products), [products]);
-
-  /* ─── T-042: дособирание комплекта (питание, стыки, БП, лампы) ─── */
-
-  /** Чего не хватает выбранному свету, чтобы он заработал. */
-  const kitCompletion = useMemo(
-    () => completeKit(cartItems, resolveProduct, products),
-    [cartItems, products, resolveProduct]
-  );
-
-  /** «Добавить всё» — кладём обязательные позиции одним действием. */
-  const applyKitCompletion = useCallback(
-    (suggestions: readonly { product: FeedCatalogProduct; qty: number }[]) => {
-      if (suggestions.length === 0) return;
-      setCartItems((prev) => {
-        const next = { ...prev };
-        for (const suggestion of suggestions) {
-          const id = toText(suggestion.product.productId);
-          next[id] = (next[id] ?? 0) + suggestion.qty;
-        }
-        return next;
-      });
-    },
-    [setCartItems]
-  );
-
-  /**
-   * T-042: CLARUS без блока питания не запустится. Не прячем кнопку совсем —
-   * даём явно согласиться на «подберём при звонке», иначе счёт уедет неполным.
-   */
-  const [psuAcknowledged, setPsuAcknowledged] = useState(false);
-  const psuBlocks = kitCompletion.psuMissing && !psuAcknowledged;
-
-  /** Кнопка «К итогу» с учётом блокировки по БП. */
-  const finishAction = useCallback(
-    (): { label: string; disabled?: boolean; onClick: () => void } =>
-      psuBlocks
-        ? { label: "Нужен блок питания", disabled: true, onClick: () => undefined }
-        : { label: "К итогу →", onClick: () => goToStep(2) },
-    [goToStep, psuBlocks]
-  );
-
-  /** «Ориентир для 10 м: 8–12 светильников» — вилка ±20 %. */
-  const fixturesHint = useMemo(
-    () => fixturesHintForMeters(selectedTrackMeters || requiredTrackMeters, pricing.trackSpotsPerMeter),
-    [requiredTrackMeters, selectedTrackMeters]
-  );
-
-
-  /**
-   * N-021: сетка следует за выбранным типом. Цоколь сужает её дальше, но
-   * только когда человек сам открыл ручной выбор — иначе тип и цоколь
-   * противоречили бы друг другу (панели не имеют цоколя вовсе).
-   */
-  const wPointProducts = useMemo(
-    () =>
-      selectPointProducts({
-        products,
-        manualOpen: manualPointsOpen,
-        socketTab: wPointTab,
-        pointKind,
-      }),
-    [manualPointsOpen, wPointTab, pointKind, products]
-  );
-
-  const wLampProducts = useMemo(() => {
-    return lampOptionsBySocket; // use as-is, already sorted
-  }, [lampOptionsBySocket]);
-
-  const pointProgressBySubtype = useMemo(
-    () => pointProgressBySocket(cartEntries, requiredPointQty, isPanelProduct, detectSocket),
-    [cartEntries, requiredPointQty]
-  );
 
   // «Готово» с незакрытыми требованиями — показываем недостающий шаг, а не тупик.
   // T-025: показ экрана мастера освещения (после того, как шаг посчитан).
@@ -660,7 +564,7 @@ export function WizardStep1Lighting() {
             chandeliers: wChandeliers,
             corniceLighting: wCorniceLighting,
             points: wPointProducts,
-            lampsBySocket: wLampProducts,
+            lampsBySocket: lampOptionsBySocket,
           }}
           track={{
             systemOptions: wizardSystemOptions,
@@ -700,12 +604,9 @@ export function WizardStep1Lighting() {
             required: requiredPointQty,
             selected: selectedPointQty,
             activeKind: pointKind,
-            onKindChange: (kind) => {
-              setPointKind(kind);
-              setManualPointsOpen(false);
-            },
+            onKindChange: choosePointKind,
             manualOpen: manualPointsOpen,
-            onManualOpen: () => setManualPointsOpen(true),
+            onManualOpen: openManualPoints,
             socketTab: wPointTab,
             onSocketTabChange: setWPointTab,
             socketProgress: pointProgressBySubtype,

@@ -192,6 +192,38 @@ export function dropOrphanTrackItems(prev: Cart, orphanEntries: readonly CartEnt
   return changed ? next : prev;
 }
 
+/**
+ * Куски автосборки профиля (T-032) кладутся в корзину как есть: количество
+ * задаёт план, а не складывается с уже лежащим — иначе повторное нажатие
+ * «Собрать автоматически» удваивало бы метраж.
+ */
+export function applyProfilePlan(
+  prev: Cart,
+  pieces: readonly { product: FeedCatalogProduct; qty: number }[]
+): Cart {
+  const next = { ...prev };
+  for (const piece of pieces) {
+    next[toText(piece.product.productId)] = piece.qty;
+  }
+  return next;
+}
+
+/**
+ * «Добавить всё» из дособирания комплекта (T-042): количества СКЛАДЫВАЮТСЯ с
+ * уже лежащими в корзине — человек добирает питание и стыки к тому, что есть.
+ */
+export function applyKitSuggestions(
+  prev: Cart,
+  suggestions: readonly { product: FeedCatalogProduct; qty: number }[]
+): Cart {
+  const next = { ...prev };
+  for (const suggestion of suggestions) {
+    const id = toText(suggestion.product.productId);
+    next[id] = (next[id] ?? 0) + suggestion.qty;
+  }
+  return next;
+}
+
 export type CartChangeAction = "add" | "remove" | "change";
 
 export type CartChangeEvent = {
