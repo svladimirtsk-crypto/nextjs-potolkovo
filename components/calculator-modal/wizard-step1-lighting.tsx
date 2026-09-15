@@ -16,7 +16,7 @@ import {
 } from "@/lib/lighting-formulas";
 import { detectSocket } from "@/lib/feed2-products";
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
-import { resolveInitialLightingStep, type WizardStep } from "@/lib/lighting/resolve-initial-step";
+import { type WizardStep } from "@/lib/lighting/resolve-initial-step";
 import { pricing } from "@/content/pricing";
 import { useCatalogProducts } from "@/lib/lighting/use-catalog-products";
 import { useLightingCart } from "@/lib/lighting/use-lighting-cart";
@@ -41,37 +41,17 @@ import {
 import { isPanelProduct } from "@/lib/lighting/product-predicates";
 import { decideOrphanTrackAction } from "@/lib/lighting/orphan-track";
 import { CatalogBrowse } from "@/components/lighting/CatalogBrowse";
-// PT-018: переходы между экранами Шага 1 (B-F104) — чистые функции, компонент
-// владеет только состоянием `wOverride`.
-import {
-  backFromLamps,
-  calcStep1Progress,
-  missingActionFor,
-  nextAfterChandeliers,
-  nextAfterLamps,
-  nextAfterPoints,
-  nextAfterTrackFixtures,
-  nextAfterTrackProfile,
-  shownStepFor,
-  type Step1NavResult,
-  type Step1ProgressInput,
-} from "@/lib/lighting/step1-progress";
 // PT-018: чистые селекторы Шага 1 (B-F104) — правила выдачи каталога,
 // профили/светильники/системы и итоги «Выбранного» вынесены из компонента.
 import {
   buildTrackProfileRecommendations,
   calcSelectedTotals,
   cardDiscountPercentFor,
-  detectCartTrackSystem,
   scopeCatalogProducts,
   selectChandeliers,
   selectCorniceLighting,
   selectPointProducts,
-  selectTrackFixtures,
-  selectWizardTrackProfiles,
-  summarizeCartForStep,
   systemLabelOf,
-  wizardSystemOptionsFor,
 } from "@/lib/lighting/step1-selectors";
 import { RecommendationsTab } from "@/components/lighting/RecommendationsTab";
 import { CatalogFilterChipGroup, CatalogFilterChipsRow } from "@/components/lighting/CatalogFilterChips";
@@ -122,6 +102,7 @@ import {
 } from "@/components/lighting/CatalogPieces";
 import { buildStep1FooterAction, resolveStep1FooterAction } from "@/lib/lighting/step1-footer-action";
 import { useStep1Cart } from "@/lib/lighting/use-step1-cart";
+import { useStep1Wizard } from "@/lib/lighting/use-step1-wizard";
 import { useCatalogFilters } from "@/lib/lighting/use-catalog-filters";
 import { useCatalogIndex } from "@/lib/lighting/use-catalog-index";
 
@@ -351,6 +332,44 @@ export function WizardStep1Lighting() {
     setStep1CatalogView(view);
   }, [setStep1CatalogView, setCatalogView]);
 
+  /* ─── Мастер Шага 1: экран, переходы, прогресс (PT-018: `use-step1-wizard`) ───
+   * Состояние оверрайда (`wOverride`) остаётся здесь: его сеттер нужен и
+   * корзине — профиль выбирает систему. Правила переходов — `step1-progress`,
+   * правила выдачи — `step1-selectors`. */
+  const openRecommendations = useCallback(() => {
+    setActiveTab("recommendations");
+    setCatalogViewAndSync("browse");
+  }, [setActiveTab, setCatalogViewAndSync]);
+
+  const {
+    wStep, shownWStep, selectedTrackSystem, wizardSystemOptions,
+    trackProfiles: wTrackProfiles, trackFixtures: wTrackFixtures,
+    trackComplete, pointsComplete, lampsComplete, requiredSelectionComplete,
+    missingAction, chooseWizardSystem, chooseNoTrackFlow, goAfterTrackProfile,
+    goAfterTrackFixtures, goAfterLamps, goAfterChandeliers, goAfterPoints,
+    goBackFromLamps, goToMissingAction,
+  } = useStep1Wizard({
+    requiredTrackMeters,
+    requiredPointQty,
+    trackMountType,
+    needsChandeliers,
+    needsCorniceLighting,
+    cartEntries,
+    missingLampsCount: missingLamps.length,
+    selectedTrackMeters,
+    selectedPointQty,
+    lampRequiredTotal,
+    lampCurrentTotal,
+    products,
+    recommendedTrackProfiles,
+    wOverride,
+    setWStep,
+    setWSystem,
+    clearTrackProductsForSystem,
+    onSelectCatalogSection: catalogFilters.selectSection,
+    onOpenRecommendations: openRecommendations,
+  });
+
   /* ─── Selected view ─── */
   // Пустое «Выбранное» показывать нечем — молча показываем каталог.
   const shownCatalogView: CatalogView =
@@ -370,47 +389,6 @@ export function WizardStep1Lighting() {
      WIZARD (Подбор tab) — step-by-step guided flow
      ═══════════════════════════════════════════════════ */
   const rootRef = useRef<HTMLDivElement | null>(null);
-
-  // T-010: стартовый экран пересчитывается резолвером, пока пользователь не тронул подбор.
-  const wizardTouchedRef = useRef(false);
-  const markWizardTouched = useCallback(() => {
-    wizardTouchedRef.current = true;
-  }, []);
-
-  const chooseWizardSystem = useCallback((system: TrackSystemId) => {
-    wizardTouchedRef.current = true;
-    setWSystem(system);
-    clearTrackProductsForSystem(system);
-    setWStep("trackProfile");
-  }, [clearTrackProductsForSystem, setWStep, setWSystem]);
-
-  const chooseNoTrackFlow = useCallback(() => {
-    wizardTouchedRef.current = true;
-    setWSystem(null);
-    clearTrackProductsForSystem(null);
-    setWStep(requiredPointQty > 0 ? "points" : "done");
-  }, [clearTrackProductsForSystem, requiredPointQty, setWStep, setWSystem]);
-
-  const resolvedInitialStep = useMemo(
-    () =>
-      resolveInitialLightingStep({
-        requiredTrackMeters,
-        requiredPointQty,
-        cart: summarizeCartForStep(cartEntries, missingLamps.length),
-      }),
-    [cartEntries, missingLamps.length, requiredPointQty, requiredTrackMeters]
-  );
-
-  // Система, вычитанная из корзины: чем пользователь уже начал комплектоваться.
-  const cartTrackSystem = useMemo<TrackSystemId | null>(
-    () => detectCartTrackSystem(cartEntries),
-    [cartEntries]
-  );
-
-  // Итоговые шаг и система: override пользователя поверх резолвера.
-  const wStep: WStep = wOverride?.step ?? resolvedInitialStep;
-  const wSystem: TrackSystemId | null =
-    requiredTrackMeters > 0 ? (wOverride ? wOverride.system : cartTrackSystem) : null;
 
   // При смене внутреннего шага/таба пользователь всегда видит начало следующего действия.
   const didMountScrollRef = useRef(false);
@@ -436,29 +414,7 @@ export function WizardStep1Lighting() {
   }, [zoomImage]);
 
 
-  const wizardSystemOptions = useMemo<TrackSystemId[]>(
-    () => wizardSystemOptionsFor({ requiredTrackMeters, trackMountType }),
-    [requiredTrackMeters, trackMountType]
-  );
 
-  const selectedTrackSystem = useMemo<TrackSystemId | null>(
-    () => wSystem ?? detectCartTrackSystem(cartEntries, { withAccessory: true }),
-    [cartEntries, wSystem]
-  );
-
-
-
-  // Products for each wizard step
-  const wTrackProfiles = useMemo(
-    () =>
-      selectWizardTrackProfiles({
-        products,
-        selectedSystem: selectedTrackSystem,
-        recommendedSystems: recommendedTrackProfiles.map((r) => r.system),
-        trackMountType,
-      }),
-    [products, recommendedTrackProfiles, selectedTrackSystem, trackMountType]
-  );
 
   /* ─── T-032: автосборка профиля и ориентир по светильникам ─── */
 
@@ -472,7 +428,6 @@ export function WizardStep1Lighting() {
   const applyAutoProfilePlan = useCallback(() => {
     if (!autoProfilePlan) return;
 
-    markWizardTouched();
     const system = autoProfilePlan.pieces[0]?.product.system;
     if (system && isTrackSystemId(system)) setWSystem(system);
 
@@ -483,7 +438,7 @@ export function WizardStep1Lighting() {
       }
       return next;
     });
-  }, [autoProfilePlan, markWizardTouched, setCartItems, setWSystem]);
+  }, [autoProfilePlan, setCartItems, setWSystem]);
 
   /** Товары для экранов T-043. */
   const wChandeliers = useMemo(() => selectChandeliers(products), [products]);
@@ -501,7 +456,6 @@ export function WizardStep1Lighting() {
   const applyKitCompletion = useCallback(
     (suggestions: readonly { product: FeedCatalogProduct; qty: number }[]) => {
       if (suggestions.length === 0) return;
-      markWizardTouched();
       setCartItems((prev) => {
         const next = { ...prev };
         for (const suggestion of suggestions) {
@@ -511,7 +465,7 @@ export function WizardStep1Lighting() {
         return next;
       });
     },
-    [markWizardTouched, setCartItems]
+    [setCartItems]
   );
 
   /**
@@ -536,10 +490,6 @@ export function WizardStep1Lighting() {
     [requiredTrackMeters, selectedTrackMeters]
   );
 
-  const wTrackFixtures = useMemo(
-    () => selectTrackFixtures(products, selectedTrackSystem),
-    [selectedTrackSystem, products]
-  );
 
   /**
    * N-021: сетка следует за выбранным типом. Цоколь сужает её дальше, но
@@ -566,72 +516,6 @@ export function WizardStep1Lighting() {
     [cartEntries, requiredPointQty]
   );
 
-  /* ─── PT-018: переходы между экранами — чистые функции `step1-progress` ─── */
-
-  /** Факты, по которым решается следующий экран. */
-  const step1Nav = useMemo<Step1ProgressInput>(
-    () => ({
-      requiredTrackMeters,
-      requiredPointQty,
-      selectedTrackMeters,
-      selectedPointQty,
-      lampRequiredTotal,
-      lampCurrentTotal,
-      selectedTrackSystem,
-      trackFixturesCount: wTrackFixtures.length,
-      needsChandeliers,
-      needsCorniceLighting,
-    }),
-    [lampCurrentTotal, lampRequiredTotal, needsChandeliers, needsCorniceLighting,
-      requiredPointQty, requiredTrackMeters, selectedPointQty, selectedTrackMeters,
-      selectedTrackSystem, wTrackFixtures.length]
-  );
-
-  /**
-   * Переход: ставим экран и, если он про каталог, показываем нужный раздел.
-   * `null` — оставаться на месте (профиль не добран).
-   */
-  const applyStep1Nav = useCallback(
-    (result: Step1NavResult | null) => {
-      if (!result) return;
-      if (result.catalogSection) catalogFilters.selectSection(result.catalogSection);
-      setWStep(result.step);
-    },
-    [catalogFilters, setWStep]
-  );
-
-  /** Один обработчик на все переходы: правило — функция из `step1-progress`. */
-  const goStep1 = useCallback(
-    (rule: (input: Step1ProgressInput) => Step1NavResult | null) =>
-      applyStep1Nav(rule(step1Nav)),
-    [applyStep1Nav, step1Nav]
-  );
-
-  const goAfterTrackProfile = useCallback(() => goStep1(nextAfterTrackProfile), [goStep1]);
-  const goAfterTrackFixtures = useCallback(() => goStep1(nextAfterTrackFixtures), [goStep1]);
-  /** T-043: следующий экран после ламп — люстры, затем подсветка карниза. */
-  const goAfterLamps = useCallback(() => goStep1(nextAfterLamps), [goStep1]);
-  const goAfterChandeliers = useCallback(() => goStep1(nextAfterChandeliers), [goStep1]);
-  const goAfterPoints = useCallback(() => goStep1(nextAfterPoints), [goStep1]);
-  const goBackFromLamps = useCallback(() => goStep1(backFromLamps), [goStep1]);
-
-
-  const step1Progress = useMemo(() => calcStep1Progress(step1Nav), [step1Nav]);
-  const { trackComplete, pointsComplete, lampsComplete, requiredSelectionComplete } =
-    step1Progress;
-
-  const missingAction = useMemo(
-    () => missingActionFor(step1Progress, selectedTrackSystem),
-    [selectedTrackSystem, step1Progress]
-  );
-
-  const goToMissingAction = useCallback(() => {
-    if (!missingAction) return;
-    setActiveTab("recommendations");
-    setCatalogViewAndSync("browse");
-    setWStep(missingAction.step);
-  }, [missingAction, setCatalogViewAndSync, setActiveTab, setWStep]);
-
   // «Готово» с незакрытыми требованиями — показываем недостающий шаг, а не тупик.
   // T-025: показ экрана мастера освещения (после того, как шаг посчитан).
   const lastWStepRef = useRef<string>("");
@@ -645,7 +529,6 @@ export function WizardStep1Lighting() {
     });
   }, [wStep, requiredTrackMeters, requiredPointQty]);
 
-  const shownWStep: WStep = shownStepFor(wStep, step1Progress, missingAction);
 
   /**
    * N-050: выбор кнопки футера — чистая функция resolveStep1FooterAction,
@@ -880,11 +763,6 @@ export function WizardStep1Lighting() {
               setActiveTab("catalog");
               setCatalogViewAndSync("browse");
             },
-            onOpenCatalogTouched: () => {
-              markWizardTouched();
-              setActiveTab("catalog");
-              setCatalogViewAndSync("browse");
-            },
             onGoToSummary: () => goToStep(2),
             onBackToSystem: () => setWStep("system"),
             onBackToTrackProfile: () => setWStep("trackProfile"),
@@ -933,7 +811,7 @@ export function WizardStep1Lighting() {
                   <button
                     key={suggestion.key}
                     type="button"
-                    onClick={() => { markWizardTouched(); suggestion.apply(); }}
+                    onClick={suggestion.apply}
                     className="min-h-11 rounded-2xl border border-amber-300 bg-white px-3 text-xs font-semibold text-amber-950 hover:bg-amber-100"
                   >
                     {suggestion.title} ({fmt(suggestion.priceRub)} ₽)
