@@ -24,7 +24,7 @@ const ROOTS = ["components", "app"];
  * уменьшения; при росте страж падает.
  */
 const LEGACY_BUDGET = {
-  "components/calculator-modal/wizard-step1-lighting.tsx": 1303,
+  "components/calculator-modal/wizard-step1-lighting.tsx": 1279,
   // PT-011: экран интента вынесен в `ask-checkout-intent.ts` — порог понижен с 773.
   // PT-017: правило «есть ли фото» уехало в `lib/catalog-photo.ts` — порог понижен с 757.
   "app/uslugi/prodazha-trekovogo-osveshcheniya/_components/CatalogSectionClient.tsx": 748,

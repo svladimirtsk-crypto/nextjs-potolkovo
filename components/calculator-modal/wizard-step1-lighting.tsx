@@ -69,6 +69,21 @@ import {
   selectOrphanTrackEntries,
 } from "@/lib/lighting/orphan-track";
 import { CatalogBrowse } from "@/components/lighting/CatalogBrowse";
+// PT-018: переходы между экранами Шага 1 (B-F104) — чистые функции, компонент
+// владеет только состоянием `wOverride`.
+import {
+  backFromLamps,
+  calcStep1Progress,
+  missingActionFor,
+  nextAfterChandeliers,
+  nextAfterLamps,
+  nextAfterPoints,
+  nextAfterTrackFixtures,
+  nextAfterTrackProfile,
+  shownStepFor,
+  type Step1NavResult,
+  type Step1ProgressInput,
+} from "@/lib/lighting/step1-progress";
 // PT-018: чистые селекторы Шага 1 (B-F104) — правила выдачи каталога,
 // профили/светильники/системы и итоги «Выбранного» вынесены из компонента.
 import {
@@ -794,102 +809,64 @@ export function WizardStep1Lighting() {
     [cartEntries, requiredPointQty]
   );
 
-  const goAfterTrackProfile = useCallback(() => {
-    if (requiredTrackMeters > 0 && (!selectedTrackSystem || selectedTrackMeters < requiredTrackMeters)) return;
+  /* ─── PT-018: переходы между экранами — чистые функции `step1-progress` ─── */
 
-    if (wTrackFixtures.length > 0) {
-      setWStep("trackFixtures");
-      return;
-    }
-    if (requiredPointQty > 0 && selectedPointQty < requiredPointQty) {
-      setWStep("points");
-      return;
-    }
-    if (lampRequiredTotal > 0 && lampCurrentTotal < lampRequiredTotal) {
-      setWStep("lamps");
-      return;
-    }
-    setWStep("done");
-  }, [lampCurrentTotal, lampRequiredTotal, requiredPointQty, requiredTrackMeters, selectedPointQty, selectedTrackMeters, selectedTrackSystem, wTrackFixtures.length, setWStep]);
+  /** Факты, по которым решается следующий экран. */
+  const step1Nav = useMemo<Step1ProgressInput>(
+    () => ({
+      requiredTrackMeters,
+      requiredPointQty,
+      selectedTrackMeters,
+      selectedPointQty,
+      lampRequiredTotal,
+      lampCurrentTotal,
+      selectedTrackSystem,
+      trackFixturesCount: wTrackFixtures.length,
+      needsChandeliers,
+      needsCorniceLighting,
+    }),
+    [lampCurrentTotal, lampRequiredTotal, needsChandeliers, needsCorniceLighting,
+      requiredPointQty, requiredTrackMeters, selectedPointQty, selectedTrackMeters,
+      selectedTrackSystem, wTrackFixtures.length]
+  );
 
-  const goAfterTrackFixtures = useCallback(() => {
-    if (requiredPointQty > 0 && selectedPointQty < requiredPointQty) {
-      setWStep("points");
-      return;
-    }
-    if (lampRequiredTotal > 0 && lampCurrentTotal < lampRequiredTotal) {
-      setWStep("lamps");
-      return;
-    }
-    setWStep("done");
-  }, [lampCurrentTotal, lampRequiredTotal, requiredPointQty, selectedPointQty, setWStep]);
+  /**
+   * Переход: ставим экран и, если он про каталог, показываем нужный раздел.
+   * `null` — оставаться на месте (профиль не добран).
+   */
+  const applyStep1Nav = useCallback(
+    (result: Step1NavResult | null) => {
+      if (!result) return;
+      if (result.catalogSection) catalogFilters.selectSection(result.catalogSection);
+      setWStep(result.step);
+    },
+    [catalogFilters, setWStep]
+  );
 
+  /** Один обработчик на все переходы: правило — функция из `step1-progress`. */
+  const goStep1 = useCallback(
+    (rule: (input: Step1ProgressInput) => Step1NavResult | null) =>
+      applyStep1Nav(rule(step1Nav)),
+    [applyStep1Nav, step1Nav]
+  );
+
+  const goAfterTrackProfile = useCallback(() => goStep1(nextAfterTrackProfile), [goStep1]);
+  const goAfterTrackFixtures = useCallback(() => goStep1(nextAfterTrackFixtures), [goStep1]);
   /** T-043: следующий экран после ламп — люстры, затем подсветка карниза. */
-  const goAfterLamps = useCallback(() => {
-    if (needsChandeliers) {
-      setWStep("chandeliers");
-      catalogFilters.selectSection("chandeliers");
-      return;
-    }
-    if (needsCorniceLighting) {
-      setWStep("corniceLighting");
-      catalogFilters.selectSection("cornice-lighting");
-      return;
-    }
-    setWStep("done");
-  }, [catalogFilters, needsChandeliers, needsCorniceLighting, setWStep]);
-
-  const goAfterChandeliers = useCallback(() => {
-    if (needsCorniceLighting) {
-      setWStep("corniceLighting");
-      catalogFilters.selectSection("cornice-lighting");
-      return;
-    }
-    setWStep("done");
-  }, [catalogFilters, needsCorniceLighting, setWStep]);
-
-  const goAfterPoints = useCallback(() => {
-    if (lampRequiredTotal > 0 && lampCurrentTotal < lampRequiredTotal) {
-      setWStep("lamps");
-      return;
-    }
-    goAfterLamps();
-  }, [goAfterLamps, lampCurrentTotal, lampRequiredTotal, setWStep]);
-
-  const goBackFromLamps = useCallback(() => {
-    if (requiredPointQty > 0) {
-      setWStep("points");
-      return;
-    }
-    if (selectedTrackSystem) {
-      setWStep("trackFixtures");
-      return;
-    }
-    if (requiredTrackMeters > 0) {
-      setWStep("trackProfile");
-      return;
-    }
-    setWStep("system");
-  }, [requiredPointQty, requiredTrackMeters, selectedTrackSystem, setWStep]);
+  const goAfterLamps = useCallback(() => goStep1(nextAfterLamps), [goStep1]);
+  const goAfterChandeliers = useCallback(() => goStep1(nextAfterChandeliers), [goStep1]);
+  const goAfterPoints = useCallback(() => goStep1(nextAfterPoints), [goStep1]);
+  const goBackFromLamps = useCallback(() => goStep1(backFromLamps), [goStep1]);
 
 
-  const trackComplete = requiredTrackMeters <= 0 || selectedTrackMeters >= requiredTrackMeters;
-  const pointsComplete = requiredPointQty <= 0 || selectedPointQty >= requiredPointQty;
-  const lampsComplete = lampRequiredTotal <= 0 || lampCurrentTotal >= lampRequiredTotal;
-  const requiredSelectionComplete = trackComplete && pointsComplete && lampsComplete;
+  const step1Progress = useMemo(() => calcStep1Progress(step1Nav), [step1Nav]);
+  const { trackComplete, pointsComplete, lampsComplete, requiredSelectionComplete } =
+    step1Progress;
 
-  const missingTrackMeters = Math.max(0, requiredTrackMeters - selectedTrackMeters);
-  const missingPointQty = Math.max(0, requiredPointQty - selectedPointQty);
-  const missingLampQty = Math.max(0, lampRequiredTotal - lampCurrentTotal);
-
-  const missingAction = useMemo(() => {
-    if (missingTrackMeters > 0) {
-      return { label: selectedTrackSystem ? "Добрать профиль →" : "Выбрать систему →", step: selectedTrackSystem ? "trackProfile" : "system" } as const;
-    }
-    if (missingPointQty > 0) return { label: "Выбрать светильники →", step: "points" } as const;
-    if (missingLampQty > 0) return { label: "Добавить лампы →", step: "lamps" } as const;
-    return null;
-  }, [missingLampQty, missingPointQty, missingTrackMeters, selectedTrackSystem]);
+  const missingAction = useMemo(
+    () => missingActionFor(step1Progress, selectedTrackSystem),
+    [selectedTrackSystem, step1Progress]
+  );
 
   const goToMissingAction = useCallback(() => {
     if (!missingAction) return;
@@ -911,8 +888,7 @@ export function WizardStep1Lighting() {
     });
   }, [wStep, requiredTrackMeters, requiredPointQty]);
 
-  const shownWStep: WStep =
-    wStep === "done" && !requiredSelectionComplete && missingAction ? missingAction.step : wStep;
+  const shownWStep: WStep = shownStepFor(wStep, step1Progress, missingAction);
 
   /**
    * N-050: выбор кнопки футера — чистая функция resolveStep1FooterAction,
