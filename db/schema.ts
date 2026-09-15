@@ -6,6 +6,7 @@
 import {
   bigint,
   bigserial,
+  date,
   index,
   integer,
   jsonb,
@@ -158,3 +159,49 @@ export const deliveryAlerts = pgTable(
   },
   (table) => [index("delivery_alerts_created_at_idx").on(table.createdAt)]
 );
+
+/**
+ * PT-016 · Календарь свободных дат замера (B-F108, T-322).
+ *
+ * До задачи даты жили в `content/availability.ts`: чтобы поменять их, нужен
+ * коммит и деплой, а между деплоями сайт показывал «чт, сб», которые давно
+ * заняты. Здесь — конкретные даты, которые владелец правит с телефона через
+ * `PUT /api/admin/availability` за 20 секунд, без сборки.
+ *
+ * Одна строка = одна дата. `note` — необязательная подпись окна («утро»,
+ * «после 17:00»): два окна в один день master не даёт, поэтому отдельной
+ * колонки времени нет, а уточнение остаётся текстом.
+ *
+ * Просроченные даты НЕ удаляются автоматически и не скрываются в БД: их
+ * отсекает чтение (`lib/availability/format.ts`) по московскому дню. Строки
+ * остаются как история того, что было предложено клиентам.
+ */
+export const availabilitySlots = pgTable(
+  "availability_slots",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    /** Дата замера `YYYY-MM-DD` в Europe/Moscow. `mode: "string"` — без сюрпризов часовых поясов у `Date`. */
+    slotDate: date("slot_date", { mode: "string" }).notNull().unique(),
+    /** Подпись окна; `null` — показываем только дату. */
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("availability_slots_date_idx").on(table.slotDate)]
+);
+
+/**
+ * PT-016 · Состояние календаря: одна строка (`id = 1`).
+ *
+ * Нужна, чтобы отличить «таблицу ещё ни разу не заполняли» от «владелец
+ * намеренно оставил ноль свободных окон». В первом случае сайт показывает
+ * запасной календарь из `content/availability.ts` (иначе блок исчез бы сразу
+ * после деплоя, до первого захода в админку), во втором — молчит: обещать
+ * окна, которых нет, хуже, чем не обещать ничего.
+ */
+export const availabilitySettings = pgTable("availability_settings", {
+  id: integer("id").primaryKey().default(1),
+  /** Когда календарь впервые заполнили через админку. */
+  configuredAt: timestamp("configured_at", { withTimezone: true }).notNull().defaultNow(),
+  /** Последнее изменение — показывается владельцу и в публичном API. */
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

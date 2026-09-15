@@ -145,6 +145,28 @@ const envSchema = z.object({
   /** Bearer для POST /api/lead/retry. */
   CRON_SECRET: optionalSecret,
 
+  /**
+   * PT-016 · Календарь свободных дат замера.
+   *
+   * До задачи даты лежали в `content/availability.ts`: чтобы поменять их,
+   * нужен коммит, сборка и деплой, а между деплоями сайт показывал «чт, сб»,
+   * которые давно заняты. Теперь даты пишутся в таблицу `availability_slots`
+   * через `PUT /api/admin/availability` и страницу `/admin/availability`.
+   *
+   * `AVAILABILITY_DB_ENABLED=0` — аварийный откат (правило 8 раздела 2 ТЗ):
+   * календарь снова читается только из файла, админ-API отвечает 503.
+   * Дефолт `1` осознанный: при пустой таблице источник всё равно файл
+   * (строки настроек нет), то есть поведение сайта не меняется до первого
+   * сохранения владельца.
+   */
+  AVAILABILITY_DB_ENABLED: boolFlag(true),
+  /**
+   * Пароль админки календаря. Отдельный от `CRON_SECRET`: крон и календарь
+   * меняют разные вещи, и утечка одного не должна открывать другое.
+   * Без него `/api/admin/availability` отвечает 503 («не настроено»).
+   */
+  AVAILABILITY_TOKEN: optionalSecret,
+
   /** Строка подключения к БД лидов; без неё используется in-memory store. */
   DATABASE_URL: optionalSecret,
 
@@ -190,6 +212,13 @@ function collectWarnings(env: z.infer<typeof envSchema>): string[] {
 
   if (!env.CRON_SECRET) {
     warnings.push("CRON_SECRET не задан — POST /api/lead/retry будет отвечать 503.");
+  }
+
+  if (env.AVAILABILITY_DB_ENABLED && env.DATABASE_URL && !env.AVAILABILITY_TOKEN) {
+    warnings.push(
+      "AVAILABILITY_TOKEN не задан — /api/admin/availability отвечает 503, " +
+        "даты замера нельзя обновить без деплоя."
+    );
   }
 
   if (!env.DATABASE_URL) {
