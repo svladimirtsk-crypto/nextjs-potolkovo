@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   backFromLamps,
+  backFromPoints,
   calcStep1Progress,
   missingActionFor,
   nextAfterChandeliers,
@@ -192,6 +193,27 @@ describe("PT-018 · «Назад» с ламп", () => {
 
   it("иначе — выбор системы", () => {
     expect(backFromLamps(base)).toEqual({ step: "system" });
+  });
+});
+
+describe("PT-018 · назад с точек", () => {
+  it("светильники трека — если система выбрана, даже при недобранных точках", () => {
+    expect(
+      backFromPoints(facts({ requiredPointQty: 4, selectedPointQty: 1, selectedTrackSystem: "CLARUS_48" }))
+    ).toEqual({ step: "trackFixtures" });
+  });
+
+  it("профиль — если метраж есть, а система нет", () => {
+    expect(backFromPoints(facts({ requiredTrackMeters: 6 }))).toEqual({ step: "trackProfile" });
+  });
+
+  it("иначе — выбор системы", () => {
+    expect(backFromPoints(base)).toEqual({ step: "system" });
+  });
+
+  it("совпадает с «назад с ламп», когда точек не требуется", () => {
+    const noPoints = facts({ selectedTrackSystem: "COLIBRI_220", requiredPointQty: 0 });
+    expect(backFromPoints(noPoints)).toEqual(backFromLamps(noPoints));
   });
 });
 

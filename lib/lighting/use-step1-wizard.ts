@@ -33,6 +33,7 @@ import type { CartEntry } from "@/lib/lighting/cart-derived";
 import { resolveInitialLightingStep, type WizardStep } from "@/lib/lighting/resolve-initial-step";
 import {
   backFromLamps,
+  backFromPoints,
   calcStep1Progress,
   missingActionFor,
   nextAfterChandeliers,
@@ -121,6 +122,11 @@ export type Step1WizardApi = {
   goAfterChandeliers: () => void;
   goAfterPoints: () => void;
   goBackFromLamps: () => void;
+  goBackFromPoints: () => void;
+  /** Возврат к экрану выбора системы (кнопка «Изменить» в блоке «К итогу»). */
+  goToSystem: () => void;
+  /** Возврат к экрану профиля трека. */
+  goToTrackProfile: () => void;
   goToMissingAction: () => void;
 };
 
@@ -244,6 +250,11 @@ export function useStep1Wizard(input: UseStep1WizardInput): Step1WizardApi {
   const goAfterChandeliers = useCallback(() => go(nextAfterChandeliers), [go]);
   const goAfterPoints = useCallback(() => go(nextAfterPoints), [go]);
   const goBackFromLamps = useCallback(() => go(backFromLamps), [go]);
+  const goBackFromPoints = useCallback(() => go(backFromPoints), [go]);
+
+  /** «Изменить» в блоке «К итогу»: возврат к выбору системы или к профилю. */
+  const goToSystem = useCallback(() => setWStep("system"), [setWStep]);
+  const goToTrackProfile = useCallback(() => setWStep("trackProfile"), [setWStep]);
 
   /* ─── Выбор системы и отказ от трека ─── */
 
@@ -317,6 +328,9 @@ export function useStep1Wizard(input: UseStep1WizardInput): Step1WizardApi {
     goAfterChandeliers,
     goAfterPoints,
     goBackFromLamps,
+    goBackFromPoints,
+    goToSystem,
+    goToTrackProfile,
     goToMissingAction,
   };
 }

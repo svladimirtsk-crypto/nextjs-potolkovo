@@ -8,7 +8,6 @@ import {
   trackLightingSystemSelected,
 } from "@/lib/analytics";
 
-import { applyLightingWithCeilingDiscount } from "@/lib/lighting-formulas";
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
 import { type WizardStep } from "@/lib/lighting/resolve-initial-step";
 import { useCatalogProducts } from "@/lib/lighting/use-catalog-products";
@@ -29,9 +28,8 @@ import {
   calcSelectedTotals,
   cardDiscountPercentFor,
   scopeCatalogProducts,
-  systemLabelOf,
 } from "@/lib/lighting/step1-selectors";
-import { RecommendationsTab } from "@/components/lighting/RecommendationsTab";
+import { Step1Recommendations } from "@/components/lighting/Step1Recommendations";
 import { useCalculatorModal } from "./calculator-modal-context";
 import { useCalculatorStore } from "@/lib/calculator/store";
 
@@ -194,14 +192,7 @@ export function WizardStep1Lighting() {
   /* ─── Корзина Шага 1: факты и действия (PT-018: `lib/lighting/use-step1-cart`) ───
    * Правила — в `cart-derived`, `kit-rules` и `orphan-track`; хук их только
    * собирает. Источник корзины один: `lightingDraft` через `useLightingCart`. */
-  const {
-    cartEntries, selectedTrackMeters, selectedPointQty, selectedViewItems,
-    lampOptionsBySocket, lampRequiredBySocket, lampCurrentBySocket, lampSocketsToShow,
-    lampRequiredTotal, lampCurrentTotal, missingLamps, missingMounts, clarusPsuOptions,
-    accessorySuggestions, orphanTrackMeters, orphanTrackCount, showOrphanTrackWarning,
-    dropOrphanTrackItems, setProductQty, setTrackProfileQty, clearTrackProductsForSystem,
-    addMountOneToOne, addCheapestLamps, setClarusPsu,
-  } = useStep1Cart({
+  const step1Cart = useStep1Cart({
     cart: cartItems,
     updateCart: setCartItems,
     resolveProduct,
@@ -212,6 +203,13 @@ export function WizardStep1Lighting() {
     requiredTrackMeters,
     onTrackSystemPicked: setWSystem,
   });
+  const {
+    cartEntries, selectedTrackMeters, selectedPointQty, selectedViewItems,
+    lampRequiredBySocket, lampCurrentBySocket,
+    lampRequiredTotal, lampCurrentTotal, missingLamps,
+    accessorySuggestions, orphanTrackMeters, orphanTrackCount, showOrphanTrackWarning,
+    dropOrphanTrackItems, setProductQty, clearTrackProductsForSystem, addCheapestLamps,
+  } = step1Cart;
 
   /* ─── Recommendations ─── */
   const recommendedTrackProfiles = useMemo(
@@ -272,15 +270,14 @@ export function WizardStep1Lighting() {
     setCatalogViewAndSync("browse");
   }, [setActiveTab, setCatalogViewAndSync]);
 
-  const {
-    wStep, shownWStep, selectedTrackSystem, wizardSystemOptions,
-    trackProfiles: wTrackProfiles, trackFixtures: wTrackFixtures,
-    progress: step1Progress, footerHandlers, missingAction,
-    trackComplete, pointsComplete, lampsComplete, requiredSelectionComplete,
-    chooseWizardSystem, chooseNoTrackFlow, goAfterTrackProfile,
-    goAfterTrackFixtures, goAfterLamps, goAfterPoints,
-    goBackFromLamps, goToMissingAction,
-  } = useStep1Wizard({
+  /** Кнопки вкладки «Подбор»: открыть каталог и уйти на Шаг 2. */
+  const openCatalogBrowse = useCallback(() => {
+    setActiveTab("catalog");
+    setCatalogViewAndSync("browse");
+  }, [setActiveTab, setCatalogViewAndSync]);
+  const goToSummary = useCallback(() => goToStep(2), [goToStep]);
+
+  const wizard = useStep1Wizard({
     requiredTrackMeters,
     requiredPointQty,
     trackMountType,
@@ -301,16 +298,14 @@ export function WizardStep1Lighting() {
     onSelectCatalogSection: catalogFilters.selectSection,
     onOpenRecommendations: openRecommendations,
   });
+  const {
+    wStep, shownWStep, selectedTrackSystem, wizardSystemOptions,
+    trackProfiles: wTrackProfiles, progress: step1Progress, footerHandlers,
+    missingAction, requiredSelectionComplete, goToMissingAction,
+  } = wizard;
 
   /* ─── Экраны подбора: товары и комплекты (PT-018: `use-step1-screens`) ─── */
-  const {
-    pointKind, choosePointKind, manualPointsOpen, openManualPoints,
-    pointTab: wPointTab, setPointTab: setWPointTab,
-    pointProducts: wPointProducts, pointProgressBySubtype,
-    autoProfilePlan, applyAutoProfilePlan, fixturesHint,
-    kitCompletion, applyKitCompletion, psuAcknowledged, setPsuAcknowledged,
-    psuBlocks, finishAction, chandeliers: wChandeliers, corniceLighting: wCorniceLighting,
-  } = useStep1Screens({
+  const screens = useStep1Screens({
     products,
     cartItems,
     updateCart: setCartItems,
@@ -323,6 +318,7 @@ export function WizardStep1Lighting() {
     setWSystem,
     goToStep,
   });
+  const { psuBlocks, finishAction } = screens;
 
   /* ─── Selected view ─── */
   // Пустое «Выбранное» показывать нечем — молча показываем каталог.
@@ -480,111 +476,25 @@ export function WizardStep1Lighting() {
           ПОДБОР — Guided Wizard
           ═══════════════════════════════════════════════ */}
       {activeTab === "recommendations" && (
-        <RecommendationsTab
-          step={shownWStep}
-          cart={{
-            items: cartItems,
-            onQtyChange: setProductQty,
-            onZoom: setZoomImage,
-            discountPercent: cardDiscountPercent,
-          }}
-          products={{
-            all: products,
-            trackProfiles: wTrackProfiles,
-            trackFixtures: wTrackFixtures,
-            chandeliers: wChandeliers,
-            corniceLighting: wCorniceLighting,
-            points: wPointProducts,
-            lampsBySocket: lampOptionsBySocket,
-          }}
-          track={{
-            systemOptions: wizardSystemOptions,
-            mountType: trackMountType,
-            selectedSystem: selectedTrackSystem,
-            systemLabel: systemLabelOf,
-            requiredMeters: requiredTrackMeters,
-            selectedMeters: selectedTrackMeters,
-            complete: trackComplete,
-            fixturesHint,
-            autoPlan:
-              autoProfilePlan && requiredTrackMeters > 0 && !trackComplete
-                ? {
-                    pieces: autoProfilePlan.pieces,
-                    totalRub: autoProfilePlan.totalRub,
-                    discountedTotalRub: applyLightingWithCeilingDiscount(autoProfilePlan.totalRub),
-                    totalMeters: autoProfilePlan.totalMeters,
-                  }
-                : null,
-            onApplyAutoPlan: applyAutoProfilePlan,
-            onChooseSystem: chooseWizardSystem,
-            onNoTrack: chooseNoTrackFlow,
-            onProfileQtyChange: setTrackProfileQty,
-            onConfirmProfile: goAfterTrackProfile,
-            onConfirmFixtures: goAfterTrackFixtures,
-          }}
-          completion={{
-            mandatory: kitCompletion.mandatory,
-            recommended: kitCompletion.recommended,
-            psuMissing: kitCompletion.psuMissing,
-            psuAcknowledged,
-            onPsuAcknowledgedChange: setPsuAcknowledged,
-            onAddMandatory: () => applyKitCompletion(kitCompletion.mandatory),
-            onAddRecommended: () => applyKitCompletion(kitCompletion.recommended),
-          }}
-          points={{
-            required: requiredPointQty,
-            selected: selectedPointQty,
-            activeKind: pointKind,
-            onKindChange: choosePointKind,
-            manualOpen: manualPointsOpen,
-            onManualOpen: openManualPoints,
-            socketTab: wPointTab,
-            onSocketTabChange: setWPointTab,
-            socketProgress: pointProgressBySubtype,
-            complete: pointsComplete,
-            onBack: () =>
-              setWStep(
-                selectedTrackSystem
-                  ? "trackFixtures"
-                  : requiredTrackMeters > 0
-                    ? "trackProfile"
-                    : "system"
-              ),
-            onConfirm: goAfterPoints,
-          }}
-          lamps={{
-            sockets: lampSocketsToShow,
-            requiredBySocket: lampRequiredBySocket,
-            currentBySocket: lampCurrentBySocket,
-            complete: lampsComplete,
-            onAddCheapest: addCheapestLamps,
-            onBack: goBackFromLamps,
-            onConfirm: goAfterLamps,
-          }}
-          done={{
-            itemsCount: lightingDraft?.items?.length ?? 0,
-            regularTotal: lightingRegularTotal,
-            effectiveTotal: lightingEffectiveTotal,
-            missingMounts,
-            clarusPsuOptions,
-            onAddMount: addMountOneToOne,
-            onPickClarusPsu: setClarusPsu,
-            selectionComplete: requiredSelectionComplete,
-            missingAction,
-            onGoToMissingAction: goToMissingAction,
-          }}
-          nav={{
-            chandeliersQty: toNumber(snapshot?.derivedInputs?.chandeliersQty),
-            corniceMeters: toNumber(snapshot?.derivedInputs?.corniceLightingMeters),
-            hasRecommendations,
-            onOpenCatalog: () => {
-              setActiveTab("catalog");
-              setCatalogViewAndSync("browse");
-            },
-            onGoToSummary: () => goToStep(2),
-            onBackToSystem: () => setWStep("system"),
-            onBackToTrackProfile: () => setWStep("trackProfile"),
-          }}
+        <Step1Recommendations
+          cart={step1Cart}
+          wizard={wizard}
+          screens={screens}
+          cartItems={cartItems}
+          products={products}
+          trackMountType={trackMountType}
+          requiredTrackMeters={requiredTrackMeters}
+          requiredPointQty={requiredPointQty}
+          chandeliersQty={toNumber(snapshot?.derivedInputs?.chandeliersQty)}
+          corniceMeters={toNumber(snapshot?.derivedInputs?.corniceLightingMeters)}
+          hasRecommendations={hasRecommendations}
+          draftItemsCount={lightingDraft?.items?.length ?? 0}
+          regularTotal={lightingRegularTotal}
+          effectiveTotal={lightingEffectiveTotal}
+          cardDiscountPercent={cardDiscountPercent}
+          onZoomImage={setZoomImage}
+          onOpenCatalog={openCatalogBrowse}
+          onGoToSummary={goToSummary}
           fmt={fmt}
           fmtMeters={fmtM}
         />

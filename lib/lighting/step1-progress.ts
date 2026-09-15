@@ -124,6 +124,17 @@ export function nextAfterPoints(input: Step1ProgressInput): Step1NavResult {
   return nextAfterLamps(input);
 }
 
+/**
+ * «Назад» с точек — к экрану трека, если трек выбран или требуется.
+ * PT-018: правило жило инлайн-стрелкой в JSX вкладки «Подбор» и было копией
+ * `backFromLamps` без первой ветки.
+ */
+export function backFromPoints(input: Step1ProgressInput): Step1NavResult {
+  if (input.selectedTrackSystem) return { step: "trackFixtures" };
+  if (input.requiredTrackMeters > 0) return { step: "trackProfile" };
+  return { step: "system" };
+}
+
 /** «Назад» с ламп — к последнему осмысленному экрану до них. */
 export function backFromLamps(input: Step1ProgressInput): Step1NavResult {
   if (input.requiredPointQty > 0) return { step: "points" };
