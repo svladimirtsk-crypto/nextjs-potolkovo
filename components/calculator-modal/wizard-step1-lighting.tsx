@@ -9,25 +9,20 @@ import {
 } from "@/lib/analytics";
 
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
-import { trackLightingCartChanged } from "@/lib/analytics";
 import {
   LIGHTING_ONLY_DISCOUNT_PERCENT,
   LIGHTING_WITH_CEILING_DISCOUNT_PERCENT,
   applyLightingWithCeilingDiscount,
 } from "@/lib/lighting-formulas";
-import {
-  detectSocket,
-} from "@/lib/feed2-products";
+import { detectSocket } from "@/lib/feed2-products";
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
 import { resolveInitialLightingStep, type WizardStep } from "@/lib/lighting/resolve-initial-step";
 import { pricing } from "@/content/pricing";
 import { useCatalogProducts } from "@/lib/lighting/use-catalog-products";
 import { useLightingCart } from "@/lib/lighting/use-lighting-cart";
-import { completeKit } from "@/lib/lighting/kit-rules";
 import {
   autoAssembleProfiles,
-  clearAllTrackProducts,
-  clearIncompatibleSystem as clearIncompatibleSystem_,
+  completeKit,
   fixturesHintForMeters,
   isTrackSystemId,
 } from "@/lib/lighting/kit-rules";
@@ -35,39 +30,16 @@ import {
 import {
   visibleCatalogSections,
   POINT_SUBTYPES,
-  POINT_TO_MOUNT_VENDOR_CODE,
-  CLARUS_PSU_VENDOR_CODES,
   REMOVED_COLIBRI_VENDOR_CODES,
   TRACK_GROUPS,
   TRACK_SYSTEMS,
   LAMP_SOCKETS,
   type PointSubtypeId,
   type TrackSystemId,
-  type LampSocket,
 } from "@/lib/catalog-ui-config";
 
-import { isPanelProduct, normalizeQty } from "@/lib/lighting/product-predicates";
-import {
-  buildAccessorySuggestions,
-  buildCartEntries,
-  calcClarusPsuQty,
-  calcLampCurrentBySocket,
-  calcLampCurrentTotal,
-  calcLampRequiredBySocket,
-  calcLampRequiredTotal,
-  calcLampSocketsToShow,
-  calcMissingLamps,
-  calcMissingMounts,
-  calcSelectedPointQty,
-  calcSelectedTrackMeters,
-  groupLampOptionsBySocket,
-  hasClarusInCart as hasClarusInCartFn,
-} from "@/lib/lighting/cart-derived";
-import {
-  calcOrphanTrackMeters,
-  decideOrphanTrackAction,
-  selectOrphanTrackEntries,
-} from "@/lib/lighting/orphan-track";
+import { isPanelProduct } from "@/lib/lighting/product-predicates";
+import { decideOrphanTrackAction } from "@/lib/lighting/orphan-track";
 import { CatalogBrowse } from "@/components/lighting/CatalogBrowse";
 // PT-018: переходы между экранами Шага 1 (B-F104) — чистые функции, компонент
 // владеет только состоянием `wOverride`.
@@ -87,10 +59,7 @@ import {
 // PT-018: чистые селекторы Шага 1 (B-F104) — правила выдачи каталога,
 // профили/светильники/системы и итоги «Выбранного» вынесены из компонента.
 import {
-  buildClarusPsuOptions,
-  buildSelectedViewItems,
   buildTrackProfileRecommendations,
-  calcMountRequiredByVendor,
   calcSelectedTotals,
   cardDiscountPercentFor,
   detectCartTrackSystem,
@@ -115,7 +84,6 @@ import { useCalculatorStore } from "@/lib/calculator/store";
 
 type Tab = "recommendations" | "catalog";
 type CatalogView = "selected" | "browse";
-type CartItems = Record<string, number>;
 
 function fmt(v: number): string { return new Intl.NumberFormat("ru-RU").format(Math.round(v)); }
 function fmtM(v: number): string { return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 }).format(v); }
@@ -153,6 +121,7 @@ import {
   TabBtn,
 } from "@/components/lighting/CatalogPieces";
 import { buildStep1FooterAction, resolveStep1FooterAction } from "@/lib/lighting/step1-footer-action";
+import { useStep1Cart } from "@/lib/lighting/use-step1-cart";
 import { useCatalogFilters } from "@/lib/lighting/use-catalog-filters";
 import { useCatalogIndex } from "@/lib/lighting/use-catalog-index";
 
@@ -277,15 +246,6 @@ export function WizardStep1Lighting() {
     });
   }, [options?.initialLighting, resolveProduct]);
 
-  /* ─── Derived cart data ─── */
-  const cartEntries = useMemo(
-    () => buildCartEntries(cartItems, resolveProduct),
-    [cartItems, resolveProduct]
-  );
-
-  const selectedTrackMeters = useMemo(() => calcSelectedTrackMeters(cartEntries), [cartEntries]);
-  const selectedPointQty = useMemo(() => calcSelectedPointQty(cartEntries), [cartEntries]);
-
   const requiredTrackMeters = showCeilingInUi ? toNumber(snapshot?.derivedInputs?.trackLengthMeters) : 0;
   const requiredPointQty = showCeilingInUi ? toNumber(snapshot?.derivedInputs?.pointSpotsQty) : 0;
   const trackMountType = (snapshot?.derivedInputs?.trackMountType ?? "none") as "built-in" | "surface" | "none";
@@ -313,6 +273,28 @@ export function WizardStep1Lighting() {
   /** N-021: ручной выбор по цоколю свёрнут, пока человек не попросил. */
   const [manualPointsOpen, setManualPointsOpen] = useState(false);
 
+  /* ─── Корзина Шага 1: факты и действия (PT-018: `lib/lighting/use-step1-cart`) ───
+   * Правила — в `cart-derived`, `kit-rules` и `orphan-track`; хук их только
+   * собирает. Источник корзины один: `lightingDraft` через `useLightingCart`. */
+  const {
+    cartEntries, selectedTrackMeters, selectedPointQty, selectedViewItems,
+    lampOptionsBySocket, lampRequiredBySocket, lampCurrentBySocket, lampSocketsToShow,
+    lampRequiredTotal, lampCurrentTotal, missingLamps, missingMounts, clarusPsuOptions,
+    accessorySuggestions, orphanTrackMeters, orphanTrackCount, showOrphanTrackWarning,
+    dropOrphanTrackItems, setProductQty, setTrackProfileQty, clearTrackProductsForSystem,
+    addMountOneToOne, addCheapestLamps, setClarusPsu,
+  } = useStep1Cart({
+    cart: cartItems,
+    updateCart: setCartItems,
+    resolveProduct,
+    productsById,
+    productIdByVendorCode,
+    products,
+    source: options?.source,
+    requiredTrackMeters,
+    onTrackSystemPicked: setWSystem,
+  });
+
   /* ─── Recommendations ─── */
   const recommendedTrackProfiles = useMemo(
     () =>
@@ -327,86 +309,11 @@ export function WizardStep1Lighting() {
 
   const hasRecommendations = recommendedTrackProfiles.length > 0 || requiredPointQty > 0;
 
-  /* ─── Lamps / mounts deps ─── */
-  const lampOptionsBySocket = useMemo(() => groupLampOptionsBySocket(products), [products]);
-
-  const lampRequiredBySocket = useMemo(() => calcLampRequiredBySocket(cartEntries), [cartEntries]);
-
-  const lampCurrentBySocket = useMemo(
-    () => calcLampCurrentBySocket(cartItems, lampOptionsBySocket),
-    [cartItems, lampOptionsBySocket]
-  );
-
-  const mountRequiredByVendor = useMemo(() => calcMountRequiredByVendor(cartEntries), [cartEntries]);
-
-  const missingLamps = useMemo(
-    () => calcMissingLamps(lampRequiredBySocket, lampCurrentBySocket),
-    [lampCurrentBySocket, lampRequiredBySocket]
-  );
-
-  const lampRequiredTotal = useMemo(
-    () => calcLampRequiredTotal(lampRequiredBySocket),
-    [lampRequiredBySocket]
-  );
-
-  const lampCurrentTotal = useMemo(
-    () => calcLampCurrentTotal(lampRequiredBySocket, lampCurrentBySocket),
-    [lampCurrentBySocket, lampRequiredBySocket]
-  );
-
-  const lampSocketsToShow = useMemo(
-    () => calcLampSocketsToShow(lampRequiredBySocket, lampCurrentBySocket),
-    [lampCurrentBySocket, lampRequiredBySocket]
-  );
-
-  const missingMounts = useMemo(
-    () => calcMissingMounts({ cartItems, productIdByVendorCode, productsById }),
-    [cartItems, productIdByVendorCode, productsById]
-  );
-
-  const hasClarusInCart = useMemo(() => hasClarusInCartFn(cartEntries), [cartEntries]);
-  const clarusPsuQty = useMemo(() => calcClarusPsuQty(cartEntries), [cartEntries]);
-
-  /** Варианты БП для CLARUS; пусто — если блок уже выбран или CLARUS нет. */
-  const clarusPsuOptions = useMemo(
-    () =>
-      buildClarusPsuOptions({ hasClarusInCart, clarusPsuQty, productIdByVendorCode, productsById }),
-    [hasClarusInCart, clarusPsuQty, productIdByVendorCode, productsById]
-  );
-
   /* ─── T-024: трек выключен, но в корзине есть трековые позиции ───
    * Раньше эффект молча вычищал корзину. Если набор собран в каталоге
    * (lighting-first, origin: "page"), удалять нельзя — показываем предупреждение
    * и даём клиенту решить самому. */
   const isLightingFirst = options?.entryMode === "lighting-first";
-
-  const orphanTrackEntries = useMemo(
-    () => selectOrphanTrackEntries(cartEntries, requiredTrackMeters),
-    [cartEntries, requiredTrackMeters]
-  );
-
-  const orphanTrackMeters = useMemo(
-    () => calcOrphanTrackMeters(orphanTrackEntries),
-    [orphanTrackEntries]
-  );
-
-  const orphanTrackCount = orphanTrackEntries.length;
-
-  const dropOrphanTrackItems = useCallback(() => {
-    const ids = new Set(orphanTrackEntries.map((entry) => toText(entry.product.productId)));
-    if (ids.size === 0) return;
-    setCartItems((prev) => {
-      const next = { ...prev };
-      let changed = false;
-      for (const id of Object.keys(prev)) {
-        if (ids.has(id)) {
-          delete next[id];
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [orphanTrackEntries, setCartItems]);
 
   /**
    * N-051: чистим корзину только когда трек действительно «выключили» на
@@ -430,13 +337,6 @@ export function WizardStep1Lighting() {
     if (decision === "drop") dropOrphanTrackItems();
   }, [requiredTrackMeters, orphanTrackCount, isLightingFirst, dropOrphanTrackItems]);
 
-  /**
-   * Предупреждение показываем всегда, когда трековые позиции есть, а трек не
-   * заказан: если их только что удалили автоматически, счётчик обнулится и
-   * блок исчезнет сам.
-   */
-  const showOrphanTrackWarning = orphanTrackCount > 0 && requiredTrackMeters <= 0;
-
   // T-025: выбранная система трека
   const lastSystemRef = useRef<string>("");
   useEffect(() => {
@@ -445,147 +345,6 @@ export function WizardStep1Lighting() {
     trackLightingSystemSelected({ system: trackSystem });
   }, [trackSystem]);
 
-  /* ─── T-012: предложения по комплектующим (без принуждения) ─── */
-  const accessorySuggestions = useMemo(() => {
-    const suggestions = buildAccessorySuggestions({
-      lampRequiredBySocket,
-      lampCurrentBySocket,
-      lampOptionsBySocket,
-      missingMounts,
-      productIdByVendorCode,
-      productsById,
-    });
-    return suggestions.map((suggestion) => ({
-      ...suggestion,
-      apply: () =>
-        setCartItems((prev) => ({
-          ...prev,
-          [suggestion.productId]: toNumber(prev[suggestion.productId]) + suggestion.qty,
-        })),
-    }));
-  }, [
-    lampCurrentBySocket,
-    lampOptionsBySocket,
-    lampRequiredBySocket,
-    missingMounts,
-    productIdByVendorCode,
-    productsById,
-    setCartItems,
-  ]);
-
-  // T-031: единственная реализация — в lib/lighting/kit-rules.ts
-  const clearIncompatibleSystem = useCallback(
-    (next: CartItems, targetSystem: string) => {
-      const cleaned = clearIncompatibleSystem_(next, targetSystem, resolveProduct);
-      for (const key of Object.keys(next)) {
-        if (!(key in cleaned)) delete next[key];
-      }
-    },
-    [resolveProduct]
-  );
-
-  /* ─── setProductQty ─── */
-  const setProductQty = useCallback((product: FeedCatalogProduct, nextQtyRaw: number) => {
-    const id = toText(product.productId);
-    const nextQty = normalizeQty(nextQtyRaw, product.unit);
-    const prevQty = toNumber(cartItems[id]);
-    if (prevQty !== nextQty) {
-      trackLightingCartChanged({
-        action: prevQty <= 0 && nextQty > 0 ? "add" : prevQty > 0 && nextQty <= 0 ? "remove" : "change",
-        sku: id, productKind: String(product.kind), qty: nextQty, source: String(options?.source ?? "unknown"),
-      });
-    }
-    setCartItems((prev) => {
-      const n = { ...prev };
-      if (nextQty <= 0) {
-        delete n[id];
-      } else {
-        const system = product.system;
-        if (system && isTrackSystemId(system)) {
-          clearIncompatibleSystem(n, system);
-        }
-        const clarusPsuVendorCodes = new Set<string>(CLARUS_PSU_VENDOR_CODES);
-        if (clarusPsuVendorCodes.has(toText(product.vendorCode))) {
-          clearIncompatibleSystem(n, "CLARUS_48");
-        }
-        n[id] = nextQty;
-      }
-      return n;
-    });
-  }, [cartItems, options?.source, clearIncompatibleSystem, setCartItems]);
-
-  const clearTrackProductsForSystem = useCallback((system: TrackSystemId | null) => {
-    /**
-     * N-051: третья копия правила несовместимости жила здесь. Отличие от
-     * остальных — случай `system === null`: человек отказался от трека, и
-     * убрать надо всё трековое, а не только чужую систему.
-     */
-    setCartItems((prev) =>
-      system === null
-        ? clearAllTrackProducts(prev, resolveProduct)
-        : clearIncompatibleSystem_(prev, system, resolveProduct)
-    );
-  }, [resolveProduct, setCartItems]);
-
-  const setTrackProfileQty = useCallback((product: FeedCatalogProduct, nextQtyRaw: number) => {
-    const system = isTrackSystemId(product.system) ? product.system : null;
-    if (!system) return;
-
-    const id = toText(product.productId);
-    const nextQty = normalizeQty(nextQtyRaw, product.unit);
-    const prevQty = toNumber(cartItems[id]);
-
-    setWSystem(system);
-
-    if (prevQty !== nextQty) {
-      trackLightingCartChanged({
-        action: prevQty <= 0 && nextQty > 0 ? "add" : prevQty > 0 && nextQty <= 0 ? "remove" : "change",
-        sku: id,
-        productKind: String(product.kind),
-        qty: nextQty,
-        source: String(options?.source ?? "unknown"),
-      });
-    }
-
-    setCartItems((prev) => {
-      /**
-       * N-051: правило несовместимости — общая `clearIncompatibleSystem`.
-       * Здесь была его вторая, инлайн-версия: три вида трековых товаров и
-       * блоки CLARUS перечислялись руками. Совпадала она с оригиналом
-       * случайно — добавление нового вида товара чинилось бы в двух местах.
-       */
-      const next = clearIncompatibleSystem_(prev, system, resolveProduct);
-
-      if (nextQty <= 0) delete next[id];
-      else next[id] = nextQty;
-
-      return next;
-    });
-  }, [cartItems, options?.source, resolveProduct, setCartItems, setWSystem]);
-
-  const addMountOneToOne = useCallback((fv: string) => {
-    const mv = POINT_TO_MOUNT_VENDOR_CODE[toText(fv)]; if (!mv) return;
-    const mid = productIdByVendorCode.get(mv); if (!mid) return;
-    const rq = toNumber(mountRequiredByVendor[mv]); if (rq <= 0) return;
-    setCartItems((prev) => ({ ...prev, [mid]: rq }));
-  }, [mountRequiredByVendor, productIdByVendorCode, setCartItems]);
-
-  const addCheapestLamps = useCallback((socket: LampSocket) => {
-    const rq = toNumber(lampRequiredBySocket[socket]); if (rq <= 0) return;
-    const c = toNumber(lampCurrentBySocket[socket]); const miss = Math.max(0, rq - c); if (miss <= 0) return;
-    const cheapest = lampOptionsBySocket[socket][0]; if (!cheapest) return;
-    const id = toText(cheapest.productId); if (!id) return;
-    setCartItems((prev) => ({ ...prev, [id]: toNumber(prev[id]) + miss }));
-  }, [lampRequiredBySocket, lampCurrentBySocket, lampOptionsBySocket, setCartItems]);
-
-  const setClarusPsu = useCallback((pid: string) => {
-    setCartItems((prev) => {
-      const n = { ...prev };
-      for (const v of CLARUS_PSU_VENDOR_CODES) { const id = productIdByVendorCode.get(v); if (id && id !== pid) delete n[id]; }
-      n[pid] = Math.max(1, toNumber(n[pid])); return n;
-    });
-  }, [productIdByVendorCode, setCartItems]);
-
   /* ─── Navigation helpers ─── */
   const setCatalogViewAndSync = useCallback((view: CatalogView) => {
     setCatalogView(view);
@@ -593,8 +352,6 @@ export function WizardStep1Lighting() {
   }, [setStep1CatalogView, setCatalogView]);
 
   /* ─── Selected view ─── */
-  const selectedViewItems = useMemo(() => buildSelectedViewItems(cartEntries), [cartEntries]);
-
   // Пустое «Выбранное» показывать нечем — молча показываем каталог.
   const shownCatalogView: CatalogView =
     catalogView === "selected" && selectedViewItems.length === 0 ? "browse" : catalogView;
