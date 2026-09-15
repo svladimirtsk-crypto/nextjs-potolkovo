@@ -37,8 +37,6 @@ import { useCalculatorStore } from "@/lib/calculator/store";
 
 /* ─── helpers ─── */
 
-type Tab = "recommendations" | "catalog";
-type CatalogView = "selected" | "browse";
 
 function fmt(v: number): string { return new Intl.NumberFormat("ru-RU").format(Math.round(v)); }
 function fmtM(v: number): string { return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 1 }).format(v); }
@@ -71,10 +69,11 @@ function getScrollParent(node: HTMLElement | null): HTMLElement | null {
 /* ─── small UI components ─── */
 
 import { ImageQuickPreview, TabBtn } from "@/components/lighting/CatalogPieces";
-import { buildStep1FooterAction, resolveStep1FooterAction } from "@/lib/lighting/step1-footer-action";
+import { buildStep1FooterAction, resolveStep1FooterFromProgress } from "@/lib/lighting/step1-footer-action";
 import { useStep1Cart } from "@/lib/lighting/use-step1-cart";
 import { useStep1Wizard } from "@/lib/lighting/use-step1-wizard";
 import { useStep1Screens } from "@/lib/lighting/use-step1-screens";
+import { shownCatalogViewOf, useStep1Tabs } from "@/lib/lighting/use-step1-tabs";
 import { useCatalogFilters } from "@/lib/lighting/use-catalog-filters";
 import { useCatalogIndex } from "@/lib/lighting/use-catalog-index";
 
@@ -93,47 +92,18 @@ export function WizardStep1Lighting() {
   const hasCeilingContext = Boolean(showCeilingInUi || toNumber(snapshot?.total) > 0 || (snapshot?.roomBreakdown?.length ?? 0) > 0);
 
   /**
-   * T-031: вкладка и режим каталога больше не синхронизируются эффектами.
-   * Базовое значение выводится из `options` и `step1CatalogView` (общий контекст),
-   * а ручной выбор пользователя хранится как override и сбрасывается, когда
-   * меняется сам базис — то есть при новом открытии или переходе шага.
+   * T-031: вкладка и режим каталога не синхронизируются эффектами. Базис
+   * выводится из `options` и `step1CatalogView` (общий контекст), ручной выбор
+   * живёт оверрайдом и сбрасывается вместе с базисом — правила в
+   * `lib/lighting/use-step1-tabs` (PT-018).
    */
-  const baseTab = useMemo<Tab>(() => {
-    if (step1CatalogView) return "catalog";
-    if (options?.initialLightingTab === "catalog") return "catalog";
-    if (options?.initialLightingTab === "recommendations") return "recommendations";
-    return options?.entryMode === "lighting-first" ? "catalog" : "recommendations";
-  }, [options?.entryMode, options?.initialLightingTab, step1CatalogView]);
-
-  const baseCatalogView = useMemo<CatalogView>(() => {
-    if (step1CatalogView) return step1CatalogView;
-    return options?.initialLightingView === "selected" ? "selected" : "browse";
-  }, [options?.initialLightingView, step1CatalogView]);
-
-  const [tabOverride, setTabOverride] = useState<{ base: string; tab: Tab; view: CatalogView } | null>(null);
-  const baseKey = `${baseTab}|${baseCatalogView}`;
-  const override = tabOverride?.base === baseKey ? tabOverride : null;
-
-  const activeTab = override?.tab ?? baseTab;
-  const catalogView = override?.view ?? baseCatalogView;
-
-  const setActiveTab = useCallback(
-    (tab: Tab) => setTabOverride((prev) => ({
-      base: baseKey,
-      tab,
-      view: prev?.base === baseKey ? prev.view : baseCatalogView,
-    })),
-    [baseCatalogView, baseKey]
-  );
-
-  const setCatalogView = useCallback(
-    (view: CatalogView) => setTabOverride((prev) => ({
-      base: baseKey,
-      tab: prev?.base === baseKey ? prev.tab : baseTab,
-      view,
-    })),
-    [baseKey, baseTab]
-  );
+  const { activeTab, catalogView, setActiveTab, setCatalogViewAndSync } = useStep1Tabs({
+    step1CatalogView,
+    setStep1CatalogView,
+    initialLightingTab: options?.initialLightingTab,
+    initialLightingView: options?.initialLightingView,
+    entryMode: options?.entryMode,
+  });
 
   /* ─── Catalog filters ─── */
   /**
@@ -293,12 +263,6 @@ export function WizardStep1Lighting() {
     trackLightingSystemSelected({ system: trackSystem });
   }, [trackSystem]);
 
-  /* ─── Navigation helpers ─── */
-  const setCatalogViewAndSync = useCallback((view: CatalogView) => {
-    setCatalogView(view);
-    setStep1CatalogView(view);
-  }, [setStep1CatalogView, setCatalogView]);
-
   /* ─── Мастер Шага 1: экран, переходы, прогресс (PT-018: `use-step1-wizard`) ───
    * Состояние оверрайда (`wOverride`) остаётся здесь: его сеттер нужен и
    * корзине — профиль выбирает систему. Правила переходов — `step1-progress`,
@@ -311,9 +275,10 @@ export function WizardStep1Lighting() {
   const {
     wStep, shownWStep, selectedTrackSystem, wizardSystemOptions,
     trackProfiles: wTrackProfiles, trackFixtures: wTrackFixtures,
+    progress: step1Progress, footerHandlers, missingAction,
     trackComplete, pointsComplete, lampsComplete, requiredSelectionComplete,
-    missingAction, chooseWizardSystem, chooseNoTrackFlow, goAfterTrackProfile,
-    goAfterTrackFixtures, goAfterLamps, goAfterChandeliers, goAfterPoints,
+    chooseWizardSystem, chooseNoTrackFlow, goAfterTrackProfile,
+    goAfterTrackFixtures, goAfterLamps, goAfterPoints,
     goBackFromLamps, goToMissingAction,
   } = useStep1Wizard({
     requiredTrackMeters,
@@ -361,8 +326,7 @@ export function WizardStep1Lighting() {
 
   /* ─── Selected view ─── */
   // Пустое «Выбранное» показывать нечем — молча показываем каталог.
-  const shownCatalogView: CatalogView =
-    catalogView === "selected" && selectedViewItems.length === 0 ? "browse" : catalogView;
+  const shownCatalogView = shownCatalogViewOf(catalogView, selectedViewItems.length);
 
   const selectedTotals = useMemo(
     () => calcSelectedTotals(selectedViewItems, hasCeilingContext),
@@ -426,32 +390,18 @@ export function WizardStep1Lighting() {
    */
   const footerDescriptor = useMemo(
     () =>
-      resolveStep1FooterAction({
+      resolveStep1FooterFromProgress({
         activeTab,
         shownWStep,
-        hasMissingAction: Boolean(missingAction),
+        missingAction,
         hasSystemOptions: wizardSystemOptions.length > 0,
         psuBlocks,
-        requiredSelectionComplete,
         requiredTrackMeters,
         hasTrackSystem: Boolean(selectedTrackSystem),
-        trackComplete,
-        pointsComplete,
-        lampsComplete,
+        progress: step1Progress,
       }),
-    [
-      activeTab,
-      lampsComplete,
-      missingAction,
-      pointsComplete,
-      psuBlocks,
-      requiredSelectionComplete,
-      requiredTrackMeters,
-      selectedTrackSystem,
-      shownWStep,
-      trackComplete,
-      wizardSystemOptions.length,
-    ]
+    [activeTab, missingAction, psuBlocks, requiredTrackMeters, selectedTrackSystem,
+      shownWStep, step1Progress, wizardSystemOptions.length]
   );
 
   /**
@@ -469,30 +419,11 @@ export function WizardStep1Lighting() {
         missingAction,
         goToMissingAction,
         finishAction,
-        handlers: {
-          pickSystem: () => undefined,
-          confirmTrackProfile: goAfterTrackProfile,
-          confirmTrackFixtures: goAfterTrackFixtures,
-          confirmPoints: goAfterPoints,
-          confirmLamps: goAfterLamps,
-          confirmChandeliers: goAfterChandeliers,
-          confirmCornice: () => setWStep("done"),
-        },
+        handlers: footerHandlers,
       })
     );
-  }, [
-    finishAction,
-    footerDescriptor,
-    goAfterChandeliers,
-    goAfterLamps,
-    goAfterPoints,
-    goAfterTrackFixtures,
-    goAfterTrackProfile,
-    goToMissingAction,
-    missingAction,
-    setStep1FooterAction,
-    setWStep,
-  ]);
+  }, [finishAction, footerDescriptor, footerHandlers, goToMissingAction, missingAction,
+    setStep1FooterAction]);
 
   /** Шаг 1 ушёл с экрана — его кнопка не должна остаться в футере. */
   useEffect(() => () => setStep1FooterAction(null), [setStep1FooterAction]);

@@ -43,6 +43,7 @@ import {
   shownStepFor,
   type MissingAction,
   type Step1NavResult,
+  type Step1Progress,
   type Step1ProgressInput,
 } from "@/lib/lighting/step1-progress";
 import {
@@ -98,11 +99,19 @@ export type Step1WizardApi = {
   trackProfiles: FeedCatalogProduct[];
   trackFixtures: FeedCatalogProduct[];
 
+  progress: Step1Progress;
   trackComplete: boolean;
   pointsComplete: boolean;
   lampsComplete: boolean;
   requiredSelectionComplete: boolean;
   missingAction: MissingAction | null;
+
+  /**
+   * Обработчики намерений футера (N-050): словарь «намерение → переход».
+   * `pickSystem` — заглушка: систему выбирают на самом экране, а не кнопкой
+   * футера; `confirmCornice` — последний экран, дальше только итог.
+   */
+  footerHandlers: Record<string, () => void>;
 
   chooseWizardSystem: (system: TrackSystemId) => void;
   chooseNoTrackFlow: () => void;
@@ -272,9 +281,25 @@ export function useStep1Wizard(input: UseStep1WizardInput): Step1WizardApi {
   // «Готово» с незакрытыми требованиями — показываем недостающий экран, а не тупик.
   const shownWStep = shownStepFor(wStep, progress, missingAction);
 
+  const footerHandlers = useMemo(
+    () => ({
+      pickSystem: () => undefined,
+      confirmTrackProfile: goAfterTrackProfile,
+      confirmTrackFixtures: goAfterTrackFixtures,
+      confirmPoints: goAfterPoints,
+      confirmLamps: goAfterLamps,
+      confirmChandeliers: goAfterChandeliers,
+      confirmCornice: () => setWStep("done"),
+    }),
+    [goAfterChandeliers, goAfterLamps, goAfterPoints, goAfterTrackFixtures,
+      goAfterTrackProfile, setWStep]
+  );
+
   return {
     wStep,
     shownWStep,
+    progress,
+    footerHandlers,
     selectedTrackSystem,
     wizardSystemOptions,
     trackProfiles,
