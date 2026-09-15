@@ -9,11 +9,7 @@ import {
 } from "@/lib/analytics";
 
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
-import {
-  LIGHTING_ONLY_DISCOUNT_PERCENT,
-  LIGHTING_WITH_CEILING_DISCOUNT_PERCENT,
-  applyLightingWithCeilingDiscount,
-} from "@/lib/lighting-formulas";
+import { applyLightingWithCeilingDiscount } from "@/lib/lighting-formulas";
 import { detectSocket } from "@/lib/feed2-products";
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
 import { type WizardStep } from "@/lib/lighting/resolve-initial-step";
@@ -29,18 +25,14 @@ import {
 
 import {
   visibleCatalogSections,
-  POINT_SUBTYPES,
   REMOVED_COLIBRI_VENDOR_CODES,
-  TRACK_GROUPS,
-  TRACK_SYSTEMS,
-  LAMP_SOCKETS,
   type PointSubtypeId,
   type TrackSystemId,
 } from "@/lib/catalog-ui-config";
 
 import { isPanelProduct } from "@/lib/lighting/product-predicates";
 import { decideOrphanTrackAction } from "@/lib/lighting/orphan-track";
-import { CatalogBrowse } from "@/components/lighting/CatalogBrowse";
+import { Step1CatalogTab } from "@/components/lighting/Step1CatalogTab";
 // PT-018: чистые селекторы Шага 1 (B-F104) — правила выдачи каталога,
 // профили/светильники/системы и итоги «Выбранного» вынесены из компонента.
 import {
@@ -54,8 +46,6 @@ import {
   systemLabelOf,
 } from "@/lib/lighting/step1-selectors";
 import { RecommendationsTab } from "@/components/lighting/RecommendationsTab";
-import { CatalogFilterChipGroup, CatalogFilterChipsRow } from "@/components/lighting/CatalogFilterChips";
-import { SelectedList } from "@/components/lighting/SelectedList";
 import { pointProgressBySocket, type PointKindId } from "@/lib/lighting/popular-points";
 import { useCalculatorModal } from "./calculator-modal-context";
 import { useCalculatorStore } from "@/lib/calculator/store";
@@ -95,11 +85,7 @@ function getScrollParent(node: HTMLElement | null): HTMLElement | null {
 
 /* ─── small UI components ─── */
 
-import {
-  ImageQuickPreview,
-  OrphanTrackNotice,
-  TabBtn,
-} from "@/components/lighting/CatalogPieces";
+import { ImageQuickPreview, TabBtn } from "@/components/lighting/CatalogPieces";
 import { buildStep1FooterAction, resolveStep1FooterAction } from "@/lib/lighting/step1-footer-action";
 import { useStep1Cart } from "@/lib/lighting/use-step1-cart";
 import { useStep1Wizard } from "@/lib/lighting/use-step1-wizard";
@@ -776,136 +762,39 @@ export function WizardStep1Lighting() {
           КАТАЛОГ tab
           ═══════════════════════════════════════════════ */}
       {activeTab === "catalog" && (
-        <div key="catalog-tab" className="animate-fade-in space-y-4">
-          {/* Lamp reminder */}
-          {missingLamps.length > 0 && (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-              <p className="font-semibold">Не хватает ламп</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {missingLamps.map((m) => (
-                  <button key={m.socket} type="button" onClick={() => addCheapestLamps(m.socket)}
-                    className="rounded-xl bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-800">
-                    +{m.requiredQty - m.currentQty} ламп {m.socket}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {showOrphanTrackWarning ? (
-            <OrphanTrackNotice
-              meters={orphanTrackMeters}
-              isLightingFirst={isLightingFirst}
-              onDrop={dropOrphanTrackItems}
-            />
-          ) : null}
-
-          {shownCatalogView === "selected" && accessorySuggestions.length > 0 ? (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-              <p className="text-sm font-semibold text-amber-950">Комплектующие</p>
-              <p className="mt-1 text-xs text-amber-900">
-                Это предложения — можно не добавлять или удалить позже.
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {accessorySuggestions.map((suggestion) => (
-                  <button
-                    key={suggestion.key}
-                    type="button"
-                    onClick={suggestion.apply}
-                    className="min-h-11 rounded-2xl border border-amber-300 bg-white px-3 text-xs font-semibold text-amber-950 hover:bg-amber-100"
-                  >
-                    {suggestion.title} ({fmt(suggestion.priceRub)} ₽)
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          {shownCatalogView === "selected" ? (
-            <SelectedList
-              items={selectedViewItems}
-              totals={selectedTotals}
-              showWithCeilingHint={lightingDiscountMode !== "with-ceiling"}
-              onQtyChange={setProductQty}
-              onRemove={(productId) =>
-                setCartItems((prev) => {
-                  const next = { ...prev };
-                  delete next[productId];
-                  return next;
-                })
-              }
-              onGoToSummary={() => goToStep(2)}
-              goToSummaryDisabled={!requiredSelectionComplete}
-            />
-          ) : (
-            <>
-              <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar max-sm:-mx-5 max-sm:px-5">
-                {shownCatalogSections.map((item) => (
-                  <button key={item.id} type="button" onClick={() => catalogFilters.selectSection(item.id)}
-                    className={["whitespace-nowrap rounded-xl border border-slate-200 px-3 py-2 text-sm max-sm:px-2.5 max-sm:py-1.5 max-sm:text-xs",
-                      section === item.id ? "bg-slate-950 text-white" : "bg-white text-slate-700 hover:bg-slate-50"].join(" ")}>
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* N-051: ленты фильтров — общий компонент со страницей каталога. */}
-              {section === "track-systems" ? (
-                <CatalogFilterChipsRow ariaLabel="Трековые системы и группы">
-                  <CatalogFilterChipGroup
-                    options={TRACK_SYSTEMS}
-                    active={trackSystem}
-                    onSelect={catalogFilters.selectTrackSystem}
-                  />
-                  <CatalogFilterChipGroup
-                    options={TRACK_GROUPS}
-                    active={trackGroup}
-                    onSelect={catalogFilters.selectTrackGroup}
-                  />
-                </CatalogFilterChipsRow>
-              ) : null}
-
-              {section === "point-fixtures" ? (
-                <CatalogFilterChipsRow ariaLabel="Типы точечных светильников">
-                  <CatalogFilterChipGroup
-                    options={POINT_SUBTYPES}
-                    active={pointSubtype}
-                    onSelect={catalogFilters.selectPointSubtype}
-                  />
-                </CatalogFilterChipsRow>
-              ) : null}
-
-              {section === "lamps" ? (
-                <CatalogFilterChipsRow ariaLabel="Цоколи ламп">
-                  <CatalogFilterChipGroup
-                    options={LAMP_SOCKETS.map((socket) => ({
-                      id: socket,
-                      label:
-                        lampCurrentBySocket[socket] > 0
-                          ? `${socket} (${lampCurrentBySocket[socket]}/${lampRequiredBySocket[socket]})`
-                          : socket,
-                    }))}
-                    active={lampSocket}
-                    onSelect={catalogFilters.selectLampSocket}
-                  />
-                </CatalogFilterChipsRow>
-              ) : null}
-
-              <CatalogBrowse
-                query={query}
-                onQueryChange={catalogFilters.setQuery}
-                hasCeilingContext={hasCeilingContext}
-                withCeilingPercent={LIGHTING_WITH_CEILING_DISCOUNT_PERCENT}
-                lightingOnlyPercent={LIGHTING_ONLY_DISCOUNT_PERCENT}
-                products={scopedProducts}
-                cartItems={cartItems}
-                onQtyChange={setProductQty}
-                onZoom={setZoomImage}
-                cardDiscountPercent={cardDiscountPercent}
-              />
-            </>
-          )}
-        </div>
+        <Step1CatalogTab
+          view={shownCatalogView}
+          sections={shownCatalogSections}
+          filters={catalogFilters}
+          products={scopedProducts}
+          cartItems={cartItems}
+          hasCeilingContext={hasCeilingContext}
+          cardDiscountPercent={cardDiscountPercent}
+          fmt={fmt}
+          onQtyChange={setProductQty}
+          onRemoveProduct={lightingCart.remove}
+          onZoom={setZoomImage}
+          lamps={{
+            missing: missingLamps,
+            requiredBySocket: lampRequiredBySocket,
+            currentBySocket: lampCurrentBySocket,
+            onAddCheapest: addCheapestLamps,
+          }}
+          orphan={{
+            show: showOrphanTrackWarning,
+            meters: orphanTrackMeters,
+            isLightingFirst,
+            onDrop: dropOrphanTrackItems,
+          }}
+          suggestions={accessorySuggestions}
+          selected={{
+            items: selectedViewItems,
+            totals: selectedTotals,
+            showWithCeilingHint: lightingDiscountMode !== "with-ceiling",
+            onGoToSummary: () => goToStep(2),
+            goToSummaryDisabled: !requiredSelectionComplete,
+          }}
+        />
       )}
 
     </div>
