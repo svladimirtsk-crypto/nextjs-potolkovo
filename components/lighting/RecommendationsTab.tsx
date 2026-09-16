@@ -138,7 +138,6 @@ export type RecommendationsTabProps = {
     corniceMeters: number;
     hasRecommendations: boolean;
     onOpenCatalog: () => void;
-    onOpenCatalogTouched: () => void;
     onGoToSummary: () => void;
     onBackToSystem: () => void;
     onBackToTrackProfile: () => void;
@@ -164,7 +163,7 @@ export function RecommendationsTab({
 }: RecommendationsTabProps) {
   const manualPick: ReactNode = (
     <ManualPickScreen
-      onOpenCatalog={nav.onOpenCatalogTouched}
+      onOpenCatalog={nav.onOpenCatalog}
       onSkipToSummary={nav.onGoToSummary}
     />
   );

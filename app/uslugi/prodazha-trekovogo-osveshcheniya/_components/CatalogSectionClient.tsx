@@ -1,11 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 import { useCalculatorStore } from "@/lib/calculator/store";
-import type { CalculatorLeadSnapshot } from "@/lib/calculator/snapshot-types";
-import { normalizeQty } from "@/lib/lighting/product-predicates";
 import { CATALOG_PAGE_SIZE, CatalogGrid } from "@/components/lighting/CatalogGrid";
 import { CatalogFreshness } from "./CatalogFreshness";
 import { CatalogWarnings } from "./CatalogWarnings";
@@ -13,42 +11,31 @@ import { CatalogFilterChipGroup, CatalogFilterChipsRow } from "@/components/ligh
 import {
   buildCatalogLightingSnapshot,
   cartToLightingItems,
-  productToLightingItem,
 } from "@/lib/lighting/catalog-checkout";
 import {
   filterCatalogProducts,
   searchMatchesBySection,
 } from "@/lib/lighting/catalog-filters";
+import { toText } from "@/lib/feed2-snapshot-normalize";
 import {
-  calcClarusPsuOptions,
-  calcLampCurrentBySocket,
-  calcLampRequiredBySocket,
-  calcMissingLamps,
-  calcMissingMounts,
-  calcMountRequiredByVendor,
-  groupLampsBySocket,
-} from "@/lib/lighting/catalog-kit-gaps";
-import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
+  buildLightingSnapshotFromItems,
+  nextCatalogSnapshot,
+} from "@/lib/lighting/track-sale-snapshot";
 import { Container } from "@/components/ui/container";
 import { Heading } from "@/components/ui/heading";
 import { Section } from "@/components/ui/section";
 
-import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
-import type { FeedCatalogProduct, FeedCatalogResult } from "@/lib/eks-feed2-catalog";
+import type { FeedCatalogResult } from "@/lib/eks-feed2-catalog";
 
 import { trackLightingCartCheckout, trackSmartInterestSelected } from "@/lib/analytics";
 import { useLightingCart } from "@/lib/lighting/use-lighting-cart";
-import { clearIncompatibleSystem } from "@/lib/lighting/kit-rules";
-import { showConfirmDialog } from "@/components/ui/confirm-dialog";
 import { askCheckoutIntent } from "./ask-checkout-intent";
+import { useTrackSaleCart } from "./use-track-sale-cart";
 import { LightingCartDrawer } from "@/components/lighting/LightingCartDrawer";
 
 import {
   LIGHTING_ONLY_DISCOUNT_PERCENT,
   LIGHTING_WITH_CEILING_DISCOUNT_PERCENT,
-  applyLightingOnlyDiscount,
-  applyLightingWithCeilingDiscount,
-  calcLightingDiscountAmount,
 } from "@/lib/lighting-formulas";
 
 import {
@@ -56,18 +43,14 @@ import {
   POINT_SUBTYPES,
   TRACK_GROUPS,
   TRACK_SYSTEMS,
-  POINT_TO_MOUNT_VENDOR_CODE,
-  CLARUS_PSU_VENDOR_CODES,
   isRemovedColibriVendorCode,
   LAMP_SOCKETS,
-  type LampSocket,
 } from "@/lib/catalog-ui-config";
 
 import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
 import { useCatalogFilters } from "@/lib/lighting/use-catalog-filters";
 import { useCatalogIndex } from "@/lib/lighting/use-catalog-index";
 
-type CartItems = Record<string, number>;
 
 function fmt(value: number): string {
   return new Intl.NumberFormat("ru-RU").format(Math.round(value));
@@ -79,65 +62,6 @@ function fmt(value: number): string {
 
 
 
-
-
-function createLightingOnlySnapshot(): CalculatorLeadSnapshot {
-  return {
-    area: 0,
-    ceilingTypeLabel: "Потолок пока не рассчитан",
-    ceilingBaseRate: 0,
-    ceilingBaseTotal: 0,
-    ceilingExtraLabel: null,
-    ceilingLength: null,
-    ceilingExtraRatePerMeter: null,
-    ceilingExtraTotal: 0,
-    lightLinesEnabled: false,
-    lightLinesLabel: null,
-    lightLinesLength: null,
-    lightLinesRatePerMeter: null,
-    lightLinesTotal: 0,
-    corniceLabel: null,
-    corniceLength: null,
-    corniceRatePerMeter: null,
-    corniceTotal: 0,
-    trackLabel: null,
-    trackLength: null,
-    trackRatePerMeter: null,
-    trackTotal: 0,
-    lightsEnabled: false,
-    lightsCount: null,
-    lightsRatePerUnit: 0,
-    lightsTotal: 0,
-    total: 0,
-    derivedInputs: {
-      pointSpotsQty: 0,
-      trackMountType: "none",
-      trackLengthMeters: 0,
-      recommendedTrackSpotsQty: 0,
-    },
-  };
-}
-
-function buildLightingSnapshotFromItems(items: LightingItem[]): LightingSnapshot | null {
-  if (items.length === 0) return null;
-
-  const totalRub = items.reduce((sum, item) => sum + item.qty * item.priceRub, 0);
-  const discountedTotalRub = applyLightingOnlyDiscount(totalRub);
-  const withCeilingDiscountedTotalRub = applyLightingWithCeilingDiscount(totalRub);
-
-  return {
-    mode: "catalog",
-    items,
-    totalRub,
-    discountedTotalRub,
-    standaloneDiscountedTotalRub: discountedTotalRub,
-    withCeilingDiscountedTotalRub,
-    discountMode: "lighting-only",
-    discountPercentApplied: LIGHTING_ONLY_DISCOUNT_PERCENT,
-    discountAmountRub: calcLightingDiscountAmount(totalRub, discountedTotalRub),
-    userCustomizedLighting: true,
-  };
-}
 
 
 type Props = { data: FeedCatalogResult };
@@ -170,167 +94,35 @@ export function CatalogSectionClient({ data }: Props) {
    * счётчики страницы и калькулятора всегда совпадают, комплект не теряется.
    */
   const lightingCart = useLightingCart(resolveProduct);
-  const cartItems = lightingCart.cart;
-
-  /** Совместимость со старым кодом: принимает как объект, так и updater. */
-  const setCartItems = useCallback(
-    (updater: CartItems | ((prev: CartItems) => CartItems)) => {
-      const next = typeof updater === "function" ? updater(lightingCart.cart) : updater;
-      lightingCart.replaceCart(next);
-    },
-    [lightingCart]
-  );
   const [visibleCount, setVisibleCount] = useState(24);
   const [cartOpen, setCartOpen] = useState(false);
 
-  const selectedEntries = useMemo(() => {
-    return Object.entries(cartItems)
-      .filter(([, qty]) => qty > 0)
-      .map(([productId, qty]) => {
-        const product = byProductId.get(productId);
-        return product ? { productId, product, qty } : null;
-      })
-      .filter((x): x is { productId: string; product: FeedCatalogProduct; qty: number } => Boolean(x));
-  }, [byProductId, cartItems]);
-
-  const selectedLightingItems = useMemo(() => {
-    return selectedEntries.map((entry) => productToLightingItem(entry.product, entry.qty));
-  }, [selectedEntries]);
-
-  const selectedTotal = useMemo(() => {
-    return selectedEntries.reduce((sum, entry) => sum + entry.qty * toNumber(entry.product.priceRub), 0);
-  }, [selectedEntries]);
-
-  const lightingOnlySelectedTotal = useMemo(() => applyLightingOnlyDiscount(selectedTotal), [selectedTotal]);
-  const withCeilingSelectedTotal = useMemo(() => applyLightingWithCeilingDiscount(selectedTotal), [selectedTotal]);
-
-  useEffect(() => {
-    const lighting = buildLightingSnapshotFromItems(selectedLightingItems);
-
-    setSnapshot((prev) => {
-      if (!lighting) {
-        if (!prev?.lighting) return prev;
-        return {
-          ...prev,
-          lighting: undefined,
-          lightingDiscountApplied: false,
-          lightingDiscountPercentApplied: 0,
-          lightingDiscountMode: "none",
-          lightingDiscountAmountRub: 0,
-        };
-      }
-
-      const base = prev ?? createLightingOnlySnapshot();
-      return {
-        ...base,
-        leadSource: base.leadSource ?? "track-sale-page-catalog",
-        lighting,
-        lightingDiscountApplied: true,
-        lightingDiscountPercentApplied: LIGHTING_ONLY_DISCOUNT_PERCENT,
-        lightingDiscountMode: "lighting-only",
-        lightingDiscountAmountRub: lighting.discountAmountRub ?? Math.max(0, selectedTotal - lightingOnlySelectedTotal),
-      };
-    });
-  }, [lightingOnlySelectedTotal, selectedLightingItems, selectedTotal, setSnapshot]);
-
-  // ===== Dependencies (mounts / lamps / PSU) =====
-  const mountRequiredByVendor = useMemo(() => calcMountRequiredByVendor(selectedEntries), [selectedEntries]);
-
-  const missingMounts = useMemo(
-    () => calcMissingMounts(cartItems, productIdByVendorCode, byProductId),
-    [byProductId, cartItems, productIdByVendorCode],
-  );
-
-  const lampProductsBySocket = useMemo(() => groupLampsBySocket(products), [products]);
-
-  const lampRequiredBySocket = useMemo(() => calcLampRequiredBySocket(selectedEntries), [selectedEntries]);
-
-  const lampCurrentBySocket = useMemo(
-    () => calcLampCurrentBySocket(cartItems, lampProductsBySocket),
-    [cartItems, lampProductsBySocket],
-  );
-
-  const missingLamps = useMemo(
-    () => calcMissingLamps(lampRequiredBySocket, lampCurrentBySocket, lampProductsBySocket),
-    [lampCurrentBySocket, lampProductsBySocket, lampRequiredBySocket],
-  );
-
-  const clarusPsuOptions = useMemo(
-    () => calcClarusPsuOptions(selectedEntries, productIdByVendorCode, byProductId),
-    [selectedEntries, productIdByVendorCode, byProductId],
-  );
-
-  const setClarusPsu = (productId: string) => {
-    setCartItems((prev) => {
-      const next = { ...prev };
-      for (const vendor of CLARUS_PSU_VENDOR_CODES) {
-        const id = productIdByVendorCode.get(vendor);
-        if (!id) continue;
-        if (id !== productId) delete next[id];
-      }
-      next[productId] = Math.max(1, toNumber(next[productId]));
-      return next;
-    });
-  };
-
-  const addMountOneToOne = (fixtureVendor: string) => {
-    const mountVendor = POINT_TO_MOUNT_VENDOR_CODE[toText(fixtureVendor)];
-    if (!mountVendor) return;
-    const mountId = productIdByVendorCode.get(mountVendor);
-    if (!mountId) return;
-
-    const required = toNumber(mountRequiredByVendor[mountVendor]);
-    if (required <= 0) return;
-
-    setCartItems((prev) => ({ ...prev, [mountId]: required }));
-  };
-
-  const addLampOneToOneCheapest = (socket: LampSocket, lampId: string) => {
-    const required = toNumber(lampRequiredBySocket[socket]);
-    if (required <= 0) return;
-
-    setCartItems((prev) => {
-      const next = { ...prev };
-      const allLampIds = lampProductsBySocket[socket].map((p) => toText(p.productId));
-      for (const id of allLampIds) if (id !== lampId) delete next[id];
-      next[lampId] = required;
-      return next;
-    });
-  };
+  /* ─── Корзина страницы и её производные (PT-018: `use-track-sale-cart`) ───
+   * Правила — в `catalog-kit-gaps` и `catalog-checkout`; хук их только собирает.
+   * Источник корзины один: `lightingDraft` через `useLightingCart`. */
+  const {
+    cartItems, setCartItems, selectedEntries, selectedLightingItems, selectedTotal,
+    lightingOnlySelectedTotal, missingMounts, missingLamps, clarusPsuOptions,
+    setClarusPsu, addMountOneToOne, addLampOneToOneCheapest, incrementProduct,
+  } = useTrackSaleCart({
+    products,
+    byProductId,
+    productIdByVendorCode,
+    resolveProduct,
+    lightingCart,
+  });
 
   /**
-   * T-031: добавление позиции с проверкой совместимости систем.
-   * При конфликте спрашиваем подтверждение; отказ не меняет корзину.
+   * PT-018: комплект из каталога страницы пишется в общий снимок заявки.
+   * Правило — чистая функция `nextCatalogSnapshot` (`lib/lighting/track-sale-snapshot`),
+   * здесь остаётся только сам эффект-мост к стору (п. 0.7 ТЗ v2).
    */
-  const incrementProduct = useCallback(
-    async (product: FeedCatalogProduct, nextQtyRaw: number) => {
-      const id = toText(product.productId);
-      const nextQty = normalizeQty(nextQtyRaw, product.unit);
-      if (nextQty <= 0) return;
-
-      const conflict = lightingCart.checkConflict(product);
-      if (conflict) {
-        const confirmed = await showConfirmDialog({
-          title: "Разные системы трека",
-          message: conflict.message,
-          confirmLabel: "Заменить",
-          cancelLabel: "Оставить как есть",
-          variant: "warning",
-        });
-        // Отказ — корзина остаётся нетронутой.
-        if (confirmed !== true) return;
-
-        lightingCart.update((prev) => ({
-          ...clearIncompatibleSystem(prev, conflict.targetSystem, resolveProduct),
-          [id]: nextQty,
-        }));
-        return;
-      }
-
-      lightingCart.update((prev) => ({ ...prev, [id]: nextQty }));
-    },
-    [lightingCart, resolveProduct]
-  );
+  useEffect(() => {
+    const lighting = buildLightingSnapshotFromItems(selectedLightingItems);
+    setSnapshot((prev) =>
+      nextCatalogSnapshot(prev, { lighting, selectedTotal, lightingOnlySelectedTotal })
+    );
+  }, [lightingOnlySelectedTotal, selectedLightingItems, selectedTotal, setSnapshot]);
 
   const openInCalculator = () => {
     const items = cartToLightingItems(selectedEntries);
