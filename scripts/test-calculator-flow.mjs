@@ -25,11 +25,13 @@ vm.runInNewContext(
 );
 
 const {
+  fillCallbackWindow,
   resolveInitialLightingTab,
   resolveInitialLightingView,
   resolveInitialWizardStep,
   resolveLightingDiscountMode,
   resolveStep0SummaryActions,
+  resolveStep2Copy,
 } = compiledModule.exports;
 
 function plain(value) {
@@ -199,4 +201,84 @@ test("unknown scenario falls back to standard summary routing", () => {
       secondary: { label: "Подобрать свет −25% →", destination: 1 },
     }
   );
+});
+
+/* ─── PT-019 · Копирайт Шага 2 и окно перезвона ───
+ * До этого харнесс проверял 5 из 7 экспортов `calculator-flow.ts`:
+ * `resolveStep2Copy` и `fillCallbackWindow` не проверялись ничем, кроме E2E.
+ * Оба отвечают за текст, который видит клиент в шаге заявки, а подстановка
+ * окна перезвона приходит с сервера (`/api/lead`) — если placeholder разъедется
+ * с фактом, клиент увидит «Перезвоню {callbackWindow}». */
+
+const STEP2_INTENTS = [
+  "ceiling_only",
+  "lighting_with_ceiling",
+  "lighting_only",
+  "advanced",
+  "direct",
+];
+
+test("step 2 copy is defined for every intent and keeps the callback placeholder", () => {
+  for (const intent of STEP2_INTENTS) {
+    const copy = resolveStep2Copy(intent);
+
+    assert.ok(copy, `нет копирайта для ${intent}`);
+    assert.equal(typeof copy.submitLabel, "string", `submitLabel для ${intent}`);
+    assert.ok(copy.submitLabel.length > 0, `пустая подпись кнопки для ${intent}`);
+    assert.ok(Array.isArray(copy.chips) && copy.chips.length > 0, `нет чипов для ${intent}`);
+    assert.equal(typeof copy.showFulfilment, "boolean", `showFulfilment для ${intent}`);
+
+    // Окно перезвона подставляется сервером — место под него обязано быть.
+    const withPlaceholder = copy.nextSteps.filter((step) => step.includes("{callbackWindow}"));
+    assert.equal(withPlaceholder.length, 1, `ровно один placeholder в «Что дальше» для ${intent}`);
+  }
+});
+
+test("step 2 copy: «только свет» спрашивает получение, «напрямую» не дублирует заголовок", () => {
+  // Свет без потолка — это счёт и доставка: спрашиваем способ получения и время.
+  assert.equal(resolveStep2Copy("lighting_only").showFulfilment, true);
+  for (const intent of ["ceiling_only", "lighting_with_ceiling", "advanced", "direct"]) {
+    assert.equal(resolveStep2Copy(intent).showFulfilment, false, `showFulfilment для ${intent}`);
+  }
+
+  // Потолок и «потолок + свет» — одна и та же форма.
+  assert.deepEqual(plain(resolveStep2Copy("ceiling_only")), plain(resolveStep2Copy("lighting_with_ceiling")));
+
+  // `direct`: заголовок и подзаголовок задаёт секция страницы, форма их не дублирует.
+  const direct = resolveStep2Copy("direct");
+  assert.equal(direct.formTitle, "");
+  assert.equal(direct.formSubtitle, "");
+  assert.equal(direct.submitLabel, resolveStep2Copy("ceiling_only").submitLabel);
+
+  // Незнаковый интент (пришёл из старого черновика) — откат к форме потолка, а не undefined.
+  assert.deepEqual(plain(resolveStep2Copy("unknown_intent")), plain(resolveStep2Copy("ceiling_only")));
+});
+
+test("fillCallbackWindow подставляет окно, а при пустом — честное «в ближайшее время»", () => {
+  const steps = ["Перезвоню {callbackWindow}", "Бесплатный замер, фиксирую смету"];
+
+  assert.deepEqual(fillCallbackWindow(steps, "сегодня с 18:00 до 20:00"), [
+    "Перезвоню сегодня с 18:00 до 20:00",
+    "Бесплатный замер, фиксирую смету",
+  ]);
+
+  // Пустое или пробельное окно — не дыра в тексте и не «Перезвоню ».
+  for (const empty of ["", "   ", "\t"]) {
+    assert.deepEqual(fillCallbackWindow(steps, empty), [
+      "Перезвоню в ближайшее время",
+      "Бесплатный замер, фиксирую смету",
+    ], `пустое окно: ${JSON.stringify(empty)}`);
+  }
+
+  // Исходный массив не мутируется: шаги переиспользуются между рендерами.
+  assert.deepEqual(steps, ["Перезвоню {callbackWindow}", "Бесплатный замер, фиксирую смету"]);
+
+  // Placeholder не остался — иначе клиент увидит фигурные скобки.
+  for (const intent of STEP2_INTENTS) {
+    const filled = fillCallbackWindow(resolveStep2Copy(intent).nextSteps, "завтра утром");
+    assert.ok(
+      filled.every((step) => !step.includes("{callbackWindow}")),
+      `остался placeholder для ${intent}`
+    );
+  }
 });
