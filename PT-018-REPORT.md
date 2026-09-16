@@ -156,6 +156,16 @@ $ npx playwright test            # полный прогон, порт 3100, pro
 EXIT=0
 ```
 
+### CI (GitHub Actions, ветка `quizv2ver1-fix/p4-pt018`, `PR #37`)
+
+```
+E2E (Playwright)        | completed | success
+Build · bundle budget   | completed | success
+Lint · types · unit     | completed | success
+Секреты (gitleaks)      | completed | success
+Vercel Preview Comments | completed | success
+```
+
 Бейслайн E2E до рефакторинга (`/tmp/e2e-baseline.txt`): **180 passed / 12 skipped** — совпадает.
 Промежуточные прогоны: после коммита 5 — 180/12, после коммита 6 — целевой 44/6, после коммита 7 —
 180/12, после коммита 8 — целевой 55/9, после коммитов 9 и 10 — 180/12 каждый раз.
