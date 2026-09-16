@@ -283,6 +283,53 @@ ALTER TABLE lead_deliveries DROP COLUMN IF EXISTS lease_until;
 
 ---
 
-## 8. CI на ветке задачи
+## 8. CI на ветке задачи (фактический прогон)
 
-Будет дополнен фактическим выводом после пуша и прогона проверок (5 check-runs: Lint·types·unit, Build·bundle budget, E2E Playwright, gitleaks, Vercel).
+`PR #41` → `quizv2ver1`, head `f1d53e8`. Все 5 проверок зелёные:
+
+```
+Lint · types · unit          completed  success
+Build · bundle budget        completed  success
+E2E (Playwright)             completed  success
+Секреты (gitleaks)           completed  success
+Vercel Preview Comments      completed  success
+```
+
+Шаги job `Lint · types · unit` (все `success`): `npm ci` → `ESLint` → `TypeScript`
+→ **`Применить схему БД`** → `Unit-тесты (vitest)` → `Поток калькулятора (test:flow)`
+→ `Окружение и реквизиты` → `Каталог` → `Календарь замеров`.
+
+Выдержка из лога этой job — видно, что схема с новой колонкой и индексом в CI
+накатилась, а оба новых файла выполнились (а не пропустились):
+
+```
+[✓] Changes applied
+ ✓  unit  tests/lead-delivery-channels.test.ts (16 tests) 270ms
+ ✓  db  tests/lead-delivery-integration-db.test.ts (19 tests) 1407ms
+ Test Files  88 passed (88)
+      Tests  1119 passed (1119)
+# pass 8
+[env] ok — 27 переменных документированы
+```
+
+Лог сервиса `postgres:17-alpine` в той же job содержит ожидаемую ошибку из теста
+уникального индекса — прямое подтверждение, что индекс в CI создан:
+
+```
+ERROR:  duplicate key value violates unique constraint "lead_deliveries_lead_channel_key"
+STATEMENT:  insert into "lead_deliveries" ("id", "lead_id", "channel", "status", "attempts", …
+```
+
+Job `E2E (Playwright)`: шаги `Восстановить сборку` → `Распаковать сборку` →
+`Установить браузеры` → `Playwright` → **`Плавающие E2E-тесты`** → `Отчёт при
+падении` (`skipped` — не понадобился). Фактический вывод:
+
+```
+180 passed (6.2m)
+[e2e-flaky] всего: 180 passed, 0 failed, 0 flaky, 12 skipped
+[e2e-flaky] ok — повторных попыток не потребовалось, результат стабильный
+```
+
+Вывод: интеграционные тесты PT-020 в CI выполняются на каждом пуше — то, ради
+чего ТЗ требует использовать уже поднимаемый `postgres:17-alpine`, а не только
+unit-тесты `PgLeadStore`.
