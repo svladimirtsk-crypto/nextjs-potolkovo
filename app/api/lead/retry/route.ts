@@ -8,6 +8,7 @@ import { deliverToTelegram } from "@/lib/lead/deliver-telegram";
 import { deliverToWeb3Forms } from "@/lib/lead/deliver-web3forms";
 import { maybeAlertDeliveryDegradation } from "@/lib/lead/delivery-alert";
 import { getLeadStore } from "@/lib/lead/store";
+import type { DeliveryRecord } from "@/lib/lead/store-types";
 import { getEnv } from "@/lib/env";
 
 export const runtime = "nodejs";
@@ -36,10 +37,31 @@ export async function POST(request: Request) {
    *
    * Порядок важен: сначала ни разу не отправленные, потом повторные. Свежая
    * заявка ценнее ретрая, который уже несколько раз не прошёл.
+   *
+   * PT-020 · Задания забираются атомарно, а не читаются.
+   *
+   * Прежние два `SELECT` ничего не резервировали: два параллельных прогона крона
+   * (или крон и приём заявки, который отправляет свои `pending` фоном) получали
+   * одни и те же строки и слали клиенту два одинаковых сообщения — интеграционный
+   * тест `tests/lead-delivery-integration-db.test.ts` это воспроизвёл. `claim`
+   * помечает строки арендой через `FOR UPDATE SKIP LOCKED`: второму брать нечего.
+   *
+   * Флаг `LEAD_OUTBOX_CLAIM_ENABLED=0` возвращает прежнее поведение (правило 8
+   * раздела 2 ТЗ): если claim поведёт себя не так на боевой БД, доставку можно
+   * откатить без деплоя, ценой риска дублей.
    */
-  const pending = await store.listPendingDeliveries(BATCH_SIZE);
-  const failedOnes = await store.listFailedDeliveries(Math.max(0, BATCH_SIZE - pending.length));
-  const failed = [...pending, ...failedOnes];
+  let failed: DeliveryRecord[];
+
+  if (getEnv().LEAD_OUTBOX_CLAIM_ENABLED) {
+    failed = await store.claimDeliveries(BATCH_SIZE, MAX_ATTEMPTS);
+  } else {
+    // Откат флагом: прежнее чтение двумя запросами, без резервирования строк.
+    const pending = await store.listPendingDeliveries(BATCH_SIZE);
+    const failedOnes = await store.listFailedDeliveries(
+      Math.max(0, BATCH_SIZE - pending.length)
+    );
+    failed = [...pending, ...failedOnes];
+  }
 
   let retried = 0;
   let recovered = 0;
