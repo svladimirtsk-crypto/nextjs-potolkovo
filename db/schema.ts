@@ -116,8 +116,36 @@ export const leadDeliveries = pgTable(
      * читается `created_at`.
      */
     lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
+    /**
+     * PT-020 · Аренда задания на время попытки отправки (lease).
+     *
+     * ТЗ, строка 124 (PT-003), предписывает атомарный `claim`: без него два
+     * параллельных прогона крона (или крон и приём заявки) забирают одну и ту
+     * же строку и отправляют клиенту два одинаковых сообщения. Интеграционный
+     * тест `tests/lead-delivery-integration-db.test.ts` воспроизвёл ровно это.
+     *
+     * `claimDeliveries` одним UPDATE проставляет `lease_until = now() + lease`
+     * и тем самым помечает строку занятой; `recordDelivery` по итогам попытки
+     * обнуляет её. Если процесс умер посреди отправки, строка не зависает
+     * навсегда: аренда истекает сама, и следующий прогон крона её заберёт.
+     *
+     * Nullable — фаза `expand` (раздел 3.8): у существующих строк значения нет,
+     * что читается как «свободна».
+     */
+    leaseUntil: timestamp("lease_until", { withTimezone: true }),
   },
-  (table) => [index("lead_deliveries_status_idx").on(table.status, table.createdAt)]
+  (table) => [
+    index("lead_deliveries_status_idx").on(table.status, table.createdAt),
+    /**
+     * PT-020 · ТЗ, строка 124 (PT-003): уникальный индекс `(lead_id, channel)`.
+     *
+     * Одна заявка — одно задание на канал. Без ограничения второй набор строк
+     * можно было бы вставить повторно (например, при повторном вызове
+     * `createLeadWithDeliveries`), и тогда каждая копия доставлялась бы
+     * отдельно: клиент получил бы дубль сообщения, а не дубль записи.
+     */
+    uniqueIndex("lead_deliveries_lead_channel_key").on(table.leadId, table.channel),
+  ]
 );
 
 /**

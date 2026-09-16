@@ -18,6 +18,7 @@ import type {
   LeadRecord,
   LeadStore,
 } from "./store-types";
+import { DELIVERY_LEASE_MS } from "./store-types";
 
 export { generatePublicCode };
 export type {
@@ -115,6 +116,8 @@ export class InMemoryLeadStore implements LeadStore {
       existing.status = status;
       existing.attempts += 1;
       existing.lastError = error;
+      // PT-020: попытка завершилась — аренда снимается, как в Pg-версии.
+      existing.leaseUntil = undefined;
       // PT-015: как и в Pg-версии — строка обновляется на месте, поэтому
       // время попытки отдельное и `createdAt` не трогается.
       existing.lastAttemptAt = Date.now();
@@ -131,6 +134,7 @@ export class InMemoryLeadStore implements LeadStore {
       sentAt: status === "sent" ? Date.now() : undefined,
       createdAt: Date.now(),
       lastAttemptAt: Date.now(),
+      leaseUntil: undefined,
     };
     this.deliveries.push(record);
     return record;
@@ -148,6 +152,7 @@ export class InMemoryLeadStore implements LeadStore {
     channels: readonly DeliveryChannel[]
   ): Promise<LeadRecord> {
     const lead = await this.createLead(input);
+    const leaseUntil = getEnv().LEAD_OUTBOX_CLAIM_ENABLED ? Date.now() + DELIVERY_LEASE_MS : undefined;
 
     for (const channel of channels) {
       this.deliveries.push({
@@ -157,10 +162,57 @@ export class InMemoryLeadStore implements LeadStore {
         status: "pending",
         attempts: 0,
         createdAt: Date.now(),
+        leaseUntil,
       });
     }
 
     return lead;
+  }
+
+  /**
+   * PT-020 · Тот же контракт, что у `PgLeadStore.claimDeliveries`.
+   *
+   * Настоящих блокировок в памяти нет, но поведение обязано совпадать: тесты
+   * алертов и ретрая гоняются на этой реализации, и если бы она отдавала одно
+   * задание дважды, дефект из боевой БД остался бы невидимым.
+   */
+  async claimDeliveries(limit: number, maxAttempts = 5): Promise<DeliveryRecord[]> {
+    if (limit <= 0) return [];
+
+    const now = Date.now();
+    const ordered = [...this.deliveries].sort(
+      (a, b) =>
+        Number(b.status === "pending") - Number(a.status === "pending") ||
+        a.createdAt - b.createdAt ||
+        a.id - b.id
+    );
+
+    const claimed: DeliveryRecord[] = [];
+    for (const delivery of ordered) {
+      if (claimed.length >= limit) break;
+
+      const eligible =
+        delivery.status === "pending" ||
+        (delivery.status === "failed" && delivery.attempts < maxAttempts);
+      const free = !delivery.leaseUntil || delivery.leaseUntil <= now;
+      if (!eligible || !free) continue;
+
+      delivery.leaseUntil = now + DELIVERY_LEASE_MS;
+      claimed.push(delivery);
+    }
+
+    return claimed;
+  }
+
+  /**
+   * PT-020 · Только для тестов: снять аренду со всех заданий.
+   *
+   * В бою аренда снимается двумя способами: `recordDelivery` по итогам попытки
+   * и истечение `DELIVERY_LEASE_MS`, если процесс умер. Тестам ждать две минуты
+   * незачем — они моделируют «отправка не состоялась, задание снова свободно».
+   */
+  releaseLeasesForTests(): void {
+    for (const delivery of this.deliveries) delivery.leaseUntil = undefined;
   }
 
   async listPendingDeliveries(limit: number): Promise<DeliveryRecord[]> {
