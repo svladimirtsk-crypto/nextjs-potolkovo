@@ -64,6 +64,16 @@ jobs:
       - name: Unit-тесты (vitest)
         run: npm run test
 
+      # PT-019 (A-12, T-325): харнесс потока калькулятора — обязательный гейт.
+      # Раньше `npm run test:flow` не вызывался в CI ВООБЩЕ: контракт
+      # `lib/calculator-flow.ts` (маршрутизация Шага 0, режимы скидки света,
+      # начальные опции модалки, копирайт Шага 2, окно перезвона) проверялся
+      # только локально. Именно поэтому в нём полгода жил вызов несуществующей
+      # `resolveStep0ConfirmLabel` — падение видел лишь тот, кто запускал скрипт
+      # руками. ТЗ, строка 192, требует единого обязательного pipeline.
+      - name: Поток калькулятора (test:flow)
+        run: npm run test:flow
+
       - name: Окружение и реквизиты
         # PT-006: RELEASE=1 делает проверку блокирующей. Раньше скрипт
         # вызывался без флага и только предупреждал — то есть не срабатывал
@@ -194,12 +204,28 @@ jobs:
       - name: Playwright
         run: npm run test:e2e
 
+      # PT-019 (A-12, T-325): «плавающий» тест не должен проходить незамеченным.
+      # `retries: 1` спасает от сетевых флаков, но заодно прячет настоящие —
+      # job зеленеет, а проблема остаётся. Гейт читает JSON-отчёт Playwright и
+      # роняет сборку, если хоть один тест прошёл только со второй попытки.
+      #
+      # Блокирующий режим — на ветках релиза и в PR, которые в них идут
+      # (`github.base_ref`): чинить флак после мержа поздно. На остальных ветках
+      # предупреждение, чтобы не мешать промежуточной работе. Тот же приём, что
+      # в `check:env` (PT-006).
+      - name: Плавающие E2E-тесты
+        env:
+          RELEASE: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/quizv2ver1' || github.base_ref == 'main' || github.base_ref == 'quizv2ver1') && '1' || '' }}
+        run: node scripts/check-e2e-flaky.mjs
+
       - name: Отчёт при падении
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: playwright-report
+          path: |
+            playwright-report
+            test-results/results.json
           retention-days: 7
 
   secrets:

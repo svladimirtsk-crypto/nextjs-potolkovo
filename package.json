@@ -9,6 +9,8 @@
     "start": "next start",
     "lint": "eslint",
     "test:flow": "node scripts/test-calculator-flow.mjs",
+    "check:e2e-flaky": "node scripts/check-e2e-flaky.mjs",
+    "ci:all": "npm run lint && npx tsc --noEmit && npm run test && npm run test:flow && npm run validate:catalog && npm run build && npm run check:bundle && npm run test:e2e && npm run check:e2e-flaky",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "validate:catalog": "node scripts/validate-catalog.mjs",

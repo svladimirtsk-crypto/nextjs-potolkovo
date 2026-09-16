@@ -25,7 +25,15 @@ export default defineConfig({
   timeout: 45_000,
   expect: { timeout: 10_000 },
 
-  reporter: process.env.CI ? [["github"], ["list"]] : [["list"]],
+  /**
+   * PT-019 (A-12, T-325): в CI кроме человекочитаемых отчётов пишем JSON —
+   * его читает гейт `scripts/check-e2e-flaky.mjs`. Повторная попытка
+   * (`retries: 1`) маскирует «плавающий» тест: job зеленеет, а флак остаётся.
+   * Без отчёта узнать об этом нельзя.
+   */
+  reporter: process.env.CI
+    ? [["github"], ["list"], ["json", { outputFile: "test-results/results.json" }]]
+    : [["list"]],
 
   use: {
     baseURL: BASE_URL,
