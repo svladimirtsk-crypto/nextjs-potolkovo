@@ -815,6 +815,12 @@ describe("PT-015 · проверка встроена в оба места от�
         DELIVERY_CHANNELS
       );
     }
+    /**
+     * PT-020: задания рождаются арендованными — их отправляет приём заявки.
+     * Этот тест моделирует «процесс умер до отправки», поэтому аренду снимаем:
+     * иначе крон честно пройдёт мимо и алерту будет нечего считать.
+     */
+    target.releaseLeasesForTests();
     const calls = stubAlertWebhook();
 
     const response = await postRetry(
@@ -843,6 +849,8 @@ describe("PT-015 · проверка встроена в оба места от�
       { status: "new", payload: leadPayload(), grandTotal: 0 },
       DELIVERY_CHANNELS
     );
+    // PT-020: см. комментарий выше — крон берёт только освобождённые задания.
+    target.releaseLeasesForTests();
 
     const response = await postRetry(
       new Request("http://localhost/api/lead/retry", {

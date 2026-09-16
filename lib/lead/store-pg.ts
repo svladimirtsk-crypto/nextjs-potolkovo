@@ -5,9 +5,10 @@
  * при холодном старте serverless: дедуп по телефону, серверный rate-limit,
  * ретраи доставки и поиск заявки по короткому коду.
  */
-import { and, count, desc, eq, gt, lt, sql } from "drizzle-orm";
+import { and, count, desc, eq, gt, inArray, isNull, lt, or, sql } from "drizzle-orm";
 
 import { getDb, type Db } from "@/db";
+import { getEnv } from "@/lib/env";
 import { deliveryAlerts, leadDeliveries, leads } from "@/db/schema";
 
 import type { LeadPayload } from "./schema";
@@ -19,6 +20,7 @@ import type {
   LeadRecord,
   LeadStore,
 } from "./store-types";
+import { DELIVERY_LEASE_MS } from "./store-types";
 import { generatePublicCode } from "./public-code";
 
 /**
@@ -78,6 +80,7 @@ function toDeliveryRecord(row: DeliveryRow): DeliveryRecord {
     sentAt: row.sentAt?.getTime(),
     createdAt: row.createdAt.getTime(),
     lastAttemptAt: row.lastAttemptAt?.getTime(),
+    leaseUntil: row.leaseUntil?.getTime(),
   };
 }
 
@@ -191,6 +194,18 @@ export class PgLeadStore implements LeadStore {
     input: Omit<LeadRecord, "id" | "createdAt" | "publicCode">,
     channels: readonly DeliveryChannel[]
   ): Promise<LeadRecord> {
+    /**
+     * PT-020 · Задания рождаются уже арендованными.
+     *
+     * Приём заявки отправляет их сам, но делает это фоном — после ответа
+     * клиенту. Крон, запущенный в это окно, увидел бы те же `pending`-строки и
+     * отправил сообщение второй раз. Аренда закрывает окно; если процесс умрёт
+     * до `recordDelivery`, она истечёт и крон задание подберёт.
+     */
+    const leaseUntil = getEnv().LEAD_OUTBOX_CLAIM_ENABLED
+      ? sql`now() + ${Math.round(DELIVERY_LEASE_MS / 1000)} * interval '1 second'`
+      : null;
+
     return this.db.transaction(async (tx) => {
       const lead = await this.insertLead(tx, input);
 
@@ -201,6 +216,7 @@ export class PgLeadStore implements LeadStore {
             channel,
             status: "pending" as DeliveryStatus,
             attempts: 0,
+            leaseUntil,
           }))
         );
       }
@@ -300,6 +316,9 @@ export class PgLeadStore implements LeadStore {
           lastError: error ?? null,
           sentAt: status === "sent" ? new Date() : existing.sentAt,
           lastAttemptAt: new Date(),
+          // PT-020: попытка завершилась — строка снова свободна для крона.
+          // Без этого упавшее задание ждало бы истечения аренды.
+          leaseUntil: null,
         })
         .where(eq(leadDeliveries.id, existing.id))
         .returning();
@@ -317,10 +336,65 @@ export class PgLeadStore implements LeadStore {
         lastError: error ?? null,
         sentAt: status === "sent" ? new Date() : null,
         lastAttemptAt: new Date(),
+        leaseUntil: null,
       })
       .returning();
 
     return toDeliveryRecord(row);
+  }
+
+  /**
+   * PT-020 · Атомарный `claim` (ТЗ, строка 124 · PT-003).
+   *
+   * Один `UPDATE … WHERE id IN (SELECT … FOR UPDATE SKIP LOCKED)`: подзапрос
+   * выбирает свободные задания и блокирует их строки, внешний UPDATE помечает
+   * их арендованными и возвращает. Конкурентный вызов те же строки не увидит —
+   * `SKIP LOCKED` пропускает заблокированные, а не ждёт их.
+   *
+   * Почему это один запрос, а не «select, потом update»: между двумя запросами
+   * строку успевает забрать кто угодно, именно так и возникал дубль отправки.
+   *
+   * Порядок тот же, что был у крона: сначала ни разу не отправленные `pending`,
+   * потом повторные `failed`.
+   */
+  async claimDeliveries(limit: number, maxAttempts = 5): Promise<DeliveryRecord[]> {
+    if (limit <= 0) return [];
+
+    const leaseSeconds = Math.round(DELIVERY_LEASE_MS / 1000);
+
+    const rows = await this.db
+      .update(leadDeliveries)
+      .set({ leaseUntil: sql`now() + ${leaseSeconds} * interval '1 second'` })
+      .where(
+        inArray(
+          leadDeliveries.id,
+          this.db
+            .select({ id: leadDeliveries.id })
+            .from(leadDeliveries)
+            .where(
+              and(
+                or(
+                  eq(leadDeliveries.status, "pending"),
+                  and(eq(leadDeliveries.status, "failed"), lt(leadDeliveries.attempts, maxAttempts))
+                ),
+                // Аренда истекла или не ставилась — значит, задание свободно.
+                or(
+                  isNull(leadDeliveries.leaseUntil),
+                  lt(leadDeliveries.leaseUntil, sql`now()`)
+                )
+              )
+            )
+            .orderBy(
+              sql`(${leadDeliveries.status} = 'pending') DESC`,
+              leadDeliveries.createdAt
+            )
+            .limit(limit)
+            .for("update", { skipLocked: true })
+        )
+      )
+      .returning();
+
+    return rows.map(toDeliveryRecord);
   }
 
   /** Для ретраев: только неудачные и только те, где не исчерпаны попытки. */

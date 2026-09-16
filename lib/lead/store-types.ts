@@ -7,6 +7,16 @@
  */
 import type { LeadPayload } from "./schema";
 
+/**
+ * PT-020 · Срок аренды задания outbox, мс.
+ *
+ * Аренда защищает строку на время одной попытки отправки: конкурент её не
+ * заберёт. Срок выбран с запасом к реальному времени доставки (секунды), но
+ * достаточно коротким, чтобы смерть процесса не отложила ретрай надолго:
+ * истёкшую аренду следующий прогон крона считает свободной.
+ */
+export const DELIVERY_LEASE_MS = 120_000;
+
 export type LeadStatus = "new" | "draft" | "rescue" | "contacted" | "closed";
 export type DeliveryChannel = "telegram" | "web3forms";
 export type DeliveryStatus = "pending" | "sent" | "failed";
@@ -41,6 +51,11 @@ export type DeliveryRecord = {
   createdAt: number;
   /** PT-015: время последней попытки, epoch ms (`undefined` — попыток не было). */
   lastAttemptAt?: number;
+  /**
+   * PT-020: до какого момента задание арендовано отправителем, epoch ms
+   * (`undefined` — свободно).
+   */
+  leaseUntil?: number;
 };
 
 /** PT-015 · Запись журнала служебных алертов о деградации доставки. */
@@ -123,6 +138,20 @@ export interface LeadStore {
   listPendingDeliveries(limit: number): Promise<DeliveryRecord[]>;
 
   listFailedDeliveries(limit: number): Promise<DeliveryRecord[]>;
+
+  /**
+   * PT-020 · Атомарно забрать задания на отправку (ТЗ, строка 124 · PT-003).
+   *
+   * Отличие от `listPendingDeliveries`/`listFailedDeliveries`: те просто читают
+   * строки, поэтому два параллельных прогона крона забирали один и тот же набор
+   * и отправляли клиенту дубль. Здесь одним `UPDATE … WHERE id IN (SELECT …
+   * FOR UPDATE SKIP LOCKED)` строки помечаются арендой (`lease_until`) и
+   * возвращаются: конкурент их уже не увидит.
+   *
+   * Аренда истекает сама, поэтому смерть процесса посреди отправки не теряет
+   * задание. По итогам попытки `recordDelivery` освобождает строку.
+   */
+  claimDeliveries(limit: number, maxAttempts?: number): Promise<DeliveryRecord[]>;
 
   /**
    * PT-015 · Последние попытки доставки — от свежих к старым.
