@@ -11,6 +11,14 @@ import { defineConfig, devices } from "@playwright/test";
  * dev-режим отличается гидрацией и таймингами, и в CI это даёт флаки.
  */
 const PORT = Number(process.env.E2E_PORT ?? 3100);
+
+/**
+ * PT-019: JSON-отчёт пишется и локально, не только в CI. Иначе `npm run ci:all`
+ * заканчивался бы сообщением «отчёт не прочитан» на ровном месте: гейт
+ * `check:e2e-flaky` должен уметь посчитать нули, а не гадать.
+ * Каталог `test-results/` в `.gitignore`.
+ */
+const JSON_REPORTER = ["json", { outputFile: "test-results/results.json" }] as const;
 const BASE_URL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${PORT}`;
 
 export default defineConfig({
@@ -32,8 +40,8 @@ export default defineConfig({
    * Без отчёта узнать об этом нельзя.
    */
   reporter: process.env.CI
-    ? [["github"], ["list"], ["json", { outputFile: "test-results/results.json" }]]
-    : [["list"]],
+    ? [["github"], ["list"], JSON_REPORTER]
+    : [["list"], JSON_REPORTER],
 
   use: {
     baseURL: BASE_URL,
