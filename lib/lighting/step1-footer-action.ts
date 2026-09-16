@@ -1,5 +1,6 @@
 import type { Step1FooterAction } from "@/lib/calculator-modal-types";
 import type { WizardStep } from "@/lib/lighting/resolve-initial-step";
+import type { Step1Progress } from "@/lib/lighting/step1-progress";
 
 /**
  * N-050 · Какая кнопка стоит в футере модалки на Шаге 1.
@@ -52,6 +53,39 @@ export type Step1FooterInput = {
   pointsComplete: boolean;
   lampsComplete: boolean;
 };
+
+/**
+ * PT-018 (B-F104) · тот же выбор кнопки, но на входе — объект прогресса из
+ * `step1-progress`, а не четыре отдельных флага.
+ *
+ * Адаптер нужен, чтобы вызывающая сторона не раскладывала прогресс по полям
+ * вручную: расхождение в одном флаге означало бы кнопку не от того экрана, а
+ * заметить это можно только кликом.
+ */
+export function resolveStep1FooterFromProgress(input: {
+  activeTab: string;
+  shownWStep: WizardStep;
+  missingAction: { label: string } | null;
+  hasSystemOptions: boolean;
+  psuBlocks: boolean;
+  requiredTrackMeters: number;
+  hasTrackSystem: boolean;
+  progress: Step1Progress;
+}): Step1FooterDescriptor {
+  return resolveStep1FooterAction({
+    activeTab: input.activeTab,
+    shownWStep: input.shownWStep,
+    hasMissingAction: input.missingAction !== null,
+    hasSystemOptions: input.hasSystemOptions,
+    psuBlocks: input.psuBlocks,
+    requiredSelectionComplete: input.progress.requiredSelectionComplete,
+    requiredTrackMeters: input.requiredTrackMeters,
+    hasTrackSystem: input.hasTrackSystem,
+    trackComplete: input.progress.trackComplete,
+    pointsComplete: input.progress.pointsComplete,
+    lampsComplete: input.progress.lampsComplete,
+  });
+}
 
 export function resolveStep1FooterAction(input: Step1FooterInput): Step1FooterDescriptor {
   const fallback: Step1FooterDescriptor = input.hasMissingAction

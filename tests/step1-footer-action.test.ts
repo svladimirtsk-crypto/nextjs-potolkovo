@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   buildStep1FooterAction,
   resolveStep1FooterAction,
+  resolveStep1FooterFromProgress,
   type Step1FooterInput,
 } from "../lib/lighting/step1-footer-action";
+import { calcStep1Progress, type Step1ProgressInput } from "../lib/lighting/step1-progress";
 
 /**
  * N-050 · Футер Шага 1 — производная от состояния шага, а не отдельное
@@ -163,5 +165,110 @@ describe("N-050 · buildStep1FooterAction", () => {
       { missingAction: null, goToMissingAction: () => {}, finishAction: finish, handlers: {} }
     );
     expect(() => action.onClick()).not.toThrow();
+  });
+});
+
+/**
+ * PT-018 · Адаптер `resolveStep1FooterFromProgress` обязан давать ровно тот же
+ * результат, что и плоский вызов: он существует только чтобы вызывающая сторона
+ * не раскладывала прогресс по полям руками.
+ */
+describe("resolveStep1FooterFromProgress", () => {
+  const facts: Step1ProgressInput = {
+    requiredTrackMeters: 10,
+    requiredPointQty: 4,
+    selectedTrackMeters: 10,
+    selectedPointQty: 1,
+    lampRequiredTotal: 4,
+    lampCurrentTotal: 4,
+    selectedTrackSystem: "COLIBRI_220",
+    trackFixturesCount: 3,
+    needsChandeliers: false,
+    needsCorniceLighting: false,
+  };
+  const progress = calcStep1Progress(facts);
+
+  it("совпадает с плоским вызовом на том же наборе фактов", () => {
+    const viaAdapter = resolveStep1FooterFromProgress({
+      activeTab: "recommendations",
+      shownWStep: "points",
+      missingAction: null,
+      hasSystemOptions: true,
+      psuBlocks: false,
+      requiredTrackMeters: facts.requiredTrackMeters,
+      hasTrackSystem: true,
+      progress,
+    });
+
+    const flat = resolveStep1FooterAction({
+      activeTab: "recommendations",
+      shownWStep: "points",
+      hasMissingAction: false,
+      hasSystemOptions: true,
+      psuBlocks: false,
+      requiredSelectionComplete: progress.requiredSelectionComplete,
+      requiredTrackMeters: facts.requiredTrackMeters,
+      hasTrackSystem: true,
+      trackComplete: progress.trackComplete,
+      pointsComplete: progress.pointsComplete,
+      lampsComplete: progress.lampsComplete,
+    });
+
+    expect(viaAdapter).toEqual(flat);
+  });
+
+  it("незакрытые точки из прогресса видны как недостающее действие", () => {
+    expect(progress.pointsComplete).toBe(false);
+    expect(progress.missingPointQty).toBe(3);
+
+    const descriptor = resolveStep1FooterFromProgress({
+      activeTab: "recommendations",
+      shownWStep: "done",
+      missingAction: { label: "Выбрать светильники →" },
+      hasSystemOptions: true,
+      psuBlocks: false,
+      requiredTrackMeters: facts.requiredTrackMeters,
+      hasTrackSystem: true,
+      progress,
+    });
+
+    expect(descriptor.intent).toBe("missing");
+  });
+
+  it("блокировка по БП: в мастере её несёт дескриптор, в каталоге — само действие", () => {
+    const complete = calcStep1Progress({ ...facts, requiredPointQty: 0, selectedPointQty: 0 });
+    const input = {
+      shownWStep: "system" as const,
+      missingAction: null,
+      hasSystemOptions: false,
+      psuBlocks: true,
+      requiredTrackMeters: facts.requiredTrackMeters,
+      hasTrackSystem: true,
+      progress: complete,
+    };
+
+    // Экран выбора системы без вариантов: футер завершающий и заблокирован БП.
+    expect(resolveStep1FooterFromProgress({ ...input, activeTab: "recommendations" })).toEqual({
+      intent: "finish",
+      disabled: true,
+    });
+
+    // На вкладке каталога дескриптор блокировку не несёт — её ставит finishAction.
+    const onCatalog = resolveStep1FooterFromProgress({ ...input, activeTab: "catalog" });
+    expect(onCatalog).toEqual({ intent: "finish" });
+
+    const action = buildStep1FooterAction(onCatalog, {
+      missingAction: null,
+      goToMissingAction: () => undefined,
+      finishAction: () => ({
+        label: "Нужен блок питания",
+        disabled: true,
+        onClick: () => undefined,
+      }),
+      handlers: {},
+    });
+
+    expect(action.label).toBe("Нужен блок питания");
+    expect(action.disabled).toBe(true);
   });
 });

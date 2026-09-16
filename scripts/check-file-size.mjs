@@ -24,10 +24,10 @@ const ROOTS = ["components", "app"];
  * уменьшения; при росте страж падает.
  */
 const LEGACY_BUDGET = {
-  "components/calculator-modal/wizard-step1-lighting.tsx": 1396,
+  // PT-018: оркестратор Шага 1 «Свет» разобран (1395 → 544 строки) — исключение снято.
   // PT-011: экран интента вынесен в `ask-checkout-intent.ts` — порог понижен с 773.
   // PT-017: правило «есть ли фото» уехало в `lib/catalog-photo.ts` — порог понижен с 757.
-  "app/uslugi/prodazha-trekovogo-osveshcheniya/_components/CatalogSectionClient.tsx": 748,
+  // PT-018: каталог страницы разобран (748 → 539) — исключение снято.
   // PT-013: состояния ошибки вынесены в `lead-form-alert.tsx` + `lib/lead/failure-view.ts`,
   // блок «Получение / Когда удобно» — в `lead-fulfilment-fields.tsx`. Порог понижен с 602.
   // PT-014: чекбокс согласия вынесен в `lead-consent-checkbox.tsx`. Порог понижен с 561.
