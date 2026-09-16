@@ -54,7 +54,7 @@ npm run ci:all
 ```bash
 npm run lint            # eslint, 0 errors
 npx tsc --noEmit        # 0 errors
-npm run test            # vitest: 1038 passed / 34 skipped (пропуски — в реестре ниже)
+npm run test            # vitest: 1054 passed / 53 skipped без БД, 1119 passed с TEST_DATABASE_URL
 npm run test:flow       # харнесс контракта lib/calculator-flow.ts, 8 тестов
 npm run validate:catalog
 npm run build           # 19 маршрутов; тянет prebuild — все стражи
@@ -214,6 +214,7 @@ curl -s https://potolkovo-msk.ru/api/health | jq
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | доставка в Telegram |
 | `WEB3FORMS_ACCESS_KEY` | серверный ключ дубля на почту |
 | `CRON_SECRET` | доступ к `POST /api/lead/retry` (заголовок `Authorization: Bearer …`) |
+| `LEAD_OUTBOX_CLAIM_ENABLED` | `0` — аварийный откат PT-020: крон снова читает задания двумя `SELECT` без резервирования строк (возвращает риск дубля отправки) |
 | `AVAILABILITY_TOKEN` | пароль `/admin/availability` и `GET\|PUT /api/admin/availability` (PT-016) |
 | `AVAILABILITY_DB_ENABLED` | `0` — аварийный откат PT-016: календарь снова только из `content/availability.ts` |
 | `DATABASE_URL` | строка подключения к PostgreSQL; схема — `db/schema.ts` |
@@ -2442,7 +2443,7 @@ not a function`». На HEAD это **не так**: прогон проходи
 ТЗ требует причину и владельца для любого `skip`. Владелец всех пунктов —
 `svladimirtsk-crypto` (владелец продукта); исполнитель — Arena Agent.
 
-**Unit (vitest): 34 skipped теста в 3 файлах.** Причина общая — нужна реальная
+**Unit (vitest): 53 skipped теста в 4 файлах.** Причина общая — нужна реальная
 PostgreSQL, схема накатывается `drizzle-kit push`.
 
 | Файл | Тестов | Причина пропуска | Выполняются ли в CI |
@@ -2450,6 +2451,7 @@ PostgreSQL, схема накатывается `drizzle-kit push`.
 | `tests/lead-route-db.test.ts:73` | 15 | `describe.skipIf(!TEST_DATABASE_URL)` — N-001, `POST /api/lead` с реальной БД | **Да**, всегда: job `static` поднимает `postgres:17-alpine` и задаёт `TEST_DATABASE_URL` |
 | `tests/availability-db.test.ts:46` | 10 | то же — PT-016, календарь замеров в PostgreSQL | Да |
 | `tests/delivery-alert-db.test.ts:58` | 9 | то же — PT-015, алерт о сбоях доставки | Да |
+| `tests/lead-delivery-integration-db.test.ts:123` | 19 | то же — PT-020, доставка на реальной БД и фейковом HTTP-сервере | Да |
 
 Локально включаются одной переменной:
 
@@ -2499,3 +2501,155 @@ TEST_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/potolkovo_test npm
 **Других пропусков нет:** `test.only`/`describe.only` запрещены в CI
 (`forbidOnly`), `.skip`/`.todo`/`fixme` в `tests/` и `e2e/` не используются,
 кроме перечисленных выше.
+
+## Доставка под настоящим HTTP и атомарный claim (PT-020)
+
+ТЗ v5, раздел 4 (Фаза 5); задача `PT-020` (источники `A-13` (PDF, `F-14`), `T-326`).
+
+### Зачем
+
+CI и до этой задачи поднимал `postgres:17-alpine`, но БД использовалась только
+для `PgLeadStore`. Каналы доставки во всех тестах были заглушены через
+`vi.mock("@/lib/lead/deliver-telegram")`, поэтому их HTTP-слой не проверялся
+ничем: ни 429, ни обрыв соединения, ни контракт Web3Forms «HTTP 200, но
+`success: false` — это провал», ни поведение при выключенном канале.
+
+### Фейковый сервер доставки
+
+`tests/helpers/fake-delivery.ts` — настоящий `node:http` на `127.0.0.1` плюс
+перехват `globalThis.fetch`. URL в каналах захардкожены
+(`https://api.telegram.org/bot<token>/sendMessage`,
+`https://api.web3forms.com/submit`), поэтому подменить их можно только на
+уровне `fetch` — прод-код ради тестов не менялся.
+
+Перехват строгий: любой внешний хост вне списка бросает исключение
+`внешний вызов в тесте запрещён (правило 7 раздела 2 ТЗ)`. То есть запрет
+реальных отправок обеспечен технически, а не дисциплиной: новый внешний вызов
+в коде доставки уронит тест, а не уйдёт в боевой сервис.
+
+Программируется статус, тело (JSON или мусор), задержка, обрыв соединения,
+«не отвечать вовсе» и последовательность ответов — «упасть дважды, потом
+ожить».
+
+### Что покрыто
+
+| Файл | Тестов | Что проверяет |
+|---|---|---|
+| `tests/lead-delivery-channels.test.ts` | 16 | HTTP-слой каналов: состав тела запроса, 429/500, тело не-JSON, обрыв сокета, медленный ответ, `TELEGRAM_LEADS_ENABLED=0`, отсутствие конфигурации (ни одного запроса), запрет внешнего хоста |
+| `tests/lead-delivery-integration-db.test.ts` | 19 | настоящая БД + фейковый HTTP: транзакционность аутбокса (включая откат заявки при сбое вставки задания), идемпотентность насквозь, крон ретрая, недоступные каналы, гонки, флаг отката |
+
+Отдельно зафиксировано поведение, которое решением не является, но теперь
+видимое: Telegram-канал смотрит только на `response.ok`, поэтому HTTP 200 с
+телом `{ok:false}` считается успехом. На практике Telegram при ошибке отвечает
+4xx, так что случай гипотетический — но менять это поведение теперь можно
+только вместе с тестом.
+
+### Найденный дефект: дубль отправки
+
+Тест гонок воспроизвёл его детерминированно, в двух независимых сценариях:
+
+1. **Два параллельных прогона крона.** `listPendingDeliveries` и
+   `listFailedDeliveries` — обычные `SELECT` без резервирования строк, поэтому
+   оба прогона забирали одно и то же задание: `fake.count("telegram")` = **2
+   вместо 1**. Клиент получил бы два одинаковых сообщения.
+2. **Приём заявки и крон одновременно.** `/api/lead` создаёт задания в статусе
+   `pending` и отправляет их фоном, не дожидаясь ответа клиенту; крон в это окно
+   видит те же строки. Результат тот же — 2 отправки.
+
+ТЗ, строка 124 (PT-003), предписывает это закрыть: «Добавить уникальный индекс
+`(lead_id, channel)` и атомарный `claim` (`FOR UPDATE SKIP LOCKED` или
+`UPDATE ... WHERE status='pending' AND (lease_until IS NULL OR lease_until <
+now()) RETURNING`)». Проверка БД (`\d lead_deliveries`) показала, что ни
+индекса, ни колонки аренды не было — из PT-003 была реализована транзакция, но
+не claim.
+
+### Решение
+
+- **Схема.** Колонка `lead_deliveries.lease_until` (nullable — фаза `expand`,
+  раздел 3.8: у существующих строк значения нет, что читается как «свободна») и
+  `uniqueIndex lead_deliveries_lead_channel_key (lead_id, channel)`.
+- **`PgLeadStore.claimDeliveries(limit, maxAttempts)`** — один запрос:
+  `UPDATE ... WHERE id IN (SELECT ... FOR UPDATE SKIP LOCKED) ... RETURNING`.
+  Порядок прежний: сначала ни разу не отправленные `pending`, потом `failed`.
+- **`createLeadWithDeliveries`** создаёт задания уже арендованными: это закрывает
+  окно «приём заявки ↔ крон».
+- **`recordDelivery`** освобождает аренду по итогам попытки, поэтому упавшее
+  задание не ждёт истечения срока и следующий прогон крона его берет сразу.
+- **Смерть процесса** задание не теряет: аренда `DELIVERY_LEASE_MS` = 120 с
+  истекает сама, отдельного статуса `processing` и его расчистки не появилось.
+- **`InMemoryLeadStore`** повторяет контракт (иначе дефект боевой БД остался бы
+  невидимым для тестов, которые гоняются на in-memory). Добавлен
+  `releaseLeasesForTests()`: в бою аренду снимают `recordDelivery` и истечение
+  срока, тестам ждать две минуты незачем.
+
+### Миграция БД — применить ДО деплоя
+
+Новый код пишет в `lease_until` при каждой заявке, поэтому на старой схеме
+приём заявок упадёт с `column "lease_until" does not exist`. Порядок: проверка
+прод-БД на дубли `(lead_id, channel)` → `drizzle-kit push` → мерж в `main` и
+пересборка. Пошагово — раздел 15 файла `OWNER-TODO-2026-09-15.md`. Сама колонка
+обратно совместима: старый код её не читает, поэтому применить схему заранее
+безопасно.
+
+В CI шаг «Применить схему БД» (`drizzle-kit push --force`) уже есть и выполняется
+до `npm run test`, поэтому новые тесты в CI идут на настоящей БД.
+
+### Gate (раздел 6 ТЗ) — точный вывод
+
+```
+$ npm run ci:all                → EXIT=0   (lint → tsc → test → test:flow →
+                                            validate:catalog → build →
+                                            check:bundle → test:e2e →
+                                            check:e2e-flaky)
+$ npm run lint                  → ✖ 18 problems (0 errors, 18 warnings)   ← все предсуществующие
+$ npx tsc --noEmit              → 0 ошибок
+$ npm run test                  → Test Files 88 passed (88); Tests 1119 passed (1119)
+$ npm run test:flow             → # tests 8 / # pass 8 / # fail 0
+$ npm run validate:catalog      → validate-catalog: ok (48 SKU, 7 профилей)
+$ node scripts/check-file-size.mjs
+                                → [file-size] ok — проверено 131 файлов, лимит 600 строк, 2 legacy-исключения
+$ node scripts/check-effect-setstate.mjs
+                                → [effect-setstate] ok — 18 разрешённых сеттеров, 3 моста к стору
+$ npm run build                 → ✓ Compiled successfully in 3.2s; 19/19 статических страниц
+$ npm run check:bundle          → [bundle] ok — / 225.7 КБ ≤ 300 КБ (не изменился: код серверный)
+$ npm run test:e2e              → 180 passed (7.3m)
+$ npm run check:e2e-flaky       → [e2e-flaky] всего: 180 passed, 0 failed, 0 flaky, 12 skipped
+                                  [e2e-flaky] ok — повторных попыток не потребовалось
+$ npm run check:env             → [env] ok — 27 переменных документированы
+$ TEST_DATABASE_URL=… npx vitest run (без БД, как в локальной разработке)
+                                → Test Files 84 passed | 4 skipped (88); Tests 1054 passed | 53 skipped (1107)
+```
+
+Было: 86 файлов / 1084 теста (с БД). Стало: **88 / 1119** (+2 файла, +35 тестов). E2E — 180
+passed, как и до задачи: изменений в UI нет.
+
+Реестр пропусков выше обновлё: 34 → **53** skipped локально без БД (добавился
+файл `tests/lead-delivery-integration-db.test.ts`, 19 тестов; в CI выполняются).
+
+### Ограничения
+
+- Реальные Telegram и Web3Forms не вызывались нигде — ни в тестах, ни при
+  подготовке задачи (правило 7 раздела 2 ТЗ). Прод не проверялся: `curl`
+  боевого сайта не выполнялся, прод-БД не открывалась (доступа нет) — проверка
+  дублей `(lead_id, channel)` на проде **не выполнена**, это шаг владельца.
+- `InMemoryLeadStore` повторяет контракт `claim`, но не повторяет транзакцию и
+  уникальный индекс `(lead_id, channel)`: в памяти их нет. Расхождение
+  осознанное — in-memory реализация нужна для локальной разработки, а не для
+  гарантий целостности.
+- Аренда 120 с означает: если процесс умер сразу после приёма заявки, крон
+  подберёт задание не мгновенно, а после истечения аренды. При рекомендованном
+  интервале крона (15 мин, README; ТЗ предлагает 1 мин) это незаметно.
+- Safari и Firefox не проверялись: изменений в клиентском коде нет.
+
+### Откат
+
+`LEAD_OUTBOX_CLAIM_ENABLED=0` — без деплоя: крон снова читает задания двумя
+`SELECT`, аренда не проставляется. Поведение до PT-020 возвращается целиком,
+вместе с дефектом дубля — это зафиксировано отдельным тестом («флаг отката …
+возвращает прежнее поведение»), чтобы выключатель нельзя было сломать молча.
+
+Колонка `lease_until` и уникальный индекс при этом остаются в схеме: старому
+коду они не мешают. `git revert` убирает код; при желании убрать и схему:
+`ALTER TABLE lead_deliveries DROP CONSTRAINT IF EXISTS lead_deliveries_lead_channel_key;
+DROP INDEX IF EXISTS lead_deliveries_lead_channel_key; ALTER TABLE lead_deliveries
+DROP COLUMN IF EXISTS lease_until;`
