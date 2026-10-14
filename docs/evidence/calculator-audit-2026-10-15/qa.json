@@ -1,0 +1,70 @@
+{
+  "date": "2026-10-15",
+  "timezoneNote": "browser/test timestamps use UTC; report date is Europe/Moscow",
+  "productCommit": "2775d4bfe8335bf27d160cfb03296b8fda19a6e4",
+  "auditBeforeCommit": "8c14802d91d7d72c424f803ad2c5cae82b65bbfd",
+  "auditStates": 67,
+  "findings": 18,
+  "futureUXScenarios": 30,
+  "futureUXImplemented": false,
+  "unit": {
+    "passed": 1305,
+    "files": 99,
+    "skipped": 0,
+    "failed": 0,
+    "database": "local PostgreSQL 17"
+  },
+  "e2e": {
+    "startTime": "2026-10-14T22:01:15.199Z",
+    "duration": 443246.118,
+    "expected": 288,
+    "skipped": 12,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "newTests": {
+    "unit": 20,
+    "e2e": 6
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 18
+  },
+  "typecheck": "passed",
+  "buildPrebuild": "passed",
+  "flowPassed": 8,
+  "homeJsGzipKb": 226.6,
+  "implemented": {
+    "trackControls": 5,
+    "fixtureAccessories": 7,
+    "falsePointRolesCorrected": 9,
+    "realPanelsPreserved": 48,
+    "newlyWithdrawnSku": "0У-00001341",
+    "withdrawnOfferId": "2021",
+    "activeIndexProducts": 545,
+    "retiredArchivePurpose": "historical lookup only, unavailable; preserved across feed removal",
+    "selectedTabHoverContrast": "fixed"
+  },
+  "catalogReviewRemaining": {
+    "withoutMainBrowseSection": 20,
+    "sourceAndOpticsNotBenchVerified": true
+  },
+  "initialFailuresResolved": [
+    "Old tests counted surface mounts as installation points: changed expectations to the owner-confirmed role; genuine-fixture assertions retained",
+    "Coverage test duplicated taxonomy: now tests canonical category classification",
+    "Strict locators hit hidden stage/sidebar duplicates: scoped to the actual stage/visible notice",
+    "Mobile selected-tab hover had contrast 1.19: fixed CSS specificity, axe retained"
+  ],
+  "notChanged": [
+    "content/pricing.ts rates",
+    "ceiling calculation reducer",
+    "main/production branch",
+    "full scenario/room UX and LED engineering flow are still specifications"
+  ],
+  "preExistingWorktreeChange": "Only executable bit of scripts/check-e2e-flaky.mjs, left untouched",
+  "limitations": [
+    "No real-device/screen-reader acceptance",
+    "No full electrical compatibility/stock verification",
+    "Local gitleaks unavailable; no new secrets scan claimed"
+  ]
+}

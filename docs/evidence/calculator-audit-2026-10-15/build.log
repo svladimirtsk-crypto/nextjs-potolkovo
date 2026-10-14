@@ -1,0 +1,85 @@
+
+> nextjs@0.1.0 prebuild
+> node scripts/check-legal-fields.mjs && node scripts/validate-catalog.mjs && node scripts/build-catalog-index.mjs && node scripts/check-images.mjs && node scripts/check-catalog-images.mjs && node scripts/check-file-size.mjs && node scripts/check-effect-setstate.mjs && node scripts/check-availability.mjs && node scripts/build-og-image.mjs && node scripts/build-brand-identity.mjs && node scripts/build-page-dates.mjs
+
+✓ Реквизиты заполнены
+validate-catalog: ok (45 SKU, 7 профилей)
+[catalog-index] proof-pricing 11.4 КБ (6 профилей)
+[catalog-index] 545 товаров · index 104.1 КБ · prefill 14.2 КБ
+[images] ok — 33 ссылок, 44 исходников, варианты на месте
+[catalog-images] ok — 100% товаров с ценой имеют локальное фото
+[file-size] ok — проверено 150 файлов, лимит 600 строк, 1 legacy-исключения
+[effect-setstate] ok — 18 разрешённых сеттеров, 3 моста к стору
+[availability] внимание: запасной календарь протух 8 дн. назад (validUntil 2026-10-05)
+  Пока даты в БД (availability_slots) свежие, на сайт это не влияет.
+  Если БД недоступна или календарь в ней не заполнен, блок «свободные даты»
+  скроется — это честно, но срочность с сайта пропадёт.
+  Освежить запасной список можно правкой content/availability.ts.
+[og-image] ok — уже собрана, 30 КБ
+[brand-identity] home: 1200×630, 71KB
+[brand-identity] solutions: 1200×630, 64KB
+[brand-identity] company: 1200×630, 68KB
+[brand-identity] smart: 1200×630, 69KB
+[brand-identity] privacy: 1200×630, 21KB
+[brand-identity] tenevoy-profil: 1200×630, 69KB
+[brand-identity] paryashchie-potolki: 1200×630, 67KB
+[brand-identity] svetovye-linii: 1200×630, 64KB
+[brand-identity] skrytye-karnizy: 1200×630, 68KB
+[brand-identity] prostye-potolki: 1200×630, 63KB
+[brand-identity] trekovoe-osveshchenie: 1200×630, 67KB
+[brand-identity] prodazha-trekovogo-osveshcheniya: 1200×630, 62KB
+[brand-identity] svetoprozrachnye-potolki: 1200×630, 53KB
+[brand-identity] individualnye-proekty: 1200×630, 71KB
+[brand-identity] icons: SVG, ICO 16/32/48, PNG 16/32/48/180/192/512; local Inter font
+[page-dates] ok — 5 страниц: /, /uslugi, /privacy, /o-kompanii, /umnoe-osveshchenie
+
+> nextjs@0.1.0 build
+> next build
+
+▲ Next.js 16.3.5 (Turbopack)
+✓ Running next.config.ts took 41ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 3.2s
+  Running TypeScript ...
+  Finished TypeScript in 4.3s ...
+  Collecting page data using 1 worker ...
+  Generating static pages using 1 worker (0/23) ...
+  Generating static pages using 1 worker (5/23)
+  Generating static pages using 1 worker (11/23)
+  Generating static pages using 1 worker (17/23)
+✓ Generating static pages using 1 worker (23/23) in 1124ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /admin/availability
+├ ƒ /api/admin/availability
+├ ƒ /api/availability
+├ ƒ /api/catalog
+├ ƒ /api/health
+├ ƒ /api/lead
+├ ƒ /api/lead/[code]
+├ ƒ /api/lead/retry
+├ ○ /icon.svg
+├ ○ /manifest.webmanifest
+├ ○ /o-kompanii
+├ ○ /privacy
+├ ○ /robots.txt
+├ ○ /sitemap.xml
+├ ○ /umnoe-osveshchenie
+├ ○ /uslugi
+├ ○ /uslugi/individualnye-proekty
+├ ○ /uslugi/paryashchie-potolki
+├ ○ /uslugi/prodazha-trekovogo-osveshcheniya
+├ ○ /uslugi/prostye-potolki
+├ ○ /uslugi/skrytye-karnizy
+├ ○ /uslugi/svetoprozrachnye-potolki
+├ ○ /uslugi/svetovye-linii
+├ ○ /uslugi/tenevoy-profil
+└ ○ /uslugi/trekovoe-osveshchenie
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
