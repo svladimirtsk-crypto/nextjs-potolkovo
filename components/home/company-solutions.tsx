@@ -31,7 +31,7 @@ export function CompanyLighting() {
     <section className="pk-section pk-wrap" aria-labelledby="lighting-title">
       <div className="pk-lighting-panel">
         <div><p className="pk-eyebrow">Освещение и управление</p><h2 id="lighting-title">Одна комната.<br />Разные сценарии.</h2><p>{company.lighting.description}</p>
-          <Link href="/uslugi/prodazha-trekovogo-osveshcheniya" className="pk-link-button">Открыть каталог света <span aria-hidden="true">↗</span></Link>
+          <Link href="/umnoe-osveshchenie" className="pk-link-button">Сценарии и управление <span aria-hidden="true">↗</span></Link>
           <Link href="/uslugi/trekovoe-osveshchenie" className="pk-lighting-secondary">Свет с монтажом <span aria-hidden="true">↗</span></Link>
           <small>{company.lighting.note}</small>
         </div>

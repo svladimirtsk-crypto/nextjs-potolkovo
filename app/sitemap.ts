@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 
 import pageDates from "@/data/page-dates.json";
+import { brandPages } from "@/content/brand-pages";
 import { phase2Services } from "@/content/services";
 
 const BASE_URL = "https://potolkovo-msk.ru";
@@ -42,6 +43,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.9,
     },
+    ...Object.values(brandPages).map((page) => ({
+      url: `${BASE_URL}${page.path}`,
+      lastModified: pageDate(page.path, new Date("2026-10-14T00:00:00Z")),
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
     {
       url: `${BASE_URL}/privacy`,
       lastModified: pageDate("/privacy", now),

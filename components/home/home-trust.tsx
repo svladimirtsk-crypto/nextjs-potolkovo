@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { company } from "@/content/company";
 import { contacts } from "@/content/contacts";
 
@@ -10,6 +11,7 @@ export function HomeTrust() {
         <div><p>{company.about.description}</p><p>{company.about.detail}</p>
           <div className="pk-founder"><span aria-hidden="true">ВС</span><div><b>{company.about.founder}</b><small>{company.about.founderRole}</small></div></div>
           <a className="pk-text-link" href={contacts.phoneHref}>Связаться с компанией <span aria-hidden="true">↗</span></a>
+          <Link className="pk-company-more" href="/o-kompanii">О компании и подходе <span aria-hidden="true">↗</span></Link>
         </div>
       </div>
     </section>

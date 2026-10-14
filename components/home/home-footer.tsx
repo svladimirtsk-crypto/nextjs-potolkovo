@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { contacts, isLegalFieldFilled } from "@/content/contacts";
 import { homepage } from "@/content/homepage";
@@ -17,6 +18,7 @@ export function HomeFooter() {
             <p className="mt-4 max-w-md text-sm leading-7 text-slate-600">
               {homepage.footer.footerNote}
             </p>
+            <nav className="pk-footer-editorial" aria-label="О компании и свете"><Link href="/o-kompanii">Компания</Link><Link href="/umnoe-osveshchenie">Умный свет</Link></nav>
           </div>
 
           <div>
