@@ -1,0 +1,55 @@
+{
+  "date": "2026-10-14",
+  "productCommit": "55b6f79724a964bccee48bb8cfd6a8f55271fdb0",
+  "baseCommit": "37405ed8cdd65e3fec2e875bf5de2ff291e1bbd1",
+  "unit": {
+    "passed": 1285,
+    "files": 98,
+    "skipped": 0,
+    "failed": 0,
+    "database": "local PostgreSQL 17"
+  },
+  "e2e": {
+    "startTime": "2026-10-14T19:23:54.056Z",
+    "duration": 359368.909,
+    "expected": 282,
+    "skipped": 12,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "newTests": {
+    "unit": 18,
+    "e2e": 10
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 18
+  },
+  "types": "passed",
+  "buildPrebuild": "passed",
+  "flowPassed": 8,
+  "homeBundleGzipKB": 226.3,
+  "e2eTestsSHA256": "e9cd3043428af70dba41c27dbd25a12283e290cf994d1f1eb02821d81ecfbd72",
+  "pageDatesSHA256": "3f90e8b1cbba0951e0220fb4d39fb0984cb8f131ce78b5f1883e2de3011cf6aa",
+  "initialTargetedFailures": "Empty selection silently fell back to browse; retry focus ran before DOM commit; chunk test initially allowed built-in Turbopack retry. UI fixes and complete outage simulation retained; targeted and full suites rerun without retries.",
+  "verified": [
+    "same requestId and input after lead retry",
+    "real lazy chunk delay/failure/recovery without reload",
+    "equipment-only cart, total and lead snapshot preserved",
+    "explicit empty selected tab and search reset",
+    "pending keyboard containment and failed-state focus",
+    "short-screen 320/390/1440 controls and axe"
+  ],
+  "limits": [
+    "Real devices, native keyboard, 200% zoom and screen reader still pending",
+    "No production/rights/legal verification",
+    "Local gitleaks unavailable; not a new secrets-scan result"
+  ],
+  "unchanged": [
+    "pricing and calculator reducer",
+    "API/schema/request contract",
+    "service URLs and explicit presets",
+    "original assets/review quotes/legal text"
+  ],
+  "preExistingWorktreeChange": "scripts/check-e2e-flaky.mjs executable bit only (100755→100644), present before work, not included in commits; script content unchanged"
+}

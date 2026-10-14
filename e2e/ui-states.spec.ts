@@ -132,3 +132,33 @@ test("B8 states: delayed catalog, failure and explicit recovery keep the same pa
   await modal.locator(".calculator-modal-footer").getByRole("button", { name: /К итогу/ }).click();
   await expect(modal.locator(".pk-estimate-total")).toHaveText(total);
 });
+
+test("B8 states: catalog recovery preserves an existing equipment-only cart and lead snapshot", async ({ page }) => {
+  const chunk = indexChunk(); let allowSuccess = false;
+  await page.route(`**/_next/static/chunks/${chunk}*`, route => allowSuccess ? route.continue() : route.abort("failed"));
+  const leads = await interceptLeadApi(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/uslugi/prodazha-trekovogo-osveshcheniya#price");
+  const card = page.locator(".pk-product").first();
+  const selectedId = await card.getAttribute("data-product-id");
+  await card.getByRole("button", { name: "Увеличить", exact: true }).click();
+  await page.locator("[data-cart-bar]").last().getByRole("button", { name: "Оформить", exact: true }).click();
+  await page.getByLabel("Как оформляем комплект?").getByRole("button", { name: /Только оборудование/ }).click();
+  const modal = page.locator(MODAL);
+  const total = await modal.locator(".pk-estimate-total").innerText();
+  await modal.getByRole("button", { name: "Изменить свет", exact: true }).click();
+  await expect(modal.getByTestId("catalog-load-state")).toHaveAttribute("data-ui-state", "error");
+  allowSuccess = true;
+  await modal.getByRole("button", { name: "Повторить загрузку", exact: true }).click();
+  await expect(modal.getByTestId("catalog-load-state")).toHaveCount(0);
+  await expect(modal.getByRole("button", { name: "Выбранное (1)", exact: true })).toBeVisible();
+  await modal.locator(".calculator-modal-footer").getByRole("button", { name: /К итогу/ }).click();
+  await expect(modal.locator(".pk-estimate-total")).toHaveText(total);
+  await expect(modal.getByTestId("estimate-card")).not.toContainText("Потолок и работы");
+  await submitLeadForm(page, { scope: modal });
+  await expect.poll(() => leads.length).toBe(1);
+  const snapshot = leads[0].snapshot as { lighting: { items: Array<{ sku: string; qty: number }> }; totals: { grand: number; lightingEffective: number } };
+  expect(snapshot.lighting.items).toHaveLength(1);
+  expect(snapshot.lighting.items[0]).toMatchObject({ sku: selectedId, qty: 1 });
+  expect(snapshot.totals.grand).toBe(snapshot.totals.lightingEffective);
+});
