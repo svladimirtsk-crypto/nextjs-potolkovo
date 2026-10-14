@@ -235,7 +235,7 @@ export function selectFooterAction(
     case "param":
       return { label: getParamConfirmLabel(screen.param), disabled: false };
     case "roomEdit":
-      return { label: "Готово →", disabled: false };
+      return { label: "К помещениям", disabled: false };
   }
 }
 

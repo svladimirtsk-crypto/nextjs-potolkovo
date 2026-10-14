@@ -3,7 +3,7 @@ import type { RoomConfig } from "@/lib/calculator/use-calculator-engine";
 
 export function RoomContext({ rooms, roomId, status, editing, onSelect, onOverview }: {
   rooms: readonly RoomConfig[]; roomId?: string; status?: string; editing: boolean;
-  onSelect: (id: string) => void; onOverview: () => void;
+  onSelect: (id: string) => void; onOverview?: () => void;
 }) {
   if (!rooms.length) return null;
   const index = rooms.findIndex(room => room.id === roomId);
@@ -20,7 +20,7 @@ export function RoomContext({ rooms, roomId, status, editing, onSelect, onOvervi
       <option value="" disabled>Выбрать помещение</option>
       {rooms.map((r, i) => <option key={r.id} value={r.id}>{i + 1}. {r.label}</option>)}
     </select>}
-    {!editing && <button type="button" onClick={onOverview}>К помещениям</button>}
+    {!editing && onOverview && <button type="button" onClick={onOverview}>К помещениям</button>}
     {editing && <span className="pk-room-context-edit">Правка до сохранения</span>}
   </div>;
 }

@@ -2,9 +2,9 @@
 import { useEffect, useRef } from "react";
 import type { RoomConfig } from "@/lib/calculator/use-calculator-engine";
 const ROOM_TYPES = ["Кухня","Гостиная","Спальня","Детская","Кабинет","Санузел","Коридор","Прихожая","Другое"];
-export function RoomPickerScreen({ rooms, mode, onAdd, onSelect, onBack }:{
+export function RoomPickerScreen({ rooms, mode, onAdd, onSelect }:{
   rooms: RoomConfig[]; mode: "first"|"add";
-  onAdd: (label:string)=>void; onSelect: (id:string)=>void; onBack?: ()=>void;
+  onAdd: (label:string)=>void; onSelect: (id:string)=>void;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => { headingRef.current?.focus(); }, [mode]);
@@ -31,9 +31,6 @@ export function RoomPickerScreen({ rooms, mode, onAdd, onSelect, onBack }:{
             <button key={t} type="button" onClick={()=>onAdd(t)} className="min-h-11 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100">+ {t}</button>
           ))}
         </div>
-      </div>
-      <div className="mt-4 flex justify-between text-sm">
-        {onBack && rooms.length > 0 && <button type="button" onClick={onBack} className="min-h-11 px-3 text-slate-700">← Назад</button>}
       </div>
     </section>
   );

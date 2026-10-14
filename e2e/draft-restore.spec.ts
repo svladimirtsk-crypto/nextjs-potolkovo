@@ -229,7 +229,7 @@ test.describe("PT-007 · восстановление корзины света"
     // Потолок до закрытия: помещение и сумма — их и сверяем после восстановления.
     const ceilingBefore = squash((await modal.textContent()) ?? "");
     expect(ceilingBefore).toContain("Помещение·18м²");
-    const ceilingTotalBefore = ceilingBefore.match(/Предварительныйрасчёт(\d+₽)/)?.[1];
+    const ceilingTotalBefore = squash(await modal.locator('[data-quiz-v2] p[aria-live="polite"]').innerText());
     expect(ceilingTotalBefore, "видна сумма потолка").toBeTruthy();
 
     /**
@@ -262,7 +262,7 @@ test.describe("PT-007 · восстановление корзины света"
     await expect(modal.getByRole("heading", { name: "Проверка" })).toBeVisible();
     const ceilingAfter = squash((await modal.textContent()) ?? "");
     expect(ceilingAfter, ceilingAfter).toContain("Помещение·18м²");
-    expect(ceilingAfter, ceilingAfter).toContain(`Предварительныйрасчёт${ceilingTotalBefore}`);
+    expect(squash(await modal.locator('[data-quiz-v2] p[aria-live="polite"]').innerText())).toBe(ceilingTotalBefore);
 
     /**
      * Корзина света восстанавливается целиком: состав, количества, суммы и

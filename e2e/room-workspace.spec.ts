@@ -51,7 +51,7 @@ test('Room UX: cancel and save are transactional, do not replay all questions or
   await expect(m.getByRole('heading',{name:'Карточка комнаты — Кухня',exact:true})).toBeFocused();
   await expect.poll(async()=> (await draft(page)).rooms[0].area).toBe(21);
   expect((await draft(page)).rooms[1]).toEqual(before.rooms[1]);
-  await m.locator('.calculator-modal-footer').getByRole('button',{name:/Готово/}).click();
+  await m.locator('.calculator-modal-footer').getByRole('button',{name:"К помещениям",exact:true}).click();
   await expect(m.locator('.pk-wizard-caption')).toHaveText('Параметры потолка заполнены');
   await expect(m.getByRole('button',{name:/К итогу/})).toBeEnabled();
   await capture(page,'rooms-summary');
@@ -93,7 +93,7 @@ test('Room UX: only new dependent parameters are checked after changing the ceil
   await m.getByRole('button',{name:'Редактировать: Кухня',exact:true}).click();await m.locator('[data-edit-param="ceiling"]').click();
   await m.getByRole('button',{name:/Показать теневой и парящий/}).click();await m.locator('[data-ceiling-option="shadow"]').click();
   await m.getByRole('button',{name:'Сохранить изменения',exact:true}).click();
-  await m.locator('.calculator-modal-footer').getByRole('button',{name:/Готово/}).click();
+  await m.locator('.calculator-modal-footer').getByRole('button',{name:"К помещениям",exact:true}).click();
   await m.getByRole('button',{name:/Продолжить заполнение/}).click();
   for(const title of ['Теневой профиль','Световые линии','Трековое освещение']) {
     await expect(m.getByRole('heading',{name:title,exact:true})).toBeVisible();

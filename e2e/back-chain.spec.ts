@@ -40,15 +40,15 @@ test.describe("Step 0 · цепочка «Назад»", () => {
     );
   });
 
-  test("«Назад» на первом шаге возвращает к выбору сценария, а не закрывает модалку", async ({
+  test("на первом экране нет ложного «Назад», режим доступен и модалка не закрывается", async ({
     page,
   }) => {
     const modal = page.locator(MODAL);
 
     await modal.getByRole("button", { name: /Одну комнату/ }).click();
-    await modal.getByRole("button", { name: /Назад/ }).click();
+    await expect(modal.locator(".calculator-modal-footer").getByRole("button", { name: /Назад/ })).toHaveCount(0);
 
-    // Модалка осталась открытой и предлагает снова выбрать режим расчёта.
+    // Назад некуда: никакого мёртвого действия и самовольного закрытия.
     await expect(modal).toBeVisible();
     await expect(modal.getByRole("button", { name: /Одну комнату/ })).toBeVisible();
     await expect(modal.getByRole("button", { name: /Всю квартиру или дом/ })).toBeVisible();

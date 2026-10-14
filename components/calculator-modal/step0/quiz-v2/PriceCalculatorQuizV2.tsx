@@ -330,7 +330,7 @@ export function PriceCalculatorQuizV2({
     : isSummary ? { label: hasPending ? "Продолжить заполнение →" : summaryPrimaryLabel ?? routing.primary.label, disabled: !engine.rooms.length }
     : selectFooterAction(screen, { scope: engine.calculationScope }),
     [isEditing, isSummary, hasPending, summaryPrimaryLabel, routing.primary.label, engine.rooms.length, screen, engine.calculationScope]);
-  const backVisible = isEditing || selectBackVisible(screen, { historyLength: history.length, scenarioPreselected: initialSolutionScenario !== "standard" });
+  const backVisible = isEditing || (screen.t !== "roomEdit" && selectBackVisible(screen, { historyLength: history.length, scenarioPreselected: initialSolutionScenario !== "standard" }));
 
   /**
    * N-050 · Публикация состояния Шага 0 в стор.
@@ -467,7 +467,7 @@ export function PriceCalculatorQuizV2({
     <div data-quiz-v2 data-active-screen={screen.t} className="step0-quiz-v2 max-w-3xl mx-auto">
       {(screen.t === "param" || screen.t === "roomEdit") && <RoomContext rooms={engine.rooms} roomId={screen.roomId}
         status={isEditing ? "Изменения не сохранены" : currentRoom ? workspace.roomStatus(currentRoom) : undefined} editing={isEditing}
-        onSelect={workspace.openRoom} onOverview={() => setHistory([{ t: "summary" }])} />}
+        onSelect={workspace.openRoom} onOverview={screen.t === "param" ? () => setHistory([{ t: "summary" }]) : undefined} />}
       {edit && <p className="pk-room-edit-note" role="status">Изменения и сумма обновятся после сохранения. «Отмена правки» оставит прежний расчёт.</p>}
       {screen.t === "scenario" && (
         <>
@@ -502,7 +502,6 @@ export function PriceCalculatorQuizV2({
           mode={screen.mode}
           onAdd={label => { const id = engine.addRoom(label); pushScreen({ t: "param", roomId: id, param: "area" }); }}
           onSelect={workspace.openRoom}
-          onBack={goBack}
         />
       )}
       {screen.t === "param" && (
@@ -520,7 +519,6 @@ export function PriceCalculatorQuizV2({
           roomId={screen.roomId}
           engine={engine}
           onEditParam={param => workspace.begin(screen.roomId, param)}
-          onBack={goBack}
           onDelete={() => { void workspace.remove(screen.roomId); }}
         />
       )}

@@ -9,9 +9,9 @@ import {
   formatRoomLine,
   trackLabel,
 } from "@/lib/calculator/labels";
-export function RoomEditScreen({ roomId, engine, onEditParam, onBack, onDelete }:{
+export function RoomEditScreen({ roomId, engine, onEditParam, onDelete }:{
   roomId: string; engine: CeilingEngine;
-  onEditParam: (p: ParamId)=>void; onBack: ()=>void; onDelete?: ()=>void;
+  onEditParam: (p: ParamId)=>void; onDelete?: ()=>void;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => { headingRef.current?.focus(); }, [roomId]);
@@ -58,7 +58,6 @@ export function RoomEditScreen({ roomId, engine, onEditParam, onBack, onDelete }
         ))}
       </div>
       <div className="mt-4 flex flex-wrap gap-3 justify-between items-center">
-        <button type="button" onClick={onBack} className="min-h-11 px-3 text-sm text-slate-700">← Назад</button>
         <button type="button" onClick={onDelete} className="min-h-11 text-sm text-rose-700 border border-rose-200 rounded-xl px-3 py-2">Удалить текущее помещение</button>
       </div>
     </section>
