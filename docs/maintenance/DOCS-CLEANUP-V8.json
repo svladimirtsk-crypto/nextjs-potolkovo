@@ -1,0 +1,1325 @@
+{
+  "date": "2026-10-14",
+  "baseCommit": "3dd20cd5eccb68e82148a643840d95a369e75000",
+  "replacement": "docs/current v8",
+  "requirementsCoverage": {
+    "technicalCards": 36,
+    "brandCards": 8,
+    "legacyMappingRows": 137
+  },
+  "preserved": "Product sources/assets/config, uploads, licenses, source XML, visual concepts, implementation ZIP/bundle backups, last full QA, Git history",
+  "protectedFiles": 1854,
+  "sourceFingerprintBefore": "707367b32b736bc642be253e21d1862e8eb8d9dd7bf90125716edcc87ef0121c",
+  "relocatedQA": [
+    {
+      "from": "docs/reports/evidence/R7-gallery/build.log",
+      "to": "docs/evidence/latest-qa/build.log",
+      "sha256": "03189418b1838d3948733e522e395926f2e748fba520601a0cae066f21b7cefd"
+    },
+    {
+      "from": "docs/reports/evidence/R7-gallery/bundle.log",
+      "to": "docs/evidence/latest-qa/bundle.log",
+      "sha256": "354ad16299b60411d85f20d966b768c8dabfd6d34e07b237e58eb771b48dfb96"
+    },
+    {
+      "from": "docs/reports/evidence/R7-gallery/e2e-all.log",
+      "to": "docs/evidence/latest-qa/e2e-all.log",
+      "sha256": "3d83e61fad42ce5bd3ee5391f47db5f4b64434dbb12bda03712788e07b0c1639"
+    },
+    {
+      "from": "docs/reports/evidence/R7-gallery/e2e-summary.json",
+      "to": "docs/evidence/latest-qa/e2e-summary.json",
+      "sha256": "b095d29532c73827dc8c48b9b42bbc8009da9f67d54940847981c41202bd5ba9"
+    },
+    {
+      "from": "docs/reports/evidence/R7-gallery/env.log",
+      "to": "docs/evidence/latest-qa/env.log",
+      "sha256": "ee12edd6a9b867cf7a045af63a5f0c00410aea5ba95a62495ad1093e17485319"
+    },
+    {
+      "from": "docs/reports/evidence/R7-gallery/flaky.log",
+      "to": "docs/evidence/latest-qa/flaky.log",
+      "sha256": "a0868f10cdfb8787c3af7c0c2d488b3526d84c7c5a8bb5ff75d117ed0e43c0b2"
+    },
+    {
+      "from": "docs/reports/evidence/R7-gallery/flow.log",
+      "to": "docs/evidence/latest-qa/flow.log",
+      "sha256": "0bfdf2363e64662af12971b042344a84dfe7d2bb35cb485e606051b0d68ea757"
+    },
+    {
+      "from": "docs/reports/evidence/R7-gallery/lint.log",
+      "to": "docs/evidence/latest-qa/lint.log",
+      "sha256": "345511daf91de74fdf8fa414ac53ee8e4c2264cee628d3acb3075037375034d3"
+    },
+    {
+      "from": "docs/reports/evidence/R7-gallery/unit-all.log",
+      "to": "docs/evidence/latest-qa/unit-all.log",
+      "sha256": "4b0e9d5ebbc8a61b178a87d41b230c468c1d9c795494b8a5313abf390a673537"
+    }
+  ],
+  "removed": [
+    {
+      "path": "audit/CHECKOUT-REFERENCE.json",
+      "bytes": 536,
+      "sha256": "fedef79f703abe458d3c7cef78b483f2ebb1da240d9708d9a6f3f25c00492cac",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "audit/POTOLKOVO-AUDIT-PACKAGE-V6.zip",
+      "bytes": 5881121,
+      "sha256": "08a22ff7096ec70b8ee2518155f9ca5a10931b33be5cbf73602a0a309546bd64",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "audit/POTOLKOVO-BACKLOG-V6.xlsx",
+      "bytes": 38918,
+      "sha256": "8395ca17e0043e668314381969cef973c49b74a242464acc748364af4c19ac3e",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "audit/POTOLKOVO-FINAL-AUDIT-TZ-V6.docx",
+      "bytes": 757218,
+      "sha256": "21ae52b61c68418123a00445b9512c9bda87dd5875d536775a4f4f65810e7ab3",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "audit/POTOLKOVO-FINAL-AUDIT-TZ-V6.html",
+      "bytes": 1078254,
+      "sha256": "287a1a5f67084fe62c10b9f3ac6075cbd068e37770dd148e9d9df476bed57b27",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "audit/POTOLKOVO-FINAL-AUDIT-TZ-V6.md",
+      "bytes": 185662,
+      "sha256": "a0ec140d7d4d617bbb4f3340c01c57b8dd5bc7e796a698bc2cc5831dbbe2375e",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "audit/POTOLKOVO-FINAL-AUDIT-TZ-V6.pdf",
+      "bytes": 1073181,
+      "sha256": "e014e81d221c8b95756a3b322c32dd7a8c948571b402bdcd8699f3484104f09c",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "audit/README-FIRST.md",
+      "bytes": 7051,
+      "sha256": "4f023c1d822e5cd282b8afc896f50396f4e0af5d82326f063b3dfdf5a9b53c46",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "audit/SHA256SUMS.txt",
+      "bytes": 8127,
+      "sha256": "ad6652771c769f46c212480e91fa50343a49c7fc6ab366cd045b100a510401b5",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "audit/mapping.json",
+      "bytes": 29265,
+      "sha256": "cfe819ee705a545ce637693d20bb21f8f2872084e01f59286e2e0efb28b01832",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "audit/qa.json",
+      "bytes": 13345,
+      "sha256": "844e1fcd190f6c5865a801907f18cbc21b0a79f1c5fc804455e74dc22aa479cd",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "audit/tasks.json",
+      "bytes": 42603,
+      "sha256": "3a1ef2ff7aab2e92a7efd03210567d62d45370c979214141f2793aba63e3c875",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/R7-IMPLEMENTATION.md",
+      "bytes": 11998,
+      "sha256": "33f4ee04088705395c714ddcbaf91c701e3286494ced8c782d5cb7e00f8c46e1",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/README-HANDOFF.md",
+      "bytes": 5272,
+      "sha256": "0a19b409a66ad088c0c7c18df8478b039715ac69c98927e7efcb5fd72eb8ecd4",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/calculator/R7-CALCULATOR.md",
+      "bytes": 11268,
+      "sha256": "5d6b33b3b51d20c6ecde2f2ec4399127484b17da914f2ff4dfe77f25d6418e30",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/calculator/README-HANDOFF.md",
+      "bytes": 4566,
+      "sha256": "71b8ab383a1be6c14305cf75ea8542e90b27e942d4ab434cd4919a89743cf76a",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/calculator/evidence/axe-install.log",
+      "bytes": 371,
+      "sha256": "4782387882ec5b1dd61d69f8cbe6397a723be95e9234968488eae7d331dcf5e7",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/calculator/evidence/axe-target.log",
+      "bytes": 3896,
+      "sha256": "ec3500ea42ff7d36d170ca37c072af76834dd1134dd4c059635081f98f6875d7",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/calculator/evidence/browser-deps.log",
+      "bytes": 14543,
+      "sha256": "729da312a438d412df667265186dd1c811c130d7ddac7ca9d393f12b7bc4d0fd",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/calculator/evidence/build.log",
+      "bytes": 3010,
+      "sha256": "7bd9db4131573509b9f8c8d4ff80539701797264024e338ad56211e39f9aa2f2",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/calculator/evidence/capture.log",
+      "bytes": 151,
+      "sha256": "658a517d1baf93e8a49c700d4ec2e5e39dc7fff2da49b0fd36a15e5c127335b0",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/calculator/evidence/install.log",
+      "bytes": 742,
+      "sha256": "a4a7e9e40b187178476a0577b4c2d8fa0f876a8d7335ec6baa1bac47abca0833",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/calculator/evidence/targeted-e2e.log",
+      "bytes": 3959,
+      "sha256": "e7b412e4a60b82333686fd53ea4a05527a9b2cbc9c9b98137ff171f3774788e3",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/calculator/evidence/unit.log",
+      "bytes": 52431,
+      "sha256": "e4a9a9cb51c2ca8b2059abc531c872d6dcbd941cf8b34d56a57601f31d21a575",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/catalog/R7-CATALOG.md",
+      "bytes": 11080,
+      "sha256": "68d279dd577e4fc23f05df53b61890fbbf32b8ef45479288947fbb83b033e10f",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/catalog/README-HANDOFF.md",
+      "bytes": 5379,
+      "sha256": "83f12e4969c03e7ef0e6fdce40887961c62fddb207751df5685a9440fb283d46",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/catalog/SHA256SUMS.txt",
+      "bytes": 1222,
+      "sha256": "5e9a4157c2c5d3d0218a9c7197cecbb07acf9ceac23cc250623e895ce4fcc183",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/catalog/evidence/browser-deps.log",
+      "bytes": 14545,
+      "sha256": "854d5d0ad3bc1f4840cffc1d0d108bdd53defee09a3fc40ecd7c17217176ca8e",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/catalog/evidence/browser-install.log",
+      "bytes": 21350,
+      "sha256": "19fcb6f132dfee5a3aee2524d86de1277c16b6d8b46791725c8822c863335e52",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/catalog/evidence/install.log",
+      "bytes": 534,
+      "sha256": "bce2d2189ab4869385d9a721b8a67ca723b8c07182561f678df23f48962a5262",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/catalog/evidence/targeted-e2e.log",
+      "bytes": 2502,
+      "sha256": "cf9cbcf6a5544f71b1bb431a79235e5738346c30d80b2d528a6e9e632fa87ab6",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/ci-fix/after-all-v2.log",
+      "bytes": 90499,
+      "sha256": "8fedb136cf148547ac90ca10122c6820e8610b3e1e3f684cab8ad3b054cd520a",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/ci-fix/after-all.log",
+      "bytes": 90366,
+      "sha256": "00d7e4e7a34d6ce6fff284455a83b1b1b1f88c3c6b27be08a4fc990bae80ad11",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/ci-fix/availability-v2.log",
+      "bytes": 565,
+      "sha256": "3b912d30b38011b207c15f3f34c3eaaa1f39a7e065c68780d7cd7fe83f5cfdb0",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/ci-fix/before.log",
+      "bytes": 4102,
+      "sha256": "cd72435c936eb8b3082a854b5602f9e2847319fb3c328a34234dcdd7cdfd7285",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/ci-fix/build-v2.log",
+      "bytes": 3965,
+      "sha256": "17744a2262a5794f518ba13cb04d6cf1b9a6de70039504c1dc2d5b277a311ee8",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/ci-fix/bundle-v2.log",
+      "bytes": 792,
+      "sha256": "f24c04c7bffc5bac34d416b6ee495c50cb4c41c161ae47ee20433c413ad66b08",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/ci-fix/catalog-v2.log",
+      "bytes": 120,
+      "sha256": "3ee0ed642b8d7820a7ca24f8d9cd5a333b36fef8d37e2cb3b3ae6a932bcb8764",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/ci-fix/env-tests.log",
+      "bytes": 1610,
+      "sha256": "3c7e51f28f545d83593ae05901360ac2f7597baaf754f10d394c4d72df386d1c",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/ci-fix/env-v2.log",
+      "bytes": 233,
+      "sha256": "96ae7d055afb784e6aa38e25e0ef1e702ed94ada7481f245395a62daf7b2ff16",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/ci-fix/flow-v2.log",
+      "bytes": 1832,
+      "sha256": "0ae4920083c3cc2ec847634e059d49d64b0cb583aa9120d8949593ba70a00085",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/ci-fix/flow.log",
+      "bytes": 1832,
+      "sha256": "b85733b9c55c80585872a4e08e0cc3a93b4c83c4391361d914beab78baba41e6",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/ci-fix/lint-v2.log",
+      "bytes": 3683,
+      "sha256": "345511daf91de74fdf8fa414ac53ee8e4c2264cee628d3acb3075037375034d3",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/ci-fix/lint.log",
+      "bytes": 3683,
+      "sha256": "345511daf91de74fdf8fa414ac53ee8e4c2264cee628d3acb3075037375034d3",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/ci-fix/push-v2.log",
+      "bytes": 75694,
+      "sha256": "7eb2f90a6f31fa2bc6f062ca9bb4fa18c2fba6db829054a8d635017e0b9d1d8f",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/ci-fix/push.log",
+      "bytes": 75633,
+      "sha256": "a8328657be9aeb78e0996b0ff5109a3be8aff5e7f4c894d1be2e9abe530176c9",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/ci-fix/schema.log",
+      "bytes": 261,
+      "sha256": "c2a8a526cab6ff1fbe7a6f9c8f86f038354d2e6778c5d6a9acc2da8484219483",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/ci-fix/timezones.log",
+      "bytes": 6448,
+      "sha256": "52b41479e539868e92ef5d2e354ba3ec49b36eb0df0d73b0f5e2531788eb1ee8",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/ci-fix/types-v2.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/ci-fix/types.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/ci-fix-npm.log",
+      "bytes": 742,
+      "sha256": "a76442dbeb96f0ebbd66b1fd0edd523cdcc59e16ebd95e9f5fa025c01eed8343",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/ci-fix-postgres-install.log",
+      "bytes": 6631,
+      "sha256": "0b27ef225dec80e4b13e88f0862e138c76c05fd7262e17737faed376ad586e9d",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/editorial/R7-EDITORIAL.md",
+      "bytes": 9938,
+      "sha256": "a1c80dae839faabe2c8f0a14d62f83f9aa80c4d231316863ad1ce1a778c6fcf9",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/editorial/README-HANDOFF.md",
+      "bytes": 5229,
+      "sha256": "1cd7ab91899b4cfbefb3b9d8dc32913bc1bfacf52363f4d900dd0731226c1064",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/editorial/SHA256SUMS.txt",
+      "bytes": 1232,
+      "sha256": "056083753d3b2c565cb166a2cfe6e27fc98cbc101617fcf1145df2720ca4e33a",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/editorial/evidence/browser-install.log",
+      "bytes": 10732,
+      "sha256": "861f03d1c50599d1bb285c67e3da35915db4eb1b50cc51a467cabbd61f40cbff",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/editorial/evidence/rebuild-limited.log",
+      "bytes": 3093,
+      "sha256": "04a4083e9c3cb71980053fbd2e7cd82d626ac82be515f218bb2942027c79dd10",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/editorial/evidence/rebuild.log",
+      "bytes": 1894,
+      "sha256": "05afe73da1cb5ceecca33e1f0e9d0357a6c8c6fbaff231bb60516b20e5f8d11e",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/editorial/evidence/reinstall.log",
+      "bytes": 742,
+      "sha256": "8c14afe62273c0ef10c03c481def054cf23e24391a28405aa2cf658de66fa149",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/evidence/brand-unit.log",
+      "bytes": 1610,
+      "sha256": "8484f94e95f9a10da2c5f11cf6cf91201a285b22162f76837aafb96ac7e7bac9",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/evidence/browser-checks.json",
+      "bytes": 23525,
+      "sha256": "597aefa4c6cd1065fba14cdd285fc00d0d5eaa1a3377da15ed5c5bf443c8e53d",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/evidence/browser-qa.log",
+      "bytes": 1210,
+      "sha256": "ba29004b7f2578990eaeddf0ddff7f29b98b64e1ffc5e8cbf5772500db01c854",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/evidence/build.log",
+      "bytes": 3010,
+      "sha256": "b74104a1e0e0e7416579631186cf38adf80506d55ab2e50426dd630121e1fae0",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/evidence/copy-review.log",
+      "bytes": 1739,
+      "sha256": "eefbfe87c18f187b32b4bbfdb82f98ed49be72e009263405ba933e9f25d00fdf",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/evidence/unit.log",
+      "bytes": 52145,
+      "sha256": "5b85072ea08e67c1d9f3f5a2e48b4bd8e09ffd64a1c569468d2f21464ed1c7d8",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/gallery/R7-GALLERY.md",
+      "bytes": 8613,
+      "sha256": "ad2bc535394a8deab3d7da48f98ada5a4015f5ce0c4e5991b8a7bdfd4c201dc4",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/gallery/README-HANDOFF.md",
+      "bytes": 1378,
+      "sha256": "70e95b0e739fa5dcc71a01eb64ccb02fbe264d270aeddebfb4104f00ad4106d5",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/gallery/SHA256SUMS.txt",
+      "bytes": 1128,
+      "sha256": "337f709266932efaf0673d94fcc2409f0e535d81a0b5f0241d6542b8c584eba8",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/gallery/evidence/browser-install.log",
+      "bytes": 6805,
+      "sha256": "5798b343735904826b722ff9ca12b529fa2e65372ff38ef1a98bbc5e2c626144",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/gallery/evidence/build.log",
+      "bytes": 3963,
+      "sha256": "03189418b1838d3948733e522e395926f2e748fba520601a0cae066f21b7cefd",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/gallery/evidence/bundle.log",
+      "bytes": 792,
+      "sha256": "354ad16299b60411d85f20d966b768c8dabfd6d34e07b237e58eb771b48dfb96",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/gallery/evidence/e2e-all.log",
+      "bytes": 57764,
+      "sha256": "3d83e61fad42ce5bd3ee5391f47db5f4b64434dbb12bda03712788e07b0c1639",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/gallery/evidence/e2e-summary.json",
+      "bytes": 140,
+      "sha256": "b095d29532c73827dc8c48b9b42bbc8009da9f67d54940847981c41202bd5ba9",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/gallery/evidence/env.log",
+      "bytes": 124,
+      "sha256": "ee12edd6a9b867cf7a045af63a5f0c00410aea5ba95a62495ad1093e17485319",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/gallery/evidence/flaky.log",
+      "bytes": 260,
+      "sha256": "a0868f10cdfb8787c3af7c0c2d488b3526d84c7c5a8bb5ff75d117ed0e43c0b2",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/gallery/evidence/flow.log",
+      "bytes": 1830,
+      "sha256": "0bfdf2363e64662af12971b042344a84dfe7d2bb35cb485e606051b0d68ea757",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/gallery/evidence/gallery-unit.log",
+      "bytes": 1610,
+      "sha256": "d6e2e0ed324074f472c6bf3cb0a32e94cde2b1129562b52474b077d8c93ad6a5",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/gallery/evidence/lint.log",
+      "bytes": 3683,
+      "sha256": "345511daf91de74fdf8fa414ac53ee8e4c2264cee628d3acb3075037375034d3",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/gallery/evidence/push.log",
+      "bytes": 75765,
+      "sha256": "640b81cfdc7bea783fbc135111933c65f653c4a76bb11e2d197f59b0f8fde2a4",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/gallery/evidence/targeted-e2e-fixed-test.log",
+      "bytes": 1820,
+      "sha256": "1f724d33cd51926b661ddf52f84de778bfc77e11b95c8e9a84a12a39ea17fd1d",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/gallery/evidence/targeted-e2e.log",
+      "bytes": 13754,
+      "sha256": "9936d331a2faaab5beebb4cac820e2099eeea1c5980cdd89b1c09c5745bfeef7",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/gallery/evidence/types.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/gallery/evidence/unit-all.log",
+      "bytes": 90629,
+      "sha256": "4b0e9d5ebbc8a61b178a87d41b230c468c1d9c795494b8a5313abf390a673537",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/gallery/evidence/unit-before-commit.log",
+      "bytes": 90738,
+      "sha256": "b42cf51f69d359f50a653df386d5affdd54dd66106df27c8c4172e606bc66701",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/polish/R7-POLISH.md",
+      "bytes": 9887,
+      "sha256": "c79feafa24871e1c85997fdb698c4989c61fc2caac3cc7d76bc3f419d1ea37cc",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/polish/README-HANDOFF.md",
+      "bytes": 4397,
+      "sha256": "258d6b9dea4df62a27006bd2a54af4d39dd9c951ce7210e6ff31a917c0b329eb",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/polish/SHA256SUMS.txt",
+      "bytes": 1124,
+      "sha256": "997b30fd40b79e11dd2562f4e70d67f56e0ebbbf94f8d36f968488830cdbac3b",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/polish/evidence/browser-install.log",
+      "bytes": 21350,
+      "sha256": "5f75e8478c1f19fcf9801bb39e35ea83d2e828ea9f711640dd54b3339297c682",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/polish/evidence/build.log",
+      "bytes": 3964,
+      "sha256": "792df104f367f4067730390853977e33feb06738a1b4d7d6486de7265b04af69",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/polish/evidence/bundle.log",
+      "bytes": 792,
+      "sha256": "f24c04c7bffc5bac34d416b6ee495c50cb4c41c161ae47ee20433c413ad66b08",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/polish/evidence/e2e-summary.json",
+      "bytes": 141,
+      "sha256": "08a4682beb623a654b3f6853b862f70575987cea143149d842e4ae7f8a8f7e63",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/polish/evidence/e2e.log",
+      "bytes": 55985,
+      "sha256": "c4d5d2de6f599cd1633352379d7aecba3f413997c33177f3d425b97e0457bb9b",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/polish/evidence/flaky.log",
+      "bytes": 260,
+      "sha256": "ab03b00b3c3ec1ad4efff8fb95de01b54d37d2e1b659011b619ab6afe12ce84a",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/polish/evidence/flow.log",
+      "bytes": 1833,
+      "sha256": "5c4b9a8fb8e3288b7b2b1b88332cb8bee33a49bf384b36547ec4914aa0738475",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/polish/evidence/identity.log",
+      "bytes": 783,
+      "sha256": "0ade3d33b9192f368b3c4970456a9b04dac1256a9c84d93d96e2a5c550900d22",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/polish/evidence/install.log",
+      "bytes": 534,
+      "sha256": "89075df1ee036dc570dce3ca70d4be696f9bcc38fb4e793be6c2702ad9033256",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/polish/evidence/lint.log",
+      "bytes": 3683,
+      "sha256": "345511daf91de74fdf8fa414ac53ee8e4c2264cee628d3acb3075037375034d3",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/polish/evidence/targeted-e2e.log",
+      "bytes": 1529,
+      "sha256": "21c12bda3b1db501055cdd5efc47a5bafaf504227545525c53212f0d32aee3d4",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/polish/evidence/unit.log",
+      "bytes": 52543,
+      "sha256": "00d972b9917bc57b81fa73ec5d233616bdb71bf8a2d11eea9f8aaf96f8c548c1",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/services/R7-SERVICES.md",
+      "bytes": 9642,
+      "sha256": "7cd154be379a1b592c207ff4111461bae38a481dc2508353591b49efeb169e96",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/services/README-HANDOFF.md",
+      "bytes": 5061,
+      "sha256": "5ab5dac91e3fe7687079d91b6ca5055616d740dacee952f43d0e8b803e599e82",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/services/SHA256SUMS.txt",
+      "bytes": 1218,
+      "sha256": "c9032e8e988a3b8bbe3699d8f0a43b583cb8726f7668f3aa6baef2d0c73bc7f1",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/services/evidence/browser-install.log",
+      "bytes": 2414,
+      "sha256": "6b0345f284110c78606eff1b022269a83c394744dfa988148687b940d13c7928",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/services/evidence/initial-axe.json",
+      "bytes": 243,
+      "sha256": "67e9ca91f299d519d18ed3c459a096f7ce873f992bd63164d13ebf11b9e9309c",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/services/evidence/install.log",
+      "bytes": 534,
+      "sha256": "f4a1e922ba48d70a55ffdf7b9f646a764f5801aa7e6b6e41b1ff5b088b6676f7",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "implementation/services/evidence/targeted-e2e.log",
+      "bytes": 3196,
+      "sha256": "db14b0825463399b60cf4a96200251bf91198bb179488cf6e89ac654ea7d4af8",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "rebrand/POTOLKOVO-BACKLOG-V7.xlsx",
+      "bytes": 37921,
+      "sha256": "d9c140b5b962efd574970e0584237eab7a25a7781c0d60e5b8b3cf24f6863cfb",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "rebrand/POTOLKOVO-BRAND-REDESIGN-TZ-V7.docx",
+      "bytes": 62802,
+      "sha256": "3af3f410078fec1e3d07c671c97604c36e2ceb040cfc1226804de2f80f631031",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "rebrand/POTOLKOVO-BRAND-REDESIGN-TZ-V7.html",
+      "bytes": 85105,
+      "sha256": "ee74fa832fba3aa26c7aee4c8f2635481964e161fa2d5782b3e0544df5cd4d0a",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "rebrand/POTOLKOVO-BRAND-REDESIGN-TZ-V7.md",
+      "bytes": 74845,
+      "sha256": "b3ffca37a8298d83f696044628306367c2ef716dca741d5483ec6f3a990f3bb1",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "rebrand/POTOLKOVO-BRAND-REDESIGN-TZ-V7.pdf",
+      "bytes": 195339,
+      "sha256": "9bd3231e4e3040ee08863dea418c45e563ba22bdb3e2dbbb363058199f5854d6",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "rebrand/README-FIRST.md",
+      "bytes": 8045,
+      "sha256": "7570596c0d7cae633f47b73c701b78ee4cb5bee7208caf461fdb154e6ad1cb7a",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "rebrand/SHA256SUMS.txt",
+      "bytes": 3029,
+      "sha256": "6155d723c3935c3cbd308945c4eee71bd78c4fea4644ce90447d9672f9b6e9df",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "rebrand/tasks-r7.json",
+      "bytes": 19353,
+      "sha256": "98f20a0b3b6f16c69cb970058eb099f4101fc3fb3fee4d8d143fbef6b39d83cb",
+      "recovery": "Generated historical copy; requirements migrated to docs/current; implementation backups retained"
+    },
+    {
+      "path": "repo/01-audit-sootvetstvie-tz.md",
+      "bytes": 20753,
+      "sha256": "63ae0ca4f76ba22bdac199cfdc3f91feb56dc70a78248609e8dbdb72b4168763",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/02-glubokiy-audit.md",
+      "bytes": 25593,
+      "sha256": "5109e9968825073eb13df3f901e7a539e304e720b9b693c1d67128a08f99f3ed",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/03-tz-v2.md",
+      "bytes": 43129,
+      "sha256": "a38d0ecfdaabd87e64d73de028b9bd95300415960cefe84fe43783f6e6a2d0b1",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/PHASE-0-REPORT.md",
+      "bytes": 9465,
+      "sha256": "33c46cf5674938acf648277fdc0e518be2b1165f5b27bdc5535734f22db28dda",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/PHASE-4-REPORT.md",
+      "bytes": 6238,
+      "sha256": "127c8796e4f001f7cd93adfd78a64986fd415611f234547ab381c5390af0f6e1",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/PHASE-A-REPORT.md",
+      "bytes": 10429,
+      "sha256": "001f2e387e2731f1b8a6582c19b5cf2a3ef206967d6c8bee8c6fe78866dbb78e",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/PHASE-B-REPORT.md",
+      "bytes": 17287,
+      "sha256": "6d139a518d32b87232247a2c082bfc15755de27256d3e4ae192636326795b0da",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/PHASE-C-REPORT.md",
+      "bytes": 11431,
+      "sha256": "b3c997d24ba8852e0cbbdd8225c40546db8982c7c1b0276aa739be04892af332",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/POTOLKOVO-TZ-V5-FINAL.md",
+      "bytes": 91530,
+      "sha256": "76ccec533d6e8a4bfcd17ed2d4b16991470b21b3f4335de4fb738047b227ad88",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/PT-018-REPORT.md",
+      "bytes": 17543,
+      "sha256": "a54dd3e04fc2477dd93e0ba267d9c703f37a262af8104c879b04f10e95d5949c",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/PT-019-REPORT.md",
+      "bytes": 20478,
+      "sha256": "b018a14a4c896e99b9e0a09e3f60faa72e3ef8e308b50ecfa2537700a9716fc3",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/PT-020-REPORT.md",
+      "bytes": 28487,
+      "sha256": "7949c866222353d41b11107075a7d7b84354c675417ff4911f9a891780f4b31f",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/TZv5 допы/01-audit-idei.md",
+      "bytes": 23039,
+      "sha256": "7accffd332ff76a1f6645c07ee34526f1cad17b72ba947604bc1aec4e1a550a1",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/TZv5 допы/02-audit-koda-i-vizuala.md",
+      "bytes": 22374,
+      "sha256": "4e16a86f95b1528bf07af0dffbfcad81d2672e8027919cc571eaebe6f1de82d0",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/TZv5 допы/03-TZv5-addendum-PT038-PT049.md",
+      "bytes": 30303,
+      "sha256": "115028bc1ea9c05c5ddedcff337a1e4f3d5bbaada962e5e7f35f420fc1c330a7",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/current/POTOLKOVO-BRAND-REDESIGN-TZ-V7.md",
+      "bytes": 74851,
+      "sha256": "bc10eca53fe6678219891afc6d12b633fecbf5441a7aeb613d787023c1dac489",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/current/POTOLKOVO-FINAL-AUDIT-TZ-V6.md",
+      "bytes": 185672,
+      "sha256": "3deea819b5b6950cfb8f659ffe188d2d21fdebdb83ee718cb898b94a08c17413",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/R7-CALCULATOR.md",
+      "bytes": 11268,
+      "sha256": "5d6b33b3b51d20c6ecde2f2ec4399127484b17da914f2ff4dfe77f25d6418e30",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/R7-CATALOG.md",
+      "bytes": 11080,
+      "sha256": "68d279dd577e4fc23f05df53b61890fbbf32b8ef45479288947fbb83b033e10f",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/R7-CI-AVAILABILITY-FIX.md",
+      "bytes": 5310,
+      "sha256": "576c3c3cb1436eeb6a46da41a969ad47dff7d62a034c5197f7761e7ee175d032",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/R7-EDITORIAL.md",
+      "bytes": 9938,
+      "sha256": "a1c80dae839faabe2c8f0a14d62f83f9aa80c4d231316863ad1ce1a778c6fcf9",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/R7-GALLERY.md",
+      "bytes": 8613,
+      "sha256": "ad2bc535394a8deab3d7da48f98ada5a4015f5ce0c4e5991b8a7bdfd4c201dc4",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/R7-IMPLEMENTATION.md",
+      "bytes": 11998,
+      "sha256": "33f4ee04088705395c714ddcbaf91c701e3286494ced8c782d5cb7e00f8c46e1",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/R7-POLISH.md",
+      "bytes": 9887,
+      "sha256": "c79feafa24871e1c85997fdb698c4989c61fc2caac3cc7d76bc3f419d1ea37cc",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/R7-SERVICES.md",
+      "bytes": 9642,
+      "sha256": "7cd154be379a1b592c207ff4111461bae38a481dc2508353591b49efeb169e96",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7/browser-checks-final.json",
+      "bytes": 8716,
+      "sha256": "ae410b47778b638709ccc3af3212c01bf3ecf87724db3bb319b3e071550c6788",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7/build.log",
+      "bytes": 3003,
+      "sha256": "164ccbe4fc80043576a30ae31b844b9378ffbda4c213098c10ef1ce0178626fa",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7/bundle.log",
+      "bytes": 728,
+      "sha256": "abc1da2785ac691f920cf44f3fad69e87b7ed995a918fee07b2c348416aafb63",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7/e2e-summary.json",
+      "bytes": 3188,
+      "sha256": "532d5d32354d28a9deafd37e41327dfbc5d88a2b39b20ccad2549a9abcd7cc1d",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7/e2e.log",
+      "bytes": 45438,
+      "sha256": "98c23352ffdfd28d22a18a9eee7dd0413d552436fe3306cf8de2f8e349998138",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7/flow.log",
+      "bytes": 1832,
+      "sha256": "c90407f5426dad52889ccda3186706e4e04c80a95c0f920140aac67262f5fab2",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7/lint.log",
+      "bytes": 3682,
+      "sha256": "9c8127967db2916a7eb2eb3cb35b86fb2e827f647f0129659802c8321d4af395",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7/unit.log",
+      "bytes": 39763,
+      "sha256": "631dcbddc565a0781ac692d48772e032d1e1a146e7e03010b0dc94020ceccad7",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-calculator/build.log",
+      "bytes": 3003,
+      "sha256": "7cc7f89a5f32edad86836f6596ccf03c9479da1d3ed19448ff044ab647b47795",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-calculator/bundle.log",
+      "bytes": 728,
+      "sha256": "abc1da2785ac691f920cf44f3fad69e87b7ed995a918fee07b2c348416aafb63",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-calculator/e2e-summary.json",
+      "bytes": 141,
+      "sha256": "fbe88fe4d8e956c1d59e27e8dac06e51d23f5c51f1a886a8711e85a975bbeeec",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-calculator/e2e.log",
+      "bytes": 47267,
+      "sha256": "2e7cf910a82bac5c6b921f0b7313519080439bf8c1464dba839cf19970bc0b3f",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-calculator/flow.log",
+      "bytes": 1831,
+      "sha256": "ac9dc42ae863bfd6f4e4b8d11a9f60a648b94f4cc299aa743856161768e6e7a0",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-calculator/lint.log",
+      "bytes": 3682,
+      "sha256": "9c8127967db2916a7eb2eb3cb35b86fb2e827f647f0129659802c8321d4af395",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-calculator/quick-axe.json",
+      "bytes": 1103,
+      "sha256": "b02334b06c7c6763d3e75421897c6dc9b68f20c3c5d960680e8fec10291137ce",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-calculator/unit.log",
+      "bytes": 39973,
+      "sha256": "b7976a057d38b61997017103adfe989e2094602d10df24f50d17377744aa2eea",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-catalog/build.log",
+      "bytes": 3008,
+      "sha256": "fa3b308420be9dacc06dc2fc11b812f66349c6b2df62ed7ca0ad06cc4384cd72",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-catalog/bundle.log",
+      "bytes": 728,
+      "sha256": "12963b6aee28a37d9ff5cc2fad195ee21bb4a334916a3d100ee9d93b1e1ed3e4",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-catalog/e2e-summary.json",
+      "bytes": 140,
+      "sha256": "bd14272086e06ae940c8626a87abd094b305a85cbc7aa284902e828af8711d5c",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-catalog/e2e.log",
+      "bytes": 49724,
+      "sha256": "9814a0b70615ade83acd22fa398d0c4b87be6fce9431b2926dce2151e3fc1ddf",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-catalog/flaky.log",
+      "bytes": 260,
+      "sha256": "3bf67a5dd70f1b99f07517e33827cf1b342ea6395ab78a942497ff14c230de01",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-catalog/flow.log",
+      "bytes": 1833,
+      "sha256": "bf3b6854fb5fb1df87eb8bf0e51fa52fda73213226f9ba5de6c44d43a314080f",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-catalog/lint.log",
+      "bytes": 3683,
+      "sha256": "345511daf91de74fdf8fa414ac53ee8e4c2264cee628d3acb3075037375034d3",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-catalog/quick-axe.json",
+      "bytes": 568,
+      "sha256": "d42255ea639c5d06e6f8e4b48fb68a53410bb84461b2b73436057788ad8cf7cf",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-catalog/unit.log",
+      "bytes": 52319,
+      "sha256": "6bf1262d038920f628de9b1aef59a6362493e68044347972106178a6d7b490a5",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-editorial/build.log",
+      "bytes": 3072,
+      "sha256": "b488127532512d250445f7bd9ec55ee0d0f9f463ccbf3cf7a1df971fb38683cf",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-editorial/bundle.log",
+      "bytes": 792,
+      "sha256": "7e43cca721cf9978b3455fe78223a60762102fc3da8cad09cdce68610fdc9b8a",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-editorial/e2e-summary.json",
+      "bytes": 141,
+      "sha256": "c784f48ad6aa9076dc91334c4c79b0babf90be0422f584f42a7ac4e21bfd9a10",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-editorial/e2e.log",
+      "bytes": 54492,
+      "sha256": "ade0bedffcde2ebee08ceefb1f0bf75c286cdabedba0dc06c091dcc51d9a8dde",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-editorial/flaky.log",
+      "bytes": 260,
+      "sha256": "d6d33adb12b76786779600c7e9b05d9ccada9669f147b43af29e06ab427c745f",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-editorial/flow.log",
+      "bytes": 1832,
+      "sha256": "eed5a3928358b4a7d8f6a9dd635dc1d8d5a1a01592e82598a483e15dda148621",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-editorial/lint.log",
+      "bytes": 3683,
+      "sha256": "345511daf91de74fdf8fa414ac53ee8e4c2264cee628d3acb3075037375034d3",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-editorial/targeted-e2e.log",
+      "bytes": 1655,
+      "sha256": "6da1db8c01aa01c8d6f85acbf5e451247c1b160c2a26764e69886fc7ce6ca991",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-editorial/unit.log",
+      "bytes": 52548,
+      "sha256": "80f0cde4da287e6ceb41d7ea1c35ff810b2b13bae8ddf2036e928620bb22eab8",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-gallery/build.log",
+      "bytes": 3963,
+      "sha256": "03189418b1838d3948733e522e395926f2e748fba520601a0cae066f21b7cefd",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-gallery/bundle.log",
+      "bytes": 792,
+      "sha256": "354ad16299b60411d85f20d966b768c8dabfd6d34e07b237e58eb771b48dfb96",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-gallery/e2e-all.log",
+      "bytes": 57764,
+      "sha256": "3d83e61fad42ce5bd3ee5391f47db5f4b64434dbb12bda03712788e07b0c1639",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-gallery/e2e-summary.json",
+      "bytes": 140,
+      "sha256": "b095d29532c73827dc8c48b9b42bbc8009da9f67d54940847981c41202bd5ba9",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-gallery/env.log",
+      "bytes": 124,
+      "sha256": "ee12edd6a9b867cf7a045af63a5f0c00410aea5ba95a62495ad1093e17485319",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-gallery/flaky.log",
+      "bytes": 260,
+      "sha256": "a0868f10cdfb8787c3af7c0c2d488b3526d84c7c5a8bb5ff75d117ed0e43c0b2",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-gallery/flow.log",
+      "bytes": 1830,
+      "sha256": "0bfdf2363e64662af12971b042344a84dfe7d2bb35cb485e606051b0d68ea757",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-gallery/lint.log",
+      "bytes": 3683,
+      "sha256": "345511daf91de74fdf8fa414ac53ee8e4c2264cee628d3acb3075037375034d3",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-gallery/unit-all.log",
+      "bytes": 90629,
+      "sha256": "4b0e9d5ebbc8a61b178a87d41b230c468c1d9c795494b8a5313abf390a673537",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-polish/build.log",
+      "bytes": 3964,
+      "sha256": "792df104f367f4067730390853977e33feb06738a1b4d7d6486de7265b04af69",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-polish/bundle.log",
+      "bytes": 792,
+      "sha256": "f24c04c7bffc5bac34d416b6ee495c50cb4c41c161ae47ee20433c413ad66b08",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-polish/e2e-summary.json",
+      "bytes": 141,
+      "sha256": "08a4682beb623a654b3f6853b862f70575987cea143149d842e4ae7f8a8f7e63",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-polish/e2e.log",
+      "bytes": 55985,
+      "sha256": "c4d5d2de6f599cd1633352379d7aecba3f413997c33177f3d425b97e0457bb9b",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-polish/flaky.log",
+      "bytes": 260,
+      "sha256": "ab03b00b3c3ec1ad4efff8fb95de01b54d37d2e1b659011b619ab6afe12ce84a",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-polish/flow.log",
+      "bytes": 1833,
+      "sha256": "5c4b9a8fb8e3288b7b2b1b88332cb8bee33a49bf384b36547ec4914aa0738475",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-polish/identity.log",
+      "bytes": 783,
+      "sha256": "0ade3d33b9192f368b3c4970456a9b04dac1256a9c84d93d96e2a5c550900d22",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-polish/lint.log",
+      "bytes": 3683,
+      "sha256": "345511daf91de74fdf8fa414ac53ee8e4c2264cee628d3acb3075037375034d3",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-polish/unit.log",
+      "bytes": 52543,
+      "sha256": "00d972b9917bc57b81fa73ec5d233616bdb71bf8a2d11eea9f8aaf96f8c548c1",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-services/build.log",
+      "bytes": 3010,
+      "sha256": "57a3ac6be1c61c1d95652fa1de883984ef46d63047507f0b27888c0135e6f6ed",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-services/bundle.log",
+      "bytes": 728,
+      "sha256": "fd50f27c4da6149c511b1a1a48f5db4cf5050f8edbccf7963a40b2bf5fde9caa",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-services/e2e-summary.json",
+      "bytes": 139,
+      "sha256": "40986de19c26c53c5eadf53b938b23f78396e81cf710f19542fde67d24ae88ef",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-services/e2e.log",
+      "bytes": 52882,
+      "sha256": "9fc07a042a2356fbdd1070f337141192cd4c345745b4b8febfb58fd1c3f8bf7c",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-services/flaky.log",
+      "bytes": 260,
+      "sha256": "d244c70c990e037398168134c64e0171ab08b80181d5f3e0b927c7144ab53189",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-services/flow.log",
+      "bytes": 1833,
+      "sha256": "2c6e297b2f6d108b7431f987770ec5eab84305d19b27c3587ffaf0e5071e66f3",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-services/images.log",
+      "bytes": 634,
+      "sha256": "2a80d8955586b6a4946e2f0bbc4d2673a300b756e4609a7c3e0681d8030a7112",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-services/lint.log",
+      "bytes": 3683,
+      "sha256": "345511daf91de74fdf8fa414ac53ee8e4c2264cee628d3acb3075037375034d3",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-services/quick-axe.json",
+      "bytes": 1113,
+      "sha256": "55d401074be495d53e694254f85d70ca09ff1cffc9cba123bd9de0f398e05b2b",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/docs/reports/evidence/R7-services/unit.log",
+      "bytes": 52275,
+      "sha256": "3d844c4848940eea8f0ace66e557a6b2313db4f6e8d15f355dfe40533483fbec",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/tz portal/04-audit-koda-portal.md",
+      "bytes": 20128,
+      "sha256": "c8a4c11112c2dea5167222932664dcd7f2db96c38c76b67162281b68ae76fc7f",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/tz portal/05-tz-v3-portal.md",
+      "bytes": 62375,
+      "sha256": "552208a6c5df77dddca438a51ce1ad6256a5f0cedfd67856d6bebb3dcb6c6081",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/tz-agent.md",
+      "bytes": 92447,
+      "sha256": "6f2391168b8a0f6342998daba0f4910583d4228a932d6adf15a5419f91c7bcfc",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/tzv3/audit astra.pdf",
+      "bytes": 352350,
+      "sha256": "e526bf2179d2feca7dfb6df5bba22a34caa432cc14bf93a33ad2cb5691adf385",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/tzv3/potolkovo-audit-astra-quizv2ver1.md",
+      "bytes": 67686,
+      "sha256": "e0660f4ff4b45b412986dd3d517e6e1bc7921f2bdcf1055e1b19a562fb54fa09",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/tzv3/public.audit_findings.csv",
+      "bytes": 17653,
+      "sha256": "ab53ebf5ac68bac483ae840eb085086c39af49f2409bc0b0955e27b8ddee2baa",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/tzv3/public.audit_roadmap.csv",
+      "bytes": 2163,
+      "sha256": "a7b287b9f494ff063d26c18501d5a7ef4b7bbffa35efcf9790e17b2ef6320a50",
+      "recovery": "Git at 3dd20cd / origin history"
+    },
+    {
+      "path": "repo/tzv3/public.audit_strengths.csv",
+      "bytes": 2999,
+      "sha256": "5c3f57fd3f6279bc557f4bf8884f9063a26c49ff58a188282d108e20744cee19",
+      "recovery": "Git at 3dd20cd / origin history"
+    }
+  ],
+  "removedCount": 209,
+  "removedBytes": 12961919,
+  "sourceFingerprintAfter": "707367b32b736bc642be253e21d1862e8eb8d9dd7bf90125716edcc87ef0121c",
+  "sourceUnchanged": true,
+  "replacedEntryPoints": [
+    "audit/README-FIRST.md",
+    "rebrand/README-FIRST.md"
+  ],
+  "note": "removedCount counts removed old versions; these two paths now contain new pointers to v8, not the deleted content."
+}
