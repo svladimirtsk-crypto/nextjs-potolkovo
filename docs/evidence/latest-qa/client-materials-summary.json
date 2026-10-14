@@ -1,0 +1,68 @@
+{
+  "date": "2026-10-14",
+  "baselineCommit": "b49b056636392cf74d772e9d5dd1e35d0e4fb5e9",
+  "scope": "B8-003/004 design templates and inventory; no runtime changes",
+  "targetedTestsPassed": 24,
+  "unit": {
+    "passed": 1267,
+    "files": 97,
+    "skipped": 0,
+    "failed": 0,
+    "database": "local PostgreSQL 17"
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 18
+  },
+  "types": "passed",
+  "flowPassed": 8,
+  "runtimeChanges": false,
+  "fullBuildRerun": false,
+  "fullE2ERerun": false,
+  "lastFullProductQA": "3de577e, 272 E2E passed / 12 skipped / 0 failed / 0 flaky",
+  "exports": {
+    "docx": 5,
+    "xlsx": {
+      "projects": 6,
+      "photos": 18,
+      "thumbnails": 18,
+      "formulas": 0,
+      "defaultRights": "not confirmed",
+      "defaultPublication": "not approved"
+    },
+    "pdfPages": 10,
+    "htmlOffline": true,
+    "widths": [
+      320,
+      390,
+      1440
+    ],
+    "footerOverlap": false,
+    "docxCheck": "OOXML structure and contents, not a Word layout render"
+  },
+  "automaticSiteExport": false,
+  "newCasePages": false,
+  "limits": [
+    "Owner/legal approval pending",
+    "No CMYK print production approval",
+    "After filling DOCX/XLSX, review in target editor and export PDF again",
+    "No secrets scan: local gitleaks unavailable"
+  ],
+  "assetHashes": {
+    "design/client/v8/POTOLKOVO-CLIENT-MATERIALS.html": "5a4be638ac9ee056521b113c807b280ab34e79b6398e2d8d2e5deed38da60fdc",
+    "design/client/v8/POTOLKOVO-CLIENT-MATERIALS.pdf": "6002c26f80787050a804807cd537ccd4983e2c0804ef58f419d15f741f92d8a8",
+    "design/client/v8/README.md": "3a55761a5e602b24a539a9ea2532be86db52437bd78a50b557229f16b225302d",
+    "design/client/v8/editable/01-PREDLOZHENIE.docx": "568b2cce409648da376dfd6de3fef6a399f0d420d85ce1c704c0351bdc4c3296",
+    "design/client/v8/editable/02-PAMYATKA.docx": "b2b5c12a2a17edbb9cbf12d1502630fe152c6f4dabb00640139b56c660cc3d74",
+    "design/client/v8/editable/03-PEREDACHA-SERVIS.docx": "200e5cc8abf2563cf51596a3d9428cee31d4c068834412012038792f142aa9d0",
+    "design/client/v8/editable/04-PASSPORT-PROEKTA.docx": "e327a147d253b6381538cbc21eb53ce610e393800ed01a37ceedf6f54890e736",
+    "design/client/v8/editable/05-FOTOBRIF.docx": "2fb4bf07f90f1630928a7af1be281505e161bd73c2aac9817f040fb919901c2c",
+    "design/client/v8/editable/06-REESTR-PROEKTOV-I-FOTO.xlsx": "b1a45a276979a1c62547f1041cd42b24768f87804bbb9af12d355c3fdfeeec15",
+    "design/client/v8/layout-check.json": "5233930f00d9046cfa9e91b941d0916e9338b6166f0f99dcdaf6760f4179c774",
+    "design/client/v8/manifest.json": "141ae3e0778e83e428060278ab995a16c9b2c277fd6e3af08cb7d75db3b10a59",
+    "design/client/v8/materials.css": "32386b73e16248786c5f33a34c581e5cdcbcb0f8c8004e4e97316d579717491b",
+    "design/client/v8/photo-inventory.json": "75f8328bd25a7a674d0a52c1b6c5aa3130dab2bf8b980485d8c604b3e6067aeb",
+    "design/client/v8/source-data.json": "a2de71721438bb2811abf916241415014f126a56483f618e002dbef3a09cd0fb",
+    "design/client/v8/templates.json": "d672e775ab295d66d95919dd69082dbf6d51474deda3df44d5c0059047abade2"
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "pages": 10,
+  "widths": [
+    320,
+    390,
+    1440
+  ],
+  "externalRequests": 0,
+  "footerOverlap": false,
+  "layout": [
+    {
+      "page": 1,
+      "height": 1122.515625,
+      "lastBottom": 1010.84375,
+      "footerTop": 1049.6875
+    },
+    {
+      "page": 2,
+      "height": 1122.515625,
+      "lastBottom": 2119.140625,
+      "footerTop": 2172.203125
+    },
+    {
+      "page": 3,
+      "height": 1122.515625,
+      "lastBottom": 3113.984375,
+      "footerTop": 3294.71875
+    },
+    {
+      "page": 4,
+      "height": 1122.515625,
+      "lastBottom": 4202.015625,
+      "footerTop": 4417.234375
+    },
+    {
+      "page": 5,
+      "height": 1122.515625,
+      "lastBottom": 5432.53125,
+      "footerTop": 5539.75
+    },
+    {
+      "page": 6,
+      "height": 1122.515625,
+      "lastBottom": 6461.046875,
+      "footerTop": 6662.265625
+    },
+    {
+      "page": 7,
+      "height": 1122.515625,
+      "lastBottom": 7579.34375,
+      "footerTop": 7784.78125
+    },
+    {
+      "page": 8,
+      "height": 1122.515625,
+      "lastBottom": 8769.125,
+      "footerTop": 8907.296875
+    },
+    {
+      "page": 9,
+      "height": 1122.515625,
+      "lastBottom": 9986.65625,
+      "footerTop": 10029.8125
+    },
+    {
+      "page": 10,
+      "height": 1122.515625,
+      "lastBottom": 11002.84375,
+      "footerTop": 11152.328125
+    }
+  ]
+}

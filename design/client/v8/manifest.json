@@ -1,0 +1,20 @@
+{
+  "version": "8.2",
+  "sourceProductCommit": "b49b056636392cf74d772e9d5dd1e35d0e4fb5e9",
+  "contactsSource": "content/contacts.ts",
+  "legalFieldsCopied": false,
+  "pricingCalculation": false,
+  "automaticSiteExport": false,
+  "documents": 5,
+  "pdfExpectedPages": 10,
+  "projects": 6,
+  "photos": 18,
+  "publication": "none; all rights and project facts pending",
+  "sourceHashes": {
+    "content/contacts.ts": "81a61886ede49930b10b0e1065b4c9ffc8a64217845a216c5065b006f56b69b0",
+    "content/home-assets.ts": "ba8b0a7ba052f493f4e2852447c975c3cea32b075cf6449cad87c0f4ee4d093d",
+    "content/homepage.ts": "19acc2ddf5d335d28e7e8693b5a8c9e356ede0d4807c118ffd4f51c0a30c2c1a",
+    "content/pricing.ts": "79f1042676d5884f3234fd06af2d19e09d20abee2ac3d038b2846252be478885",
+    "lib/calculator/types.ts": "708238c2e7445cb435db672372f98804cedbaee0f6b99d926de85a8110d0e771"
+  }
+}

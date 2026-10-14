@@ -1,0 +1,84 @@
+{
+  "contacts": {
+    "brandName": "ПОТОЛКОВО",
+    "phoneDisplay": "+7 905 521 99 09",
+    "phoneHref": "tel:+79055219909",
+    "telegramUrl": "https://t.me/potolkovo_msk",
+    "whatsappUrl": "https://wa.me/79032764693",
+    "emailDisplay": "potolkovo_msk@mail.ru"
+  },
+  "projects": [
+    {
+      "slug": "shadow-track-apartment",
+      "title": "Теневой профиль + трековое освещение COLIBRI",
+      "assetKey": "proof-01",
+      "existingDescription": "Нужно было сделать теневой потолок и современное решение по освещению без визуального шума.",
+      "photos": [
+        "/proj-shadow-1.jpeg",
+        "/proj-shadow-2.jpeg",
+        "/proj-shadow-3.jpeg"
+      ],
+      "publicationStatus": "Не подтверждено — не публиковать новый кейс"
+    },
+    {
+      "slug": "floating-led-living-room",
+      "title": "Парящий профиль, линии, трек и карниз",
+      "assetKey": "proof-02",
+      "existingDescription": "Комплексный проект с парящим профилем, световыми линиями, встроенными карнизами и трековой системой COLIBRI.",
+      "photos": [
+        "/proj-float-1.jpeg",
+        "/proj-float-2.jpeg",
+        "/proj-float-3.jpeg"
+      ],
+      "publicationStatus": "Не подтверждено — не публиковать новый кейс"
+    },
+    {
+      "slug": "light-lines-office",
+      "title": "Световые линии",
+      "assetKey": "proof-03",
+      "existingDescription": "Геометричный встроенный свет вместо стандартных светильников с расчётом освещённости.",
+      "photos": [
+        "/proj-lines-1.jpeg",
+        "/proj-lines-2.jpeg",
+        "/proj-lines-3.jpeg"
+      ],
+      "publicationStatus": "Не подтверждено — не публиковать новый кейс"
+    },
+    {
+      "slug": "hidden-cornice-flat",
+      "title": "Скрытый карниз",
+      "assetKey": "proof-04",
+      "existingDescription": "Шторы идут от потолка без видимого карниза и лишних накладок.",
+      "photos": [
+        "/proj-cornice-1.jpeg",
+        "/proj-cornice-2.jpeg",
+        "/proj-cornice-3.jpeg"
+      ],
+      "publicationStatus": "Не подтверждено — не публиковать новый кейс"
+    },
+    {
+      "slug": "matte-apartment",
+      "title": "Матовый потолок",
+      "assetKey": "proof-05",
+      "existingDescription": "Ровная спокойная поверхность без лишних деталей — быстрое и аккуратное решение для жилых комнат.",
+      "photos": [
+        "/proj-matte-1.jpeg",
+        "/proj-matte-2.jpeg",
+        "/proj-matte-3.jpeg"
+      ],
+      "publicationStatus": "Не подтверждено — не публиковать новый кейс"
+    },
+    {
+      "slug": "custom-dome",
+      "title": "Индивидуальный проект",
+      "assetKey": "proof-06",
+      "existingDescription": "Объёмная форма, сложная геометрия и кастомная подсветка под конкретный проект.",
+      "photos": [
+        "/proj-dome-1.jpeg",
+        "/proj-dome-2.jpeg",
+        "/proj-dome-3.jpeg"
+      ],
+      "publicationStatus": "Не подтверждено — не публиковать новый кейс"
+    }
+  ]
+}
