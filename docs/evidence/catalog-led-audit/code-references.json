@@ -1,0 +1,102 @@
+[
+  {
+    "file": "lib/catalog-ui-config.ts",
+    "line": 25,
+    "text": "export const CATALOG_SECTIONS: { id: CatalogSectionId; label: string }[] = ["
+  },
+  {
+    "file": "lib/catalog-ui-config.ts",
+    "line": 38,
+    "text": "const CONDITIONAL_SECTIONS: Partial<Record<CatalogSectionId, \"chandeliersEnabled\" | \"corniceLightingEnabled\">> = {"
+  },
+  {
+    "file": "lib/catalog-ui-config.ts",
+    "line": 119,
+    "text": "export const CLARUS_PSU_VENDOR_CODES = [\"0У-00002310\", \"0У-00002308\"] as const;"
+  },
+  {
+    "file": "lib/lighting/catalog-filters.ts",
+    "line": 51,
+    "text": "export function sectionOfProduct(product: FeedCatalogProduct): CatalogSectionId | null {"
+  },
+  {
+    "file": "lib/lighting/catalog-filters.ts",
+    "line": 58,
+    "text": "return \"cornice-lighting\";"
+  },
+  {
+    "file": "lib/lighting/product-predicates.ts",
+    "line": 35,
+    "text": "export function isSmartProduct(product: FeedCatalogProduct): boolean {"
+  },
+  {
+    "file": "lib/lighting/product-predicates.ts",
+    "line": 81,
+    "text": "export function normalizeQty(rawQty: number, unit: \"pcs\" | \"m\"): number {"
+  },
+  {
+    "file": "lib/lighting/catalog-products.ts",
+    "line": 23,
+    "text": "* Индекс не содержит `params`, `images`, `url` и `categoryPath` — они нужны"
+  },
+  {
+    "file": "lib/lighting/catalog-kit-gaps.ts",
+    "line": 167,
+    "text": "export function calcClarusPsuOptions("
+  },
+  {
+    "file": "lib/lighting/catalog-kit-gaps.ts",
+    "line": 172,
+    "text": "if (!hasClarusFixtures(entries) || calcClarusPsuQty(entries) >= 1) return [];"
+  },
+  {
+    "file": "lib/calculator/use-calculator-engine.ts",
+    "line": 116,
+    "text": "corniceLightingPowerSupplies: 1,"
+  },
+  {
+    "file": "lib/calculator/room-snapshot.ts",
+    "line": 57,
+    "text": "const corniceLightingPowerSupplyTotal = isCorniceLightingActive ? (room.corniceLightingPowerSupplies ?? 1) * calculator.corniceLighting.powerSupplyRate : 0;"
+  },
+  {
+    "file": "content/pricing.ts",
+    "line": 14,
+    "text": "floatingProfilePerM: 2500,"
+  },
+  {
+    "file": "content/pricing.ts",
+    "line": 23,
+    "text": "lightLinesPerM: 3500,"
+  },
+  {
+    "file": "content/pricing.ts",
+    "line": 32,
+    "text": "psu: 1500,"
+  },
+  {
+    "file": "scripts/refresh-feed.mjs",
+    "line": 50,
+    "text": "return res.json();"
+  },
+  {
+    "file": "scripts/refresh-feed.mjs",
+    "line": 171,
+    "text": "writeFileSync(SNAPSHOT, `${JSON.stringify(after, null, 2)}\\n`, \"utf8\");"
+  },
+  {
+    "file": "lib/lighting/catalog-presentation.ts",
+    "line": 13,
+    "text": "export function catalogViewProducts(products: readonly FeedCatalogProduct[], filters: CatalogFilters) {"
+  },
+  {
+    "file": "components/lighting/CatalogGrid.tsx",
+    "line": 73,
+    "text": "const step = product.unit === \"m\" ? 0.5 : 1;"
+  },
+  {
+    "file": "components/lighting/CatalogBrowse.tsx",
+    "line": 69,
+    "text": "placeholder=\"Поиск в текущем разделе\""
+  }
+]

@@ -1,0 +1,55 @@
+{
+  "checkedDate": "2026-10-14",
+  "sources": [
+    {
+      "name": "XML EKS",
+      "url": "https://eksmarket.ru/api/personal/feed2/",
+      "scope": "696 offer; source date 2026-10-14 21:00 без TZ; raw SHA256 adc8d0a94ffb121c8fb950458a14f2b793442b4ece7ea10912a3179471646f2d"
+    },
+    {
+      "name": "Карточка WB5",
+      "url": "https://eksmarket.ru/upload/iblock/9cd/kz1vnfnfhkisikl1fhyw2u0nrtbjb081.png",
+      "scope": "Фото EKS: 6 А/канал, 15 А суммарно; label_observed, не утверждение pairing/Алисы"
+    },
+    {
+      "name": "Карточка C01RF",
+      "url": "https://eksmarket.ru/upload/iblock/086/risssu9u24wvgggs1e6bk1td18yxb36l.png",
+      "scope": "Фото EKS: 6/12 А, круглый вход 5 А; разные нижние границы U; 5 В не включать без паспорта"
+    },
+    {
+      "name": "Arlight",
+      "url": "https://arlight.ru/support/recommendations/",
+      "scope": "Инженерные принципы; не присвоение характеристик EKS"
+    },
+    {
+      "name": "MEAN WELL LPV-100",
+      "url": "https://www.meanwell.com/Upload/PDF/LPV-100/LPV-100-SPEC.PDF",
+      "scope": "Пример разных output/efficiency/derating. Не рекомендация LPV для объекта; ограничения паспорта сохраняются"
+    },
+    {
+      "name": "MiBoxer WL5",
+      "url": "https://miboxer.com/light/m_n/pdf/WL5/WL5_FR_V1.0.pdf",
+      "scope": "Справочная другая модель; не EKS WB5"
+    },
+    {
+      "name": "BTF WB5",
+      "url": "https://www.btf-lighting.com/products/wb5-controller",
+      "scope": "Другая торговая марка; OEM/ревизия EKS не подтверждены"
+    },
+    {
+      "name": "Алиса / Matter",
+      "url": "https://alice.yandex.ru/support/ru/smart-home/supported-matter-devices",
+      "scope": "Проверять поддерживаемые модели и транспорт; Thread не обещать по этой справке"
+    },
+    {
+      "name": "Алиса / Zigbee",
+      "url": "https://alice.yandex.ru/support/ru/smart-home/turn-on/zigbee",
+      "scope": "Точные поддерживаемые устройства/хабы, не любой Zigbee"
+    },
+    {
+      "name": "EKS / статья о БП",
+      "url": "https://eksmarket.ru/blog/kak-podobrat-blok-pitaniya-dlya-svetodiodnoy-lenty/",
+      "scope": "Не смешивать указанный в статье КПД с проектным запасом мощности"
+    }
+  ]
+}

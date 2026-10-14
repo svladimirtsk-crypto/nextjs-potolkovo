@@ -11,6 +11,7 @@
 - [Действующее продолжение PT-020…049 из main](docs/current/PT-CONTINUATION-TZ.md)
 - [ТЗ на завершение бренда и дизайна](docs/current/BRAND-REDESIGN-TZ-V8.md)
 - [Техническое ТЗ и допуски](docs/current/TECHNICAL-TZ-V8.md)
+- [Аудит каталога и ТЗ на ленты/комплектование](docs/current/CATALOG-LED-AUDIT.md)
 - [Клиентские материалы и подтверждение проектов](docs/current/CLIENT-MATERIALS.md)
 - [Эксплуатация, проверки, реестр пропусков и выпуск](docs/current/RELEASE-OPERATIONS.md)
 

@@ -1,0 +1,30 @@
+[
+  {
+    "case": "5m mono",
+    "ledLoadW": 50.0,
+    "requiredW": 62.5,
+    "candidateNominalW": 72,
+    "assumptions": "24 V, verified max W/m, K=1.25, D=1, P_aux=0; wattage-only illustration, not an approved EKS BOM"
+  },
+  {
+    "case": "8m mono",
+    "ledLoadW": 96.0,
+    "requiredW": 120.0,
+    "candidateNominalW": 150,
+    "assumptions": "24 V, verified max W/m, K=1.25, D=1, P_aux=0; wattage-only illustration, not an approved EKS BOM"
+  },
+  {
+    "case": "17m mono",
+    "ledLoadW": 244.8,
+    "requiredW": 306.0,
+    "candidateNominalW": 360,
+    "assumptions": "24 V, verified max W/m, K=1.25, D=1, P_aux=0; wattage-only illustration, not an approved EKS BOM"
+  },
+  {
+    "case": "6m line, two rows",
+    "ledLoadW": 144.0,
+    "requiredW": 180.0,
+    "candidateNominalW": 200,
+    "assumptions": "24 V, verified max W/m, K=1.25, D=1, P_aux=0; wattage-only illustration, not an approved EKS BOM"
+  }
+]

@@ -1,0 +1,33 @@
+{
+  "WB5": {
+    "offerId": "12386",
+    "vendorCode": "0У-00006564",
+    "source": "https://eksmarket.ru/upload/iblock/9cd/kz1vnfnfhkisikl1fhyw2u0nrtbjb081.png",
+    "status": "label_observed",
+    "voltageLabel": "DC12–24V",
+    "perChannelA": 6,
+    "totalA": 15,
+    "temperatureLabel": "-20…60 °C",
+    "rfLabel": "2.4 GHz",
+    "wifiLabel": true,
+    "aliceVerified": false,
+    "inputConnectorCurrentLimit": "not established",
+    "imageSHA256": "f78be91aa6b97539db9b67ef040a542177eb3e451bd2c22018dc4c0508810e3d"
+  },
+  "C01RF": {
+    "offerId": "12379",
+    "vendorCode": "0У-00006557",
+    "source": "https://eksmarket.ru/upload/iblock/086/risssu9u24wvgggs1e6bk1td18yxb36l.png",
+    "status": "label_observed; lower voltage bound differs from title, confirm before enabling 5 V",
+    "voltageLabel": "DC5–24V",
+    "voltageTitle": "12–24V",
+    "perChannelA": 6,
+    "totalA": 12,
+    "screwInputMaxA": 12,
+    "barrelInputMaxA": 5,
+    "rfLabel": "2.4G RF",
+    "temperatureLabel": "-25…40 °C",
+    "pairingVerified": false,
+    "imageSHA256": "f6efd9275d5709b6b564609bfdfd34399f4e3c638a1409a5961d26a3296c2936"
+  }
+}
