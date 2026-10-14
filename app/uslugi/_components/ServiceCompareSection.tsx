@@ -14,7 +14,7 @@ const COMPARISON_ROWS = [
 
 export function ServiceCompareSection() {
   return (
-    <section id="compare" aria-labelledby="compare-title" className="scroll-mt-24 bg-white py-16 sm:py-20">
+    <section id="compare" aria-labelledby="compare-title" className="pk-service-compare scroll-mt-24 bg-white py-16 sm:py-20">
       <Container>
         <div className="mx-auto max-w-3xl text-center">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Сравнение</p>

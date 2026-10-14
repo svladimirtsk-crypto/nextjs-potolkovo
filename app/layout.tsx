@@ -10,6 +10,7 @@ import "./globals.css";
 import "./brand.css";
 import "./calculator-brand.css";
 import "./catalog-brand.css";
+import "./services-brand.css";
 
 const inter = Inter({
   subsets:  ["latin", "cyrillic"],

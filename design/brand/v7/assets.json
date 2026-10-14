@@ -22,5 +22,37 @@
     "alt": "Визуализация кухни со встроенными световыми линиями",
     "usage": "Главная: световые линии",
     "rights": "AI-generated for this project; not a completed client project"
+  },
+  "service-light-lines": {
+    "source": "service-light-lines.jpg",
+    "kind": "ai-visualization",
+    "label": "Визуализация решения",
+    "alt": "Визуализация гостиной со встроенными световыми линиями",
+    "usage": "Страница световых линий и хаб решений",
+    "rights": "AI-generated for this project; not a completed client project"
+  },
+  "service-concealed-curtain": {
+    "source": "service-concealed-curtain.jpg",
+    "kind": "ai-visualization",
+    "label": "Визуализация решения",
+    "alt": "Визуализация скрытого карниза с потолочной нишей для штор",
+    "usage": "Страница скрытых карнизов и хаб решений",
+    "rights": "AI-generated for this project; not a completed client project"
+  },
+  "service-standard-ceiling": {
+    "source": "service-standard-ceiling.jpg",
+    "kind": "ai-visualization",
+    "label": "Визуализация решения",
+    "alt": "Визуализация гостиной с простым матовым потолком и обычным примыканием",
+    "usage": "Страница простых потолков и хаб решений",
+    "rights": "AI-generated for this project; not a completed client project"
+  },
+  "service-luminous-ceiling": {
+    "source": "service-luminous-ceiling.jpg",
+    "kind": "ai-visualization",
+    "label": "Визуализация решения",
+    "alt": "Визуализация равномерно светящегося светопрозрачного потолка",
+    "usage": "Светопрозрачные потолки и хаб решений",
+    "rights": "AI-generated for this project; not a completed client project"
   }
 }

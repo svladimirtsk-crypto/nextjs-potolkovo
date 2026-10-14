@@ -10,7 +10,7 @@ export function ServiceTrustSection({ service }: ServiceTrustSectionProps) {
     <section
       id="trust"
       aria-labelledby={`${service.slug}-trust-title`}
-      className="bg-slate-50 py-16 sm:py-20"
+      className="pk-service-trust bg-slate-50 py-16 sm:py-20"
     >
       <Container>
         <div className="mx-auto max-w-3xl text-center">

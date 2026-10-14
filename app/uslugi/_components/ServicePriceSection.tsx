@@ -11,18 +11,18 @@ import { projectEntryCtaLabel } from "@/lib/entry-context";
  *
  * Раньше текст был один и захардкожен под светопрозрачные полотна: после
  * добавления в список индивидуальных проектов он показывал бы на их странице
- * «Светопрозрачные полотна считаю по проекту» — то есть чужой факт.
+ * «Светопрозрачные полотна считаем по проекту» — то есть чужой факт.
  *
  * Цена в заголовке берётся из `servicePriceAnchor` (`content/pricing.ts`),
  * а не литералом «от 4 000 ₽/м²»: правило ТЗ запрещает литералы цен вне
  * прайса.
  */
 const PROJECT_BLOCK_TITLE: Record<string, string> = {
-  "svetoprozrachnye-potolki": "Светопрозрачные полотна считаю по проекту",
-  "individualnye-proekty": "Индивидуальные проекты считаю по замеру и конструкции",
+  "svetoprozrachnye-potolki": "Светопрозрачные полотна считаем по проекту",
+  "individualnye-proekty": "Индивидуальные проекты считаем по замеру и конструкции",
 };
 
-const PROJECT_BLOCK_TITLE_FALLBACK = "Стоимость считаю по проекту";
+const PROJECT_BLOCK_TITLE_FALLBACK = "Стоимость считаем по проекту";
 
 /**
  * Пояснение к блоку. Для светопрозрачных полотен сохранён прежний текст;
@@ -31,14 +31,14 @@ const PROJECT_BLOCK_TITLE_FALLBACK = "Стоимость считаю по пр�
  */
 const PROJECT_BLOCK_TEXT: Record<string, string> = {
   "svetoprozrachnye-potolki":
-    "Стоимость зависит от размера полотна, подсветки и способа монтажа. Оставьте заявку — посчитаю по вашим размерам.",
+    "Стоимость зависит от размера полотна, подсветки и способа монтажа. Оставьте заявку — посчитаем по вашим размерам.",
 };
 
 /**
  * Для остальных услуг — приглашение, а не факт: цифры и состав работ уже
  * названы в `price.note` выше и в прайсе страницы.
  */
-const PROJECT_BLOCK_TEXT_FALLBACK = "Оставьте заявку — посчитаю по вашим размерам и задаче.";
+const PROJECT_BLOCK_TEXT_FALLBACK = "Оставьте заявку — посчитаем по вашим размерам и задаче.";
 
 type ServicePriceSectionProps = {
   service: ServicePageContent;
@@ -52,7 +52,7 @@ export function ServicePriceSection({ service }: ServicePriceSectionProps) {
     <section
       id="price"
       aria-labelledby={`${service.slug}-price-title`}
-      className="scroll-mt-24 bg-white py-16 sm:py-20"
+      className="pk-service-price scroll-mt-24 bg-white py-16 sm:py-20"
     >
       <Container>
         <div className="mx-auto max-w-3xl text-center">
