@@ -8,6 +8,7 @@ import { buildLocalBusinessSchema } from "@/lib/seo-schema";
 import { Providers } from "./providers";
 import "./globals.css";
 import "./brand.css";
+import "./calculator-brand.css";
 
 const inter = Inter({
   subsets:  ["latin", "cyrillic"],

@@ -6,7 +6,7 @@ export function RoomPickerScreen({ rooms, mode, onAdd, onSelect, onBack }:{
   onAdd: (label:string)=>void; onSelect: (id:string)=>void; onBack?: ()=>void;
 }) {
   return (
-    <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="pk-question rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
       <h3 className="text-lg font-semibold">{mode==="first" ? "Добавьте первое помещение" : "Добавьте ещё помещение"}</h3>
       <p className="mt-1 text-sm text-slate-600">Выберите комнату, а затем задайте её площадь и параметры потолка.</p>
       {rooms.length>0 && (

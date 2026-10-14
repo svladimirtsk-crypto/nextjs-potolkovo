@@ -13,6 +13,7 @@ import { contacts } from "@/content/contacts";
 import { fillCallbackWindow, resolveStep2Copy, type Step2Intent } from "@/lib/calculator-flow";
 import { trackMessengerClick } from "@/lib/analytics";
 
+import { EstimateCard } from "./estimate-card";
 import { ActionForm } from "@/components/home/action-form";
 import { useCalculatorStore } from "@/lib/calculator/store";
 import { getCalculatorSummaryLines } from "@/lib/calculator/summary-lines";
@@ -288,68 +289,16 @@ export function WizardStep2Summary() {
 
   return (
     <div key="step2" className="animate-fade-slide-in space-y-4">
-      {/* Grand total — hero number */}
-      <div className="rounded-2xl bg-slate-950 p-6 text-center text-white shadow-xl">
-        <p className="text-sm text-white/70">Ориентировочный итог</p>
-        <p className="mt-2 text-4xl font-bold tracking-tight">~{fmt(resolvedGrandTotal)} ₽</p>
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-xs text-white/60">
-          {resolvedShowCeilingInUi ? <span>Потолок и работы {fmt(resolvedCeilingTotal)} ₽</span> : null}
-          {resolvedShowCeilingInUi && (includedSpotQty > 0 || includedTrackMeters > 0) ? (
-            <span>
-              Монтаж света: {includedSpotQty} светильников, {includedTrackMeters} м трека — уже в потолке
-            </span>
-          ) : null}
-          {extraInstallLines.map((line) => (
-            <span key={line}>+ {line}</span>
-          ))}
-          {resolvedShowCeilingInUi && resolvedLightingEffectiveTotal > 0 ? <span>+</span> : null}
-          {resolvedLightingEffectiveTotal > 0 ? (
-            <span>
-              Свет{" "}
-              {lightingDiscountEligible && lightingAppliedBenefit > 0 ? (
-                <>
-                  <span className="line-through text-white/35">{fmt(resolvedLightingRegularTotal)} ₽</span>{" "}
-                  <span>{fmt(resolvedLightingEffectiveTotal)} ₽</span>{" "}
-                  <span className="text-emerald-400">−{lightingAppliedPercent}% (−{fmt(lightingAppliedBenefit)} ₽)</span>
-                </>
-              ) : (
-                <>{fmt(resolvedLightingEffectiveTotal)} ₽</>
-              )}
-            </span>
-          ) : null}
-        </div>
-        {lightingDiscountMode !== "with-ceiling" && resolvedLightingEffectiveTotal > 0 && resolvedLightingWithCeilingTotal > 0 ? (
-          <p className="mt-2 text-xs text-white/50">
-            С потолком: <span className="line-through text-white/35">{fmt(resolvedLightingRegularTotal)} ₽</span>{" "}
-            {fmt(resolvedLightingWithCeilingTotal)} ₽ −25% (−{fmt(lightingPotentialBenefit)} ₽)
-          </p>
-        ) : null}
-      </div>
-
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm sm:hidden">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-slate-500">Потолок</span>
-          <span className="font-semibold text-slate-950">{resolvedShowCeilingInUi ? `${fmt(resolvedCeilingTotal)} ₽` : "—"}</span>
-        </div>
-        {resolvedLightingEffectiveTotal > 0 ? (
-          <>
-            <div className="mt-2 flex items-center justify-between gap-3">
-              <span className="text-slate-500">Свет</span>
-              <span className="font-semibold text-slate-950">{fmt(resolvedLightingEffectiveTotal)} ₽</span>
-            </div>
-            {lightingAppliedBenefit > 0 ? (
-              <div className="mt-2 flex items-center justify-between gap-3 text-emerald-700">
-                <span>Скидка на свет</span>
-                <span className="font-semibold">−{fmt(lightingAppliedBenefit)} ₽</span>
-              </div>
-            ) : null}
-          </>
-        ) : null}
-        <div className="mt-3 border-t border-slate-200 pt-3 flex items-center justify-between gap-3">
-          <span className="font-semibold text-slate-950">Итого</span>
-          <span className="text-lg font-bold text-slate-950">~{fmt(resolvedGrandTotal)} ₽</span>
-        </div>
-      </div>
+      <EstimateCard total={fmt(resolvedGrandTotal)} ceiling={fmt(resolvedCeilingTotal)}
+        showCeiling={resolvedShowCeilingInUi}
+        lighting={resolvedLightingEffectiveTotal > 0 ? fmt(resolvedLightingEffectiveTotal) : null}
+        includedInstallation={resolvedShowCeilingInUi && (includedSpotQty > 0 || includedTrackMeters > 0)
+          ? `Монтаж света: ${includedSpotQty} светильников, ${includedTrackMeters} м трека — уже в потолке` : null}
+        extraInstallLines={extraInstallLines}
+        discount={resolvedLightingEffectiveTotal > 0 && lightingDiscountEligible && lightingAppliedBenefit > 0
+          ? <>Скидка на свет −{lightingAppliedPercent}% (−{fmt(lightingAppliedBenefit)} ₽). До скидки: <del>{fmt(resolvedLightingRegularTotal)} ₽</del></> : null}
+        alternative={lightingDiscountMode !== "with-ceiling" && resolvedLightingEffectiveTotal > 0 && resolvedLightingWithCeilingTotal > 0
+          ? <>С потолком: {fmt(resolvedLightingWithCeilingTotal)} ₽ −25% (−{fmt(lightingPotentialBenefit)} ₽).</> : null} />
 
       {hasRoomBreakdown ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -412,7 +361,7 @@ export function WizardStep2Summary() {
       </div>
 
       {/* Detailed breakdown — only if user wants it */}
-      <details className="rounded-2xl border border-slate-200 bg-white">
+      <details className="pk-summary-details rounded-2xl border border-slate-200 bg-white">
         <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-950">
           Состав расчёта
         </summary>

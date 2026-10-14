@@ -44,7 +44,7 @@ test.describe("Шаг 0 · экран площади", () => {
     const body = await modal.innerText();
     // F-09: слова монтажника не должны попадаться клиенту на первом экране.
     expect(body).not.toMatch(/узл|участк/i);
-    expect(body).toContain("Только площадь");
+    expect(body).toContain("Начнём с площади");
 
     // F-13: пять чипов вместо восьми.
     for (const value of ["12 м²", "15 м²", "18 м²", "22 м²", "30 м²"]) {
@@ -83,6 +83,6 @@ test.describe("Шаг 0 · экран площади", () => {
     await modal.waitFor();
 
     // А здесь площадь действительно подставлена — и плашка называет её.
-    await expect(modal.getByText(/Подставил \d+ м² со страницы/)).toBeVisible();
+    await expect(modal.getByText(/Подставлено \d+ м² со страницы/)).toBeVisible();
   });
 });
