@@ -20,6 +20,7 @@ type CommonProps = {
   size?: ButtonSize;
   /** Стабильный хук для e2e — не завязываться на тексты и классы (T-091). */
   "data-testid"?: string;
+  "aria-label"?: string;
 };
 
 type ButtonAsButtonProps = CommonProps & {
@@ -121,6 +122,7 @@ export function Button(props: ButtonProps) {
           href={props.href}
           className={baseClassName}
           data-testid={props["data-testid"]}
+          aria-label={props["aria-label"]}
           onClick={handleHashClick}
         >
           {props.children}
@@ -129,7 +131,8 @@ export function Button(props: ButtonProps) {
     }
 
     return (
-      <Link href={props.href} className={baseClassName} data-testid={props["data-testid"]}>
+      <Link href={props.href} className={baseClassName} data-testid={props["data-testid"]}
+          aria-label={props["aria-label"]}>
         {props.children}
       </Link>
     );
@@ -140,6 +143,7 @@ export function Button(props: ButtonProps) {
       type={props.type ?? "button"}
       className={baseClassName}
       data-testid={props["data-testid"]}
+          aria-label={props["aria-label"]}
       onClick={props.onClick}
       disabled={props.disabled}
     >

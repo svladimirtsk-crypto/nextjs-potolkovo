@@ -112,7 +112,7 @@ export const homepage = {
      * hero1.jpeg — 752 КБ и пропорции 3:2, которые соцсети обрезают по центру.
      * Собирается `scripts/build-og-image.mjs`.
      */
-    ogImageSrc: "/brand/v7/company-og.webp",
+    ogImageSrc: "/brand/v7/social/home.jpg",
     ogImageWidth: 1200,
     ogImageHeight: 630,
     robots: "index, follow",

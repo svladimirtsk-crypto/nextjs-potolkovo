@@ -1,3 +1,4 @@
+import { brandSocialImage } from "@/content/brand-social";
 import { servicePriceAnchor } from "@/content/pricing";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -36,8 +37,9 @@ export const metadata: Metadata = {
     description:
       "Девять направлений: от простых полотен до световых линий и трековых систем. Цены «от» и бесплатный замер.",
     url: "/uslugi",
-    images: [{ url: "/svc-shadow.jpeg" }],
+    images: [brandSocialImage("/uslugi")],
   },
+  twitter: { card: "summary_large_image", title: "Решения ПОТОЛКОВО — потолки и освещение", description: "Девять направлений потолков и освещения.", images: [brandSocialImage("/uslugi")] },
 };
 
 const orderedServices = serviceDisplayOrder.map(slug => phase2Services.find(service => service.slug === slug)!);

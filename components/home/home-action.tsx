@@ -1,122 +1,17 @@
 import { contacts } from "@/content/contacts";
 import { homepage } from "@/content/homepage";
-import { Divider } from "@/components/ui/divider";
-import { Heading } from "@/components/ui/heading";
-import { Section } from "@/components/ui/section";
-import { TextLink } from "@/components/ui/text-link";
-import { Container } from "@/components/ui/container";
-
 import { ActionForm } from "./action-form";
 
 const actionContent = homepage.action;
 
 export function HomeAction() {
   return (
-    <Section id={actionContent.anchorId ?? "action"} className="bg-white">
-      <Container>
-        <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
-          <div>
-            <Heading
-              eyebrow="Заявка"
-              title={actionContent.sectionTitle}
-              description={actionContent.sectionSubtitle}
-            />
-
-            <div className="mt-6 flex flex-wrap gap-2.5">
-              {[
-                "Свяжемся по заявке",
-                "Замер бесплатно",
-                "Смета до старта",
-              ].map((item) => (
-                <span
-                  key={item}
-                  className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700"
-                >
-                  {item}
-                </span>
-              ))}
-            </div>
-
-            <div className="mt-8 max-w-xl rounded-[2rem] border border-slate-200 bg-slate-50 p-6 shadow-[0_10px_28px_rgba(15,23,42,0.04)] sm:p-8">
-              {actionContent.formTitle ? (
-                <h3 className="text-xl font-semibold tracking-tight text-slate-950">
-                  {actionContent.formTitle}
-                </h3>
-              ) : null}
-
-              <div className={actionContent.formTitle ? "mt-6" : ""}>
-                <ActionForm source="home" placement="home" />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-6 sm:p-8">
-            <h3 className="text-xl font-semibold tracking-tight text-slate-950">
-              {actionContent.secondaryContactsTitle}
-            </h3>
-
-            <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950">
-              <p className="font-semibold">Что получите после заявки</p>
-              <p className="mt-1 text-emerald-900/80">
-                Уточним задачу, сориентируем по решению и заранее проговорим, из чего сложится смета.
-              </p>
-            </div>
-
-            <div className="mt-6 space-y-5">
-              <div>
-                <p className="text-sm text-slate-500">Телефон</p>
-                <div className="mt-2">
-                  <TextLink href={contacts.phoneHref} className="text-base font-medium">
-                    {contacts.phoneDisplay}
-                  </TextLink>
-                </div>
-              </div>
-
-              <Divider />
-
-              <div>
-                <p className="text-sm text-slate-500">Telegram</p>
-                <div className="mt-2">
-                  <TextLink href={contacts.telegramUrl} className="text-base font-medium">
-                    {contacts.telegramDisplay}
-                  </TextLink>
-                </div>
-              </div>
-
-              <Divider />
-
-              <div>
-                <p className="text-sm text-slate-500">WhatsApp</p>
-                <div className="mt-2">
-                  <TextLink href={contacts.whatsappUrl} className="text-base font-medium">
-                    {contacts.whatsappDisplay}
-                  </TextLink>
-                </div>
-              </div>
-
-              <Divider />
-
-              <div>
-                <p className="text-sm text-slate-500">Email</p>
-                <div className="mt-2">
-                  <TextLink href={contacts.emailHref} className="text-base font-medium">
-                    {contacts.emailDisplay}
-                  </TextLink>
-                </div>
-              </div>
-
-              <Divider />
-
-              <div className="space-y-2">
-                <p className="text-sm text-slate-500">{contacts.regionLabel}</p>
-                {contacts.workingHoursLabel ? (
-                  <p className="text-sm text-slate-500">{contacts.workingHoursLabel}</p>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </div>
-      </Container>
-    </Section>
+    <section id={actionContent.anchorId ?? "action"} className="pk-home-action">
+      <div className="pk-wrap pk-home-action-grid">
+        <div className="pk-home-action-intro"><p className="pk-eyebrow">Начнём с вашей задачи</p><h2>{actionContent.sectionTitle}</h2><p>{actionContent.sectionSubtitle}</p><ul className="pk-action-facts"><li>Замер бесплатно</li><li>Смета до старта</li><li>Согласованный состав</li></ul></div>
+        <div className="pk-home-action-form"><p className="pk-eyebrow">Связь с компанией</p>{actionContent.formTitle ? <h3>{actionContent.formTitle}</h3> : null}<p className="pk-action-form-intro">Укажите имя и телефон. Район и этап ремонта можно добавить по желанию.</p><ActionForm source="home" placement="home" /></div>
+        <div className="pk-home-action-contacts"><h3>{actionContent.secondaryContactsTitle}</h3><a className="pk-action-phone" href={contacts.phoneHref}>{contacts.phoneDisplay}</a><p>{contacts.workingHoursLabel}</p><div className="pk-action-contact-links"><a href={contacts.telegramUrl}>Telegram <span aria-hidden="true">↗</span></a><a href={contacts.whatsappUrl}>WhatsApp <span aria-hidden="true">↗</span></a><a href={contacts.emailHref}>{contacts.emailDisplay} <span aria-hidden="true">↗</span></a></div><p className="pk-action-region">{contacts.regionLabel}</p></div>
+      </div>
+    </section>
   );
 }

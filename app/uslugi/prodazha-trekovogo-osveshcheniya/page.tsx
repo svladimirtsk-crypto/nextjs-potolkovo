@@ -1,3 +1,4 @@
+import { brandSocialImage } from "@/content/brand-social";
 import type { Metadata } from "next";
 
 import { JsonLd } from "@/components/seo/json-ld";
@@ -30,8 +31,9 @@ export const metadata: Metadata = {
     title:       service.metadata.ogTitle,
     description: service.metadata.ogDescription,
     url:         service.pathname,
-    images:      [{ url: service.metadata.ogImage }],
+    images: [brandSocialImage(service.pathname)],
   },
+  twitter: { card: "summary_large_image", title: service.metadata.ogTitle, description: service.metadata.ogDescription, images: [brandSocialImage(service.pathname)] },
 };
 
 export default function ProdazhaTrekovogoOsveshcheniyaPage() {

@@ -1,3 +1,4 @@
+import { brandSocialImage } from "@/content/brand-social";
 import type { Metadata } from "next";
 
 import { JsonLd } from "@/components/seo/json-ld";
@@ -20,15 +21,9 @@ export const metadata: Metadata = {
      * N-062: первым идёт кадр 1200×630 — соцсети берут первую подходящую
      * картинку, и обрезать её им уже не придётся.
      */
-    images: [
-      {
-        url: homepage.metadata.ogImageSrc,
-        width: homepage.metadata.ogImageWidth,
-        height: homepage.metadata.ogImageHeight,
-        alt: "ПОТОЛКОВО — потолки и освещение. Визуализация интерьера.",
-      },
-    ],
+    images: [brandSocialImage("/")],
   },
+  twitter: { card: "summary_large_image", title: homepage.metadata.ogTitle ?? homepage.metadata.title, description: homepage.metadata.ogDescription ?? homepage.metadata.description, images: [brandSocialImage("/")] },
 };
 
 export default function Page() {

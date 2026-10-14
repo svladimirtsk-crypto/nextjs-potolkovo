@@ -1,3 +1,4 @@
+import { brandSocialImage } from "@/content/brand-social";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { HomeHeader } from "@/components/home/home-header";
@@ -14,7 +15,8 @@ const page = brandPages.company;
 export const metadata: Metadata = {
   title: { absolute: page.title }, description: page.description,
   alternates: { canonical: page.path },
-  openGraph: { title: page.title, description: page.description, url: page.path, images: [{ url: "/brand/v7/architectural-living-1264.webp", alt: "Интерьер с потолком и светом — визуализация решения" }] },
+  openGraph: { title: page.title, description: page.description, url: page.path, images: [brandSocialImage(page.path)] },
+  twitter: { card: "summary_large_image", title: page.title, description: page.description, images: [brandSocialImage(page.path)] },
 };
 
 export default function CompanyPage() {

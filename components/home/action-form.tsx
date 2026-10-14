@@ -424,7 +424,7 @@ export function ActionForm({
       {(ceilingLines.length > 0 || lightingLines.length > 0) ? (
         compactCalculationSummary ? (
           <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-950">
-            К заявке приложу этот расчёт
+            Этот расчёт будет приложен к заявке
           </div>
         ) : (
           <details className="rounded-2xl border border-slate-200 bg-slate-50">
