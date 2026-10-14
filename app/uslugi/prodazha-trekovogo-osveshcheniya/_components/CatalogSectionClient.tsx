@@ -39,7 +39,7 @@ import {
   LIGHTING_WITH_CEILING_DISCOUNT_PERCENT,
 } from "@/lib/lighting-formulas";
 
-import { isRemovedColibriVendorCode } from "@/lib/catalog-ui-config";
+import { isRetiredCatalogProduct } from "@/lib/catalog-retirement";
 
 import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
 import { useCatalogFilters } from "@/lib/lighting/use-catalog-filters";
@@ -54,7 +54,7 @@ export function CatalogSectionClient({ data }: Props) {
 
   const products = useMemo(() => {
     return (data.products ?? [])
-      .filter((product) => !isRemovedColibriVendorCode(product.vendorCode))
+      .filter((product) => !isRetiredCatalogProduct(product))
       .map((p) => applyVendorOverrides(p));
   }, [data.products]);
 

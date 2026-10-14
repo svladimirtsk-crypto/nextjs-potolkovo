@@ -1,13 +1,15 @@
+import { RETIRED_VENDOR_CODES } from "@/lib/catalog-retirement";
 import { pricing } from "@/content/pricing";
 export type CatalogSectionId =
   | "track-systems"
   | "point-fixtures"
+  | "fixture-accessories"
   | "mounts-grilles"
   | "lamps"
   | "chandeliers"
   | "cornice-lighting";
 export type TrackSystemId = "COLIBRI_220" | "CLARUS_48" | "TRACK_220";
-export type TrackGroupId = "TRACK_FIXTURE" | "TRACK_PROFILE" | "TRACK_ACCESSORY";
+export type TrackGroupId = "TRACK_FIXTURE" | "TRACK_PROFILE" | "TRACK_ACCESSORY" | "TRACK_CONTROL";
 export type PointSubtypeId = "GX53" | "MR16" | "GU10" | "PANELS" | "OTHER";
 export type LampSocket = "GX53" | "MR16" | "GU10";
 
@@ -27,6 +29,7 @@ export const CATALOG_SECTIONS: { id: CatalogSectionId; label: string }[] = [
   { id: "point-fixtures", label: "Точечные светильники" },
   { id: "chandeliers", label: "Люстры" },
   { id: "cornice-lighting", label: "Подсветка карниза" },
+  { id: "fixture-accessories", label: "Крепёж и отражатели" },
   { id: "mounts-grilles", label: "Закладные и решетки" },
   { id: "lamps", label: "Лампы" },
 ];
@@ -59,6 +62,7 @@ export const TRACK_GROUPS: { id: TrackGroupId; label: string }[] = [
   { id: "TRACK_FIXTURE", label: "Светильники" },
   { id: "TRACK_PROFILE", label: "Профили" },
   { id: "TRACK_ACCESSORY", label: "Аксессуары" },
+  { id: "TRACK_CONTROL", label: "Управление" },
 ];
 
 export const POINT_SUBTYPES: { id: PointSubtypeId; label: string }[] = [
@@ -69,14 +73,14 @@ export const POINT_SUBTYPES: { id: PointSubtypeId; label: string }[] = [
   { id: "OTHER", label: "Прочее" },
 ];
 
-export const REMOVED_COLIBRI_VENDOR_CODES = new Set(["0У-00002967", "0У-00001345"]);
+export const REMOVED_COLIBRI_VENDOR_CODES = RETIRED_VENDOR_CODES;
 
 export function isRemovedColibriVendorCode(vendorCode: unknown): boolean {
   return REMOVED_COLIBRI_VENDOR_CODES.has(String(vendorCode ?? "").trim());
 }
 
 export const TRACK_PROFILE_WHITELIST: Record<TrackSystemId, string[]> = {
-  COLIBRI_220: ["0У-00006089", "0У-00006090", "0У-00006986", "0У-00001341"],
+  COLIBRI_220: ["0У-00006089", "0У-00006090", "0У-00006986"],
   CLARUS_48: ["0У-00006634", "0У-00006633"],
   TRACK_220: [
     "0У-00006342",

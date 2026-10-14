@@ -1,3 +1,4 @@
+import { isPointFixture } from "@/lib/lighting/product-predicates";
 import { describe, expect, it } from "vitest";
 
 import snapshot from "../data/eks-feed2-snapshot.json";
@@ -90,7 +91,7 @@ describe("PT-018 · белый список профилей", () => {
   });
 
   it("COLIBRI и CLARUS второго списка не получают", () => {
-    expect(allowedTrackProfileVendors("COLIBRI_220").size).toBe(4);
+    expect(allowedTrackProfileVendors("COLIBRI_220").size).toBe(3);
     expect(allowedTrackProfileVendors("COLIBRI_220").has("0У-00001354")).toBe(false);
     expect(allowedTrackProfileVendors("CLARUS_48").size).toBe(2);
   });
@@ -337,7 +338,7 @@ describe("PT-018 · сводка корзины для стартового эк
   });
 
   it("наборы корзины отражаются в флагах", () => {
-    const point = find((p) => p.kind === "SPOT_FIXTURE");
+    const point = find(isPointFixture);
     const summary = summarizeCartForStep(
       [entry(artProfile, 2), entry(clarusFixture, 1), entry(point, 4)],
       3

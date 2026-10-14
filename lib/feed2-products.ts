@@ -1,3 +1,4 @@
+import { nonLuminaireRole } from "@/lib/lighting/product-role";
 import type { FeedCatalogKind, FeedCatalogProduct, FeedCatalogSystem } from "@/lib/eks-feed2-catalog";
 
 import {
@@ -82,7 +83,7 @@ export function detectSocket(product: FeedCatalogProduct): LampSocket | null {
  */
 export function getRequiredLampSocket(product: FeedCatalogProduct): LampSocket | null {
   // ВАЖНО: лампы НЕ требуют ламп (иначе легко получить “бесконечное” добивание 1:1)
-  if (product.kind === "LAMP") return null;
+  if (product.kind === "LAMP" || nonLuminaireRole(product)) return null;
 
   const vendorCode = toText(product.vendorCode);
 

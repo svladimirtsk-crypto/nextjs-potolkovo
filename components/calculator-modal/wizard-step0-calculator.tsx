@@ -1,5 +1,7 @@
 "use client";
 
+import { isPointFixture } from "@/lib/lighting/product-predicates";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { homepage } from "@/content/homepage";
@@ -17,10 +19,7 @@ import { calcTrackProfileMeters } from "@/lib/product-length-meters";
 
 import { useCalculatorModal } from "./calculator-modal-context";
 
-function isPanelProduct(product: FeedCatalogProduct): boolean {
-  const text = `${toText(product.name)} ${toText(product.categoryPath)}`.toLowerCase();
-  return text.includes("панел") || text.includes("panel") || text.includes("600x600") || text.includes("595x595");
-}
+
 
 type PreferredTrackType = "built-in" | "surface" | null;
 
@@ -206,7 +205,7 @@ export function WizardStep0Calculator({ preset }: WizardStep0CalculatorProps) {
         if (product.system === "COLIBRI_220") metersColibri += meters;
       }
 
-      if (product.kind === "SPOT_FIXTURE" || isPanelProduct(product)) {
+      if (isPointFixture(product)) {
         pointSpotsQty += qty;
       }
     }

@@ -1,3 +1,5 @@
+import { nonLuminaireRole } from "@/lib/lighting/product-role";
+import { isRetiredCatalogProduct } from "@/lib/catalog-retirement";
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 
 type System = FeedCatalogProduct["system"];
@@ -39,8 +41,6 @@ const COLIBRI_PROFILE_VENDORS = new Set<string>([
   "0У-00006089",
   "0У-00006090",
   "0У-00006986",
-  // T-011: КОЛИБРИ шинопровод 2 м — это профиль, а не OTHER
-  "0У-00001341",
 ]);
 
 const COLIBRI_ACCESSORY_VENDORS = new Set<string>([
@@ -71,7 +71,6 @@ const TRACK_PROFILE_PIECE_LENGTH_METERS: Record<string, number> = {
 
   // ART profiles
   "0У-00001353": 1,
-  "0У-00001341": 2,
   "0У-00001354": 1,
   "0У-00001355": 2,
   "0У-00001356": 2,
@@ -162,6 +161,13 @@ export function applyVendorOverrides(product: FeedCatalogProduct): FeedCatalogPr
       };
     }
   }
+
+  // Role overrides win over legacy kinds and never turn control hardware into luminaires.
+  const role = nonLuminaireRole(next);
+  if (role === "fixture-accessory") next = { ...next, kind: "FIXTURE_ACCESSORY", unit: "pcs" };
+  if (role === "track-control") next = { ...next, kind: "TRACK_CONTROL", unit: "pcs",
+    system: /кларус|clarus/i.test(next.name) ? "CLARUS_48" : "COLIBRI_220" };
+  if (isRetiredCatalogProduct(next)) next = { ...next, available: false };
 
   const imageOverride = VENDOR_IMAGE_OVERRIDES[vendorCode];
   if (imageOverride) {

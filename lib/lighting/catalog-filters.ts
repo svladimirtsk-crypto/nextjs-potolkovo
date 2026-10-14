@@ -13,7 +13,7 @@ import { detectSocket } from "@/lib/feed2-products";
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
 import {
   isMountsOrGrilles,
-  isPanelProduct,
+  isPointFixture,
   isSmartProduct,
   matchesPointSubtype,
 } from "@/lib/lighting/product-predicates";
@@ -49,10 +49,11 @@ export function searchHaystack(product: FeedCatalogProduct): string {
  * есть эта позиция» посчитать было нечем.
  */
 export function sectionOfProduct(product: FeedCatalogProduct): CatalogSectionId | null {
-  if (product.kind === "TRACK_PROFILE" || product.kind === "TRACK_FIXTURE" || product.kind === "TRACK_ACCESSORY") {
+  if (product.kind === "TRACK_PROFILE" || product.kind === "TRACK_FIXTURE" || product.kind === "TRACK_ACCESSORY" || product.kind === "TRACK_CONTROL") {
     return "track-systems";
   }
-  if (product.kind === "SPOT_FIXTURE" || isPanelProduct(product)) return "point-fixtures";
+  if (product.kind === "FIXTURE_ACCESSORY") return "fixture-accessories";
+  if (isPointFixture(product)) return "point-fixtures";
   if (product.kind === "CHANDELIER") return "chandeliers";
   if (product.kind === "LED_STRIP" || product.kind === "PSU" || product.kind === "CONTROL") {
     return "cornice-lighting";
@@ -103,7 +104,7 @@ export function productsOfSection(
       .filter((p) => detectSocket(p) === lampSocket);
   }
 
-  if (section === "chandeliers" || section === "cornice-lighting") {
+  if (section === "chandeliers" || section === "cornice-lighting" || section === "fixture-accessories") {
     return products.filter((product) => sectionOfProduct(product) === section);
   }
 

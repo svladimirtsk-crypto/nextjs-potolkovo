@@ -100,9 +100,7 @@ function main() {
   }
 
   // Позиции, которые мы намеренно скрываем, в фиде могут отсутствовать.
-  const removed = new Set(
-    extractSkus(extractBlock(readSource("lib/catalog-ui-config.ts"), "REMOVED_COLIBRI_VENDOR_CODES"))
-  );
+  const removed = new Set(JSON.parse(readSource("content/catalog-retired.json")).map(item => item.vendorCode));
 
   for (const sku of referenced) {
     if (removed.has(sku)) continue;

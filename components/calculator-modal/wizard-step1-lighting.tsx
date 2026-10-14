@@ -20,6 +20,7 @@ import {
 } from "@/lib/catalog-ui-config";
 
 import { decideOrphanTrackAction } from "@/lib/lighting/orphan-track";
+import { RetiredCatalogNotice, retiredLightingItems } from "@/components/lighting/retired-catalog-notice";
 import { CatalogLoadState } from "@/components/lighting/catalog-load-state";
 import { Step1CatalogTab } from "@/components/lighting/Step1CatalogTab";
 // PT-018: чистые селекторы Шага 1 (B-F104) — правила выдачи каталога,
@@ -476,9 +477,11 @@ export function WizardStep1Lighting() {
         </TabBtn>
       </div>
 
-      {removedHint && (
+      <RetiredCatalogNotice items={lightingDraft?.items ?? []} onRemove={lightingCart.remove} />
+
+      {removedHint && retiredLightingItems(lightingDraft?.items ?? []).length === 0 && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-          Некоторые позиции удалены из ассортимента и автоматически убраны из выбранного.
+          Некоторые позиции не найдены в текущем каталоге. Проверьте состав и сохранённую сумму перед отправкой.
         </div>
       )}
 

@@ -11,6 +11,7 @@ const icons = [
   "M4 8h16l-2 5H6zM8 16l-2 4m6-4v5m4-5 2 4",
   "M12 3v5M4 8h16M7 8v5l-3 5h6l-3-5m10-5v5l-3 5h6l-3-5",
   "M3 6h18v4H3zM5 15h2m3 0h2m3 0h2m3 0h1M5 19h14",
+  "M6 8h12v8H6zM4 4h16M4 20h16M12 8v8",
   "M4 6h16v12H4zM8 6v12m4-12v12m4-12v12",
   "M8 16v-2a6 6 0 1 1 8 0v2zM9 19h6m-5 3h4",
 ];

@@ -1,3 +1,4 @@
+import { isRetiredCatalogProduct } from "@/lib/catalog-retirement";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -38,7 +39,7 @@ describe("T-029 - byudzhety sgenerirovannyh faylov", () => {
 describe("T-029 - dekodirovanie indeksa", () => {
   it("tovarov stolko zhe, skolko v fide", async () => {
     const index = await getCatalogIndex();
-    const source = (snapshotData as { products?: unknown[] }).products ?? [];
+    const source = ((snapshotData as { products?: Array<{ vendorCode: string; offerId?: string; productId?: string }> }).products ?? []).filter(p => !isRetiredCatalogProduct(p));
     expect(index.products).toHaveLength(source.length);
   });
 
@@ -53,9 +54,9 @@ describe("T-029 - dekodirovanie indeksa", () => {
 
   it("ceny i nalichie sohraneny bez izmeneniy", async () => {
     const index = await getCatalogIndex();
-    // 0У-00001341 · КОЛИБРИ 2000 мм · 5082 ₽ (эталон из фида)
-    const colibri = index.products.find((p) => p.vendorCode === "0У-00001341");
-    expect(colibri?.priceRub).toBe(5082);
+    // 0У-00006090 · КОЛИБРИ 2000 мм · 7400 ₽ (эталон из фида)
+    const colibri = index.products.find((p) => p.vendorCode === "0У-00006090");
+    expect(colibri?.priceRub).toBe(7400);
     expect(colibri?.available).toBe(true);
   });
 
@@ -89,7 +90,7 @@ describe("T-029 - prefill", () => {
     const prefill = await getCatalogPrefill();
     // Префилл отражает фид как есть; доводкой kind/длины занимается
     // applyVendorOverrides уже на стороне потребителя.
-    const colibri = prefill["0У-00001341"];
+    const colibri = prefill["0У-00006090"];
 
     expect(colibri).toBeDefined();
     expect(colibri.system).toBe("COLIBRI_220");
@@ -108,7 +109,7 @@ describe("T-029 - prefill", () => {
 
   it("pokryvaet ves fid po artikulam", async () => {
     const prefill = await getCatalogPrefill();
-    const source = (snapshotData as { products?: { vendorCode?: string }[] }).products ?? [];
+    const source = ((snapshotData as { products?: Array<{ vendorCode?: string; offerId?: string; productId?: string }> }).products ?? []).filter(p => !isRetiredCatalogProduct(p));
     const codes = new Set(source.map((p) => String(p.vendorCode ?? "")).filter(Boolean));
 
     expect(Object.keys(prefill).length).toBe(codes.size);

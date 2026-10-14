@@ -1,3 +1,4 @@
+import { isRetiredCatalogProduct } from "@/lib/catalog-retirement";
 import snapshotData from "@/data/eks-feed2-snapshot.json";
 import { Container } from "@/components/ui/container";
 import { Heading } from "@/components/ui/heading";
@@ -45,7 +46,7 @@ export function TrackSaleSystemGuideSection() {
   // Полный фид читается только на сервере — в клиентский бандл он не попадает.
   const products = normalizeFeedCatalogProducts(
     (snapshotData as { products?: unknown[] }).products ?? []
-  );
+  ).filter(p => !isRetiredCatalogProduct(p));
 
   return (
     <Section className="bg-white py-12 sm:py-16">

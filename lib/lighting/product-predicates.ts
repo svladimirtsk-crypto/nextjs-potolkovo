@@ -1,3 +1,4 @@
+import { nonLuminaireRole } from "./product-role";
 import type { LampSocket, PointSubtypeId } from "@/lib/catalog-ui-config";
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import { detectSocket } from "@/lib/feed2-products";
@@ -17,13 +18,15 @@ import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
 
 /** Светодиодная панель (в т.ч. армстронг 600×600). */
 export function isPanelProduct(product: FeedCatalogProduct): boolean {
-  const text = `${toText(product.name)} ${toText(product.categoryPath)}`.toLowerCase();
-  return (
-    text.includes("панел") ||
-    text.includes("panel") ||
-    text.includes("600x600") ||
-    text.includes("595x595")
-  );
+  if (nonLuminaireRole(product) || ["TRACK_CONTROL", "FIXTURE_ACCESSORY", "CONTROL", "PSU", "LAMP", "CEILING_COMPONENT", "TRACK_ACCESSORY", "TRACK_PROFILE", "CHANDELIER"].includes(product.kind)) return false;
+  const name = toText(product.name).toLowerCase();
+  if (/управлен|конвертер|контроллер|пульт/.test(name)) return false;
+  return product.kind === "PANEL" || /панел|panel|600[xх×]600|595[xх×]595/.test(name);
+}
+
+/** One definition for selection, installation counts, prefill and progress. */
+export function isPointFixture(product: FeedCatalogProduct): boolean {
+  return !nonLuminaireRole(product) && (product.kind === "SPOT_FIXTURE" || isPanelProduct(product));
 }
 
 /** Лампа, доступная к заказу и с ценой. */
@@ -68,6 +71,7 @@ export function getPointSocket(product: FeedCatalogProduct): LampSocket | null {
  * в «Прочее», а не выпадают из каталога молча.
  */
 export function matchesPointSubtype(product: FeedCatalogProduct, subtype: PointSubtypeId): boolean {
+  if (!isPointFixture(product)) return false;
   // Панели определяются до проверки kind: в фиде они заведены по-разному.
   if (subtype === "PANELS") return isPanelProduct(product);
   if (product.kind !== "SPOT_FIXTURE") return false;
@@ -101,6 +105,8 @@ export function systemBadgeLabel(product: FeedCatalogProduct): string | null {
 }
 
 export function kindBadgeLabel(product: FeedCatalogProduct): string | null {
+  if (nonLuminaireRole(product) === "track-control") return "Управление треком";
+  if (nonLuminaireRole(product) === "fixture-accessory") return "Дополнение к светильнику";
   if (product.kind === "TRACK_PROFILE") return "Профиль";
   if (product.kind === "TRACK_FIXTURE") return "Трековый свет";
   if (product.kind === "SPOT_FIXTURE" || isPanelProduct(product)) return "Точечный";

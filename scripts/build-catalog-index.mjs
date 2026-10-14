@@ -60,7 +60,23 @@ function detectSocket(product) {
 }
 
 const feed = JSON.parse(readFileSync(SOURCE, "utf8"));
-const products = Array.isArray(feed.products) ? feed.products : [];
+const rawProducts = Array.isArray(feed.products) ? feed.products : [];
+const retiredPolicy = JSON.parse(readFileSync(resolve(ROOT, "content/catalog-retired.json"), "utf8"));
+const isRetired = (p) => retiredPolicy.some(rule => rule.vendorCode === text(p.vendorCode)
+  || (rule.offerId && rule.offerId === text(p.offerId)) || (rule.productId && rule.productId === text(p.productId)));
+const products = rawProducts.filter(p => !isRetired(p));
+// Historical lookup survives the supplier removing the item from later feeds.
+const retiredPath = resolve(ROOT, "data/catalog-retired.json");
+let previousRetired = [];
+try { previousRetired = JSON.parse(readFileSync(retiredPath, "utf8")).products ?? []; }
+catch (error) { if (error.code !== "ENOENT") throw error; }
+const retiredById = new Map(previousRetired.filter(isRetired).map(p => [text(p.productId) || text(p.vendorCode), p]));
+for (const p of rawProducts.filter(isRetired)) {
+  const key = text(p.productId) || text(p.vendorCode);
+  if (!retiredById.has(key)) retiredById.set(key, { ...p, available: false });
+}
+// Never a new sale/quote: retained values are last-known historical evidence.
+writeFileSync(retiredPath, JSON.stringify({ products: [...retiredById.values()] }));
 
 if (products.length === 0) {
   console.error("[catalog-index] В фиде нет товаров — сборка индекса остановлена.");

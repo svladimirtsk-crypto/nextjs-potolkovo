@@ -46,7 +46,7 @@ import {
   calcSelectedTrackMeters,
   type CartEntry,
 } from "@/lib/lighting/cart-derived";
-import { REMOVED_COLIBRI_VENDOR_CODES } from "@/lib/catalog-ui-config";
+import { isRetiredCatalogProduct } from "@/lib/catalog-retirement";
 import { getCatalogLookupProducts, getCatalogProducts } from "@/lib/lighting/catalog-products";
 
 import {
@@ -210,7 +210,7 @@ function mergeLightingItems(
       };
     }
 
-    if (!product.available || REMOVED_COLIBRI_VENDOR_CODES.has(toText(product.vendorCode))) {
+    if (!product.available || isRetiredCatalogProduct(product)) {
       issues.push({
         code: "unavailable-product",
         sku: productId || undefined,

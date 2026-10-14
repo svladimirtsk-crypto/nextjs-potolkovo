@@ -16,6 +16,9 @@ export type FeedCatalogSystem =
 export type FeedCatalogKind =
   | "TRACK_PROFILE"
   | "TRACK_ACCESSORY"
+  | "TRACK_CONTROL"
+  | "FIXTURE_ACCESSORY"
+  | "PANEL"
   | "TRACK_FIXTURE"
   | "SPOT_FIXTURE"
   | "CHANDELIER"

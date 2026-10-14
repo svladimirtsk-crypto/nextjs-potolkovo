@@ -1,3 +1,4 @@
+import { isRetiredCatalogProduct } from "@/lib/catalog-retirement";
 /**
  * T-029 · Серверная обёртка каталога.
  *
@@ -26,7 +27,7 @@ function toClientProduct(product: FeedCatalogProduct): FeedCatalogProduct {
 export function CatalogSection() {
   const products = normalizeFeedCatalogProducts(
     (snapshotData as { products?: unknown[] }).products ?? []
-  ).map(toClientProduct);
+  ).filter(p => !isRetiredCatalogProduct(p)).map(toClientProduct);
 
   const data: FeedCatalogResult = {
     ok: true,

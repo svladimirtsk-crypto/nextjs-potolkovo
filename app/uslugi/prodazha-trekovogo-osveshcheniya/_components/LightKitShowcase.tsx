@@ -14,7 +14,7 @@ import {
 import { normalizeFeedCatalogProducts } from "@/lib/feed2-snapshot-normalize";
 import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
 import { detectSocket } from "@/lib/feed2-products";
-import { isRemovedColibriVendorCode } from "@/lib/catalog-ui-config";
+import { isRetiredCatalogProduct } from "@/lib/catalog-retirement";
 
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import type { LightingItem } from "@/lib/calculator-modal-types";
@@ -41,7 +41,7 @@ function getProducts(): FeedCatalogProduct[] {
   const catalog = snapshotData as unknown as { products?: unknown[] };
   return normalizeFeedCatalogProducts(catalog.products ?? [])
     .map((p) => applyVendorOverrides(p))
-    .filter((p) => toNumber(p.priceRub) > 0 && p.available !== false);
+    .filter((p) => toNumber(p.priceRub) > 0 && p.available !== false && !isRetiredCatalogProduct(p));
 }
 
 /** T-014: ввод питания COLIBRI обязателен в каждом комплекте. */
@@ -81,7 +81,7 @@ function pickColibriProfileByLength(
   const candidates = products
     .filter((p) => p.system === "COLIBRI_220")
     .filter((p) => p.kind === "TRACK_PROFILE")
-    .filter((p) => !isRemovedColibriVendorCode(p.vendorCode))
+    .filter((p) => !isRetiredCatalogProduct(p))
     .filter((p) => p.available !== false);
 
   // 1) Prefer exact pieceLengthMeters from snapshot

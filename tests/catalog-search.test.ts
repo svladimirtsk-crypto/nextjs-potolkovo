@@ -87,6 +87,7 @@ describe("T-065 · глобальный поиск по каталогу", () =>
       ["chandeliers", product({ kind: "CHANDELIER" })],
       ["cornice-lighting", product({ kind: "LED_STRIP" })],
       ["lamps", product({ kind: "LAMP" })],
+      ["fixture-accessories", product({ kind: "FIXTURE_ACCESSORY", name: "Отражатель" })],
       ["mounts-grilles", product({ name: "Вент.решетка D100", kind: "CEILING_COMPONENT" })],
     ];
 

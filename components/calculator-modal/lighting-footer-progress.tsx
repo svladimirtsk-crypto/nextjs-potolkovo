@@ -1,5 +1,7 @@
 "use client";
 
+import { isPointFixture } from "@/lib/lighting/product-predicates";
+
 import { useMemo } from "react";
 
 import type { FeedCatalogParam, FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
@@ -29,10 +31,7 @@ function fmtM(value: number): string {
 }
 
 
-function isPanelProduct(product: FeedCatalogProduct): boolean {
-  const text = `${toText(product.name)} ${toText(product.categoryPath)}`.toLowerCase();
-  return text.includes("панел") || text.includes("panel") || text.includes("600x600") || text.includes("595x595");
-}
+
 
 type Metric = {
   id: string;
@@ -109,7 +108,7 @@ export function LightingFooterProgress() {
 
   const selectedPointQty = useMemo(() => {
     return cartEntries.reduce((sum, entry) => {
-      return entry.product.kind === "SPOT_FIXTURE" || isPanelProduct(entry.product) ? sum + entry.qty : sum;
+      return isPointFixture(entry.product) ? sum + entry.qty : sum;
     }, 0);
   }, [cartEntries]);
 

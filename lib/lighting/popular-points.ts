@@ -12,7 +12,7 @@
  */
 import { sortByPhoto } from "@/lib/catalog-photo";
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
-import { matchesPointSubtype } from "@/lib/lighting/product-predicates";
+import { matchesPointSubtype, isPointFixture } from "@/lib/lighting/product-predicates";
 import type { PointSubtypeId } from "@/lib/catalog-ui-config";
 
 /** Тип светильника в терминах клиента, а не каталога. */
@@ -180,6 +180,7 @@ export function pointProgressBySocket(
   };
 
   for (const entry of entries) {
+    if (!isPointFixture(entry.product)) continue;
     if (entry.product.kind === "SPOT_FIXTURE") {
       const socket = detectSocket(entry.product);
       if (socket) result[socket].current += entry.qty;

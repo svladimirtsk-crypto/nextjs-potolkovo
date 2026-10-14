@@ -35,7 +35,7 @@ import { isTrackSystemId } from "@/lib/lighting/kit-rules";
 import {
   isLamp,
   isMountsOrGrilles,
-  isPanelProduct,
+  isPointFixture,
   matchesPointSubtype,
 } from "@/lib/lighting/product-predicates";
 import { pointsOfKind, type PointKindId } from "@/lib/lighting/popular-points";
@@ -291,7 +291,7 @@ export function summarizeCartForStep(
     hasTrackProfile: entries.some((e) => e.product.kind === "TRACK_PROFILE"),
     hasTrackFixture: entries.some((e) => e.product.kind === "TRACK_FIXTURE"),
     hasPoints: entries.some(
-      (e) => e.product.kind === "SPOT_FIXTURE" || isPanelProduct(e.product),
+      (e) => isPointFixture(e.product),
     ),
     hasMissingLamps: missingLampsCount > 0,
     isEmpty: entries.length === 0,
@@ -410,6 +410,8 @@ export function scopeCatalogProducts(input: ScopeCatalogInput): FeedCatalogProdu
     }
   } else if (section === "point-fixtures") {
     scoped = products.filter((p) => matchesPointSubtype(p, pointSubtype));
+  } else if (section === "fixture-accessories") {
+    scoped = products.filter(p => p.kind === "FIXTURE_ACCESSORY");
   } else if (section === "chandeliers") {
     scoped = selectChandeliers(products);
   } else if (section === "cornice-lighting") {

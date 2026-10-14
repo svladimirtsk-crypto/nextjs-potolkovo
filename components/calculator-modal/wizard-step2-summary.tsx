@@ -1,5 +1,7 @@
 "use client";
 
+import { isPointFixture } from "@/lib/lighting/product-predicates";
+
 import { useEffect, useMemo, useState } from "react";
 import { useAvailabilityLabel } from "@/lib/availability/use-availability-label";
 
@@ -13,6 +15,7 @@ import { contacts } from "@/content/contacts";
 import { fillCallbackWindow, resolveStep2Copy, type Step2Intent } from "@/lib/calculator-flow";
 import { trackMessengerClick } from "@/lib/analytics";
 
+import { RetiredCatalogNotice } from "@/components/lighting/retired-catalog-notice";
 import { EstimateCard } from "./estimate-card";
 import { ActionForm } from "@/components/home/action-form";
 import { useCalculatorStore } from "@/lib/calculator/store";
@@ -37,15 +40,7 @@ function fmt(value: number): string {
   return new Intl.NumberFormat("ru-RU").format(Math.round(value));
 }
 
-function isPanelProduct(product: FeedCatalogProduct): boolean {
-  const text = `${toText(product.name)} ${toText(product.categoryPath)}`.toLowerCase();
-  return (
-    text.includes("панел") ||
-    text.includes("panel") ||
-    text.includes("600x600") ||
-    text.includes("595x595")
-  );
-}
+
 
 function sumTrackMetersFromLightingItems(
   items: Array<{ sku: string; qty: number }>,
@@ -92,7 +87,7 @@ function sumPointQtyFromLightingItems(
     const product = byId.get(resolvedId);
     if (!product) continue;
 
-    if (product.kind === "SPOT_FIXTURE" || isPanelProduct(product)) qtyTotal += qty;
+    if (isPointFixture(product)) qtyTotal += qty;
   }
 
   return qtyTotal;
@@ -299,6 +294,8 @@ export function WizardStep2Summary() {
           ? <>Скидка на свет −{lightingAppliedPercent}% (−{fmt(lightingAppliedBenefit)} ₽). До скидки: <del>{fmt(resolvedLightingRegularTotal)} ₽</del></> : null}
         alternative={lightingDiscountMode !== "with-ceiling" && resolvedLightingEffectiveTotal > 0 && resolvedLightingWithCeilingTotal > 0
           ? <>С потолком: {fmt(resolvedLightingWithCeilingTotal)} ₽ −25% (−{fmt(lightingPotentialBenefit)} ₽).</> : null} />
+
+      <RetiredCatalogNotice items={lighting?.items ?? []} onReview={handleEditLighting} />
 
       {hasRoomBreakdown ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-4">

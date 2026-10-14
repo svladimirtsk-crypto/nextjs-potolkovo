@@ -1,3 +1,4 @@
+import { isPointFixture } from "@/lib/lighting/product-predicates";
 import { describe, expect, it } from "vitest";
 
 import snapshot from "../data/eks-feed2-snapshot.json";
@@ -78,7 +79,7 @@ describe("N-051 · метры трека и число точек", () => {
   });
 
   it("споты считаются точками", () => {
-    const spot = find((p) => p.kind === "SPOT_FIXTURE");
+    const spot = find(isPointFixture);
     expect(calcSelectedPointQty([entry(spot, 4)])).toBe(4);
   });
 });

@@ -5,6 +5,7 @@ import {
   getPointSocket,
   isMountsOrGrilles,
   isPanelProduct,
+  isPointFixture,
   isSmartProduct,
   kindBadgeLabel,
   matchesPointSubtype,
@@ -25,7 +26,7 @@ const products = (snapshot as unknown as { products: FeedCatalogProduct[] }).pro
 
 describe("N-051 · предикаты каталога", () => {
   it("каждый точечный светильник попадает ровно в одну вкладку", () => {
-    const spots = products.filter((p) => p.kind === "SPOT_FIXTURE" && !isPanelProduct(p));
+    const spots = products.filter((p) => isPointFixture(p) && !isPanelProduct(p));
     expect(spots.length).toBeGreaterThan(0);
 
     const subtypes = ["GX53", "MR16", "GU10", "OTHER"] as const;

@@ -12,9 +12,10 @@
  * `use-catalog-products.ts`, то есть серверу было недоступно. Теперь оно здесь,
  * в модуле без директивы: хук и серверный пересчёт вызывают одну функцию.
  */
-import { REMOVED_COLIBRI_VENDOR_CODES } from "@/lib/catalog-ui-config";
+import retiredArchive from "@/data/catalog-retired.json";
+import { isRetiredCatalogProduct } from "@/lib/catalog-retirement";
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
-import { toText } from "@/lib/feed2-snapshot-normalize";
+import { normalizeFeedCatalogProducts } from "@/lib/feed2-snapshot-normalize";
 import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
 
 import { getCatalogIndex, type CatalogIndex, type CatalogIndexProduct } from "./catalog-index";
@@ -50,8 +51,8 @@ export function catalogIndexToFeedProduct(product: CatalogIndexProduct): FeedCat
 
 /** Индекс → список товаров в том виде, в котором их видит клиент. */
 export function buildCatalogProducts(index: CatalogIndex): FeedCatalogProduct[] {
-  return buildCatalogLookupProducts(index).filter(
-    (product) => !REMOVED_COLIBRI_VENDOR_CODES.has(toText(product.vendorCode))
+  return index.products.map(catalogIndexToFeedProduct).map(applyVendorOverrides).filter(
+    (product) => !isRetiredCatalogProduct(product)
   );
 }
 
@@ -63,7 +64,8 @@ export function buildCatalogProducts(index: CatalogIndex): FeedCatalogProduct[] 
  * опознать и принять с пометкой, а не отклонять заявку как «неизвестный SKU».
  */
 export function buildCatalogLookupProducts(index: CatalogIndex): FeedCatalogProduct[] {
-  return index.products.map(catalogIndexToFeedProduct).map((product) => applyVendorOverrides(product));
+  return [...index.products.map(catalogIndexToFeedProduct), ...normalizeFeedCatalogProducts(retiredArchive.products)]
+    .map((product) => applyVendorOverrides(product));
 }
 
 /**

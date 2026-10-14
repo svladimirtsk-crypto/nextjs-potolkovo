@@ -1,3 +1,6 @@
+import { sectionOfProduct as sectionOf } from "@/lib/lighting/catalog-filters";
+import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
+import { isRetiredCatalogProduct } from "@/lib/catalog-retirement";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
@@ -16,36 +19,8 @@ const snapshot = JSON.parse(
   readFileSync(new URL("../data/eks-feed2-snapshot.json", import.meta.url), "utf8")
 ) as { products?: unknown[] };
 
-const products = normalizeFeedCatalogProducts(snapshot.products ?? []);
+const products = normalizeFeedCatalogProducts(snapshot.products ?? []).map(applyVendorOverrides).filter(p => !isRetiredCatalogProduct(p));
 const vendorCodes = new Set(products.map((p) => String(p.vendorCode ?? "").trim()).filter(Boolean));
-
-/** Та же классификация, что использует UI каталога для группировки. */
-function sectionOf(product: (typeof products)[number]): string | null {
-  const text = `${product.name ?? ""} ${product.vendorCode ?? ""} ${product.categoryPath ?? ""}`.toLowerCase();
-
-  if (
-    product.kind === "TRACK_PROFILE" ||
-    product.kind === "TRACK_FIXTURE" ||
-    product.kind === "TRACK_ACCESSORY"
-  ) {
-    return "track-systems";
-  }
-  if (product.kind === "SPOT_FIXTURE") return "point-fixtures";
-  if (product.kind === "CHANDELIER") return "chandeliers";
-  if (product.kind === "LED_STRIP" || product.kind === "PSU" || product.kind === "CONTROL") {
-    return "cornice-lighting";
-  }
-  if (product.kind === "LAMP") return "lamps";
-  if (
-    product.kind === "CEILING_COMPONENT" ||
-    text.includes("заклад") ||
-    text.includes("решетк") ||
-    text.includes("решётк")
-  ) {
-    return "mounts-grilles";
-  }
-  return null;
-}
 
 describe("T-091 · validate-catalog: whitelist ⊂ фид", () => {
   it("все профили из TRACK_PROFILE_WHITELIST есть в фиде", () => {

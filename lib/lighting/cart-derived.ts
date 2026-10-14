@@ -8,7 +8,7 @@ import {
   REMOVED_COLIBRI_VENDOR_CODES,
   type LampSocket,
 } from "@/lib/catalog-ui-config";
-import { isLamp, isPanelProduct } from "@/lib/lighting/product-predicates";
+import { isLamp, isPointFixture } from "@/lib/lighting/product-predicates";
 import { calcTrackProfileMeters } from "@/lib/product-length-meters";
 
 /**
@@ -62,7 +62,7 @@ export function calcSelectedTrackMeters(entries: CartEntry[]): number {
 export function calcSelectedPointQty(entries: CartEntry[]): number {
   return entries.reduce(
     (sum, e) =>
-      e.product.kind === "SPOT_FIXTURE" || isPanelProduct(e.product) ? sum + e.qty : sum,
+      isPointFixture(e.product) ? sum + e.qty : sum,
     0
   );
 }

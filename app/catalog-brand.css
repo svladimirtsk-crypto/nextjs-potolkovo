@@ -24,7 +24,7 @@
 .pk-catalog-tabs button { display:flex; align-items:center; gap:12px; min-height:52px; text-align:left; padding:12px; border-radius:4px; font-size:13px; line-height:1.5; border:1px solid transparent; }
 .pk-catalog-tabs svg { width:22px; height:22px; flex-shrink:0; }
 .pk-catalog-tabs button:hover { background:#e8eddf; }
-.pk-catalog-tabs [aria-selected=true] { color:#fff; background:var(--pk-ink); }
+.pk-catalog-tabs button[aria-selected=true], .pk-catalog-tabs button[aria-selected=true]:hover { color:#fff; background:var(--pk-ink); }
 .pk-smart-note { background:#e5ebd9; border-radius:5px; padding:20px; }
 .pk-smart-note h3 { margin:12px 0; font-size:20px; font-weight:500; line-height:1.25; letter-spacing:-.025em; }
 .pk-smart-note > p:not(.pk-catalog-label) { font-size:12px; line-height:1.75; color:#41594b; }

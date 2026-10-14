@@ -131,8 +131,8 @@ async function tamperedBody(phone: string) {
 /**
  * Честная сумма того же состава — посчитана вручную по ставкам
  * `content/pricing.ts`, а не модулем под тестом:
- * потолок 18 м² «теневой» + 19 м.п. профиля, досчёт монтажа за 10 креплений
- * (в потолке точек не заложено) и свет со скидкой 25 %.
+ * потолок 18 м² «теневой» + 19 м.п. профиля, без фиктивного досчёта точек за 10 креплений
+ * (крепёж не является светильником) и свет со скидкой 25 %.
  */
 async function honestGrand() {
   const products = await catalogPromise;
@@ -140,7 +140,7 @@ async function honestGrand() {
 
   const ceilingRaw = 18 * pricing.ceiling.shadowBase + 19 * pricing.ceiling.shadowProfilePerM;
   const ceilingApplied = Math.max(ceilingRaw, pricing.minimumOrderRub);
-  const extraInstall = 10 * pricing.spotInstall;
+  const extraInstall = 0; // Owner clarification: крепления не создают точки монтажа.
   const lighting = applyLightingWithCeilingDiscount(mount.priceRub * 10);
 
   return ceilingApplied + extraInstall + lighting;
@@ -224,8 +224,8 @@ describe("PT-010 · POST /api/lead пересчитывает цену на се
     const lightingRegular = mount.priceRub * 4;
     const lightingEffective = applyLightingWithCeilingDiscount(lightingRegular);
     const ceiling = 18 * pricing.ceiling.shadowBase + 19 * pricing.ceiling.shadowProfilePerM;
-    // 4 крепления в корзине — это 4 точки монтажа сверх заложенных в потолке.
-    const extraInstall = 4 * pricing.spotInstall;
+    // 4 крепления — дополнения, не 4 светильника.
+    const extraInstall = 0;
     const grand = Math.max(ceiling, pricing.minimumOrderRub) + extraInstall + lightingEffective;
 
     const response = await POST(
