@@ -29,7 +29,7 @@ function pluralizeRu(n: number, one: string, few: string, many: string): string 
 const SCENARIO_SUBTITLES: Record<SolutionScenario, string> = {
   standard: "Стандартный сценарий",
   modern: "Современный сценарий",
-  advanced: "Продвинутый сценарий · обсудим лично",
+  advanced: "Продвинутый сценарий · обсудим состав",
 };
 
 function Tag({ children }: { children: ReactNode }) {

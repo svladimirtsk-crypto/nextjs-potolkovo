@@ -1,3 +1,4 @@
+import { CompanySolutions, CompanyLighting } from "./company-solutions";
 import { HomeHeader } from "./home-header";
 import { HomeHero } from "./home-hero";
 import { HomeProof } from "./home-proof";
@@ -14,10 +15,12 @@ export function HomePage() {
     <>
       <HomeHeader />
       <div className="pb-24 lg:pb-0">
-        <main>
+        <main className="pk-home">
           <HomeHero />
-          <HomeProof />
+          <CompanySolutions />
           <HomePrice />
+          <CompanyLighting />
+          <HomeProof />
           <HomeTrust />
           <HomePromise />
           <AvitoReviewsSection />

@@ -54,7 +54,7 @@ export function ProofSliderDesktop({ items, onOpen, onWantSame }: ProofSliderDes
         ))}
       </div>
 
-      <div className="mt-4 flex items-center justify-end gap-2">
+      <div className="pk-proof-controls mt-4 flex items-center justify-end gap-2">
         <Button
           type="button"
           variant="ghost"

@@ -5,7 +5,7 @@ import type { SolutionScenario } from "@/lib/calculator-modal-types";
 const OPTIONS: Array<{id: SolutionScenario; title: string; text: string}> = [
   { id: "standard", title: "Стандартный", text: "Обычный потолок, карниз, люстры и точечные светильники." },
   { id: "modern", title: "Современный", text: "Теневой/парящий профиль, встроенный карниз, линии, треки и свет." },
-  { id: "advanced", title: "Продвинутый", text: "SMART-свет и сценарии управления — обсудим лично." },
+  { id: "advanced", title: "Продвинутый", text: "Сценарии управления — обсудим состав и совместимость." },
 ];
 
 export function ScenarioScreen({
@@ -16,9 +16,9 @@ export function ScenarioScreen({
   onChoose: (s: SolutionScenario) => void;
 }) {
   return (
-    <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="pk-question rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
       <h3 className="text-lg font-semibold text-slate-950">Какой вариант решения рассматриваете?</h3>
-      <p className="mt-1 text-sm text-slate-600">Выберите уровень подбора — дальше покажу только нужные шаги, а дополнительные опции можно открыть отдельно.</p>
+      <p className="mt-1 text-sm text-slate-600">Выберите уровень подбора — дальше покажем только нужные шаги, а дополнительные опции можно открыть отдельно.</p>
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         {OPTIONS.map(opt => {
           const active = value === opt.id;

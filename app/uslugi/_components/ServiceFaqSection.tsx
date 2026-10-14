@@ -16,7 +16,7 @@ export function ServiceFaqSection({ service }: { service: ServicePageContent }) 
   if (items.length === 0) return null;
 
   return (
-    <Section className="bg-white py-12 sm:py-16">
+    <Section className="pk-service-faq bg-white py-12 sm:py-16">
       <JsonLd data={buildFaqSchema([...items])} />
       <Container>
         <Heading eyebrow="Вопросы" title="Частые вопросы" align="center" />

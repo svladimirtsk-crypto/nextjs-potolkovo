@@ -32,7 +32,7 @@ const LEGACY_BUDGET = {
   // блок «Получение / Когда удобно» — в `lead-fulfilment-fields.tsx`. Порог понижен с 602.
   // PT-014: чекбокс согласия вынесен в `lead-consent-checkbox.tsx`. Порог понижен с 561.
   "components/home/action-form.tsx": 549,
-  "components/calculator-modal/wizard-step2-summary.tsx": 612,
+  // R7: представление итога вынесено в EstimateCard; Step 2 теперь в общем лимите.
 };
 
 async function collect(dir, acc = []) {

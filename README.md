@@ -1,3 +1,26 @@
+# ПОТОЛКОВО · сайт компании
+
+## Актуальные требования
+
+- [Индекс v7 / v6](docs/current/README.md): v7 — бренд и UX компании, v6 — техническая база и незакрытые допуски.
+- [Калькулятор и итог · вторая итерация](docs/reports/R7-CALCULATOR.md): новое оформление, продуктовый выбор и регрессионная проверка.
+- [Первая реализация R7](docs/reports/R7-IMPLEMENTATION.md): границы внедрения, QA и ограничения выпуска.
+- [Замена визуализаций](design/brand/v7/README.md): источники, размеры и сборка AVIF/WebP.
+
+## Безопасный предпросмотр R7
+
+```bash
+npm ci
+NEXT_PUBLIC_PREVIEW_MODE=1 LEAD_API_ENABLED=0 TELEGRAM_LEADS_ENABLED=0 CATALOG_LIVE_FEED2_ENABLED=0 npm run build
+NEXT_PUBLIC_PREVIEW_MODE=1 LEAD_API_ENABLED=0 TELEGRAM_LEADS_ENABLED=0 CATALOG_LIVE_FEED2_ENABLED=0 npm run start -- --hostname 0.0.0.0 --port 3100
+```
+
+`NEXT_PUBLIC_PREVIEW_MODE` отключает только Метрику (script + noscript) и фиксируется **при сборке**. Это не runtime kill switch для SMART/торговли. Для боевого сайта нужна новая сборка без `NEXT_PUBLIC_PREVIEW_MODE=1`, согласованные env и отдельное прохождение release-gates. Предпросмотр не отправляет реальные заявки. E2E используют подменённые ответы API, а не боевой канал доставки.
+
+Ниже сохранена прежняя документация; при конфликте позиционирования приоритет у актуального индекса выше.
+
+---
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

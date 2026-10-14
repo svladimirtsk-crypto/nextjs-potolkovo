@@ -21,7 +21,7 @@ export function ServiceRelatedServices({
   return (
     <section
       aria-labelledby={`${service.slug}-related-title`}
-      className="bg-white py-16 sm:py-20"
+      className="pk-service-related bg-white py-16 sm:py-20"
     >
       <Container>
         <div className="rounded-[2rem] border border-slate-200 bg-slate-50 p-6 sm:p-8">

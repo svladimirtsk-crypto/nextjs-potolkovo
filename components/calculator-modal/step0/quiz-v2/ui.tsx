@@ -14,7 +14,7 @@ export function SectionCard({
   headingRef?: React.Ref<HTMLHeadingElement>;
 }) {
   return (
-    <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="pk-question rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
       <h3 ref={headingRef} tabIndex={-1} className="text-lg font-semibold text-slate-950 outline-none">
         {title}
       </h3>
@@ -30,7 +30,7 @@ export function OptionCard({ active, title, meta, onClick }: { active: boolean; 
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`min-h-11 rounded-2xl border p-4 text-left transition ${active ? "border-slate-950 bg-slate-950 text-white shadow-lg" : "border-slate-200 bg-white hover:border-slate-400"}`}
+      className={`pk-option min-h-11 rounded-2xl border p-4 text-left transition ${active ? "border-slate-950 bg-slate-950 text-white shadow-lg" : "border-slate-200 bg-white hover:border-slate-400"}`}
     >
       <p className="text-sm font-semibold">{title}</p>
       <p className={`mt-1 text-xs ${active ? "text-white/70" : "text-slate-600"}`}>{meta}</p>
@@ -93,7 +93,7 @@ export function RangeField({
     "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white text-lg font-semibold text-slate-900 transition-colors hover:border-slate-500 disabled:opacity-40";
 
   return (
-    <div>
+    <div className="pk-range">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <label htmlFor={id} className="text-sm font-medium text-slate-700">
           {label}

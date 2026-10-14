@@ -204,12 +204,12 @@ test.describe("PT-007 · явный выбор вместо автоматиче
     await expect(choice).toBeVisible();
 
     // До решения пресет кейса не применён — плашки предзаполнения нет (F-10).
-    await expect(modal.getByText(/Подставил \d+ м² со страницы/)).toHaveCount(0);
+    await expect(modal.getByText(/Подставлено \d+ м² со страницы/)).toHaveCount(0);
 
     await choice.locator('[data-draft-action="start-new"]').click();
 
     // После явного выбора кейс применён: первый пример — «Спальня 12 м²».
-    await expect(modal.getByText(/Подставил 12 м² со страницы/)).toBeVisible();
+    await expect(modal.getByText(/Подставлено 12 м² со страницы/)).toBeVisible();
     expect(await readDraft(page)).not.toContain('"area":22');
   });
 });
@@ -229,7 +229,7 @@ test.describe("PT-007 · восстановление корзины света"
     // Потолок до закрытия: помещение и сумма — их и сверяем после восстановления.
     const ceilingBefore = squash((await modal.textContent()) ?? "");
     expect(ceilingBefore).toContain("Помещение·18м²");
-    const ceilingTotalBefore = ceilingBefore.match(/Готовыйрасчёт(\d+₽)/)?.[1];
+    const ceilingTotalBefore = ceilingBefore.match(/Предварительныйрасчёт(\d+₽)/)?.[1];
     expect(ceilingTotalBefore, "видна сумма потолка").toBeTruthy();
 
     /**
@@ -262,7 +262,7 @@ test.describe("PT-007 · восстановление корзины света"
     await expect(modal.getByRole("heading", { name: "Проверка" })).toBeVisible();
     const ceilingAfter = squash((await modal.textContent()) ?? "");
     expect(ceilingAfter, ceilingAfter).toContain("Помещение·18м²");
-    expect(ceilingAfter, ceilingAfter).toContain(`Готовыйрасчёт${ceilingTotalBefore}`);
+    expect(ceilingAfter, ceilingAfter).toContain(`Предварительныйрасчёт${ceilingTotalBefore}`);
 
     /**
      * Корзина света восстанавливается целиком: состав, количества, суммы и

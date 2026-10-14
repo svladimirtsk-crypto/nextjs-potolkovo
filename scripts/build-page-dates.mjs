@@ -29,6 +29,8 @@ const PAGES = {
   "/": ["app/page.tsx", "components/home", "content/homepage.ts"],
   "/uslugi": ["app/uslugi/page.tsx", "content/services.ts"],
   "/privacy": ["app/privacy"],
+  "/o-kompanii": ["app/o-kompanii", "content/company.ts", "content/brand-pages.ts", "components/brand/editorial-contact.tsx", "app/editorial-brand.css"],
+  "/umnoe-osveshchenie": ["app/umnoe-osveshchenie", "content/brand-pages.ts", "components/brand/lighting-scenes.tsx", "components/brand/editorial-contact.tsx", "app/editorial-brand.css"],
 };
 
 function lastCommitDate(paths) {

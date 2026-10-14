@@ -7,6 +7,9 @@ import type { WizardStep } from "@/lib/calculator-modal-types";
 import { trackWizardConfirm } from "@/lib/analytics";
 import { useCalculatorModal } from "./calculator-modal-context";
 import { PriceStrip } from "./price-strip";
+import { WizardProgress } from "./wizard-progress";
+import { ProjectOverview } from "./project-overview";
+import { resolveStep2Copy } from "@/lib/calculator-flow";
 import { LightingFooterProgress } from "./lighting-footer-progress";
 import { WizardStep0Calculator } from "./wizard-step0-calculator";
 import { WizardStep1Lighting } from "./wizard-step1-lighting";
@@ -24,88 +27,11 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
     "input:not([disabled])",
     "select:not([disabled])",
     "textarea:not([disabled])",
+    "summary",
     '[tabindex]:not([tabindex="-1"])',
   ].join(", ");
-  return Array.from(container.querySelectorAll<HTMLElement>(selector));
-}
-
-type StepNavProps = {
-  currentStep: WizardStep;
-  hasLightingSelected: boolean;
-  /** T-028: Шаг 0 мог быть пропущен (вход «сначала свет») — тогда показываем «Потолок —». */
-  hasCeilingCompleted: boolean;
-  goToStep: (step: WizardStep) => void;
-  /** Позиция внутри Шага 0: «вопрос N из M». Null на шагах света и итога. */
-  step0Progress: { done: number; total: number } | null;
-};
-
-const STEP_LABELS = ["Потолок", "Свет", "Итог"] as const;
-
-/**
- * N-011 · Единственный индикатор прогресса.
- *
- * Раньше в шапке жили два независимых индикатора: чипы «1 Потолок · 2 Свет ·
- * 3 Итог» и отдельная полоска «Шаг 3 из 8». Они показывали разное (макро-шаг
- * против номера вопроса) и на мобильном занимали две строки. Теперь один
- * блок: подпись «Потолок · вопрос 3 из 8» плюс трёхсегментная полоска, где
- * сегмент — макро-шаг. Клик по пройденному сегменту возвращает назад.
- */
-function StepNav({
-  currentStep,
-  hasLightingSelected,
-  hasCeilingCompleted,
-  goToStep,
-  step0Progress,
-}: StepNavProps) {
-  const isSkipped = (i: number) =>
-    (i === 1 && i < currentStep && !hasLightingSelected) ||
-    (i === 0 && i < currentStep && !hasCeilingCompleted);
-
-  const caption =
-    currentStep === 0 && step0Progress && step0Progress.total > 0
-      ? `${STEP_LABELS[0]} · вопрос ${step0Progress.done} из ${step0Progress.total}`
-      : STEP_LABELS[currentStep];
-
-  return (
-    <div className="flex items-center gap-3 max-sm:gap-2">
-      <span className="shrink-0 text-xs font-semibold text-slate-950 max-sm:text-[11px]">
-        {caption}
-      </span>
-      <nav className="flex flex-1 items-center gap-1.5" aria-label="Шаги калькулятора">
-        {[0, 1, 2].map((i) => {
-          const isCurrent = i === currentStep;
-          const canVisit = i < currentStep;
-          const skipped = isSkipped(i);
-          const done = i < currentStep && !skipped;
-
-          return (
-            <button
-              key={i}
-              type="button"
-              onClick={() => canVisit && goToStep(i as WizardStep)}
-              disabled={!canVisit}
-              aria-label={
-                skipped
-                  ? `${STEP_LABELS[i]} пропущен`
-                  : canVisit
-                    ? `Вернуться: ${STEP_LABELS[i]}`
-                    : STEP_LABELS[i]
-              }
-              aria-current={isCurrent ? "step" : undefined}
-              className={`h-1.5 flex-1 rounded-full transition-colors ${
-                canVisit ? "cursor-pointer" : "cursor-default"
-              } ${
-                isCurrent
-                  ? "bg-slate-950"
-                  : done
-                    ? "bg-slate-400 hover:bg-slate-500"
-                    : "bg-slate-200"
-              }`}
-            />
-          );
-        })}
-      </nav>
-    </div>
+  return Array.from(container.querySelectorAll<HTMLElement>(selector)).filter(
+    el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden" && !el.closest("[inert]")
   );
 }
 
@@ -117,6 +43,7 @@ export function CalculatorModal() {
     goToStep,
     options,
     lightingDraft,
+    lightingDiscountMode,
     step1FooterAction,
     step0FooterAction,
     step0BackAction,
@@ -410,7 +337,7 @@ export function CalculatorModal() {
            * справа липкая сводка. Раньше панель растягивалась на всю ширину
            * экрана, и на 1440 px контент болтался в пустоте (F-01, F-02).
            */
-          className={`calculator-modal-panel fixed inset-0 flex h-[100dvh] max-h-[100dvh] w-screen max-w-none flex-col overflow-hidden rounded-none bg-white shadow-none lg:static lg:h-[92dvh] lg:max-h-[92dvh] lg:w-full lg:max-w-[1200px] lg:flex-row lg:rounded-3xl lg:shadow-2xl ${transitionClass} ${
+          className={`pk-calculator calculator-modal-panel fixed inset-0 flex h-[100dvh] max-h-[100dvh] w-screen max-w-none flex-col overflow-hidden rounded-none bg-white shadow-none lg:static lg:h-[92dvh] lg:max-h-[92dvh] lg:w-full lg:max-w-[1200px] lg:flex-row lg:rounded-3xl lg:shadow-2xl ${transitionClass} ${
             modalActive
               ? "translate-y-0 opacity-100 pointer-events-auto"
               : "translate-y-0 opacity-0 pointer-events-none"
@@ -419,14 +346,15 @@ export function CalculatorModal() {
           {/* N-010 · Левая колонка: шапка + прокручиваемый контент + футер. */}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           {/* Header */}
-          <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4 max-sm:px-4 max-sm:py-3">
+          <div className="pk-calc-header flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4 max-sm:px-4 max-sm:py-3">
             <div className="min-w-0 flex-1">
+              <p className="pk-calc-eyebrow">ПОТОЛКОВО · Расчёт проекта</p>
               <h2 id="calc-modal-title" className="text-lg font-semibold text-slate-950 max-sm:text-base">
                 {stepTitle}
               </h2>
               {/* N-011 · Единственный индикатор: подпись + 3-сегментная полоска. */}
               <div className="mt-2 max-sm:mt-1.5">
-                <StepNav
+                <WizardProgress
                   currentStep={currentStep}
                   hasLightingSelected={hasLightingSelected}
                   hasCeilingCompleted={Number(snapshot?.total ?? 0) > 0}
@@ -448,7 +376,7 @@ export function CalculatorModal() {
 
           {/* P2.14: Sticky PriceStrip */}
           {currentStep !== 2 ? (
-            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-5 py-3 max-sm:px-4 max-sm:py-2 lg:hidden">
+            <div className="pk-calc-mobile-price sticky top-0 z-10 border-b border-slate-200 bg-white px-5 py-3 max-sm:px-4 max-sm:py-2 lg:hidden">
               <PriceStrip />
             </div>
           ) : null}
@@ -547,6 +475,8 @@ export function CalculatorModal() {
                           : "Далее →"}
                   </button>
                 </div>
+              ) : leadSubmittedAt ? (
+                <button type="button" onClick={closeCalculator} className="min-h-12 rounded-xl bg-slate-950 px-6 text-sm text-white">Готово</button>
               ) : actionFormVisible ? (
                 <div />
               ) : (
@@ -559,7 +489,7 @@ export function CalculatorModal() {
                   className="flex h-12 items-center rounded-2xl bg-slate-950 px-6 text-sm font-semibold text-white transition-colors hover:bg-slate-800 max-sm:h-11 max-sm:px-5"
                   style={{ minHeight: 48 }}
                 >
-                  Записаться на замер →
+                  {resolveStep2Copy(lightingDiscountMode === "lighting-only" ? "lighting_only" : "ceiling_only").submitLabel} →
                 </button>
               )}
             </div>
@@ -571,14 +501,7 @@ export function CalculatorModal() {
            * Держит сумму и прогресс подбора всегда на виду — на мобильном её
            * роль выполняют строка цены сверху и прогресс в футере.
            */}
-          <aside className="hidden w-[360px] shrink-0 flex-col gap-4 overflow-y-auto border-l border-slate-200 bg-slate-50 px-5 py-5 lg:flex">
-            <div>
-              <h3 className="text-sm font-semibold text-slate-950">Сводка</h3>
-              <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
-                <PriceStrip />
-              </div>
-            </div>
-          </aside>
+          <ProjectOverview />
         </div>
       </div>
     </div>,

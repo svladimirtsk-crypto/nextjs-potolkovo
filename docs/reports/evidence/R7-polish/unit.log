@@ -1,0 +1,529 @@
+
+> nextjs@0.1.0 test
+> vitest run
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/home/user/repo[39m
+
+ [32m✓[39m [30m[42m unit [49m[39m tests/rescue-lead.test.ts [2m([22m[2m20 tests[22m[2m)[22m[33m 775[2mms[22m[39m
+     [33m[2m✓[22m[39m setevaya oshibka -> ok:false, bez uspeha [33m 705[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-storage-guard.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 578[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/api-health.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 249[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-delivery-channels.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 247[2mms[22m[39m
+[90mstderr[2m | tests/delivery-alert.test.ts[2m > [22m[2mPT-015 · проверка на хранилище (полный цикл)[2m > [22m[2mсерия из двух заявок — алерт отправлен и записан в журнал
+[22m[39m[delivery-alert] отправлен алерт через webhook: 4 неудачных попыток подряд, заявок в серии 2
+
+[90mstderr[2m | tests/delivery-alert.test.ts[2m > [22m[2mPT-015 · проверка на хранилище (полный цикл)[2m > [22m[2mповторная проверка в пределах охлаждения — второго алерта нет
+[22m[39m[delivery-alert] отправлен алерт через webhook: 4 неудачных попыток подряд, заявок в серии 2
+
+[90mstderr[2m | tests/delivery-alert.test.ts[2m > [22m[2mPT-015 · проверка на хранилище (полный цикл)[2m > [22m[2mвсе приёмники отказали — запись в журнале всё равно есть (иначе шторм)
+[22m[39m[delivery-alert] алерт о сбое доставки НЕ доставлен (webhook: HTTP 502): 4 неудачных попыток подряд в каналы web3forms, telegram
+
+[90mstderr[2m | tests/delivery-alert.test.ts[2m > [22m[2mPT-015 · проверка на хранилище (полный цикл)[2m > [22m[2mалерт не содержит телефон заявителя, даже если он есть в ошибке канала
+[22m[39m[delivery-alert] отправлен алерт через webhook: 4 неудачных попыток подряд, заявок в серии 2
+
+[90mstderr[2m | tests/delivery-alert.test.ts[2m > [22m[2mPT-015 · проверка встроена в оба места отправки[2m > [22m[2mкрон: серия неудач в оба канала — алерт отправлен, прежние поля ответа не изменились
+[22m[39m[delivery-alert] отправлен алерт через webhook: 4 неудачных попыток подряд, заявок в серии 2
+
+[90mstdout[2m | tests/delivery-alert.test.ts[2m > [22m[2mPT-015 · проверка встроена в оба места отправки[2m > [22m[2mPOST /api/lead: упавшая доставка запускает проверку, не задерживая ответ клиенту
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/delivery-alert.test.ts[2m > [22m[2mPT-015 · проверка встроена в оба места отправки[2m > [22m[2mPOST /api/lead: упавшая доставка запускает проверку, не задерживая ответ клиенту
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstderr[2m | tests/delivery-alert.test.ts[2m > [22m[2mPT-015 · проверка встроена в оба места отправки[2m > [22m[2mPOST /api/lead: упавшая доставка запускает проверку, не задерживая ответ клиенту
+[22m[39m[delivery-alert] отправлен алерт через webhook: 2 неудачных попыток подряд, заявок в серии 1
+
+[90mstdout[2m | tests/delivery-alert.test.ts[2m > [22m[2mPT-015 · проверка встроена в оба места отправки[2m > [22m[2mPOST /api/lead: доставка прошла — проверки алерта не происходит
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/delivery-alert.test.ts[2m > [22m[2mPT-015 · проверка встроена в оба места отправки[2m > [22m[2mPOST /api/lead: доставка прошла — проверки алерта не происходит
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+ [32m✓[39m [30m[42m unit [49m[39m tests/delivery-alert.test.ts [2m([22m[2m40 tests[22m[2m)[22m[32m 217[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/popular-points.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 105[2mms[22m[39m
+[90mstdout[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - идемпотентность: один requestId[2m > [22m[2mдвойная отправка одного payload -> одна запись и один комплект доставки
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - идемпотентность: один requestId[2m > [22m[2mдвойная отправка одного payload -> одна запись и один комплект доставки
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - идемпотентность: один requestId[2m > [22m[2mповтор после таймаута отдаёт тот же код заявки, а не новую строку
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - идемпотентность: один requestId[2m > [22m[2mповтор после таймаута отдаёт тот же код заявки, а не новую строку
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - идемпотентность: один requestId[2m > [22m[2mтот же requestId с другим payload -> 409, второй записи нет
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - идемпотентность: один requestId[2m > [22m[2mтот же requestId с другим payload -> 409, второй записи нет
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - идемпотентность: один requestId[2m > [22m[2mдва параллельных запроса с одним requestId -> одна запись, оба ответа успешны
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - идемпотентность: один requestId[2m > [22m[2mдва параллельных запроса с одним requestId -> одна запись, оба ответа успешны
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - идемпотентность: один requestId[2m > [22m[2mповтор не тратит бюджет серверного rate-limit
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - идемпотентность: один requestId[2m > [22m[2mповтор не тратит бюджет серверного rate-limit
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - идемпотентность: один requestId[2m > [22m[2mразные requestId при одном payload -> дедуп по телефону и отпечатку
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - идемпотентность: один requestId[2m > [22m[2mразные requestId при одном payload -> дедуп по телефону и отпечатку
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - тот же телефон, другой состав[2m > [22m[2mrescue -> полная заявка в течение 10 минут создаёт вторую запись
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - тот же телефон, другой состав[2m > [22m[2mrescue -> полная заявка в течение 10 минут создаёт вторую запись
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - тот же телефон, другой состав[2m > [22m[2mrescue -> полная заявка в течение 10 минут создаёт вторую запись
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - тот же телефон, другой состав[2m > [22m[2mrescue -> полная заявка в течение 10 минут создаёт вторую запись
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - тот же телефон, другой состав[2m > [22m[2mполная заявка сохраняет свой состав, а не подменяется rescue
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - тот же телефон, другой состав[2m > [22m[2mполная заявка сохраняет свой состав, а не подменяется rescue
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - тот же телефон, другой состав[2m > [22m[2mполная заявка сохраняет свой состав, а не подменяется rescue
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - тот же телефон, другой состав[2m > [22m[2mполная заявка сохраняет свой состав, а не подменяется rescue
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - тот же телефон, другой состав[2m > [22m[2mизменившийся состав заказа с тем же телефоном -> новая запись
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - тот же телефон, другой состав[2m > [22m[2mизменившийся состав заказа с тем же телефоном -> новая запись
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - тот же телефон, другой состав[2m > [22m[2mизменившийся состав заказа с тем же телефоном -> новая запись
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - тот же телефон, другой состав[2m > [22m[2mизменившийся состав заказа с тем же телефоном -> новая запись
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - совместимость со старым клиентом[2m > [22m[2mбез requestId дедуп по телефону и содержимому продолжает работать
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - совместимость со старым клиентом[2m > [22m[2mбез requestId дедуп по телефону и содержимому продолжает работать
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - совместимость со старым клиентом[2m > [22m[2mбез requestId заявка с другим составом всё равно создаётся
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - совместимость со старым клиентом[2m > [22m[2mбез requestId заявка с другим составом всё равно создаётся
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - совместимость со старым клиентом[2m > [22m[2mбез requestId заявка с другим составом всё равно создаётся
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - совместимость со старым клиентом[2m > [22m[2mбез requestId заявка с другим составом всё равно создаётся
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - флаг LEAD_IDEMPOTENCY_ENABLED=0[2m > [22m[2mповтор requestId больше не разбирается: срабатывает прежний дедуп по телефону
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - флаг LEAD_IDEMPOTENCY_ENABLED=0[2m > [22m[2mповтор requestId больше не разбирается: срабатывает прежний дедуп по телефону
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - флаг LEAD_IDEMPOTENCY_ENABLED=0[2m > [22m[2mтот же requestId с другим payload не даёт 409
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - флаг LEAD_IDEMPOTENCY_ENABLED=0[2m > [22m[2mтот же requestId с другим payload не даёт 409
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - флаг LEAD_IDEMPOTENCY_ENABLED=0[2m > [22m[2mвозвращается прежний дефект: полная заявка после rescue получает её код
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-idempotency.test.ts[2m > [22m[2mPT-009 - флаг LEAD_IDEMPOTENCY_ENABLED=0[2m > [22m[2mвозвращается прежний дефект: полная заявка после rescue получает её код
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-idempotency.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 109[2mms[22m[39m
+[90mstdout[2m | tests/lead-outbox.test.ts[2m > [22m[2mPT-003 · задание на доставку создаётся вместе с заявкой[2m > [22m[2mзадания существуют на каждый канал сразу после ответа
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-outbox.test.ts[2m > [22m[2mPT-003 · задание на доставку создаётся вместе с заявкой[2m > [22m[2mзадания существуют на каждый канал сразу после ответа
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-outbox.test.ts[2m > [22m[2mPT-003 · задание на доставку создаётся вместе с заявкой[2m > [22m[2mответ приходит, не дожидаясь внешних сервисов
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-outbox.test.ts[2m > [22m[2mPT-003 · задание на доставку создаётся вместе с заявкой[2m > [22m[2mответ приходит, не дожидаясь внешних сервисов
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-outbox.test.ts[2m > [22m[2mPT-003 · задание на доставку создаётся вместе с заявкой[2m > [22m[2mответ не обещает доставку, которой ещё не было
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-outbox.test.ts[2m > [22m[2mPT-003 · задание на доставку создаётся вместе с заявкой[2m > [22m[2mответ не обещает доставку, которой ещё не было
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-outbox.test.ts[2m > [22m[2mPT-003 · задание на доставку создаётся вместе с заявкой[2m > [22m[2mпадение доставки не мешает ответу и попадает в очередь ретрая
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-outbox.test.ts[2m > [22m[2mPT-003 · задание на доставку создаётся вместе с заявкой[2m > [22m[2mпадение доставки не мешает ответу и попадает в очередь ретрая
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-outbox.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 100[2mms[22m[39m
+[90mstdout[2m | tests/lead-route.test.ts[2m > [22m[2mT-027 - POST /api/lead[2m > [22m[2m201 + zapis v hranilishche + dostavka v oba kanala
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-route.test.ts[2m > [22m[2mT-027 - POST /api/lead[2m > [22m[2m201 + zapis v hranilishche + dostavka v oba kanala
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-route.test.ts[2m > [22m[2mT-027 - POST /api/lead[2m > [22m[2mdedup: povtor s tem zhe telefonom vozvrashchaet tot zhe leadId
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-route.test.ts[2m > [22m[2mT-027 - POST /api/lead[2m > [22m[2mdedup: povtor s tem zhe telefonom vozvrashchaet tot zhe leadId
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-route.test.ts[2m > [22m[2mT-027 - POST /api/lead[2m > [22m[2m6-y zapros za 10 min -> 429 s Retry-After
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-route.test.ts[2m > [22m[2mT-027 - POST /api/lead[2m > [22m[2m6-y zapros za 10 min -> 429 s Retry-After
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219910'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-route.test.ts[2m > [22m[2mT-027 - POST /api/lead[2m > [22m[2m6-y zapros za 10 min -> 429 s Retry-After
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-route.test.ts[2m > [22m[2mT-027 - POST /api/lead[2m > [22m[2m6-y zapros za 10 min -> 429 s Retry-After
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219911'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-route.test.ts[2m > [22m[2mT-027 - POST /api/lead[2m > [22m[2m6-y zapros za 10 min -> 429 s Retry-After
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-route.test.ts[2m > [22m[2mT-027 - POST /api/lead[2m > [22m[2m6-y zapros za 10 min -> 429 s Retry-After
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219912'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-route.test.ts[2m > [22m[2mT-027 - POST /api/lead[2m > [22m[2m6-y zapros za 10 min -> 429 s Retry-After
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-route.test.ts[2m > [22m[2mT-027 - POST /api/lead[2m > [22m[2m6-y zapros za 10 min -> 429 s Retry-After
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219913'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-route.test.ts[2m > [22m[2mT-027 - POST /api/lead[2m > [22m[2m6-y zapros za 10 min -> 429 s Retry-After
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-route.test.ts[2m > [22m[2mT-027 - POST /api/lead[2m > [22m[2m6-y zapros za 10 min -> 429 s Retry-After
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219914'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-route.test.ts[2m > [22m[2mT-027 - POST /api/lead[2m > [22m[2mupavshaya dostavka ne roniaet otvet i pishetsya kak failed
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-route.test.ts[2m > [22m[2mT-027 - POST /api/lead[2m > [22m[2mupavshaya dostavka ne roniaet otvet i pishetsya kak failed
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-route.test.ts[2m > [22m[2mT-027 - POST /api/lead[2m > [22m[2mrescue-lead sohranyaetsya so statusom rescue
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-route.test.ts[2m > [22m[2mT-027 - POST /api/lead[2m > [22m[2mrescue-lead sohranyaetsya so statusom rescue
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79001234567'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-route.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 70[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-submit.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 67[2mms[22m[39m
+[90mstderr[2m | tests/lead-route-recalc.test.ts[2m > [22m[2mPT-010 · POST /api/lead пересчитывает цену на сервере[2m > [22m[2mзаниженная сумма не попадает в хранилище — пишется серверная
+[22m[39m[lead] сумма заявки пересчитана сервером: клиент 1 ₽ → сервер 42800 ₽ {
+  phone: [32m'+79161000001'[39m,
+  issues: [
+    {
+      code: [32m'client-price-deviation'[39m,
+      sku: [32m'eks-00010705'[39m,
+      message: [32m'Цена «Крепление АРТ накладное круглое поворотное, чёрное» в заявке 1 ₽, в каталоге 380 ₽ — в расчёт пошла каталожная'[39m
+    },
+    {
+      code: [32m'price-mismatch'[39m,
+      message: [32m'Клиент видел 1 ₽, сервер насчитал 42800 ₽ (расхождение 4279900.0 %)'[39m
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79161000001'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstderr[2m | tests/lead-route-recalc.test.ts[2m > [22m[2mPT-010 · POST /api/lead пересчитывает цену на сервере[2m > [22m[2mписьмо мастеру содержит серверную сумму и служебную пометку
+[22m[39m[lead] сумма заявки пересчитана сервером: клиент 1 ₽ → сервер 42800 ₽ {
+  phone: [32m'+79161000002'[39m,
+  issues: [
+    {
+      code: [32m'client-price-deviation'[39m,
+      sku: [32m'eks-00010705'[39m,
+      message: [32m'Цена «Крепление АРТ накладное круглое поворотное, чёрное» в заявке 1 ₽, в каталоге 380 ₽ — в расчёт пошла каталожная'[39m
+    },
+    {
+      code: [32m'price-mismatch'[39m,
+      message: [32m'Клиент видел 1 ₽, сервер насчитал 42800 ₽ (расхождение 4279900.0 %)'[39m
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79161000002'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstderr[2m | tests/lead-route-recalc.test.ts[2m > [22m[2mPT-010 · POST /api/lead пересчитывает цену на сервере[2m > [22m[2mчестная заявка проходит без пометки расхождения
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79161000005'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstdout[2m | tests/lead-route-recalc.test.ts[2m > [22m[2mPT-010 · POST /api/lead пересчитывает цену на сервере[2m > [22m[2mrescue-заявка без снапшота принимается с суммой клиента
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/lead-route-recalc.test.ts[2m > [22m[2mPT-010 · POST /api/lead пересчитывает цену на сервере[2m > [22m[2mrescue-заявка без снапшота принимается с суммой клиента
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79161000006'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstderr[2m | tests/lead-route-recalc.test.ts[2m > [22m[2mPT-010 · флаг аварийного отката LEAD_SERVER_RECALC_ENABLED=0[2m > [22m[2mсумма клиента проходит как есть, неизвестный SKU больше не отклоняется
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79161000007'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstderr[2m | tests/lead-route-recalc.test.ts[2m > [22m[2mPT-010 · флаг аварийного отката LEAD_SERVER_RECALC_ENABLED=0[2m > [22m[2mсумма клиента проходит как есть, неизвестный SKU больше не отклоняется
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79161000008'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-route-recalc.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 65[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/step1-selectors.test.ts [2m([22m[2m39 tests[22m[2m)[22m[32m 50[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-submit-retry.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 55[2mms[22m[39m
+[90mstderr[2m | tests/availability-admin-route.test.ts[2m > [22m[2mPT-016 · доступ к админке календаря[2m > [22m[2mверный токен проходит проверку доступа (и упирается уже в БД)
+[22m[39m[availability-admin] GET: connect ECONNREFUSED 127.0.0.1:1
+
+ [32m✓[39m [30m[42m unit [49m[39m tests/availability-admin-route.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 48[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/brand-polish.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 46[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-request-id.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/catalog-index.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-server-recalc.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-api.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-server-recalc-rejections.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/availability-slots.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/product-predicates.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/catalog-photo.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/catalog-presentation.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+[90mstderr[2m | tests/availability-api.test.ts[2m > [22m[2mPT-016 · GET /api/availability[2m > [22m[2mнедоступная БД не роняет роут: 200 и запасная строка
+[22m[39m[availability] календарь из БД не прочитался — показываю запасной: connect ECONNREFUSED 127.0.0.1:1
+
+ [32m✓[39m [30m[42m unit [49m[39m tests/availability-api.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/availability-snapshot.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/draft.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/attribution-normalize.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/copy-lint.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/step1-progress.test.ts [2m([22m[2m33 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/kit-rules.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/product-image-pending.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/design-tokens.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/selectors.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lighting.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/safe-storage.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/env.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/step0-fsm.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/step1-cart-rules.test.ts [2m([22m[2m33 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/company-rebrand.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/cart-derived.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/presets.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/entry-context.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/service-faq.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/service-price-anchor.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/analytics.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/service-page-actions.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-failure-view.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/rooms-snapshot.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/snapshot-merge.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lighting-first.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/catalog-kit-gaps.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/reducer.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/step1-footer-action.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/calculator-pricing.test.ts [2m([22m[2m22 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/catalog-coverage.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-consent.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/use-step1-tabs.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/home-price-anchor.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/orphan-track.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/catalog-filters.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/catalog-search.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/editorial-pages.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/privacy-policy.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/strip-state.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/image-manifest.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/telegram-link.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/step2-copy.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/kit-offer.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-snapshot.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/use-catalog-filters.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/track-sale-snapshot.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/service-presentation.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/catalog-images.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/pricing.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/whatsapp-contact.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/availability-window.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/catalog-checkout.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/seo-hub.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/seo-meta.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/privacy-requisites.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/catalog-index-resolve.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/catalog-sections.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/catalog-stale.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/checkout-intent.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/system-entry-price.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/availability-legal.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/discount-mode.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m [30m[45m db [49m[39m tests/lead-store-pg.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [2m[90m↓[39m[22m [30m[45m db [49m[39m tests/availability-db.test.ts [2m([22m[2m10 tests[22m[2m | [22m[33m10 skipped[39m[2m)[22m
+ [2m[90m↓[39m[22m [30m[45m db [49m[39m tests/delivery-alert-db.test.ts [2m([22m[2m9 tests[22m[2m | [22m[33m9 skipped[39m[2m)[22m
+ [2m[90m↓[39m[22m [30m[45m db [49m[39m tests/lead-delivery-integration-db.test.ts [2m([22m[2m19 tests[22m[2m | [22m[33m19 skipped[39m[2m)[22m
+ [2m[90m↓[39m[22m [30m[45m db [49m[39m tests/lead-route-db.test.ts [2m([22m[2m15 tests[22m[2m | [22m[33m15 skipped[39m[2m)[22m
+
+[2m Test Files [22m [1m[32m89 passed[39m[22m[2m | [22m[33m4 skipped[39m[90m (93)[39m
+[2m      Tests [22m [1m[32m1119 passed[39m[22m[2m | [22m[33m53 skipped[39m[90m (1172)[39m
+[2m   Start at [22m 12:35:43
+[2m   Duration [22m 24.81s[2m (transform 2.18s, setup 0ms, import 8.71s, tests 3.75s, environment 9ms)[22m
+
