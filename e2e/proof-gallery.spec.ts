@@ -89,6 +89,12 @@ test("R7 gallery: responsive layout and dialog fit short and narrow viewports", 
     await page.locator('#proof button[aria-label^="Открыть кейс:"]').first().click();
     const dialog = page.locator('.pk-proof-editorial [role="dialog"]');
     await expect(dialog.getByRole("button", { name: "Закрыть", exact: true })).toBeInViewport();
+    for (const name of ["Предыдущее фото", "Следующее фото", "Закрыть"]) {
+      const box = await dialog.getByRole("button", { name, exact: true }).boundingBox();
+      expect(box?.width).toBeGreaterThanOrEqual(44);
+      expect(box?.height).toBeGreaterThanOrEqual(44);
+    }
+    expect(await dialog.locator("h2").evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeLessThanOrEqual(38);
     await expect.poll(() => dialog.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
     const action = dialog.getByRole("button", { name: /Хочу похожее решение/ });
     await action.scrollIntoViewIfNeeded();

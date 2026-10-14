@@ -54,7 +54,7 @@ test("R7: compact header does not hide overflow; mobile disclosure has all servi
 test("R7: desktop disclosure is keyboard-operable and catalogue remains reachable", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/");
-  const trigger = page.getByRole("button", { name: "Решения" });
+  const trigger = page.getByRole("navigation", { name: "Основная навигация", exact: true }).getByRole("button", { name: "Решения", exact: true });
   await trigger.focus();
   await page.keyboard.press("Enter");
   await expect(trigger).toHaveAttribute("aria-expanded", "true");

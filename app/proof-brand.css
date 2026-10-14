@@ -61,7 +61,7 @@
 .pk-proof-photo-tools > p { font-variant-numeric:tabular-nums; white-space:nowrap; }
 .pk-proof-photo-tools a { display:flex; gap:8px; align-items:center; min-height:44px; text-decoration:underline; text-underline-offset:3px; }
 .pk-proof-photo-tools > div { display:flex; gap:6px; }
-.pk-proof-photo-tools button { border:1px solid #b5c2b4; cursor:pointer; width:44px; }
+.pk-proof-photo-tools button { border:1px solid #b5c2b4; cursor:pointer; width:44px; min-height:44px; }
 .pk-proof-thumbnails { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
 .pk-proof-thumbnails button { position:relative; aspect-ratio:1.75; overflow:hidden; border:3px solid transparent; cursor:pointer; }
 .pk-proof-thumbnails button[aria-pressed="true"] { border-color:#173c36; }
