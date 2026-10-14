@@ -39,7 +39,7 @@ export function buildLocalBusinessSchema() {
     "@id": ORGANIZATION_ID,
     name: contacts.brandName,
     url: SITE_URL,
-    image: toAbsoluteUrl("/hero1.jpeg"),
+    image: toAbsoluteUrl(homepage.metadata.ogImageSrc),
     telephone: contacts.phoneDisplay,
     email: contacts.emailDisplay,
     address: {

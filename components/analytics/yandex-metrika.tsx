@@ -18,6 +18,7 @@ const WEBVISOR_PATHS = new Set(["/", "/uslugi/prodazha-trekovogo-osveshcheniya"]
 export function YandexMetrika() {
   const pathname = usePathname();
   const webvisor = WEBVISOR_PATHS.has(pathname);
+  if (process.env.NEXT_PUBLIC_PREVIEW_MODE === "1") return null;
 
   return (
     <Script id="yandex-metrika" strategy="afterInteractive">

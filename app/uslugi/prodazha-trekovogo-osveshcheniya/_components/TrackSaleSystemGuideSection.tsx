@@ -52,7 +52,7 @@ export function TrackSaleSystemGuideSection() {
       <Container>
         <Heading
           eyebrow="Как выбрать систему"
-          title="COLIBRI, CLARUS или ART — подскажу, что подойдёт"
+          title="COLIBRI, CLARUS или ART — подскажем, что подойдёт"
           description="Если потолок ещё не установлен, систему лучше выбирать вместе с конструкцией потолка. Так проще заложить профиль, питание, блоки и монтаж без переделок."
           align="center"
         />

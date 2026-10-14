@@ -1,139 +1,44 @@
-import { servicePriceAnchor } from "@/content/pricing";
-import { Picture } from "@/components/ui/picture";
 import Link from "next/link";
+import { servicePriceAnchor } from "@/content/pricing";
 import type { ServicePageContent } from "@/content/services";
-import { Button } from "@/components/ui/button";
+import { servicePresentation, servicePriceScope } from "@/content/service-presentation";
+import { BrandPicture } from "@/components/brand/brand-picture";
 import { Container } from "@/components/ui/container";
 import { ServiceHeroLightingCta } from "./ServiceHeroLightingCta";
 import { ServiceHeroCta } from "./ServiceHeroCta";
 import { serviceCtaLabel } from "@/lib/service-page-actions";
 
-type ServiceHeroProps = {
-  /** T-014: вычисляемый ценовой якорь вместо статичного бейджа. */
-  priceBadgeOverride?: string;
-  /** N-040: строка про наличие и дату прайса вместо третьего упоминания скидки. */
-  availabilityNote?: string;
-  service: ServicePageContent;
-};
+type ServiceHeroProps = { priceBadgeOverride?: string; availabilityNote?: string; service: ServicePageContent };
 
 export function ServiceHero({ service, priceBadgeOverride, availabilityNote }: ServiceHeroProps) {
-  // N-002: цена берётся из прайса, а не из строкового литерала в services.ts.
-  const priceAnchor = servicePriceAnchor(service.slug);
-  const isTrackSalePage = service.slug === "prodazha-trekovogo-osveshcheniya";
-  const primaryHref = isTrackSalePage ? "#price" : "#action";
-
-  return (
-    <section
-      id="hero"
-      aria-labelledby={`${service.slug}-hero-title`}
-      className="bg-white py-10 sm:py-12 lg:py-16"
-    >
-      <Container>
-        <nav aria-label="Хлебные крошки" className="mb-6">
-          <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-500">
-            <li>
-              <Link
-                href="/"
-                className="transition-colors hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
-              >
-                Главная
-              </Link>
-            </li>
-            <li aria-hidden="true">/</li>
-            <li className="text-slate-950">{service.hero.breadcrumbLabel}</li>
-          </ol>
-        </nav>
-
-        {/*
-          N-032 (F-35): изображение должно продавать эффект, поэтому колонки
-          равные, а на mobile фото идёт ПОСЛЕ блока с ценой и CTA — иначе
-          первый экран занимает картинка, а кнопка уезжает под сгиб.
-        */}
-        <div className="grid gap-8 lg:grid-cols-2 lg:items-center lg:gap-12">
-          <div className="min-w-0">
-            <h1
-              id={`${service.slug}-hero-title`}
-              className="mt-5 text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl"
-            >
-              {service.hero.h1}
-            </h1>
-
-            <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">
-              {service.hero.subtitle}
-            </p>
-
-            {/*
-              T-046 · Диета героя: убраны supportingText, бейдж «Услуга»,
-              бейдж региона (регион живёт в title и футере) и строка телефона.
-              Остаётся ценовой якорь — крупно, как главный факт экрана.
-            */}
-            <p className="mt-6 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-              {priceBadgeOverride ?? priceAnchor.label}
-            </p>
-            {!priceBadgeOverride && priceAnchor.note ? (
-              <p className="mt-2 text-sm text-slate-600">{priceAnchor.note}</p>
-            ) : null}
-
-            {/*
-              N-040 (F-42): на первом экране скидка упоминалась трижды — в
-              чипах, в этой строке и в подзаголовке — и ни разу не говорилось
-              про наличие и срок. Проценты остаются на карточках комплектов,
-              а здесь стоит факт, которого клиенту не хватало.
-            */}
-            {isTrackSalePage && availabilityNote ? (
-              <p className="mt-6 text-sm font-medium text-slate-700">{availabilityNote}</p>
-            ) : null}
-
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-              {isTrackSalePage ? (
-                <>
-                  <Button href={primaryHref} className="justify-center">
-                    {service.hero.primaryCtaLabel}
-                  </Button>
-                  <ServiceHeroLightingCta label="Открыть в калькуляторе" />
-                </>
-              ) : (
-                <>
-                  {/* Primary ведёт в калькулятор с пресетом этой услуги. */}
-                  <ServiceHeroCta label={serviceCtaLabel(service.slug)} />
-                  <a
-                    href="#action"
-                    className="min-h-11 text-center text-sm font-semibold text-slate-700 underline underline-offset-4 transition-colors hover:text-slate-950 sm:text-left"
-                  >
-                    Записаться на замер
-                  </a>
-                </>
-              )}
-            </div>
-
-            <div className="mt-8 flex flex-wrap gap-2">
-              {service.hero.quickFacts.slice(0, 3).map((fact) => (
-                <span
-                  key={fact}
-                  className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-700"
-                >
-                  {fact}
-                </span>
-              ))}
-            </div>
+  const price = servicePriceAnchor(service.slug);
+  const view = servicePresentation[service.slug];
+  const sale = service.slug === "prodazha-trekovogo-osveshcheniya";
+  return <section id="hero" className="pk-service-hero" aria-labelledby={`${service.slug}-hero-title`}>
+    <Container>
+      <nav aria-label="Хлебные крошки" className="pk-service-breadcrumb"><Link href="/">Главная</Link><span aria-hidden="true">/</span><Link href="/uslugi">Решения</Link><span aria-hidden="true">/</span><span aria-current="page">{service.hero.breadcrumbLabel}</span></nav>
+      <div className="pk-service-hero-grid">
+        <div className="pk-service-hero-copy">
+          <p className="pk-service-eyebrow">ПОТОЛКОВО / {view.category}</p>
+          <h1 id={`${service.slug}-hero-title`}>{view.title}</h1>
+          <p className="pk-service-intro">{view.summary}</p>
+          <div className="pk-service-anchor"><span>{servicePriceScope[service.slug].label}</span><strong>{priceBadgeOverride ?? price.label}</strong>
+            {!priceBadgeOverride && price.note && <p>{price.note}</p>}
+            <p>{servicePriceScope[service.slug].note}</p>
+            {sale && availabilityNote && <p>{availabilityNote}</p>}
           </div>
-
-          <div className="order-last min-w-0 lg:order-none">
-            <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-100 shadow-sm">
-              <div className="relative aspect-[4/3]">
-                <Picture
-                  src={service.hero.imageSrc}
-                  alt={service.hero.imageAlt}
-                  fill
-                  priority
-                  sizes="(min-width: 1024px) 48vw, 100vw"
-                  imgClassName="object-cover"
-                />
-              </div>
-            </div>
+          <div className="pk-service-hero-actions">
+            {sale ? <><a className="pk-service-primary" href="#price">{service.hero.primaryCtaLabel}<span aria-hidden="true">↗</span></a><ServiceHeroLightingCta label="Открыть в калькуляторе" /></> : <><ServiceHeroCta label={serviceCtaLabel(service.slug)} /><a href="#action">Записаться на замер <span aria-hidden="true">↗</span></a></>}
           </div>
+          <p className="pk-service-company">Потолки · свет · монтаж<br /><span>Основатель, мастера и партнёрские бригады ПОТОЛКОВО</span></p>
         </div>
-      </Container>
-    </section>
-  );
+        <BrandPicture id={view.image} priority sizes="(max-width: 1023px) 100vw, 55vw" className="pk-service-visual" />
+      </div>
+      <nav className="pk-service-jumps" aria-label="Разделы страницы">
+        {!sale && <a href="#proof">Примеры решений <span aria-hidden="true">↓</span></a>}
+        <a href="#price">{sale ? "Каталог и комплектация" : "Стоимость и состав"} <span aria-hidden="true">↓</span></a>
+        <a href="#action">Обсудить задачу <span aria-hidden="true">↓</span></a>
+      </nav>
+    </Container>
+  </section>;
 }

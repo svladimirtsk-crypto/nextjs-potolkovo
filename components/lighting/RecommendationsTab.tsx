@@ -234,7 +234,7 @@ export function RecommendationsTab({
           onQtyChange={cart.onQtyChange}
           onZoom={cart.onZoom}
           discountPercent={cart.discountPercent}
-          emptyText="Комплектующие для подсветки подберу при звонке."
+          emptyText="Комплектующие для подсветки подберём при звонке."
         />
       ) : null}
 

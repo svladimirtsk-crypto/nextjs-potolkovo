@@ -1,0 +1,42 @@
+[
+  {
+    "name": "catalog",
+    "width": 390,
+    "violations": []
+  },
+  {
+    "name": "products",
+    "width": 390,
+    "violations": []
+  },
+  {
+    "name": "cart",
+    "width": 390,
+    "violations": []
+  },
+  {
+    "name": "intent",
+    "width": 390,
+    "violations": []
+  },
+  {
+    "name": "catalog",
+    "width": 1440,
+    "violations": []
+  },
+  {
+    "name": "products",
+    "width": 1440,
+    "violations": []
+  },
+  {
+    "name": "cart",
+    "width": 1440,
+    "violations": []
+  },
+  {
+    "name": "intent",
+    "width": 1440,
+    "violations": []
+  }
+]

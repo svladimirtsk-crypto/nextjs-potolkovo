@@ -17,7 +17,7 @@ test.describe("Страница света (мобильная)", () => {
     await page.goto("/uslugi/prodazha-trekovogo-osveshcheniya#price");
 
     // Первый «+» в сетке товаров (кнопка подписана самим символом).
-    await page.getByRole("button", { name: "+", exact: true }).first().click();
+    await page.getByRole("button", { name: "Увеличить", exact: true }).first().click();
 
     const cartBar = page.locator("[data-cart-bar]").last();
     await expect(cartBar).toBeVisible();
@@ -34,7 +34,7 @@ test.describe("Страница света (мобильная)", () => {
 
   test("один бар корзины, а не несколько конкурирующих", async ({ page }) => {
     await page.goto("/uslugi/prodazha-trekovogo-osveshcheniya#price");
-    await page.getByRole("button", { name: "+", exact: true }).first().click();
+    await page.getByRole("button", { name: "Увеличить", exact: true }).first().click();
 
     const visibleBars = page.locator("[data-cart-bar]:visible");
     await expect(visibleBars).toHaveCount(1);
@@ -59,7 +59,7 @@ test.describe("Страница света · состав заявки", () => 
     const leads = await interceptLeadApi(page);
 
     await page.goto("/uslugi/prodazha-trekovogo-osveshcheniya#price");
-    await page.getByRole("button", { name: "+", exact: true }).first().click();
+    await page.getByRole("button", { name: "Увеличить", exact: true }).first().click();
 
     const cartBar = page.locator("[data-cart-bar]").last();
     await cartBar.getByRole("button", { name: "Оформить" }).click();
@@ -120,7 +120,7 @@ test.describe("Экран интента каталога: закрытие ≠ 
   /** Открыть диалог выбора так, как это делает человек: товар → «Оформить». */
   async function openIntentDialog(page: Page) {
     await page.goto("/uslugi/prodazha-trekovogo-osveshcheniya#price");
-    await page.getByRole("button", { name: "+", exact: true }).first().click();
+    await page.getByRole("button", { name: "Увеличить", exact: true }).first().click();
 
     const cartBar = page.locator("[data-cart-bar]:visible").last();
     await expect(cartBar).toBeVisible();

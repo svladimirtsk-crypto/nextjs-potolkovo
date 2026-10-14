@@ -1,8 +1,9 @@
 "use client";
 
 import { Picture } from "@/components/ui/picture";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 
+import { useDialogFocus } from "@/lib/use-dialog-focus";
 import { homeAssets } from "@/content/home-assets";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 import { useCalculatorPageContext } from "@/components/calculator-modal/page-context";
@@ -79,17 +80,15 @@ export function ProofModalClient({
   const page = useCalculatorPageContext();
 
   const isOpen = selectedIndex !== null;
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(isOpen, dialogRef, onClose);
   const item = selectedIndex !== null ? items[selectedIndex] : null;
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   useEffect(() => {
     if (!isOpen) return;
 
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
       if (event.key === "ArrowLeft") onPrev();
       if (event.key === "ArrowRight") onNext();
     };
@@ -97,7 +96,6 @@ export function ProofModalClient({
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
-      document.body.style.overflow = originalOverflow;
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [isOpen, onClose, onPrev, onNext]);
@@ -155,7 +153,7 @@ export function ProofModalClient({
   };
 
   return (
-    <div className="fixed inset-0 z-[80]" role="dialog" aria-modal="true" aria-label={item.title}>
+    <div className="pk-proof-modal fixed inset-0 z-[80]">
       <button
         type="button"
         onClick={onClose}
@@ -163,7 +161,7 @@ export function ProofModalClient({
         aria-label="Закрыть окно"
       />
 
-      <div className="absolute inset-x-0 bottom-0 top-0 overflow-hidden bg-white text-slate-950 lg:inset-y-4 lg:left-1/2 lg:w-[min(1180px,calc(100vw-2rem))] lg:-translate-x-1/2 lg:rounded-[2rem]">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={item.title} tabIndex={-1} className="pk-proof-modal-surface absolute inset-x-0 bottom-0 top-0 overflow-hidden bg-white text-slate-950 lg:inset-y-4 lg:left-1/2 lg:w-[min(1180px,calc(100vw-2rem))] lg:-translate-x-1/2 lg:rounded-[2rem]">
         <div className="flex h-full flex-col">
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4 sm:px-6">
             <div className="min-w-0">

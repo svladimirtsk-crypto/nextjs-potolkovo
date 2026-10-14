@@ -22,7 +22,7 @@ export function HeroCta({ label, secondaryLabel }: HeroCtaProps) {
   const page = useCalculatorPageContext();
 
   return (
-    <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
+    <div className="pk-hero-actions">
       <Button
         type="button"
         className="w-full sm:w-auto"
@@ -35,7 +35,7 @@ export function HeroCta({ label, secondaryLabel }: HeroCtaProps) {
       {/* Вторичное действие — текстовая ссылка, чтобы primary в первом экране был один. */}
       <a
         href="#action"
-        className="text-center text-sm font-semibold text-white/80 underline decoration-white/30 underline-offset-4 transition-colors hover:text-white hover:decoration-white sm:text-left"
+        className="pk-text-link"
       >
         {secondaryLabel}
       </a>

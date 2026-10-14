@@ -2,238 +2,78 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { BrandLogo } from "@/components/brand/brand-logo";
 import { contacts } from "@/content/contacts";
 import { homepage } from "@/content/homepage";
 import { serviceLinks } from "@/content/service-links";
-import { scrollToAnchorTarget } from "@/lib/scroll-to-anchor";
 import { Button } from "@/components/ui/button";
-import { Container } from "@/components/ui/container";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 import { useCalculatorPageContext } from "@/components/calculator-modal/page-context";
 
-
-const priorityRank = {
-  high: 0,
-  medium: 1,
-  low: 2,
-} as const;
-
-const headerServiceLinks = serviceLinks
-  .filter((item) => item.showInHeader)
-  .slice()
-  .sort(
-    (a, b) =>
-      (priorityRank[a.priority] ?? 9) - (priorityRank[b.priority] ?? 9)
-  );
-
-export function HomeHeader() {
+/** R7: disclosure navigation; all 9 URLs and PT-008 page-context entries survive. */
+export function HomeHeader({ consultation = false }: { consultation?: boolean }) {
   const { openCalculator } = useCalculatorModal();
-  /**
-   * PT-008: хедер общий для всех страниц, но вход из него — всегда со страницы,
-   * на которой человек сейчас. Раньше здесь был хардкод `source: "home:header"`
-   * и ни пресета, ни слага услуги: на `/uslugi/tenevoy-profil` хедер открывал
-   * типовой расчёт и писал в заявку источник главной.
-   */
   const page = useCalculatorPageContext();
-  const [isDesktopServicesOpen, setIsDesktopServicesOpen] = useState(false);
-  const [isMobileServicesOpen, setIsMobileServicesOpen] = useState(false);
+  const pathname = usePathname();
+  const [desktopOpen, setDesktopOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const header = useRef<HTMLElement>(null);
+  const desktopButton = useRef<HTMLButtonElement>(null);
+  const mobileButton = useRef<HTMLButtonElement>(null);
 
-  const desktopMenuRef = useRef<HTMLDivElement | null>(null);
-  const mobileMenuRef = useRef<HTMLDivElement | null>(null);
+  const handleOutside = useCallback((event: PointerEvent) => {
+    if (!header.current?.contains(event.target as Node)) { setDesktopOpen(false); setMobileOpen(false); }
+  }, []);
+  const handleEscape = useCallback((event: KeyboardEvent) => {
+    if (event.key !== "Escape") return;
+    if (mobileOpen) { setMobileOpen(false); mobileButton.current?.focus(); }
+    if (desktopOpen) { setDesktopOpen(false); desktopButton.current?.focus(); }
+  }, [desktopOpen, mobileOpen]);
 
   useEffect(() => {
-    function handlePointerDown(event: MouseEvent) {
-      const target = event.target as Node;
+    document.addEventListener("pointerdown", handleOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => { document.removeEventListener("pointerdown", handleOutside); document.removeEventListener("keydown", handleEscape); };
+  }, [handleOutside, handleEscape]);
 
-      if (
-        desktopMenuRef.current &&
-        !desktopMenuRef.current.contains(target)
-      ) {
-        setIsDesktopServicesOpen(false);
-      }
-
-      if (
-        mobileMenuRef.current &&
-        !mobileMenuRef.current.contains(target)
-      ) {
-        setIsMobileServicesOpen(false);
-      }
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsDesktopServicesOpen(false);
-        setIsMobileServicesOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
-
-  const pathname = usePathname();
-  /**
-   * T-046: на страницах услуг секции `#trust` и `#proof` — про саму услугу,
-   * а пункт «О мастере» должен вести на блок о мастере на главной. Поэтому
-   * вне главной эти пункты становятся обычными ссылками на `/#…`.
-   */
-  const isHomePage = pathname === "/";
-  const navItems = useMemo(() => homepage.header.navItems, []);
+  const anchorHref = (id: string) => {
+    if (id === "trust") return "/o-kompanii";
+    const missingLocalPrice = id === "price" && !pathname.startsWith("/uslugi/");
+    return pathname !== "/" && (id === "proof" || id === "solutions" || missingLocalPrice) ? `/#${id}` : `#${id}`;
+  };
+  const close = () => { setDesktopOpen(false); setMobileOpen(false); };
 
   return (
-    <header className="sticky top-0 z-50 bg-white/96 shadow-[0_1px_0_rgba(15,23,42,0.08)] backdrop-blur supports-[backdrop-filter]:bg-white/88">
-      <Container className="flex min-h-[var(--header-height)] items-center justify-between gap-3">
-        <Link
-          href="/"
-          className="inline-flex shrink-0 items-center font-mono text-sm font-bold uppercase tracking-[0.24em] text-slate-950 sm:text-[15px]"
-          aria-label={contacts.brandName}
-        >
-          {contacts.brandShortName}
-        </Link>
-
-        <nav className="hidden items-center gap-7 lg:flex">
-          <div ref={desktopMenuRef} className="relative">
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 text-sm font-medium text-slate-700 transition-colors hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
-              aria-haspopup="menu"
-              aria-expanded={isDesktopServicesOpen}
-              aria-controls="desktop-services-menu"
-              onClick={() =>
-                setIsDesktopServicesOpen((prev) => !prev)
-              }
-              onMouseEnter={() => setIsDesktopServicesOpen(true)}
-            >
-              {homepage.header.servicesMenuLabel}
-              <span
-                aria-hidden="true"
-                className={`text-xs transition-transform ${
-                  isDesktopServicesOpen ? "rotate-180" : ""
-                }`}
-              >
-                ▾
-              </span>
-            </button>
-
-            {isDesktopServicesOpen ? (
-              <div
-                id="desktop-services-menu"
-                role="menu"
-                className="absolute left-0 top-[calc(100%+12px)] w-72 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl"
-                onMouseLeave={() => setIsDesktopServicesOpen(false)}
-              >
-                {headerServiceLinks.map((item) => (
-                  <Link
-                    key={item.slug}
-                    href={item.href}
-                    role="menuitem"
-                    className="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
-                    onClick={() => setIsDesktopServicesOpen(false)}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            ) : null}
+    <header ref={header} className="pk-header">
+      <div className="pk-wrap pk-header-inner">
+        <BrandLogo />
+        <nav className="pk-desktop-nav" aria-label="Основная навигация">
+          <div className="pk-services-disclosure">
+            <button ref={desktopButton} type="button" aria-expanded={desktopOpen} aria-controls="desktop-services-menu" onClick={() => setDesktopOpen(!desktopOpen)}>Решения <span aria-hidden="true">⌄</span></button>
+            {desktopOpen && <div className="pk-desktop-menu" id="desktop-services-menu">
+              {serviceLinks.map(item => <Link href={item.href} key={item.slug} onClick={close}>{item.label}<span aria-hidden="true">↗</span></Link>)}
+              <Link href="/uslugi" onClick={close}>Все услуги <span aria-hidden="true">↗</span></Link>
+            </div>}
           </div>
-
-          {navItems.map((item) => {
-            const homeOnly = item.targetId === "trust" || item.targetId === "proof";
-            const useHomeLink = !isHomePage && homeOnly;
-
-            return (
-              <a
-                key={item.targetId}
-                href={useHomeLink ? `/#${item.targetId}` : `#${item.targetId}`}
-                className="text-sm font-medium text-slate-700 transition-colors hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
-                onClick={(event) => {
-                  if (useHomeLink) return;
-                  event.preventDefault();
-                  scrollToAnchorTarget(`#${item.targetId}`);
-                }}
-              >
-                {item.label}
-              </a>
-            );
-          })}
+          <Link href="/umnoe-osveshchenie" aria-current={pathname === "/umnoe-osveshchenie" ? "page" : undefined}>Умный свет</Link>
+          <Link href="/uslugi/prodazha-trekovogo-osveshcheniya">Каталог света</Link>
+          {homepage.header.navItems.map(item => <Link key={item.targetId} href={anchorHref(item.targetId)} aria-current={item.targetId === "trust" && pathname === "/o-kompanii" ? "page" : undefined}>{item.label}</Link>)}
         </nav>
-
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div ref={mobileMenuRef} className="relative lg:hidden">
-            <button
-              type="button"
-              className="inline-flex min-h-11 items-center justify-center rounded-full border border-slate-300 bg-white px-4 text-sm font-medium text-slate-950 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
-              aria-haspopup="menu"
-              aria-expanded={isMobileServicesOpen}
-              aria-controls="mobile-services-menu"
-              onClick={() => setIsMobileServicesOpen((prev) => !prev)}
-            >
-              {homepage.header.servicesMenuLabel}
-            </button>
-
-            {isMobileServicesOpen ? (
-              <div
-                id="mobile-services-menu"
-                role="menu"
-                className="fixed left-4 right-4 top-[calc(var(--header-height)+12px)] z-50 mx-auto w-auto max-w-[22rem] rounded-2xl border border-slate-200 bg-white p-2 shadow-xl max-h-[calc(100vh-var(--header-height)-24px)] overflow-auto"
-              >
-                {headerServiceLinks.map((item) => (
-                  <Link
-                    key={item.slug}
-                    href={item.href}
-                    role="menuitem"
-                    className="block rounded-xl px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
-                    onClick={() => setIsMobileServicesOpen(false)}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            ) : null}
-          </div>
-
-          <a
-            href={contacts.phoneHref}
-            className="hidden min-h-11 items-center rounded-full border border-slate-200 bg-white px-4 text-sm font-medium text-slate-800 transition-colors hover:border-slate-300 hover:text-slate-950 md:inline-flex"
-            aria-label={`${homepage.header.phoneLabelPrefix ?? "Позвонить"} ${contacts.phoneDisplay}`}
-          >
-            {contacts.phoneDisplay}
-          </a>
-
-          {/* T-040: primary хедера открывает калькулятор напрямую. */}
-          {page.presetDisabled ? (
-            /**
-             * PT-008: для услуг из `DISABLED_PRESET_SLUGS` типовой расчёт
-             * даёт обманчиво точную смету, поэтому все точки входа — включая
-             * общий хедер — ведут в обсуждение проекта.
-             */
-            <Button
-              href="#action"
-              className="whitespace-nowrap px-4 sm:px-5"
-              data-testid="header-entry"
-            >
-              <span className="sm:hidden">Обсудить</span>
-              <span className="hidden sm:inline">{page.projectCtaLabel}</span>
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              className="whitespace-nowrap px-4 sm:px-5"
-              data-testid="header-entry"
-              onClick={() => openCalculator(page.optionsFor("header"))}
-            >
-              <span className="sm:hidden">Рассчитать</span>
-              <span className="hidden sm:inline">{homepage.header.primaryCtaLabel}</span>
-            </Button>
-          )}
+        <div className="pk-header-actions">
+          <a className="pk-header-phone" href={contacts.phoneHref}>{contacts.phoneDisplay}<small>Москва и область</small></a>
+          {page.presetDisabled || consultation ? <Button href="#action" className="pk-header-cta" data-testid="header-entry"><span className="sm:hidden">Обсудить</span><span className="hidden sm:inline">{page.projectCtaLabel}</span></Button> :
+            <Button type="button" className="pk-header-cta" data-testid="header-entry" onClick={() => openCalculator(page.optionsFor("header"))}>Рассчитать</Button>}
+          <button className="pk-mobile-toggle" ref={mobileButton} type="button" aria-label={mobileOpen ? "Закрыть меню" : "Открыть меню"} aria-expanded={mobileOpen} aria-controls="mobile-services-menu" onClick={() => setMobileOpen(!mobileOpen)}>
+            <svg width="23" height="23" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d={mobileOpen ? "M5 5l14 14M19 5L5 19" : "M3 6h18M3 12h18M3 18h18"} stroke="currentColor" strokeWidth="1.6" /></svg>
+          </button>
         </div>
-      </Container>
+      </div>
+      {mobileOpen && <nav className="pk-mobile-menu" id="mobile-services-menu" aria-label="Мобильная навигация">
+        <p className="pk-eyebrow">Потолки и освещение</p>
+        {serviceLinks.map(item => <Link key={item.slug} href={item.href} onClick={close}>{item.label}<span aria-hidden="true">↗</span></Link>)}
+        <div className="pk-mobile-extra"><Link href="/uslugi" onClick={close}>Все услуги</Link><Link href="/umnoe-osveshchenie" onClick={close}>Умный свет</Link><Link href="/o-kompanii" onClick={close}>Компания</Link><a href={contacts.phoneHref} onClick={close}>{contacts.phoneDisplay}</a></div>
+      </nav>}
     </header>
   );
 }

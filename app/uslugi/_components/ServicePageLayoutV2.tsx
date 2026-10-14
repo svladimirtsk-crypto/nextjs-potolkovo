@@ -7,6 +7,7 @@ import { HomeFooter } from "@/components/home/home-footer";
 import { MobileStickyCta } from "@/components/home/mobile-sticky-cta";
 import { buildBreadcrumbSchema, buildServiceSchema } from "@/lib/seo-schema";
 import { CalculatorPageContextProvider } from "@/components/calculator-modal/page-context";
+import { ServiceDecisionStrip } from "./ServiceDecisionStrip";
 import { ServiceMidCta } from "./ServiceMidCta";
 
 type ServicePageLayoutV2Props = {
@@ -57,8 +58,9 @@ export function ServicePageLayoutV2({
       <HomeHeader />
 
       <div className="pb-24 lg:pb-0">
-        <main>
+        <main className="pk-service-page" data-service={service.slug}>
           {hero}
+          <ServiceDecisionStrip slug={service.slug} />
           {proof}
           {price}
           {compare ?? null}

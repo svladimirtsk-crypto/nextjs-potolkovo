@@ -1,14 +1,10 @@
+import { brandSocialImage } from "@/content/brand-social";
 import type { Metadata } from "next";
 
 import { JsonLd } from "@/components/seo/json-ld";
 import { HomePage } from "@/components/home/home-page";
-import { homeAssets } from "@/content/home-assets";
 import { homepage } from "@/content/homepage";
 import { buildHomeServiceSchema } from "@/lib/seo-schema";
-
-const ogAsset = homepage.metadata.ogImageAssetKey
-  ? homeAssets.find((asset) => asset.assetKey === homepage.metadata.ogImageAssetKey)
-  : null;
 
 export const metadata: Metadata = {
   title: { absolute: homepage.metadata.title },
@@ -25,15 +21,9 @@ export const metadata: Metadata = {
      * N-062: первым идёт кадр 1200×630 — соцсети берут первую подходящую
      * картинку, и обрезать её им уже не придётся.
      */
-    images: [
-      {
-        url: homepage.metadata.ogImageSrc,
-        width: homepage.metadata.ogImageWidth,
-        height: homepage.metadata.ogImageHeight,
-        alt: ogAsset?.alt ?? homepage.metadata.title,
-      },
-    ],
+    images: [brandSocialImage("/")],
   },
+  twitter: { card: "summary_large_image", title: homepage.metadata.ogTitle ?? homepage.metadata.title, description: homepage.metadata.ogDescription ?? homepage.metadata.description, images: [brandSocialImage("/")] },
 };
 
 export default function Page() {

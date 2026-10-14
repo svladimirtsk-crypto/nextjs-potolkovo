@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { useDialogFocus } from "@/lib/use-dialog-focus";
 import { createPortal } from "react-dom";
 
 import { ProductImage } from "@/components/feed2/ProductImage";
@@ -17,6 +18,11 @@ type Props = {
 
 export function ProductImageLightbox({ src, alt, thumbClassName, productId, kind }: Props) {
   const [open, setOpen] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
+  const [fallbackFailed, setFallbackFailed] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const close = useCallback(() => setOpen(false), []);
+  useDialogFocus(open, dialogRef, close);
 
   const safeSrc = String(src ?? "").trim();
   /**
@@ -32,30 +38,11 @@ export function ProductImageLightbox({ src, alt, thumbClassName, productId, kind
   // на весь экран показываем заглушку с пометкой «Фото уточняется».
   const hasSrc = fullSrc.length > 0 && !isPhotoPending({ productId: id, coverImage: safeSrc });
 
-  useEffect(() => {
-    if (!open) return;
-
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [open]);
-
-  const portal = useMemo(() => {
-    if (!open) return null;
-    if (typeof document === "undefined") return null;
-
-    return createPortal(
+  const portal = open && typeof document !== "undefined" ? createPortal(
       <div
-        className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm"
+        ref={dialogRef}
+        tabIndex={-1}
+        className="pk-product-lightbox fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm"
         role="dialog"
         aria-modal="true"
         aria-label="Просмотр изображения"
@@ -67,12 +54,12 @@ export function ProductImageLightbox({ src, alt, thumbClassName, productId, kind
         >
           {/* без фиксированного aspect ratio -> ничего не обрезается */}
           <div className="flex max-h-[86vh] items-center justify-center p-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={fullSrc}
-              alt={alt}
-              className="max-h-[80vh] w-auto max-w-[90vw] object-contain"
-            />
+            {fallbackFailed || (imageFailed && !localSrc) ? <p className="p-8 text-white">Фото не загрузилось. Уточним изображение у поставщика.</p> : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={imageFailed ? localSrc! : fullSrc} alt={alt}
+                onError={() => imageFailed ? setFallbackFailed(true) : setImageFailed(true)}
+                className="max-h-[80vh] w-auto max-w-[90vw] object-contain" />
+            )}
           </div>
 
           <button
@@ -87,8 +74,7 @@ export function ProductImageLightbox({ src, alt, thumbClassName, productId, kind
         </div>
       </div>,
       document.body
-    );
-  }, [alt, open, fullSrc]);
+    ) : null;
 
   if (!hasSrc) {
     // Увеличивать нечего, но и прятать товар нельзя: показываем ту же заглушку,
@@ -110,7 +96,7 @@ export function ProductImageLightbox({ src, alt, thumbClassName, productId, kind
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => { setImageFailed(false); setFallbackFailed(false); setOpen(true); }}
         className={[
           "relative overflow-hidden rounded-xl bg-slate-100",
           "cursor-zoom-in focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2",
@@ -124,7 +110,7 @@ export function ProductImageLightbox({ src, alt, thumbClassName, productId, kind
           alt={alt}
           productId={productId}
           kind={kind}
-          className="object-cover"
+          className="h-full w-full object-contain"
         />
       </button>
 

@@ -1,0 +1,285 @@
+{
+  "version": 1,
+  "images": {
+    "architectural-living": {
+      "source": "architectural-living.jpg",
+      "kind": "ai-visualization",
+      "label": "Визуализация решения",
+      "alt": "Визуализация гостиной с теневым потолком и встроенным трековым освещением",
+      "usage": "Главная: hero, теневые потолки, свет",
+      "rights": "AI-generated for this project; not a completed client project",
+      "width": 1264,
+      "height": 848,
+      "sources": {
+        "avif": [
+          {
+            "src": "/brand/v7/architectural-living-480.avif",
+            "width": 480
+          },
+          {
+            "src": "/brand/v7/architectural-living-800.avif",
+            "width": 800
+          },
+          {
+            "src": "/brand/v7/architectural-living-1264.avif",
+            "width": 1264
+          }
+        ],
+        "webp": [
+          {
+            "src": "/brand/v7/architectural-living-480.webp",
+            "width": 480
+          },
+          {
+            "src": "/brand/v7/architectural-living-800.webp",
+            "width": 800
+          },
+          {
+            "src": "/brand/v7/architectural-living-1264.webp",
+            "width": 1264
+          }
+        ]
+      }
+    },
+    "floating-bedroom": {
+      "source": "floating-bedroom.jpg",
+      "kind": "ai-visualization",
+      "label": "Визуализация решения",
+      "alt": "Визуализация спальни с парящим потолком и тёплой контурной подсветкой",
+      "usage": "Главная: парящие потолки, скрытые карнизы",
+      "rights": "AI-generated for this project; not a completed client project",
+      "width": 1264,
+      "height": 848,
+      "sources": {
+        "avif": [
+          {
+            "src": "/brand/v7/floating-bedroom-480.avif",
+            "width": 480
+          },
+          {
+            "src": "/brand/v7/floating-bedroom-800.avif",
+            "width": 800
+          },
+          {
+            "src": "/brand/v7/floating-bedroom-1264.avif",
+            "width": 1264
+          }
+        ],
+        "webp": [
+          {
+            "src": "/brand/v7/floating-bedroom-480.webp",
+            "width": 480
+          },
+          {
+            "src": "/brand/v7/floating-bedroom-800.webp",
+            "width": 800
+          },
+          {
+            "src": "/brand/v7/floating-bedroom-1264.webp",
+            "width": 1264
+          }
+        ]
+      }
+    },
+    "light-lines-kitchen": {
+      "source": "light-lines-kitchen.jpg",
+      "kind": "ai-visualization",
+      "label": "Визуализация решения",
+      "alt": "Визуализация кухни со встроенными световыми линиями",
+      "usage": "Главная: световые линии",
+      "rights": "AI-generated for this project; not a completed client project",
+      "width": 1264,
+      "height": 848,
+      "sources": {
+        "avif": [
+          {
+            "src": "/brand/v7/light-lines-kitchen-480.avif",
+            "width": 480
+          },
+          {
+            "src": "/brand/v7/light-lines-kitchen-800.avif",
+            "width": 800
+          },
+          {
+            "src": "/brand/v7/light-lines-kitchen-1264.avif",
+            "width": 1264
+          }
+        ],
+        "webp": [
+          {
+            "src": "/brand/v7/light-lines-kitchen-480.webp",
+            "width": 480
+          },
+          {
+            "src": "/brand/v7/light-lines-kitchen-800.webp",
+            "width": 800
+          },
+          {
+            "src": "/brand/v7/light-lines-kitchen-1264.webp",
+            "width": 1264
+          }
+        ]
+      }
+    },
+    "service-light-lines": {
+      "source": "service-light-lines.jpg",
+      "kind": "ai-visualization",
+      "label": "Визуализация решения",
+      "alt": "Визуализация гостиной со встроенными световыми линиями",
+      "usage": "Страница световых линий и хаб решений",
+      "rights": "AI-generated for this project; not a completed client project",
+      "width": 1264,
+      "height": 848,
+      "sources": {
+        "avif": [
+          {
+            "src": "/brand/v7/service-light-lines-480.avif",
+            "width": 480
+          },
+          {
+            "src": "/brand/v7/service-light-lines-800.avif",
+            "width": 800
+          },
+          {
+            "src": "/brand/v7/service-light-lines-1264.avif",
+            "width": 1264
+          }
+        ],
+        "webp": [
+          {
+            "src": "/brand/v7/service-light-lines-480.webp",
+            "width": 480
+          },
+          {
+            "src": "/brand/v7/service-light-lines-800.webp",
+            "width": 800
+          },
+          {
+            "src": "/brand/v7/service-light-lines-1264.webp",
+            "width": 1264
+          }
+        ]
+      }
+    },
+    "service-concealed-curtain": {
+      "source": "service-concealed-curtain.jpg",
+      "kind": "ai-visualization",
+      "label": "Визуализация решения",
+      "alt": "Визуализация скрытого карниза с потолочной нишей для штор",
+      "usage": "Страница скрытых карнизов и хаб решений",
+      "rights": "AI-generated for this project; not a completed client project",
+      "width": 1264,
+      "height": 848,
+      "sources": {
+        "avif": [
+          {
+            "src": "/brand/v7/service-concealed-curtain-480.avif",
+            "width": 480
+          },
+          {
+            "src": "/brand/v7/service-concealed-curtain-800.avif",
+            "width": 800
+          },
+          {
+            "src": "/brand/v7/service-concealed-curtain-1264.avif",
+            "width": 1264
+          }
+        ],
+        "webp": [
+          {
+            "src": "/brand/v7/service-concealed-curtain-480.webp",
+            "width": 480
+          },
+          {
+            "src": "/brand/v7/service-concealed-curtain-800.webp",
+            "width": 800
+          },
+          {
+            "src": "/brand/v7/service-concealed-curtain-1264.webp",
+            "width": 1264
+          }
+        ]
+      }
+    },
+    "service-standard-ceiling": {
+      "source": "service-standard-ceiling.jpg",
+      "kind": "ai-visualization",
+      "label": "Визуализация решения",
+      "alt": "Визуализация гостиной с простым матовым потолком и обычным примыканием",
+      "usage": "Страница простых потолков и хаб решений",
+      "rights": "AI-generated for this project; not a completed client project",
+      "width": 1264,
+      "height": 848,
+      "sources": {
+        "avif": [
+          {
+            "src": "/brand/v7/service-standard-ceiling-480.avif",
+            "width": 480
+          },
+          {
+            "src": "/brand/v7/service-standard-ceiling-800.avif",
+            "width": 800
+          },
+          {
+            "src": "/brand/v7/service-standard-ceiling-1264.avif",
+            "width": 1264
+          }
+        ],
+        "webp": [
+          {
+            "src": "/brand/v7/service-standard-ceiling-480.webp",
+            "width": 480
+          },
+          {
+            "src": "/brand/v7/service-standard-ceiling-800.webp",
+            "width": 800
+          },
+          {
+            "src": "/brand/v7/service-standard-ceiling-1264.webp",
+            "width": 1264
+          }
+        ]
+      }
+    },
+    "service-luminous-ceiling": {
+      "source": "service-luminous-ceiling.jpg",
+      "kind": "ai-visualization",
+      "label": "Визуализация решения",
+      "alt": "Визуализация равномерно светящегося светопрозрачного потолка",
+      "usage": "Светопрозрачные потолки и хаб решений",
+      "rights": "AI-generated for this project; not a completed client project",
+      "width": 1264,
+      "height": 848,
+      "sources": {
+        "avif": [
+          {
+            "src": "/brand/v7/service-luminous-ceiling-480.avif",
+            "width": 480
+          },
+          {
+            "src": "/brand/v7/service-luminous-ceiling-800.avif",
+            "width": 800
+          },
+          {
+            "src": "/brand/v7/service-luminous-ceiling-1264.avif",
+            "width": 1264
+          }
+        ],
+        "webp": [
+          {
+            "src": "/brand/v7/service-luminous-ceiling-480.webp",
+            "width": 480
+          },
+          {
+            "src": "/brand/v7/service-luminous-ceiling-800.webp",
+            "width": 800
+          },
+          {
+            "src": "/brand/v7/service-luminous-ceiling-1264.webp",
+            "width": 1264
+          }
+        ]
+      }
+    }
+  }
+}
