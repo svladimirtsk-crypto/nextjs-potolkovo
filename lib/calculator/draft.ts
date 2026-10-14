@@ -1,3 +1,4 @@
+import { parseRoomConfirmations, type RoomConfirmations } from "./room-workspace";
 /**
  * T-023 · Черновик расчёта в `sessionStorage`.
  *
@@ -23,6 +24,8 @@ export type CalcDraft = {
   cart: LightingSnapshot | null;
   totalArea: number;
   totalRub: number;
+  /** UI completion only, not measured geometry or electrical verification. */
+  confirmed?: RoomConfirmations;
 };
 
 export type CalcDraftInput = Omit<CalcDraft, "version" | "savedAt">;
@@ -79,6 +82,9 @@ export function inspectCalcDraft(now: number = Date.now()): CalcDraftRead {
     return { status: "unreadable", reason: "corrupt" };
   }
 
+  const confirmed = parseRoomConfirmations(parsed.confirmed);
+  if (Object.hasOwn(parsed, "confirmed") && !confirmed) return { status: "unreadable", reason: "corrupt" };
+
   const savedAt = Number(parsed.savedAt ?? 0);
   if (!Number.isFinite(savedAt) || now - savedAt > CALC_DRAFT_TTL_MS) {
     clearCalcDraft();
@@ -96,6 +102,7 @@ export function inspectCalcDraft(now: number = Date.now()): CalcDraftRead {
       cart: (parsed.cart ?? null) as LightingSnapshot | null,
       totalArea: Number(parsed.totalArea ?? 0),
       totalRub: Number(parsed.totalRub ?? 0),
+      ...(confirmed ? { confirmed } : {}),
     },
   };
 }

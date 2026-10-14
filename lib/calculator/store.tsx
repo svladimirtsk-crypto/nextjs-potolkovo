@@ -26,8 +26,10 @@ import type { CalculatorLeadSnapshot } from "@/lib/calculator/snapshot-types";
  * по четырём подпискам: один вызов в одном месте.
  */
 export type Step0PublishedState = {
-  progress: { done: number; total: number } | null;
+  progress: { done: number; total: number; caption?: string } | null;
   isSummaryReady: boolean;
+  editing?: boolean;
+  discardEdit?: () => void;
   footerAction: { label: string; disabled?: boolean; onClick: () => void } | null;
   backAction: { visible: boolean; onClick?: () => void };
 };

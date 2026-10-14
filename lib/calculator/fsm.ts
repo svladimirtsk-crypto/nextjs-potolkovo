@@ -3,9 +3,9 @@
  *
  * Перенос `lib/step0-fsm.ts` в единый стор: тот модуль остаётся тонкой
  * ре-экспортной обёрткой на время миграции. Ключевое отличие — прогресс:
- * знаменатель `M` фиксирован для сценария (`maxParamsForScenario`), поэтому
- * полоска «вопрос N из M» больше не прыгает, когда включение теневого профиля
- * добавляет параметр в середине опроса.
+ * прогресс относится к реальным параметрам текущей комнаты.
+ * Служебный сценарий и проверка больше не маскируются под вопросы;
+ * при явном включении новой функции число параметров может измениться.
  */
 import type { SolutionScenario } from "@/lib/calculator-modal-types";
 import {
@@ -62,58 +62,24 @@ export function maxParamsForScenario(scenario: SolutionScenario): number {
 }
 
 export type Step0Progress = {
-  /** Сколько шагов уже позади. */
   done: number;
-  /** Фиксированный знаменатель: параметры сценария + сценарий, режим и сводка. */
   total: number;
+  /** Plain-language state for screens that are not questions. */
+  caption?: string;
 };
 
-/**
- * Прогресс с фиксированным знаменателем. Считаем по позиции экрана в потоке,
- * а не по числу подтверждённых параметров, чтобы полоска не откатывалась назад
- * при возврате на предыдущий вопрос.
- */
-export function calcProgress(
-  screen: Step0Screen,
-  ctx: { scenario: SolutionScenario; enabledParams: ParamId[] }
-): Step0Progress {
-  const maxParams = maxParamsForScenario(ctx.scenario);
-  // scenario + параметры + summary (экран режима расчёта удалён в T-041)
-  const total = maxParams + 2;
-
-  let done = 0;
-  switch (screen.t) {
-    case "scenario":
-      done = 0;
-      break;
-    case "roomPicker":
-      done = 1;
-      break;
-    case "param": {
-      const index = ctx.enabledParams.indexOf(screen.param);
-      done = 1 + Math.max(0, index);
-      break;
-    }
-    case "roomEdit":
-      done = 1 + maxParams;
-      break;
-    case "summary":
-      done = total - 1;
-      break;
+export function calcProgress(screen: Step0Screen, ctx: { scenario: SolutionScenario; enabledParams: ParamId[] }): Step0Progress {
+  const total = ctx.enabledParams.length;
+  if (screen.t === "param") {
+    const index = ctx.enabledParams.indexOf(screen.param);
+    return { done: index >= 0 ? index + 1 : 0, total };
   }
-
-  return { done: Math.min(done, total), total };
+  if (screen.t === "summary") return { done: total, total };
+  return { done: 0, total };
 }
 
-/** Номер текущего вопроса для подписи «вопрос N из M». */
-export function paramPosition(
-  screen: Step0Screen,
-  ctx: { scenario: SolutionScenario; enabledParams: ParamId[] }
-): { index: number; total: number } | null {
+export function paramPosition(screen: Step0Screen, ctx: { scenario: SolutionScenario; enabledParams: ParamId[] }): { index: number; total: number } | null {
   if (screen.t !== "param") return null;
-
   const index = ctx.enabledParams.indexOf(screen.param);
-  if (index < 0) return null;
-
-  return { index: index + 1, total: maxParamsForScenario(ctx.scenario) };
+  return index < 0 ? null : { index: index + 1, total: ctx.enabledParams.length };
 }

@@ -236,3 +236,17 @@ describe("PT-007 · inspectCalcDraft", () => {
     expect(window.sessionStorage.getItem(CALC_DRAFT_STORAGE_KEY)).toBeNull();
   });
 });
+
+
+describe("Room UX completion metadata", () => {
+  it("round-trips explicit completion independently of room values", () => {
+    saveCalcDraft({ scenario: "standard", scope: "room", rooms: [room], cart: null, totalArea: 24, totalRub: 24000, confirmed: { r1: { area: true } } });
+    expect(readCalcDraft()?.confirmed).toEqual({ r1: { area: true } });
+    expect(readCalcDraft()?.rooms[0].area).toBe(24);
+  });
+  it("does not treat malformed completion flags as a completed legacy draft", () => {
+    window.sessionStorage.setItem(CALC_DRAFT_STORAGE_KEY, JSON.stringify({ version: 2, savedAt: Date.now(), rooms: [room], confirmed: "bad" }));
+    expect(inspectCalcDraft()).toEqual({ status: "unreadable", reason: "corrupt" });
+    expect(window.sessionStorage.getItem(CALC_DRAFT_STORAGE_KEY)).not.toBeNull();
+  });
+});

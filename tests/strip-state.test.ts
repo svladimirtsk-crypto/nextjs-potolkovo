@@ -19,7 +19,8 @@ describe("N-012 · состояния ценовой полосы", () => {
     const state = selectStripState(base);
     expect(state.kind).toBe("idle");
     if (state.kind !== "idle") return;
-    expect(state.text).toContain("6 вопросов");
+    expect(state.text).toContain("Укажите параметры потолка");
+    expect(state.text).toContain("предварительную стоимость");
     expect(state.text).not.toContain("0 ₽");
   });
 

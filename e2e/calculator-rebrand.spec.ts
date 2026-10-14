@@ -92,7 +92,8 @@ test("R7 calculator: premium choices and edited metres survive into the lead", a
   const lines = modal.locator(".pk-question .flex.items-center.justify-between").filter({ hasText: "Световые линии:" });
   await lines.getByRole("button", { name: "Изменить", exact: true }).click();
   await modal.getByLabel("Длина световых линий, м.п.", { exact: true }).fill("5");
-  await finishParameters(modal);
+  await modal.getByRole("button", { name: "Сохранить изменения", exact: true }).click();
+  await modal.locator(".calculator-modal-footer").getByRole("button", { name: /Готово/ }).click();
   await modal.getByRole("button", { name: /К итогу/ }).first().click();
   const estimate = modal.getByTestId("estimate-card");
   await expect(estimate).toContainText("Предварительно");

@@ -115,6 +115,15 @@ function touchedFromPatch(patch: Partial<RoomConfig>, current: TouchedFlags): To
   return changed ? next : current;
 }
 
+/** Restoring a draft after deletion must not reuse a surviving room's id. */
+export function nextRoomSequence(rooms: readonly Pick<RoomConfig, "id">[]): number {
+  return rooms.reduce((next, room) => {
+    const match = /^room-(\d+)$/.exec(room.id);
+    const value = match ? Number(match[1]) : 0;
+    return Number.isSafeInteger(value + 1) && value >= 1 ? Math.max(next, value + 1) : next;
+  }, rooms.length + 1);
+}
+
 export function calculatorReducer(
   state: CalculatorState,
   action: CalculatorAction
@@ -187,7 +196,7 @@ export function calculatorReducer(
         scope: action.scope,
         rooms: action.rooms,
         activeRoomId: action.rooms[0]?.id ?? null,
-        roomSeq: action.rooms.length + 1,
+        roomSeq: nextRoomSequence(action.rooms),
         prefilled: {},
         presetNote: null,
       };
@@ -199,7 +208,7 @@ export function calculatorReducer(
         scope: action.scope,
         rooms: action.rooms,
         activeRoomId: action.rooms[0]?.id ?? null,
-        roomSeq: action.rooms.length + 1,
+        roomSeq: nextRoomSequence(action.rooms),
         prefilled: action.prefilled.reduce<Record<string, boolean>>((acc, param) => {
           acc[param] = true;
           return acc;

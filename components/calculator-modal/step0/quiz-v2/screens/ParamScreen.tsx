@@ -16,9 +16,9 @@ function formatCurrency(v:number){ return new Intl.NumberFormat("ru-RU").format(
  * T-041: кнопки «Назад» и «Подтвердить» живут только в футере модалки,
  * поэтому экрану больше не нужен `onBack`.
  */
-export function ParamScreen({ roomId, param, engine, onConfirm }:{
+export function ParamScreen({ roomId, param, engine, onConfirm, editing = false }:{
   roomId: string; param: ParamId; engine: CeilingEngine;
-  onConfirm: ()=>void;
+  onConfirm: ()=>void; editing?: boolean;
 }) {
   /**
    * T-041 · Доступность: при смене вопроса фокус уходит на заголовок карточки,
@@ -93,7 +93,7 @@ export function ParamScreen({ roomId, param, engine, onConfirm }:{
         headingRef={headingRef}
         title="Площадь потолка"
         /* N-013 (F-09): «узлы» и «участки в метрах» — язык монтажника. */
-        description="Начнём с площади. Примыкание, карнизы и свет выберем на следующих шагах."
+        description={editing ? "Измените площадь и сохраните правку. Остальные параметры помещения сохранятся." : "Начнём с площади. Примыкание, карнизы и свет выберем на следующих шагах."}
       >
         {kitHint}
 
@@ -103,7 +103,7 @@ export function ParamScreen({ roomId, param, engine, onConfirm }:{
           Раньше первым стоял ввод названия: человек ещё ничего не посчитал,
           а его уже просили печатать (F-08).
         */}
-        <div className="mb-4">
+        {!editing && !isSecondRoom && <div className="mb-4">
           <p className="text-sm font-medium text-slate-700">Что считаем?</p>
           <div className="mt-2 grid grid-cols-2 gap-2">
             <OptionCard
@@ -119,7 +119,7 @@ export function ParamScreen({ roomId, param, engine, onConfirm }:{
               onClick={() => engine.chooseCalcMode("object")}
             />
           </div>
-        </div>
+        </div>}
 
         {/* N-013 (F-10): плашка — только когда значение действительно пришло
             со страницы, и с указанием, что именно подставлено. */}
@@ -152,9 +152,12 @@ export function ParamScreen({ roomId, param, engine, onConfirm }:{
               </label>
               <input
                 id="room-label-v2"
+                autoFocus={nameOpen}
                 className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
                 value={localLabel}
-                onChange={e=>setLocalLabel(e.target.value)}
+                onChange={e=> { setLocalLabel(e.target.value); update({ label: localRoomLabelTrim(e.target.value) }); }}
+                maxLength={60}
+                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } }}
                 onBlur={()=> update({ label: localRoomLabelTrim(localLabel) })}
                 placeholder="Например: Кухня-гостиная"
               />
@@ -177,7 +180,7 @@ export function ParamScreen({ roomId, param, engine, onConfirm }:{
   if (param === "ceiling") {
     const isSimple = !room.shadowEnabled && !room.floatingEnabled;
     return (
-      <SectionCard headingRef={headingRef} title="Тип потолка" description="Выберите вид потолка. Длину профиля укажем следующим вопросом — в метрах.">
+      <SectionCard headingRef={headingRef} title="Тип потолка" description={editing ? "После смены решения может потребоваться проверка метража профиля." : "Выберите вид потолка. Длину профиля укажем следующим вопросом — в метрах."}>
         {prefillHint}
         {kitHint}
         <div className="pk-ceiling-options">
@@ -443,4 +446,4 @@ function UnavailableParamScreen({ onConfirm }: { onConfirm: () => void }) {
   );
 }
 
-function localRoomLabelTrim(s:string){ const t=s.trim(); return t || "Помещение"; }
+function localRoomLabelTrim(s:string){ const t=s.trim().slice(0,60); return t || "Помещение"; }

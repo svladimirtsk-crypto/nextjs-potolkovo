@@ -242,8 +242,8 @@ describe("T-030 - futer Shaga 0", () => {
   });
 });
 
-describe("T-030 - progress s fiksirovannym M", () => {
-  it("znamenatel ne zavisit ot vklyuchennyh opciy", () => {
+describe("Room UX: progress follows actual enabled parameters", () => {
+  it("new explicit options add only their actual questions", () => {
     const scenario = "modern" as const;
     const short = getEnabledParams({
       scenario,
@@ -261,8 +261,10 @@ describe("T-030 - progress s fiksirovannym M", () => {
     const a = calcProgress({ t: "roomPicker", mode: "first" }, { scenario, enabledParams: short });
     const b = calcProgress({ t: "roomPicker", mode: "first" }, { scenario, enabledParams: long });
 
-    // Включение теневого профиля не должно менять знаменатель полоски.
-    expect(a.total).toBe(b.total);
+    // The profile question appears only when it is actually asked.
+    expect(a.total).toBe(short.length);
+    expect(b.total).toBe(long.length);
+    expect(b.total).toBeGreaterThan(a.total);
   });
 
   it("standard koroche modern", () => {
@@ -299,7 +301,7 @@ describe("T-030 - progress s fiksirovannym M", () => {
     });
 
     expect(paramPosition({ t: "param", roomId: "r1", param: "area" }, { scenario, enabledParams }))
-      .toEqual({ index: 1, total: maxParamsForScenario(scenario) });
+      .toEqual({ index: 1, total: enabledParams.length });
     expect(paramPosition({ t: "summary" }, { scenario, enabledParams })).toBeNull();
   });
 });
@@ -363,11 +365,11 @@ describe("N-050 · футер Шага 0 определяется экраном
      * Кнопка прячется в двух случаях: экран выбора сценария (он первый) и
      * первый экран, автоматически пропущенный пресетом со страницы услуги —
      * там «назад» вернуло бы на экран, которого человек не видел.
-     * Во всех остальных случаях она есть, включая historyLength === 1 без
-     * пресета: пользователь пришёл сюда сам и вправе выйти тем же путём.
+     * При historyLength === 1 реального предыдущего экрана нет,
+     * поэтому не показываем бездействующую кнопку независимо от пресета.
      */
     const screen = { t: "param", roomId: "r1", param: "cornice" } as const;
-    expect(selectBackVisible(screen, { historyLength: 1, scenarioPreselected: false })).toBe(true);
+    expect(selectBackVisible(screen, { historyLength: 1, scenarioPreselected: false })).toBe(false);
     expect(selectBackVisible(screen, { historyLength: 1, scenarioPreselected: true })).toBe(false);
     expect(selectBackVisible(screen, { historyLength: 3, scenarioPreselected: true })).toBe(true);
     expect(selectBackVisible({ t: "scenario" }, { historyLength: 5, scenarioPreselected: false })).toBe(

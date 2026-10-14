@@ -1,5 +1,7 @@
 "use client";
 
+import { snapshotAfterLastRoom } from "@/lib/calculator/room-workspace";
+
 import {
   createContext,
   useCallback,
@@ -132,6 +134,16 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
     // T-008: устаревший grandTotal больше не хранится в snapshot
     setSnapshot((prev) => (prev && prev.grandTotal !== undefined ? { ...prev, grandTotal: undefined } : prev));
   }, [setSnapshot]);
+
+  const resetCeilingAfterLastRoom = useCallback(() => {
+    setStep0AreaConfirmed(false);
+    setStep0SessionInteracted(false);
+    setLightingDiscountEligible(false);
+    setSnapshot(prev => snapshotAfterLastRoom(prev, lightingDraft));
+    if (lightingDraft && lightingDraft.mode !== "none" && (lightingDraft.items?.length ?? 0) > 0) {
+      setOptions(prev => ({ ...prev, entryMode: "lighting-first" }));
+    }
+  }, [lightingDraft, setSnapshot]);
 
   const setStep1FooterAction = useCallback((action: Step1FooterAction | null) => {
     setStep1FooterActionState(action);
@@ -403,6 +415,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
 
         step0SessionInteracted,
         markStep0SessionInteracted,
+        resetCeilingAfterLastRoom,
         step0AreaConfirmed,
         step0Progress,
         isStep0SummaryReady,
@@ -444,6 +457,7 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
       grandTotal,
       step0SessionInteracted,
       markStep0SessionInteracted,
+      resetCeilingAfterLastRoom,
       step0AreaConfirmed,
       step0Progress,
       isStep0SummaryReady,

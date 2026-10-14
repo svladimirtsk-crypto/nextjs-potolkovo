@@ -27,7 +27,7 @@ test.describe("Воронка · стандартный сценарий", () =>
      */
     const strip = modal.locator("[data-strip-state]").locator("visible=true").first();
     await expect(strip).toHaveAttribute("data-strip-state", "idle");
-    await expect(strip).toContainText(/Ответьте на \d+ вопрос/);
+    await expect(strip).toContainText(/Укажите параметры потолка/);
     await expect(strip).not.toContainText("₽");
 
     await completeAreaScreen(page, { area: "18 м²", points: "6 шт." });

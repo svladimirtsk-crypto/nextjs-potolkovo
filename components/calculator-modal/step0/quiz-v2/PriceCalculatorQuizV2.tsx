@@ -2,13 +2,15 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ServiceCalculatorPreset } from "@/content/services";
-import type { SolutionScenario, CalculatorFooterAction, CalculatorFooterBackAction } from "@/lib/calculator-modal-types";
+import type { SolutionScenario, CalculatorFooterAction } from "@/lib/calculator-modal-types";
 import { useCeilingCalculatorEngine } from "@/lib/calculator/use-calculator-engine";
 import type { Step0Screen, ParamId } from "@/lib/step0-fsm";
 import { getEnabledParams as getEnabledParamsFsm } from "@/lib/step0-fsm";
 import { calcProgress } from "@/lib/calculator/fsm";
 import { selectBackVisible, selectFooterAction } from "@/lib/calculator/selectors";
 
+import { useRoomWorkspace } from "./use-room-workspace";
+import { RoomContext } from "./room-context";
 import { ScenarioScreen } from "./screens/ScenarioScreen";
 import { RoomPickerScreen } from "./screens/RoomPickerScreen";
 import { ParamScreen } from "./screens/ParamScreen";
@@ -55,6 +57,8 @@ type Props = {
  * `offer` — черновик прочитан и его можно продолжить; `unreadable` — запись
  * есть, но не читается, и молча затирать её нельзя (раздел 3.2 ТЗ).
  */
+const FALLBACK_SCREEN: Step0Screen = { t: "scenario" };
+
 type PendingDraft =
   | { kind: "offer"; draft: CalcDraft }
   | { kind: "unreadable"; reason: "unknown-version" | "corrupt" };
@@ -71,7 +75,7 @@ export function PriceCalculatorQuizV2({
   prefillFromLightingTrigger = 0,
 }: Props) {
   const engine = useCeilingCalculatorEngine(initialSolutionScenario);
-  const { lightingDraft, setLightingDraft, goToStep } = useCalculatorModal();
+  const { lightingDraft, setLightingDraft, goToStep, resetCeilingAfterLastRoom, markStep0SessionInteracted } = useCalculatorModal();
 
   // T-022: сводочные CTA считаем от текущего сценария движка,
   // а не от сценария, «застрявшего» в bridge-снапшоте.
@@ -87,36 +91,30 @@ export function PriceCalculatorQuizV2({
     : { t: "scenario" };
   const { setStep0, setHasInteracted } = useCalculatorStore();
   const [history, setHistory] = useState<Step0Screen[]>([startScreen]);
-  const screen = history[history.length - 1] ?? { t: "scenario" } as Step0Screen;
+  const screen = history[history.length - 1] ?? FALLBACK_SCREEN;
 
   const pushScreen = useCallback((s: Step0Screen) => setHistory(h => [...h, s]), []);
   const popScreen = useCallback(() => setHistory(h => h.length > 1 ? h.slice(0, -1) : h), []);
-  const replaceScreen = useCallback((s: Step0Screen) => setHistory(h => [...h.slice(0, -1), s]), []);
 
-  // confirmed map per room/object
-  const [confirmedMap, setConfirmedMap] = useState<Record<string, Partial<Record<ParamId, boolean>>>>({});
-  const getRoomKey = (roomId: string | "object") => roomId;
-  const isParamConfirmed = (roomId: string, param: ParamId) => !!confirmedMap[getRoomKey(roomId)]?.[param];
-  const markConfirmed = useCallback((roomId: string, param: ParamId, value: boolean = true) => {
-    setConfirmedMap(prev => ({
-      ...prev,
-      [getRoomKey(roomId)]: { ...(prev[getRoomKey(roomId)] ?? {}), [param]: value }
-    }));
-  }, []);
+  const workspace = useRoomWorkspace(engine, setHistory, lightingDraft, resetCeilingAfterLastRoom);
+  const { confirmed: confirmedMap, markConfirmed, edit } = workspace;
+  const viewEngine = workspace.viewEngine;
+  const isEditing = edit !== null;
+  const hasPending = workspace.pending !== null;
 
   // enabled params – dynamic per room state
-  const currentRoom = screen.t === "param" ? engine.rooms.find(r => r.id === screen.roomId) ?? null : engine.activeRoom;
-  const showModern = engine.solutionScenario !== "standard";
+  const currentRoom = screen.t === "param" || screen.t === "roomEdit" ? viewEngine.rooms.find(r => r.id === screen.roomId) ?? null : engine.activeRoom;
+  const showModern = viewEngine.solutionScenario !== "standard";
   const enabledParams: ParamId[] = useMemo(() => {
     const shadow = currentRoom?.shadowEnabled ?? false;
     const floating = currentRoom?.floatingEnabled ?? false;
     return getEnabledParamsFsm({
-      scenario: engine.solutionScenario,
+      scenario: viewEngine.solutionScenario,
       shadowEnabled: shadow,
       floatingEnabled: floating,
       showModernOptions: showModern,
     });
-  }, [engine.solutionScenario, showModern, currentRoom?.shadowEnabled, currentRoom?.floatingEnabled]);
+  }, [viewEngine.solutionScenario, showModern, currentRoom?.shadowEnabled, currentRoom?.floatingEnabled]);
 
   /**
    * T-023 · PT-007: черновик прошлого расчёта — предлагаем продолжить.
@@ -163,6 +161,7 @@ export function PriceCalculatorQuizV2({
       cart: lightingDraft,
       totalArea: engine.totalArea,
       totalRub: engine.totalRub,
+      confirmed: workspace.confirmationsForDraft,
     });
   }, [
     draftSettled,
@@ -172,6 +171,7 @@ export function PriceCalculatorQuizV2({
     engine.totalArea,
     engine.totalRub,
     lightingDraft,
+    workspace.confirmationsForDraft,
   ]);
 
   // T-021: применяем пресет страницы один раз при старте сессии.
@@ -205,15 +205,6 @@ export function PriceCalculatorQuizV2({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preset, draftSettled]);
 
-  // object-scope auto room — engine.chooseCalcMode already creates "object-1"
-  // keep as safety net only if rooms empty after mode switch
-  useEffect(() => {
-    if (engine.calculationScope !== "object") return;
-    if (engine.rooms.length > 0) return;
-    // fallback: engine should have created room in chooseCalcMode, if not — do it here
-    try { engine.addRoom("Весь объект"); } catch {}
-  }, [engine.calculationScope, engine.rooms.length]);
-
   // prefill from lighting — uses engine.applyPrefillFromLighting (respects touched flags)
   useEffect(() => {
     if (!prefillFromLighting) return;
@@ -223,7 +214,9 @@ export function PriceCalculatorQuizV2({
   }, [prefillFromLightingTrigger]);
 
   // next
-  const goNext = useCallback((fromParam?: ParamId, fromRoomId?: string) => {
+  const goNext = (fromParam?: ParamId, fromRoomId?: string) => {
+    if (screen.t === "param") markStep0SessionInteracted();
+    if (edit) { workspace.save(); return; }
     // mark confirmed if param screen
     if (screen.t === "param") {
       markConfirmed(screen.roomId, screen.param, true);
@@ -249,11 +242,14 @@ export function PriceCalculatorQuizV2({
     }
     if (screen.t === "param") {
       const idx = enabledParams.indexOf(screen.param);
-      const nextParam = idx >= 0 ? enabledParams[idx + 1] : null;
+      const nextParam = workspace.reviewRoom === screen.roomId
+        ? enabledParams.find(p => p !== screen.param && !confirmedMap[screen.roomId]?.[p])
+        : idx >= 0 ? enabledParams[idx + 1] : null;
       if (nextParam) {
         pushScreen({ t: "param", roomId: screen.roomId, param: nextParam });
       } else {
-        pushScreen({ t: "summary" });
+        workspace.finishReview();
+        setHistory([{ t: "summary" }]);
       }
       return;
     }
@@ -261,7 +257,7 @@ export function PriceCalculatorQuizV2({
       pushScreen({ t: "summary" });
       return;
     }
-  }, [screen, engine.calculationScope, engine.roomsCount, enabledParams, pushScreen, markConfirmed]);
+  };
 
   const goBack = useCallback(() => {
     if (history.length > 1) {
@@ -292,6 +288,12 @@ export function PriceCalculatorQuizV2({
   }, [screen, history.length, enabledParams.length, engine.solutionScenario]);
 
   const isSummary = screen.t === "summary";
+  const routing = resolveStep0SummaryActions({ scenario: engine.solutionScenario, hasLighting: hasLightingInCart });
+  const runSummaryPrimary = () => {
+    if (workspace.pending) { workspace.resume(workspace.pending.roomId, workspace.pending.param); return; }
+    if (!engine.rooms.length) return;
+    onPrimaryCtaClick?.(); goToStep(routing.primary.destination);
+  };
 
   // T-025: сводка Шага 0 + параметр визита calc_total
   const summaryTrackedRef = useRef(false);
@@ -310,28 +312,25 @@ export function PriceCalculatorQuizV2({
     });
   }, [isSummary, engine.totalRub, engine.roomsCount, engine.solutionScenario, engine.minimumApplied]);
 
-  // T-030: прогресс — чистый селектор с фиксированным знаменателем.
-  const progress = useMemo(
-    () => calcProgress(screen, { scenario: engine.solutionScenario, enabledParams }),
-    [screen, engine.solutionScenario, enabledParams]
-  );
+  const progress = useMemo(() => {
+    const value = calcProgress(screen, { scenario: viewEngine.solutionScenario, enabledParams });
+    const caption = isEditing ? "Редактирование параметра"
+      : isSummary ? (hasPending ? "Проверьте параметры помещений" : "Параметры потолка заполнены")
+      : screen.t === "roomEdit" ? "Карточка помещения"
+      : screen.t === "roomPicker" ? (engine.rooms.length ? "Добавление помещения" : "Добавьте первое помещение")
+      : screen.t === "scenario" ? "Выбор решения" : `Потолок · вопрос ${value.done} из ${value.total}`;
+    return { ...value, caption };
+  }, [screen, viewEngine.solutionScenario, enabledParams, isEditing, isSummary, hasPending, engine.rooms.length]);
 
   /**
    * T-030: подпись кнопки и видимость «назад» считают селекторы — чистые
    * функции экрана, без обращения к DOM и без ветвлений в разметке.
    */
-  const footerSpec = useMemo(
-    () => selectFooterAction(screen, { scope: engine.calculationScope }),
-    [screen, engine.calculationScope]
-  );
-  const backVisible = useMemo(
-    () =>
-      selectBackVisible(screen, {
-        historyLength: history.length,
-        scenarioPreselected: initialSolutionScenario !== "standard",
-      }),
-    [screen, history.length, initialSolutionScenario]
-  );
+  const footerSpec = useMemo(() => isEditing ? { label: "Сохранить изменения", disabled: false }
+    : isSummary ? { label: hasPending ? "Продолжить заполнение →" : summaryPrimaryLabel ?? routing.primary.label, disabled: !engine.rooms.length }
+    : selectFooterAction(screen, { scope: engine.calculationScope }),
+    [isEditing, isSummary, hasPending, summaryPrimaryLabel, routing.primary.label, engine.rooms.length, screen, engine.calculationScope]);
+  const backVisible = isEditing || selectBackVisible(screen, { historyLength: history.length, scenarioPreselected: initialSolutionScenario !== "standard" });
 
   /**
    * N-050 · Публикация состояния Шага 0 в стор.
@@ -347,17 +346,18 @@ export function PriceCalculatorQuizV2({
    * и без ref каждая смена экрана порождала бы новый объект footerAction —
    * то есть лишнюю запись в стор и лишний рендер модалки.
    */
-  const nextRef = useRef({ screen, goNext, pushScreen });
-  nextRef.current = { screen, goNext, pushScreen };
+  const nextRef = useRef({ screen, goNext, setHistory, runSummaryPrimary });
+  nextRef.current = { screen, goNext, setHistory, runSummaryPrimary };
 
   const backRef = useRef(goBack);
-  backRef.current = goBack;
+  backRef.current = edit ? workspace.cancel : goBack;
   const runGoBack = useCallback(() => backRef.current(), []);
 
   const runFooterAction = useCallback(() => {
     const current = nextRef.current;
+    if (current.screen.t === "summary") { current.runSummaryPrimary(); return; }
     if (current.screen.t === "roomEdit") {
-      current.pushScreen({ t: "summary" });
+      current.setHistory([{ t: "summary" }]);
       return;
     }
     current.goNext();
@@ -391,10 +391,12 @@ export function PriceCalculatorQuizV2({
     setStep0({
       progress,
       isSummaryReady: isSummary,
+      editing: isEditing,
+      discardEdit: workspace.cancel,
       footerAction,
       backAction: { visible: backVisible, onClick: runGoBack },
     });
-  }, [setStep0, progress, isSummary, footerAction, backVisible, runGoBack]);
+  }, [setStep0, progress, isSummary, footerAction, backVisible, runGoBack, isEditing, workspace.cancel]);
 
   /**
    * Сброс — отдельным эффектом с пустыми зависимостями.
@@ -432,6 +434,7 @@ export function PriceCalculatorQuizV2({
                    * количества и режим скидки (`discountMode` лежит в том же
                    * снапшоте), а не только параметры комнат.
                    */
+                  workspace.restore(draft.rooms, draft.confirmed, draft.scenario);
                   setLightingDraft(draft.cart);
                   /**
                    * N-050: без этого флага ActionForm не прикладывает снапшот к
@@ -462,6 +465,10 @@ export function PriceCalculatorQuizV2({
 
   return (
     <div data-quiz-v2 data-active-screen={screen.t} className="step0-quiz-v2 max-w-3xl mx-auto">
+      {(screen.t === "param" || screen.t === "roomEdit") && <RoomContext rooms={engine.rooms} roomId={screen.roomId}
+        status={isEditing ? "Изменения не сохранены" : currentRoom ? workspace.roomStatus(currentRoom) : undefined} editing={isEditing}
+        onSelect={workspace.openRoom} onOverview={() => setHistory([{ t: "summary" }])} />}
+      {edit && <p className="pk-room-edit-note" role="status">Изменения и сумма обновятся после сохранения. «Отмена правки» оставит прежний расчёт.</p>}
       {screen.t === "scenario" && (
         <>
           {initialSolutionScenario !== "standard" && history.length > 1 && (
@@ -485,20 +492,26 @@ export function PriceCalculatorQuizV2({
           </button>
         </div>
       ) : null}
+      {screen.t === "roomPicker" && engine.rooms.length === 0 && hasLightingInCart && <div className="pk-room-edit-note">
+        <p>Помещений пока нет. Оборудование сохранено в текущей вкладке.</p>
+        <button type="button" className="min-h-11 underline" onClick={() => { resetCeilingAfterLastRoom(); goToStep(2); }}>Продолжить только со светом</button>
+      </div>}
       {screen.t === "roomPicker" && (
         <RoomPickerScreen
           rooms={engine.rooms}
           mode={screen.mode}
           onAdd={label => { const id = engine.addRoom(label); pushScreen({ t: "param", roomId: id, param: "area" }); }}
-          onSelect={roomId => { engine.switchRoom(roomId); pushScreen({ t: "param", roomId, param: "area" }); }}
+          onSelect={workspace.openRoom}
           onBack={goBack}
         />
       )}
       {screen.t === "param" && (
         <ParamScreen
+          key={`${screen.roomId}:${screen.param}:${edit ? "edit" : "flow"}`}
           roomId={screen.roomId}
           param={screen.param}
-          engine={engine}
+          engine={viewEngine}
+          editing={isEditing}
           onConfirm={() => goNext(screen.param, screen.roomId)}
         />
       )}
@@ -506,38 +519,21 @@ export function PriceCalculatorQuizV2({
         <RoomEditScreen
           roomId={screen.roomId}
           engine={engine}
-          onEditParam={param => pushScreen({ t: "param", roomId: screen.roomId, param })}
+          onEditParam={param => workspace.begin(screen.roomId, param)}
           onBack={goBack}
-          onDelete={() => { engine.removeRoom(screen.roomId); popScreen(); }}
+          onDelete={() => { void workspace.remove(screen.roomId); }}
         />
       )}
-      {screen.t === "summary" && (() => {
-        const routing = resolveStep0SummaryActions({
-          scenario: engine.solutionScenario,
-          hasLighting: hasLightingInCart,
-        });
-        return (
-          <SummaryScreen
-            engine={engine}
-            onEditRoom={roomId => pushScreen({ t: "roomEdit", roomId })}
-            onAddRoom={() => pushScreen({ t: "roomPicker", mode: "add" })}
-            onPrimaryCta={() => {
-              onPrimaryCtaClick?.();
-              goToStep(routing.primary.destination);
-            }}
-            onSecondaryCta={
-              routing.secondary
-                ? () => {
-                    onSecondaryCtaClick?.();
-                    goToStep(routing.secondary!.destination);
-                  }
-                : undefined
-            }
-            primaryLabel={summaryPrimaryLabel ?? routing.primary.label}
-            secondaryLabel={summarySecondaryLabel ?? routing.secondary?.label}
-          />
-        );
-      })()}
+      {screen.t === "summary" && <SummaryScreen engine={engine} roomStatus={workspace.roomStatus}
+        pending={Boolean(workspace.pending)} showPrimary={false}
+        onEditRoom={workspace.openRoom}
+        onAddRoom={() => pushScreen({ t: "roomPicker", mode: "add" })}
+        onPrimaryCta={runSummaryPrimary}
+        onSecondaryCta={!workspace.pending && routing.secondary ? () => {
+          onSecondaryCtaClick?.(); goToStep(routing.secondary!.destination);
+        } : undefined}
+        primaryLabel={summaryPrimaryLabel ?? routing.primary.label}
+        secondaryLabel={summarySecondaryLabel ?? routing.secondary?.label} />}
     </div>
   );
 }

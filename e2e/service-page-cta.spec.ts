@@ -32,8 +32,8 @@ test.describe("Страница услуги · входы в расчёт", () 
 
     const modal = page.locator(MODAL);
     await modal.waitFor();
-    // Пресет страницы доехал — теневой даёт сценарий из 10 вопросов.
-    await expect(modal.getByText(/вопрос 1 из 10/)).toBeVisible();
+    // Пресет страницы доехал — теневой даёт сценарий из 8 реальных параметров.
+    await expect(modal.getByText(/вопрос 1 из 8/)).toBeVisible();
   });
 
   test("F-36: «Хочу так же» открывает расчёт с площадью примера", async ({ page }) => {

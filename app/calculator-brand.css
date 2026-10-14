@@ -130,3 +130,19 @@
   .pk-calculator .calculator-modal-footer { position:static!important; inset:auto!important; z-index:auto!important; }
   .pk-calculator .calculator-modal-content { padding-bottom:24px!important; }
 }
+
+/* Room workspace: identity remains visible, editing is an explicit transaction. */
+.pk-room-context { position:sticky; top:-1px; z-index:4; display:flex; align-items:center; flex-wrap:wrap; gap:10px; padding:12px 14px; margin-bottom:14px; border:1px solid #b6c3b4; border-radius:8px; background:#f6f5effa; }
+.pk-room-context-copy { flex:1 1 140px; min-width:0; }
+.pk-room-context-copy small, .pk-room-context-copy span { display:block; color:#53675e; font-size:10px; line-height:1.5; }
+.pk-room-context-copy strong { display:block; font-size:15px; line-height:1.4; font-weight:600; overflow-wrap:anywhere; }
+.pk-room-context button, .pk-room-context select { min-height:44px; max-width:100%; border:1px solid #b6c3b4; border-radius:5px; background:white; padding:8px 12px; font-size:12px; color:#173c36; }
+.pk-room-context select { width:190px; }
+.pk-room-context-edit { font-size:11px; color:#53675e; }
+.pk-room-edit-note { margin:0 0 14px; padding:12px 14px; background:#edf0e6; border-left:3px solid #a9844b; color:#345347; font-size:12px; line-height:1.65; }
+.pk-calculator .calculator-modal-content { scroll-padding-top:120px; }
+.pk-room-summary-heading { margin-bottom:16px; }
+.pk-room-summary-note { margin-top:12px; font-size:12px; line-height:1.65; color:#53675e; }
+.pk-room-list-label { min-width:0; overflow-wrap:anywhere; }
+.pk-room-list-label small { display:block; margin-top:4px; font-size:11px; color:#53675e; }
+@media(max-width:420px) { .pk-room-context { gap:8px; padding:9px 11px; } .pk-room-context select { width:100%; order:3; } .pk-room-context-copy strong { font-size:14px; } .pk-room-edit button { max-width:100%; } }

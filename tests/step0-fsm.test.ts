@@ -166,13 +166,12 @@ describe("T-091 · fsm: сравнение экранов", () => {
  * закрепляет факт, чтобы M не «поплыл» незаметно при правке списка параметров.
  */
 describe("N-011 · знаменатель прогресса Шага 0", () => {
-  it("standard = 8, modern = 10, advanced = 10", () => {
-    const totalFor = (scenario: SolutionScenario) =>
-      calcProgress({ t: "scenario" }, { scenario, enabledParams: [] }).total;
-
-    expect(totalFor("standard")).toBe(8);
-    expect(totalFor("modern")).toBe(10);
-    expect(totalFor("advanced")).toBe(10);
+  it("actual params: standard 5, modern/advanced 7 before an optional profile", () => {
+    const totalFor = (scenario: SolutionScenario) => {
+      const enabledParams = getEnabledParams({ scenario, shadowEnabled: false, floatingEnabled: false, showModernOptions: scenario !== "standard" });
+      return calcProgress({ t: "param", roomId: "r1", param: "area" }, { scenario, enabledParams }).total;
+    };
+    expect(totalFor("standard")).toBe(5); expect(totalFor("modern")).toBe(7); expect(totalFor("advanced")).toBe(7);
   });
 
   it("знаменатель не меняется по мере ответов", () => {

@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useRef } from "react";
 import type { CeilingEngine } from "@/lib/calculator/use-calculator-engine";
 import type { ParamId } from "@/lib/step0-fsm";
 import {
@@ -12,6 +13,8 @@ export function RoomEditScreen({ roomId, engine, onEditParam, onBack, onDelete }
   roomId: string; engine: CeilingEngine;
   onEditParam: (p: ParamId)=>void; onBack: ()=>void; onDelete?: ()=>void;
 }) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { headingRef.current?.focus(); }, [roomId]);
   const room = engine.rooms.find(r=>r.id===roomId);
   if (!room) return <div>Комната не найдена</div>;
   const { lines, totalRub } = describeRoom(room);
@@ -31,8 +34,8 @@ export function RoomEditScreen({ roomId, engine, onEditParam, onBack, onDelete }
   ];
 
   return (
-    <section className="pk-question rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
-      <h3 className="text-lg font-semibold">Карточка комнаты — {room.label}</h3>
+    <section className="pk-question pk-room-edit rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+      <h3 ref={headingRef} tabIndex={-1} className="text-lg font-semibold">Карточка комнаты — {room.label}</h3>
       <p className="text-sm text-slate-600 mt-1">Выберите параметр для редактирования</p>
       <div className="mt-4 rounded-2xl bg-slate-50 p-4">
         <p className="text-sm font-semibold text-slate-950">Что входит</p>
@@ -42,21 +45,21 @@ export function RoomEditScreen({ roomId, engine, onEditParam, onBack, onDelete }
           ))}
         </ul>
         <p className="mt-3 text-sm font-semibold text-slate-950">
-          Итого по помещению: {nf.format(Math.round(totalRub))} ₽
+          Предварительно по помещению: {nf.format(Math.round(totalRub))} ₽
         </p>
       </div>
 
       <div className="mt-4 space-y-2">
         {items.map(it=>(
-          <div key={it.id} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2">
-            <span className="text-sm">{it.label}: <b>{it.value}</b></span>
-            <button onClick={()=>onEditParam(it.id)} className="text-xs text-slate-600 underline">Изменить</button>
+          <div key={it.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 px-3 py-2">
+            <span id={`room-field-${roomId}-${it.id}`} className="text-sm">{it.label}: <b>{it.value}</b></span>
+            <button type="button" data-edit-param={it.id} aria-describedby={`room-field-${roomId}-${it.id}`} onClick={()=>onEditParam(it.id)} className="min-h-11 px-3 text-sm text-slate-700 underline">Изменить</button>
           </div>
         ))}
       </div>
-      <div className="mt-4 flex justify-between items-center">
-        <button onClick={onBack} className="text-sm text-slate-600">← Назад</button>
-        <button onClick={onDelete} className="text-xs text-rose-600 border border-rose-200 rounded-xl px-3 py-1.5">Удалить текущее помещение</button>
+      <div className="mt-4 flex flex-wrap gap-3 justify-between items-center">
+        <button type="button" onClick={onBack} className="min-h-11 px-3 text-sm text-slate-700">← Назад</button>
+        <button type="button" onClick={onDelete} className="min-h-11 text-sm text-rose-700 border border-rose-200 rounded-xl px-3 py-2">Удалить текущее помещение</button>
       </div>
     </section>
   );

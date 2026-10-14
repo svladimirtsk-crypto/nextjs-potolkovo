@@ -249,7 +249,7 @@ export function selectBackVisible(
   ctx: { historyLength: number; scenarioPreselected: boolean }
 ): boolean {
   if (screen.t === "scenario") return false;
-  if (ctx.historyLength <= 1 && ctx.scenarioPreselected) return false;
+  if (ctx.historyLength <= 1) return false;
   return true;
 }
 
@@ -359,7 +359,7 @@ export function selectStripState(input: StripInput): StripState {
   if (!hasCeiling && !hasLighting) {
     return {
       kind: "idle",
-      text: `Ответьте на ${input.questionsTotal} вопросов — покажем ориентир`,
+      text: "Укажите параметры потолка — покажем предварительную стоимость",
     };
   }
 

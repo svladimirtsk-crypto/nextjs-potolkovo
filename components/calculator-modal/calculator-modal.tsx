@@ -17,7 +17,7 @@ import { WizardStep2Summary } from "./wizard-step2-summary";
 
 import { useCalculatorStore } from "@/lib/calculator/store";
 import { trackCalculatorClose } from "@/lib/analytics";
-import { isConfirmDialogOpen } from "@/components/ui/confirm-dialog";
+import { isConfirmDialogOpen, showConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useRescueOffer } from "./use-rescue-lead";
 
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
@@ -52,7 +52,8 @@ export function CalculatorModal() {
     sessionId,
     leadSubmittedAt,
   } = useCalculatorModal();
-  const { snapshot } = useCalculatorStore();
+  const { snapshot, step0 } = useCalculatorStore();
+  const { editing: step0Editing, discardEdit: discardStep0Edit } = step0;
 
   const panelRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -186,7 +187,15 @@ export function CalculatorModal() {
     try {
       // T-023/T-026: после отправленной заявки ничего не спрашиваем — расчёт уже у мастера
       let rescueSubmitted = false;
-      if (hasAnyData && !leadSubmittedAt && rescueOffer.enabled && typeof window !== "undefined") {
+      const wasEditing = currentStep === 0 && step0Editing;
+      if (wasEditing) {
+        const discard = await showConfirmDialog({ title: "Закрыть без сохранения правки?",
+          message: "Сохранённый расчёт останется. Последние изменения параметра не будут применены и не отправятся в заявку.",
+          confirmLabel: "Отменить правку и закрыть", cancelLabel: "Продолжить редактирование", variant: "danger" });
+        if (discard !== true) return;
+        discardStep0Edit?.();
+      }
+      if (!wasEditing && hasAnyData && !leadSubmittedAt && rescueOffer.enabled && typeof window !== "undefined") {
         rescueSubmitted = await rescueOffer.request();
       }
 
@@ -213,7 +222,7 @@ export function CalculatorModal() {
     } finally {
       closeInFlightRef.current = false;
     }
-  }, [closeCalculator, currentStep, hasAnyData, leadSubmittedAt, rescueOffer]);
+  }, [closeCalculator, currentStep, hasAnyData, leadSubmittedAt, rescueOffer, step0Editing, discardStep0Edit]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -440,7 +449,7 @@ export function CalculatorModal() {
                   className="h-12 rounded-2xl px-5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 max-sm:h-11 max-sm:px-3"
                   style={{ minHeight: 48 }}
                 >
-                  ← Назад
+                  {step0Editing ? "Отмена правки" : "← Назад"}
                 </button>
               ) : (
                 <div className="max-lg:hidden" />

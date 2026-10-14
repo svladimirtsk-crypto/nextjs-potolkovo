@@ -183,12 +183,14 @@ export type CalculatorModalContextValue = {
 
   step0SessionInteracted: boolean;
   markStep0SessionInteracted: () => void;
+  /** Only after explicit confirmation of deleting the last room. Keeps equipment. */
+  resetCeilingAfterLastRoom: () => void;
 
   /** СТРОГОЕ правило: досчёт монтажа в Step3 делаем только если Step0 был подтверждён (0->1). */
   step0AreaConfirmed: boolean;
 
   /** Квиз-флоу: прогресс Step 0 (X из Y шагов). null если compactSections=false или модалка не на Step 0. */
-  step0Progress: { done: number; total: number } | null;
+  step0Progress: { done: number; total: number; caption?: string } | null;
 
   /** Квиз-флоу: достигнута ли сводка (все шаги подтверждены). Используется для смены title и dots-индикатора. */
   isStep0SummaryReady: boolean;

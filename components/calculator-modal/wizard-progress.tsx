@@ -10,9 +10,10 @@ export function WizardProgress({ currentStep, hasLightingSelected, hasCeilingCom
   hasLightingSelected: boolean;
   hasCeilingCompleted: boolean;
   goToStep: (step: WizardStep) => void;
-  step0Progress: { done: number; total: number } | null;
+  step0Progress: { done: number; total: number; caption?: string } | null;
 }) {
-  const caption = currentStep === 0 && step0Progress && step0Progress.total > 0
+  const caption = currentStep === 0 && step0Progress?.caption ? step0Progress.caption
+    : currentStep === 0 && step0Progress && step0Progress.total > 0
     ? `Потолок · вопрос ${step0Progress.done} из ${step0Progress.total}` : LABELS[currentStep];
   return <div className="pk-wizard-progress">
     <span className="pk-wizard-caption">{caption}</span>

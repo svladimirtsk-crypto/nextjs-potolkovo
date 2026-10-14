@@ -68,7 +68,7 @@ test.describe("Раскладка модалки", () => {
      * сумму дефолтной комнаты — цифра без заданного вопроса выглядит как
      * ответ на него.
      */
-    await expect(aside).toContainText(/Ответьте на \d+ вопрос/);
+    await expect(aside).toContainText(/Укажите параметры потолка/);
 
     await modal.getByRole("button", { name: /Одну комнату/ }).click();
     await expect(aside).toContainText("₽");
