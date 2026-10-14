@@ -146,3 +146,8 @@
 .pk-room-list-label { min-width:0; overflow-wrap:anywhere; }
 .pk-room-list-label small { display:block; margin-top:4px; font-size:11px; color:#53675e; }
 @media(max-width:420px) { .pk-room-context { gap:8px; padding:9px 11px; } .pk-room-context select { width:100%; order:3; } .pk-room-context-copy strong { font-size:14px; } .pk-room-edit button { max-width:100%; } }
+/* On short windows the room switcher must not occupy the entire scroll viewport. */
+@media(max-height:650px) {
+  .pk-room-context { position:static; }
+  .pk-calculator .calculator-modal-content { scroll-padding-top:16px; }
+}

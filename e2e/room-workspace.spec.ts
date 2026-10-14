@@ -139,3 +139,21 @@ test('Room UX: deleting the last room keeps equipment and correctly switches to 
   expect(snap.rooms).toHaveLength(0);expect(snap.lighting.items).toHaveLength(1);expect(snap.lighting.items[0].qty).toBe(1);
   expect(snap.totals.discountPct).toBe(10);expect(snap.totals.grand).toBe(snap.totals.lightingEffective);
 });
+
+test('Room UX: a second-room area input remains reachable on a 400px-high screen', async ({ page }) => {
+  const m=await start(page);
+  await m.getByRole('button',{name:/добавить помещение/}).click();
+  await m.getByRole('button',{name:'+ Спальня',exact:true}).click();
+  const input=m.locator('#area-v2');
+  for(const width of [320,390]) {
+    await page.setViewportSize({width,height:400});
+    await input.scrollIntoViewIfNeeded();
+    expect(await input.evaluate(el=>{
+      const r=el.getBoundingClientRect();
+      return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===el;
+    })).toBe(true);
+    const field=await input.boundingBox();const footer=await m.locator('.calculator-modal-footer').boundingBox();
+    expect(field!.y+field!.height).toBeLessThanOrEqual(footer!.y+1);
+    await input.fill('15');await expect(input).toHaveValue('15');
+  }
+});
