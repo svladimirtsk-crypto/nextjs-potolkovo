@@ -36,22 +36,6 @@
 .pk-recovery-contacts a:first-of-type { font-size:23px; letter-spacing:-.5px; }
 .pk-recovery-contacts small { display:block; margin-top:17px; }
 .pk-recovery a:hover { text-decoration:underline; text-underline-offset:4px; }
-.pk-home #proof > div:first-child { max-width:1440px; padding-inline:48px; }
-.pk-home #proof h2 { font-size:clamp(32px,3.5vw,49px); font-weight:450; letter-spacing:-1.7px; line-height:1.15; }
-.pk-home #proof > div > div > div > p { max-width:660px; }
-.pk-proof-card { display:flex; flex-direction:column; border-radius:6px; box-shadow:none; border-color:#cbd3c8; background:var(--pk-paper); }
-.pk-proof-card > button { height:auto; flex:1; }
-.pk-proof-card h3 { font-size:24px; line-height:1.22; font-weight:500; letter-spacing:-.7px; }
-.pk-proof-card span.rounded-full { background:transparent; border:0; border-radius:0; padding:2px 0; margin-right:7px; }
-.pk-proof-card .rounded-full:not(span) { border-radius:4px; }
-.pk-proof-card [class*="font-bold"] { font-weight:500; }
-.pk-proof-card > button > div:last-child { padding:22px; }
-.pk-proof-controls .pk-button { border:1px solid #789080; color:var(--pk-paper) !important; background:transparent; border-radius:4px; min-width:48px; }
-.pk-proof-controls .pk-button:hover { background:#285348; }
-.pk-proof-modal-surface { outline:none; }
-.pk-proof-modal button { border-radius:4px; min-width:44px; min-height:44px; }
-.pk-proof-modal .line-through { color:var(--pk-muted); }
-.pk-proof-modal-surface h2 { font-weight:500; letter-spacing:-.8px; }
 .pk-reviews { background:var(--pk-paper); color:var(--pk-ink); padding:80px 0; }
 .pk-home #reviews { margin-top:0; }
 .pk-reviews-header { display:grid; grid-template-columns:1.2fr .8fr; gap:60px; align-items:start; margin-bottom:35px; }
@@ -96,10 +80,7 @@ section.pk-reviews .pk-reviews-header h2 { font-size:clamp(32px,3.5vw,47px); fon
 .pk-action-contact-links a { border-bottom:1px solid #91a286; padding-bottom:7px; overflow-wrap:anywhere; }
 .pk-action-contact-links span { margin-left:8px; }
 :is(.pk-policy,.pk-recovery,.pk-utility-header,.pk-reviews,.pk-home-action,.pk-proof-modal) :is(a,button,summary):focus-visible { outline:3px solid #63854e; outline-offset:5px; }
-.pk-proof-card > button:focus-visible { outline:3px solid #63854e; outline-offset:-4px; }
-@media(min-width:1024px) { .pk-proof-modal-surface { border-radius:6px; } }
 @media(max-width:1100px) {
-  .pk-home #proof > div:first-child { padding-inline:30px; }
   .pk-recovery { gap:45px; }
   .pk-recovery-aside { padding-left:35px; }
   .pk-home-action-grid { gap:32px 35px; }
@@ -118,9 +99,6 @@ section.pk-reviews .pk-reviews-header h2 { font-size:clamp(32px,3.5vw,47px); fon
   .pk-home-action-grid { grid-template-columns:1fr; grid-template-areas:"intro" "form" "contacts"; }
 }
 @media(max-width:700px) {
-  .pk-home #proof > div:first-child { padding-inline:20px; }
-  .pk-proof-card h3 { font-size:22px; }
-  .pk-proof-card > button > div:last-child { padding:18px; }
   .pk-utility-header > .pk-wrap { gap:12px; }
   .pk-utility-home { font-size:11px; }
   .pk-utility-home span { margin-left:4px; }

@@ -1,395 +1,99 @@
 "use client";
 
+import Link from "next/link";
+import { useRef, useState } from "react";
 import { Picture } from "@/components/ui/picture";
-import { useEffect, useMemo, useState, useRef } from "react";
-
 import { useDialogFocus } from "@/lib/use-dialog-focus";
 import { homeAssets } from "@/content/home-assets";
+import { proofView, type ProofItem } from "@/content/proof-gallery";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 import { useCalculatorPageContext } from "@/components/calculator-modal/page-context";
-import type { ServiceCalculatorPreset } from "@/content/services";
+import { ProofBudget } from "./proof-budget";
 
-type ProofItem = {
-  slug: string;
-  title: string;
-  serviceType: string;
-  roomType: string;
-  summary: string;
-  areaLabel?: string;
-  timelineLabel?: string;
-  priceLabel?: string;
-  imageAssetKey: string;
-  alt: string;
-  ctaLabel: string;
-  actionTargetId: string;
-  addressLabel?: string;
-  challenge?: string;
-  workDone?: string;
-  configurationLines?: readonly string[];
-  scopeLabel?: string;
-  budgetNote?: string;
-  budgetBreakdown?: {
-    ceilingWorksRub: number;
-    lightingRawRub: number;
-    lightingDiscountPercent: number;
-    lightingDiscountedRub: number;
-    customCharges: readonly { label: string; amountRub: number }[];
-    totalRub: number;
-  };
-  actionPreset?: ServiceCalculatorPreset;
+type Props = {
+  items: readonly ProofItem[]; selectedIndex: number | null;
+  onClose: () => void; onPrev: () => void; onNext: () => void;
 };
 
-type ProofModalClientProps = {
-  items: readonly ProofItem[];
-  selectedIndex: number | null;
-  onClose: () => void;
-  onPrev: () => void;
-  onNext: () => void;
-};
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("ru-RU").format(Math.round(value));
-}
-
-function splitPriceLabel(priceLabel?: string) {
-  if (!priceLabel) {
-    return { main: "", suffix: "" };
-  }
-
-  const slashIndex = priceLabel.indexOf("/");
-
-  if (slashIndex === -1) {
-    return { main: priceLabel, suffix: "" };
-  }
-
-  return {
-    main: priceLabel.slice(0, slashIndex).trim(),
-    suffix: priceLabel.slice(slashIndex).trim(),
-  };
-}
-
-export function ProofModalClient({
-  items,
-  selectedIndex,
-  onClose,
-  onPrev,
-  onNext,
-}: ProofModalClientProps) {
-  const { openCalculator } = useCalculatorModal();
-  // PT-008: точка входа описана типизированным EntryContext, а не строкой.
-  const page = useCalculatorPageContext();
-
-  const isOpen = selectedIndex !== null;
-  const dialogRef = useRef<HTMLDivElement>(null);
-  useDialogFocus(isOpen, dialogRef, onClose);
-  const item = selectedIndex !== null ? items[selectedIndex] : null;
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "ArrowLeft") onPrev();
-      if (event.key === "ArrowRight") onNext();
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [isOpen, onClose, onPrev, onNext]);
-
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setActiveImageIndex(0));
-    return () => cancelAnimationFrame(frame);
-  }, [selectedIndex]);
-
-  const asset = useMemo(() => {
-    if (!item) return null;
-    return homeAssets.find((entry) => entry.assetKey === item.imageAssetKey) ?? null;
-  }, [item]);
-
-  const gallery = useMemo<string[]>(() => {
-    if (!asset) return [];
-
-    const maybeGallery =
-      "gallery" in asset && Array.isArray(asset.gallery)
-        ? [...asset.gallery]
-        : [];
-
-    if (maybeGallery.length > 0) {
-      return maybeGallery;
-    }
-
-    return [asset.src];
-  }, [asset]);
-
-  if (!item || !asset) {
-    return null;
-  }
-
-  const safeImageIndex = Math.min(activeImageIndex, Math.max(gallery.length - 1, 0));
-  const activeImage = gallery[safeImageIndex] ?? asset.src;
-  const price = splitPriceLabel(item.priceLabel);
-
-  const handleWantSame = () => {
-    onClose();
-
-    const preset = (item.actionPreset ?? {
-      ceilingType: "standard",
-    }) as ServiceCalculatorPreset;
-
-    openCalculator(
-      page.optionsFor("proof", {
-        preset,
-        // PT-007/PT-008: у части кейсов есть полный пресет — это "explicit",
-        // у остальных подставляется стандартный потолок, то есть "page".
-        presetOrigin: item.actionPreset ? "explicit" : "page",
-        // T-021: единый формат источника "<slug>:<placement>"
-        source: `${item.slug}:proof`,
-      })
-    );
-  };
-
+/** Keyed per item: changing the solution resets the photo without a stale frame. */
+function ProofPhotos({ item }: { item: ProofItem }) {
+  const [index, setIndex] = useState(0);
+  const asset = homeAssets.find(entry => entry.assetKey === item.imageAssetKey);
+  if (!asset) return null;
+  const gallery: readonly string[] = "gallery" in asset ? asset.gallery : [asset.src];
+  const move = (delta: number) => setIndex(current => (current + delta + gallery.length) % gallery.length);
   return (
-    <div className="pk-proof-modal fixed inset-0 z-[80]">
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute inset-0 bg-slate-950/72"
-        aria-label="Закрыть окно"
-      />
+    <div className="pk-proof-photos" role="region" aria-label="Фотографии решения" tabIndex={0} onKeyDown={event => {
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") { event.preventDefault(); move(event.key === "ArrowLeft" ? -1 : 1); }
+    }}>
+      <div className="pk-proof-photo-stage">
+        <Picture src={gallery[index]} alt={`${item.alt} — фото ${index + 1}`} fill sizes="(max-width: 900px) 100vw, 60vw" imgClassName="pk-proof-full-image" />
+      </div>
+      <div className="pk-proof-photo-tools">
+        <p role="status" aria-live="polite" aria-atomic="true">Фото {index + 1} / {gallery.length}</p>
+        <a href={gallery[index]} target="_blank" rel="noopener noreferrer">Оригинал фото <span className="sr-only">(откроется в новой вкладке)</span><span aria-hidden="true">↗</span></a>
+        <div><button type="button" onClick={() => move(-1)} aria-label="Предыдущее фото">←</button><button type="button" onClick={() => move(1)} aria-label="Следующее фото">→</button></div>
+      </div>
+      <div className="pk-proof-thumbnails" role="group" aria-label="Выбрать фотографию">
+        {gallery.map((src, photoIndex) => <button key={src} type="button" aria-label={`Показать фото ${photoIndex + 1}`} aria-pressed={photoIndex === index} onClick={() => setIndex(photoIndex)}>
+          <Picture src={src} alt="" fill sizes="(max-width: 900px) 28vw, 160px" imgClassName="object-cover" />
+          <span aria-hidden="true">{String(photoIndex + 1).padStart(2, "0")}</span>
+        </button>)}
+      </div>
+      <p className="pk-proof-photo-hint">Рассмотрите весь кадр. Стрелки клавиатуры переключают фото, когда фокус находится в галерее.</p>
+    </div>
+  );
+}
 
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={item.title} tabIndex={-1} className="pk-proof-modal-surface absolute inset-x-0 bottom-0 top-0 overflow-hidden bg-white text-slate-950 lg:inset-y-4 lg:left-1/2 lg:w-[min(1180px,calc(100vw-2rem))] lg:-translate-x-1/2 lg:rounded-[2rem]">
-        <div className="flex h-full flex-col">
-          <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4 sm:px-6">
-            <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Работа {selectedIndex! + 1} из {items.length}
-              </p>
-              <p className="mt-1 truncate text-sm font-medium text-slate-900">
-                {item.serviceType}
-              </p>
+export function ProofModalClient({ items, selectedIndex, onClose, onPrev, onNext }: Props) {
+  const { openCalculator } = useCalculatorModal();
+  const page = useCalculatorPageContext();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const item = selectedIndex === null ? null : items[selectedIndex];
+  useDialogFocus(Boolean(item), dialogRef, onClose);
+  if (!item) return null;
+  const view = proofView(item.slug);
+  const handleWantSame = () => {
+    if (!item.actionPreset) return;
+    onClose();
+    openCalculator(page.optionsFor("proof", {
+      preset: item.actionPreset,
+      presetOrigin: "explicit",
+      source: `${item.slug}:proof`,
+    }));
+  };
+  return (
+    <div className="pk-proof-modal pk-proof-editorial">
+      <button type="button" className="pk-proof-backdrop" onClick={onClose} aria-label="Закрыть окно" tabIndex={-1} />
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="proof-dialog-title" tabIndex={-1} className="pk-proof-modal-surface">
+        <header className="pk-proof-dialog-header">
+          <p>ПОТОЛКОВО <span aria-hidden="true">/</span> <span>Решение {selectedIndex! + 1} из {items.length}</span></p>
+          <div><button type="button" disabled={items.length < 2} onClick={onPrev} aria-label="Предыдущая работа">←</button><button type="button" disabled={items.length < 2} onClick={onNext} aria-label="Следующая работа">→</button><button type="button" onClick={onClose} aria-label="Закрыть">✕</button></div>
+        </header>
+        <div className="pk-proof-dialog-body" key={item.slug}>
+          <ProofPhotos item={item} />
+          <div className="pk-proof-story">
+            <div className="pk-proof-story-intro">
+              <p className="pk-eyebrow">Потолок + пространство</p>
+              <h2 id="proof-dialog-title">{item.title}</h2>
+              <p className="pk-proof-location">{item.addressLabel ?? item.roomType}</p>
+              <dl className="pk-proof-facts">
+                {item.areaLabel && <div><dt>Площадь в примере</dt><dd>{item.areaLabel}</dd></div>}
+                {item.timelineLabel && <div><dt>Срок в примере</dt><dd>{item.timelineLabel}</dd></div>}
+              </dl>
+              <p className="pk-proof-summary">{item.summary}</p>
             </div>
-
-            <div className="ml-4 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onPrev}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 transition-colors hover:bg-slate-50"
-                aria-label="Предыдущая работа"
-              >
-                ←
-              </button>
-
-              <button
-                type="button"
-                onClick={onNext}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 transition-colors hover:bg-slate-50"
-                aria-label="Следующая работа"
-              >
-                →
-              </button>
-
-              <button
-                type="button"
-                onClick={onClose}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 transition-colors hover:bg-slate-50"
-                aria-label="Закрыть"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-
-          <div className="min-h-0 flex-1 overflow-y-auto lg:overflow-hidden">
-            <div className="grid h-full lg:grid-cols-[1.15fr_0.85fr]">
-              <div className="flex min-h-0 flex-col border-b border-slate-200 lg:border-b-0 lg:border-r">
-                <div className="relative aspect-[5/4] overflow-hidden bg-slate-100 lg:min-h-0 lg:flex-1 lg:aspect-auto">
-                  <Picture
-                    src={activeImage}
-                    alt={`${item.alt} — фото ${safeImageIndex + 1}`}
-                    fill
-                    sizes="(max-width: 1024px) 100vw, 58vw"
-                    imgClassName="object-cover"
-                  />
-                </div>
-
-                {gallery.length > 1 ? (
-                  <div className="grid grid-cols-3 gap-2 p-3 sm:p-4">
-                    {gallery.map((src, index) => (
-                      <button
-                        key={`${src}-${index}`}
-                        type="button"
-                        onClick={() => setActiveImageIndex(index)}
-                        className={[
-                          "relative aspect-[4/3] overflow-hidden rounded-xl border transition-colors",
-                          index === safeImageIndex
-                            ? "border-slate-950"
-                            : "border-slate-200 hover:border-slate-400",
-                        ].join(" ")}
-                        aria-label={`Показать фото ${index + 1}`}
-                      >
-                        <Picture
-                          src={src}
-                          alt={`${item.alt} — миниатюра ${index + 1}`}
-                          fill
-                          sizes="(max-width: 1024px) 33vw, 180px"
-                          imgClassName="object-cover"
-                        />
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="flex min-h-0 flex-col p-5 sm:p-6 lg:p-8">
-                <div>
-                  <p className="text-sm font-medium text-slate-500">{item.serviceType}</p>
-
-                  <h3 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
-                    {item.title}
-                  </h3>
-
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
-                      {item.roomType}
-                    </span>
-
-                    {item.addressLabel ? (
-                      <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
-                        {item.addressLabel}
-                      </span>
-                    ) : null}
-
-                    {item.areaLabel ? (
-                      <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
-                        {item.areaLabel}
-                      </span>
-                    ) : null}
-
-                    {item.timelineLabel ? (
-                      <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
-                        {item.timelineLabel}
-                      </span>
-                    ) : null}
-
-                    {item.scopeLabel ? (
-                      <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">
-                        {item.scopeLabel}
-                      </span>
-                    ) : null}
-                  </div>
-
-                  {item.summary ? (
-                    <p className="mt-6 text-base leading-7 text-slate-600">{item.summary}</p>
-                  ) : null}
-
-                  {item.challenge ? (
-                    <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">Задача</p>
-                      <p className="mt-2 text-sm leading-6 text-slate-700">{item.challenge}</p>
-                    </div>
-                  ) : null}
-
-                  {item.workDone ? (
-                    <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">Что сделано</p>
-                      <p className="mt-2 text-sm leading-6 text-slate-700">{item.workDone}</p>
-                    </div>
-                  ) : null}
-
-                  {item.configurationLines?.length ? (
-                    <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">Конфигурация</p>
-                      <ul className="mt-2 space-y-1.5 text-sm text-slate-700">
-                        {item.configurationLines.map((line) => (
-                          <li key={line}>• {line}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : null}
-
-                  {item.priceLabel ? (
-                    <div className="mt-8 rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
-                        Ориентир по бюджету
-                      </p>
-
-                      <div className="mt-2 flex items-end gap-2">
-                        <p className="text-4xl font-bold tracking-tight text-slate-950">
-                          {price.main}
-                        </p>
-
-                        {price.suffix ? (
-                          <span className="pb-1 text-sm font-medium text-slate-500">
-                            {price.suffix}
-                          </span>
-                        ) : null}
-                      </div>
-
-                      {item.budgetNote ? (
-                        <p className="mt-2 text-sm leading-6 text-slate-600">{item.budgetNote}</p>
-                      ) : null}
-
-                      {item.budgetBreakdown ? (
-                        <div className="mt-4 space-y-2 border-t border-slate-200 pt-4 text-sm text-slate-700">
-                          <div className="flex items-center justify-between gap-3">
-                            <span>Потолок и монтаж</span>
-                            <span className="font-medium">{formatCurrency(item.budgetBreakdown.ceilingWorksRub)} ₽</span>
-                          </div>
-                          <div className="flex items-center justify-between gap-3">
-                            <span>Освещение без скидки</span>
-                            <span className="line-through text-slate-400">{formatCurrency(item.budgetBreakdown.lightingRawRub)} ₽</span>
-                          </div>
-                          <div className="flex items-center justify-between gap-3 text-emerald-700">
-                            <span>Освещение со скидкой −{item.budgetBreakdown.lightingDiscountPercent}%</span>
-                            <span className="font-medium">{formatCurrency(item.budgetBreakdown.lightingDiscountedRub)} ₽</span>
-                          </div>
-                          {item.budgetBreakdown.customCharges?.map((charge) => (
-                            <div key={charge.label} className="flex items-center justify-between gap-3">
-                              <span>{charge.label}</span>
-                              <span className="font-medium">{formatCurrency(charge.amountRub)} ₽</span>
-                            </div>
-                          ))}
-                          <div className="flex items-center justify-between gap-3 border-t border-slate-200 pt-3 font-semibold text-slate-950">
-                            <span>Итого по кейсу</span>
-                            <span>{formatCurrency(item.budgetBreakdown.totalRub)} ₽</span>
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="mt-8 space-y-3 lg:mt-auto">
-                  <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
-                    <p className="font-semibold">Что будет дальше</p>
-                    <ul className="mt-2 space-y-1.5 text-blue-900/80">
-                      <li>1. Загружу стартовые параметры по этому кейсу.</li>
-                      <li>2. Вы проверите площадь и метры нужных участков.</li>
-                      <li>3. Затем можно уточнить свет и получить общий ориентир.</li>
-                    </ul>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleWantSame}
-                    className="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-slate-950 bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition-colors hover:border-slate-800 hover:bg-slate-800"
-                  >
-                    Хочу похожее решение
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="inline-flex min-h-12 w-full items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition-colors hover:border-slate-950 hover:bg-slate-50"
-                  >
-                    Закрыть
-                  </button>
-                </div>
-              </div>
+            {item.challenge && <section className="pk-proof-story-section"><h3><span>01</span> Задача</h3><p>{item.challenge}</p></section>}
+            {item.workDone && <section className="pk-proof-story-section"><h3><span>02</span> Решение</h3><p>{item.workDone}</p></section>}
+            {item.configurationLines?.length ? <details className="pk-proof-configuration"><summary>Параметры этого примера <span aria-hidden="true">+</span></summary><ul>{item.configurationLines.map(line => <li key={line}>{line}</li>)}</ul></details> : null}
+            {view.categories.includes("light") && <aside className="pk-proof-lighting-note"><p>Для нового проекта протокол управления, оборудование и совместимость проверяются отдельно.</p><Link href="/umnoe-osveshchenie" onClick={onClose}>Управление светом: что уточнить <span aria-hidden="true">↗</span></Link></aside>}
+            <ProofBudget item={item} />
+            <div className="pk-proof-next-step">
+              <p className="pk-eyebrow">Для вашего помещения</p>
+              <p>{item.actionPreset ? "Перенесём стартовые параметры в калькулятор. Проверьте площадь и метры участков, затем уточните освещение. Комплект светильников не добавляется автоматически." : "Нестандартную форму и состав освещения обсуждаем по проекту. Типовой калькулятор не заменяет такую оценку."}</p>
+              {item.actionPreset ? <button type="button" className="pk-proof-primary" onClick={handleWantSame}>Хочу похожее решение <span aria-hidden="true">↗</span></button> : <Link className="pk-proof-primary" href={`${view.servicePath}#action`} onClick={onClose}>Обсудить проект <span aria-hidden="true">↗</span></Link>}
+              <Link className="pk-proof-service-link" href={view.servicePath} onClick={onClose}>{view.serviceLabel} <span aria-hidden="true">↗</span></Link>
             </div>
           </div>
         </div>

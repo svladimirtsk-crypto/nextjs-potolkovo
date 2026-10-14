@@ -14,6 +14,7 @@ import "./catalog-brand.css";
 import "./services-brand.css";
 import "./editorial-brand.css";
 import "./polish-brand.css";
+import "./proof-brand.css";
 
 const inter = localFont({
   src: "../public/brand/v7/inter-cyrillic-latin.woff2",

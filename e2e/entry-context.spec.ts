@@ -271,11 +271,7 @@ test.describe("PT-008 · приёмка: кейс «18 м² / 19 м тенево
     await page.goto("/");
     await clearCalcDraftStorage(page);
 
-    const card = page
-      .locator("article")
-      .filter({ hasText: "Теневой профиль + трековое освещение COLIBRI" })
-      .locator("visible=true")
-      .first();
+    const card = page.locator('#proof article[data-proof-slug="shadow-track-apartment"]');
     await card.scrollIntoViewIfNeeded();
     await card.getByRole("button", { name: "Хочу похожее решение" }).click();
 

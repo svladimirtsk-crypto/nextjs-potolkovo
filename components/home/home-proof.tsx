@@ -1,119 +1,52 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useState } from "react";
-
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 import { useCalculatorPageContext } from "@/components/calculator-modal/page-context";
-import type { ServiceCalculatorPreset } from "@/content/services";
-
 import { homepage } from "@/content/homepage";
-import { Container } from "@/components/ui/container";
-import { Heading } from "@/components/ui/heading";
-import { Section } from "@/components/ui/section";
-
-import { ProofCard } from "./proof-card";
+import { filterProofItems, proofFilters, type ProofFilter, type ProofItem } from "@/content/proof-gallery";
+import { ProofGalleryCard } from "./proof-gallery-card";
 import { ProofModalClient } from "./proof-modal-client";
-import { ProofTrackClient } from "./proof-track-client";
-import { ProofSliderDesktop } from "./proof-slider-desktop";
-
-const proof = homepage.proof;
 
 export function HomeProof() {
   const { openCalculator } = useCalculatorModal();
-  // PT-008: точка входа описана типизированным EntryContext, а не строкой.
   const page = useCalculatorPageContext();
+  const [filter, setFilter] = useState<ProofFilter>("all");
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-
-  /** T-040: «Хочу так же» открывает калькулятор с пресетом кейса. */
-  const wantSame = (item: (typeof proof.items)[number]) => {
-    // У части кейсов пресета нет — открываем калькулятор со стандартным потолком.
-    const itemPreset = (item as { actionPreset?: ServiceCalculatorPreset }).actionPreset;
-    const preset = (itemPreset ?? { ceilingType: "standard" }) as ServiceCalculatorPreset;
-    openCalculator(
-      page.optionsFor("proof", {
-        preset,
-        // PT-007 (раздел 3.1): у части кейсов есть полный пресет конкретного
-        // кейса — это "explicit". У остальных подставляется стандартный
-        // потолок, то есть частичные данные страницы, — "page".
-        presetOrigin: itemPreset ? "explicit" : "page",
-        source: `${item.slug}:proof-card`,
-      })
-    );
-  };
-
-  const openByIndex = (index: number) => setSelectedIndex(index);
-
-  const openBySlug = (slug: string) => {
-    const index = proof.items.findIndex((item) => item.slug === slug);
-    if (index >= 0) setSelectedIndex(index);
-  };
-
+  const items = filterProofItems(filter);
   const closeModal = useCallback(() => setSelectedIndex(null), []);
+  const showPrev = useCallback(() => setSelectedIndex(index => index === null ? null : (index - 1 + items.length) % items.length), [items.length]);
+  const showNext = useCallback(() => setSelectedIndex(index => index === null ? null : (index + 1) % items.length), [items.length]);
 
-  const showPrev = () =>
-    setSelectedIndex((cur) => {
-      if (cur === null) return cur;
-      return cur === 0 ? proof.items.length - 1 : cur - 1;
-    });
-
-  const showNext = () =>
-    setSelectedIndex((cur) => {
-      if (cur === null) return cur;
-      return cur === proof.items.length - 1 ? 0 : cur + 1;
-    });
+  const wantSame = (item: ProofItem) => {
+    if (!item.actionPreset) return;
+    openCalculator(page.optionsFor("proof", {
+      preset: item.actionPreset,
+      presetOrigin: "explicit",
+      source: `${item.slug}:proof-card`,
+    }));
+  };
 
   return (
-    <Section id="proof" className="bg-slate-950 text-white">
-      <Container>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <Heading
-              eyebrow="Работы"
-              title={proof.sectionTitle}
-              description={proof.sectionIntro}
-              tone="dark"
-            />
-            <p className="mt-4 text-sm text-white/60">
-              Ориентиры в карточках рассчитаны по составу решения. Для вашего помещения стоимость уточняется отдельно.
-            </p>
+    <section id="proof" className="pk-gallery" aria-labelledby="proof-heading">
+      <div className="pk-wrap">
+        <div className="pk-gallery-heading">
+          <div><p className="pk-eyebrow">04 / В деталях</p><h2 id="proof-heading">Потолок и свет.<br /><em>В одном пространстве.</em></h2></div>
+          <div className="pk-gallery-intro"><p>{homepage.proof.sectionIntro}</p><p>Выберите решение, рассмотрите детали и примерьте параметры к своему помещению.</p></div>
+        </div>
+        <div className="pk-gallery-toolbar">
+          <div className="pk-gallery-filters" role="group" aria-label="Фильтр решений">
+            {proofFilters.map(option => <button key={option.id} type="button" aria-pressed={filter === option.id} aria-controls="proof-grid" onClick={() => { setSelectedIndex(null); setFilter(option.id); }}>{option.label}</button>)}
           </div>
+          <p className="pk-gallery-count" role="status" aria-live="polite" aria-atomic="true">Показано: {items.length} из {homepage.proof.items.length}</p>
         </div>
-
-        {/* Mobile: swipe */}
-        <div className="mt-10 lg:hidden">
-          <div className="-mx-4 sm:-mx-6">
-            <div className="px-4 sm:px-6">
-              <ProofTrackClient>
-                {proof.items.map((item, index) => (
-                  <ProofCard
-                    key={item.slug}
-                    item={item}
-                    mode="mobile"
-                    onOpen={() => openByIndex(index)}
-                    onWantSame={() => wantSame(item)}
-                  />
-                ))}
-              </ProofTrackClient>
-            </div>
-          </div>
-          <p className="mt-4 text-sm text-white/60">
-            Свайпайте, чтобы посмотреть больше работ. Нажмите на карточку для деталей.
-          </p>
+        <div id="proof-grid" className="pk-gallery-grid">
+          {items.map((item, index) => <ProofGalleryCard key={item.slug} item={item} index={homepage.proof.items.findIndex(entry => entry.slug === item.slug)} featured={filter !== "all" || index < 2} onOpen={() => setSelectedIndex(index)} onWantSame={() => wantSame(item)} />)}
         </div>
-
-        {/* Desktop: scroll-snap slider, 3 cards visible */}
-        <div className="mt-10 hidden lg:block">
-          <ProofSliderDesktop items={proof.items} onOpen={openBySlug} onWantSame={wantSame} />
-        </div>
-      </Container>
-
-      <ProofModalClient
-        items={proof.items}
-        selectedIndex={selectedIndex}
-        onClose={closeModal}
-        onPrev={showPrev}
-        onNext={showNext}
-      />
-    </Section>
+        <div className="pk-gallery-footnote"><p>Суммы — расчётные ориентиры по составу решения, не итоговая смета вашего заказа. Площадь, метры профилей и комплект света уточняются отдельно.</p><Link href="/uslugi">Все потолочные решения <span aria-hidden="true">↗</span></Link></div>
+      </div>
+      <ProofModalClient items={items} selectedIndex={selectedIndex} onClose={closeModal} onPrev={showPrev} onNext={showNext} />
+    </section>
   );
 }
