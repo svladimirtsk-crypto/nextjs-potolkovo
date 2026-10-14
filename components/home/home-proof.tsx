@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 import { useCalculatorPageContext } from "@/components/calculator-modal/page-context";
@@ -48,7 +48,7 @@ export function HomeProof() {
     if (index >= 0) setSelectedIndex(index);
   };
 
-  const closeModal = useCallback(() => setSelectedIndex(null), []);
+  const closeModal = () => setSelectedIndex(null);
 
   const showPrev = () =>
     setSelectedIndex((cur) => {
@@ -74,7 +74,7 @@ export function HomeProof() {
               tone="dark"
             />
             <p className="mt-4 text-sm text-white/60">
-              Ориентиры в карточках рассчитаны по составу решения. Для вашего помещения стоимость уточняется отдельно.
+              Цены в карточках считаются по той же логике, что и в калькуляторе: потолок, узлы и освещение показываются прозрачно.
             </p>
           </div>
         </div>

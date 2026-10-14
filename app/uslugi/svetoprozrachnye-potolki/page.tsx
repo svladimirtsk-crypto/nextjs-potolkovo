@@ -1,4 +1,3 @@
-import { brandSocialImage } from "@/content/brand-social";
 import type { Metadata } from "next";
 
 import { getRequiredServicePageBySlug } from "@/content/services";
@@ -27,9 +26,8 @@ export const metadata: Metadata = {
     title: service.metadata.ogTitle,
     description: service.metadata.ogDescription,
     url: service.pathname,
-    images: [brandSocialImage(service.pathname)],
+    images: [{ url: service.metadata.ogImage }],
   },
-  twitter: { card: "summary_large_image", title: service.metadata.ogTitle, description: service.metadata.ogDescription, images: [brandSocialImage(service.pathname)] },
 };
 
 export default function SvetoprozrachnyePotolkiPage() {

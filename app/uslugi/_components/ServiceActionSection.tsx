@@ -15,7 +15,7 @@ type ServiceActionSectionProps = {
 
 export function ServiceActionSection({ service }: ServiceActionSectionProps) {
   return (
-    <Section id="action" className="pk-service-action scroll-mt-24 bg-white">
+    <Section id="action" className="scroll-mt-24 bg-white">
       <Container>
         <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
           {/* LEFT */}

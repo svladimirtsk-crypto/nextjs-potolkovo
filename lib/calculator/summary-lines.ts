@@ -30,7 +30,7 @@ export function getCalculatorSummaryLines(
 
   const scenarioLabel =
     snapshot.solutionScenario === "advanced"
-      ? "Продвинутый — интерес к SMART-свету и управлению, обсудить состав"
+      ? "Продвинутый — интерес к SMART-свету и управлению, обсудить лично"
       : snapshot.solutionScenario === "modern"
         ? "Современный"
         : snapshot.solutionScenario === "standard"

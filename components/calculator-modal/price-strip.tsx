@@ -87,7 +87,7 @@ export function PriceStrip() {
       aria-live="polite"
       aria-atomic="true"
       data-strip-state={state.kind}
-      className="pk-price-strip rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm max-sm:px-3 max-sm:py-2"
+      className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm max-sm:px-3 max-sm:py-2"
     >
       {state.kind === "idle" ? (
         <p className="text-slate-700 max-sm:text-xs">{state.text}</p>

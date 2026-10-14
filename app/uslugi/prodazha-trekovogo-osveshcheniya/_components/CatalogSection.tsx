@@ -31,7 +31,7 @@ export function CatalogSection() {
   const data: FeedCatalogResult = {
     ok: true,
     updatedAt: String(
-      (snapshotData as { updatedAt?: unknown }).updatedAt ?? ""
+      (snapshotData as { updatedAt?: unknown }).updatedAt ?? new Date().toISOString()
     ),
     source: "snapshot",
     discountPercentForCeilingOrder: pricing.lightingDiscount.withCeilingPct,

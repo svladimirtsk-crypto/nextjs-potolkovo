@@ -9,7 +9,7 @@ export function ServiceUseCasesSection({ service }: { service: ServicePageConten
   if (items.length === 0) return null;
 
   return (
-    <Section className="pk-service-uses bg-slate-50 py-12 sm:py-16">
+    <Section className="bg-slate-50 py-12 sm:py-16">
       <Container>
         <Heading eyebrow="Когда подходит" title={service.useCases.sectionTitle} align="center" />
 

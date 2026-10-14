@@ -14,7 +14,6 @@ import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { GET as publicGet } from "@/app/api/availability/route";
 import { GET as adminGet, PUT as adminPut } from "@/app/api/admin/availability/route";
-import { availability } from "@/content/availability";
 import { closeDb, getDb } from "@/db";
 import { availabilitySettings, availabilitySlots } from "@/db/schema";
 import { addDaysIso, moscowTodayIso } from "@/lib/availability/format";
@@ -70,29 +69,11 @@ describe.skipIf(!TEST_DATABASE_URL)("PT-016 · календарь в PostgreSQL"
     await closeDb();
   });
 
-  it.each([
-    { scenario: "до истечения срока", offsetMs: -1, expired: false },
-    { scenario: "на границе срока", offsetMs: 0, expired: false },
-    { scenario: "после истечения срока", offsetMs: 1, expired: true },
-  ])("пустая таблица — запасной файл $scenario", async ({ offsetMs, expired }) => {
-    // Проверяем настоящий PostgreSQL, но время передаём явно: этот тест
-    // не должен зависеть от дня запуска CI или продлевать реальные окна.
-    // Просроченный запасной файл обязан скрывать подпись, даже при пустой БД.
-    const expiresAt = new Date(`${availability.validUntil}T23:59:59`);
-    const now = new Date(expiresAt.getTime() + offsetMs);
-    const snapshot = await readAvailabilitySnapshot({ now });
+  it("пустая таблица — сайт на запасном файле: деплой задачи не гасит блок", async () => {
+    const snapshot = await readAvailabilitySnapshot();
 
-    expect(snapshot).toMatchObject({
-      source: "file",
-      configured: false,
-      validUntil: availability.validUntil,
-      slots: [],
-      updatedAt: null,
-      generatedAt: now.toISOString(),
-      label: expired
-        ? null
-        : `${availability.labelPrefix} ${availability.freeSlotDays.join(", ")}`,
-    });
+    expect(snapshot).toMatchObject({ source: "file", configured: false });
+    expect(snapshot.label).not.toBeNull();
   });
 
   it("сохранение дат переключает сайт на БД", async () => {

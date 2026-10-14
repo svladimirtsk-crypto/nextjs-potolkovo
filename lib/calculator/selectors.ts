@@ -359,7 +359,7 @@ export function selectStripState(input: StripInput): StripState {
   if (!hasCeiling && !hasLighting) {
     return {
       kind: "idle",
-      text: `Ответьте на ${input.questionsTotal} вопросов — покажем ориентир`,
+      text: `Ответьте на ${input.questionsTotal} вопросов — покажу ориентир`,
     };
   }
 

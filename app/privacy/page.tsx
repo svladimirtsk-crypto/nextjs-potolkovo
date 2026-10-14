@@ -2,15 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { HomeFooter } from "@/components/home/home-footer";
-import { UtilityHeader } from "@/components/brand/utility-header";
-import { brandSocialImage } from "@/content/brand-social";
+import { Container } from "@/components/ui/container";
 import { contacts, isLegalFieldFilled } from "@/content/contacts";
 import { PRIVACY_POLICY_VERSION } from "@/content/legal";
 import { formatPolicyVersionDate } from "@/lib/privacy-policy";
 
 export const metadata: Metadata = {
-  openGraph: { title: "Политика конфиденциальности — ПОТОЛКОВО", url: "/privacy", images: [brandSocialImage("/privacy")] },
-  twitter: { card: "summary_large_image", images: [brandSocialImage("/privacy")] },
   title: { absolute: "Политика конфиденциальности — ПОТОЛКОВО" },
   description: "Политика конфиденциальности и обработки персональных данных сайта ПОТОЛКОВО.",
   alternates: {
@@ -146,13 +143,69 @@ const privacySections: { title: string; text: string }[] = [
 ];
 
 export default function PrivacyPage() {
-  return <>
-    <UtilityHeader />
-    <main className="pk-policy pk-wrap">
-      <nav className="pk-policy-breadcrumb" aria-label="Хлебные крошки"><Link href="/">Главная</Link><span aria-hidden="true">/</span><span aria-current="page">Политика конфиденциальности</span></nav>
-      <div className="pk-policy-intro"><p className="pk-eyebrow">Документы ПОТОЛКОВО</p><h1>Политика конфиденциальности</h1><p>Ниже описано, какие данные сайт получает через формы заявки, для чего они используются и как можно запросить их удаление или уточнение.</p><p className="pk-policy-version">Дата обновления: {formatPolicyVersionDate(PRIVACY_POLICY_VERSION)}</p></div>
-      <div className="pk-policy-layout"><aside><details className="pk-policy-toc" open><summary>В этом документе</summary><nav aria-label="Разделы политики">{privacySections.map((section, index) => <a key={section.title} href={`#policy-section-${index + 1}`}>{section.title}</a>)}</nav></details></aside><div className="pk-policy-content">{privacySections.map((section, index) => <section key={section.title} id={`policy-section-${index + 1}`}><h2>{section.title}</h2><p>{section.text}</p></section>)}</div></div>
-    </main>
-    <HomeFooter />
-  </>;
+  return (
+    <>
+      <header className="border-b border-slate-200 bg-white">
+        <Container className="flex min-h-[var(--header-height)] items-center justify-between gap-4">
+          <Link
+            href="/"
+            className="inline-flex shrink-0 items-center font-mono text-sm font-bold uppercase tracking-[0.24em] text-slate-950 sm:text-[15px]"
+            aria-label={contacts.brandName}
+          >
+            {contacts.brandShortName}
+          </Link>
+
+          <Link
+            href="/"
+            className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950"
+          >
+            ← На главную
+          </Link>
+        </Container>
+      </header>
+
+      <main className="bg-slate-50 py-14 sm:py-16 lg:py-20">
+        <Container>
+          <div className="mx-auto max-w-4xl rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8 lg:p-10">
+            <div className="border-b border-slate-200 pb-6">
+              <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                <Link href="/" className="transition-colors hover:text-slate-950">
+                  Главная
+                </Link>
+                <span>/</span>
+                <span className="text-slate-950">Политика конфиденциальности</span>
+              </div>
+
+              <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
+                Политика конфиденциальности
+              </h1>
+
+              <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
+                Ниже описано, какие данные сайт получает через формы заявки, для чего они используются и
+                как можно запросить их удаление или уточнение.
+              </p>
+
+              <p className="mt-4 text-xs font-medium uppercase tracking-[0.18em] text-slate-600">
+                Дата обновления: {formatPolicyVersionDate(PRIVACY_POLICY_VERSION)}
+              </p>
+            </div>
+
+            <div className="mt-8 space-y-8">
+              {privacySections.map((section) => (
+                <section key={section.title}>
+                  <h2 className="text-lg font-semibold text-slate-950 sm:text-xl">
+                    {section.title}
+                  </h2>
+                  <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600 sm:text-base">
+                    {section.text}
+                  </p>
+                </section>
+              ))}
+            </div>
+          </div>
+        </Container>
+      </main>
+      <HomeFooter />
+    </>
+  );
 }

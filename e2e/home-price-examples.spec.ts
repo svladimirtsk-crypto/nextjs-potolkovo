@@ -43,6 +43,6 @@ test.describe("Главная · ценовые примеры", () => {
     // то есть доехала не только площадь, но и тип потолка.
     await expect(modal.getByText(/вопрос 1 из 10/)).toBeVisible();
     // N-013: плашка называет подставленное значение, а не абстрактный «старт».
-    await expect(modal.getByText(/Подставлено 24 м² со страницы/)).toBeVisible();
+    await expect(modal.getByText(/Подставил 24 м² со страницы/)).toBeVisible();
   });
 });

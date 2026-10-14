@@ -23,12 +23,12 @@ export function ServiceProofStrip({ service }: ServiceProofStripProps) {
     <section
       id="proof"
       aria-labelledby={`${service.slug}-proof-title`}
-      className="pk-service-proof bg-slate-50 py-16 sm:py-20"
+      className="bg-slate-50 py-16 sm:py-20"
     >
       <Container>
         <div className="mx-auto max-w-3xl text-center">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Примеры решений
+            Примеры работ
           </p>
 
           <h2
@@ -106,12 +106,12 @@ export function ServiceProofStrip({ service }: ServiceProofStripProps) {
           {isSinglePhoto ? (
             <article className="flex flex-col justify-center rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm">
               <h3 className="text-xl font-semibold tracking-tight text-slate-950">
-                Обсудим детали вашего проекта
+                Покажу примеры на замере
               </h3>
               <p className="mt-3 text-sm leading-6 text-slate-600">
-                Такие проекты отличаются по конструкции, свету и материалам.
-                На замере обсудим узлы и ограничения помещения; состав и стоимость
-                согласуем для вашей задачи, а не по чужой фотографии.
+                Такие проекты сильно отличаются друг от друга, поэтому вместо
+                случайных фото привожу папку с работами: узлы, схемы и материалы —
+                можно посмотреть вживую и потрогать.
               </p>
               <Link
                 href="/#proof"

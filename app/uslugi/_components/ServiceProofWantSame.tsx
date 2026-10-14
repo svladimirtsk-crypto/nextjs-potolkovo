@@ -25,7 +25,7 @@ export function ServiceProofWantSame({ areaLabel }: { areaLabel: string }) {
       <a
         href="#action"
         data-testid="want-same"
-        className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-slate-950 px-4 text-sm font-semibold !text-white transition hover:bg-slate-800"
+        className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
       >
         {page.projectCtaLabel}
       </a>
@@ -44,7 +44,7 @@ export function ServiceProofWantSame({ areaLabel }: { areaLabel: string }) {
           page.optionsFor("proof", { preset: proofItemPreset(page.preset!, areaLabel) })
         )
       }
-      className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-slate-950 px-4 text-sm font-semibold !text-white transition hover:bg-slate-800"
+      className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
     >
       Хочу так же
     </button>

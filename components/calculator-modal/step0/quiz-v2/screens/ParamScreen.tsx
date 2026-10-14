@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import type { ParamId } from "@/lib/step0-fsm";
 import type { CeilingEngine } from "@/lib/calculator/use-calculator-engine";
 import { SectionCard, OptionCard, RangeField } from "../ui";
-import { CeilingOption } from "@/components/calculator-modal/ceiling-option";
 import { homepage } from "@/content/homepage";
 import { PREFILL_HINT, defaultPerimeterMeters } from "@/lib/calculator/presets";
 import { formatFrom, pricing } from "@/content/pricing";
@@ -50,7 +49,7 @@ export function ParamScreen({ roomId, param, engine, onConfirm }:{
    */
   const areaPrefillNote =
     param === "area" && engine.prefilled?.area && engine.presetNote
-      ? `Подставлено ${room?.area ?? 0} м² со страницы — поправьте под себя`
+      ? `Подставил ${room?.area ?? 0} м² со страницы — поправьте под себя`
       : null;
 
   // T-021: подпись под предзаполненным пресетом параметром
@@ -93,7 +92,7 @@ export function ParamScreen({ roomId, param, engine, onConfirm }:{
         headingRef={headingRef}
         title="Площадь потолка"
         /* N-013 (F-09): «узлы» и «участки в метрах» — язык монтажника. */
-        description="Начнём с площади. Примыкание, карнизы и свет выберем на следующих шагах."
+        description="Только площадь. Профили, карнизы и свет спрошу дальше — по метрам."
       >
         {kitHint}
 
@@ -109,7 +108,7 @@ export function ParamScreen({ roomId, param, engine, onConfirm }:{
             <OptionCard
               active={!isObjectMode}
               title="Одну комнату"
-              meta="Параметры комнаты"
+              meta="Точный расчёт"
               onClick={() => engine.chooseCalcMode("room")}
             />
             <OptionCard
@@ -180,26 +179,42 @@ export function ParamScreen({ roomId, param, engine, onConfirm }:{
       <SectionCard headingRef={headingRef} title="Тип потолка" description="Выберите вид потолка. Длину профиля укажем следующим вопросом — в метрах.">
         {prefillHint}
         {kitHint}
-        <div className="pk-ceiling-options">
-          <CeilingOption active={isSimple} kind="standard" title="Простой потолок"
-            description="Ровное полотно. Привычное примыкание к стене."
-            price={formatFrom(pricing.ceiling.standard, "м²")}
-            onClick={()=>update({ ceilingType:"standard", shadowEnabled:false, floatingEnabled:false })} />
-          {engine.solutionScenario !== "standard" ? <>
-            <CeilingOption active={room.shadowEnabled} kind="shadow" title="Теневой потолок"
-              description="Чёткая линия по контуру, без потолочного плинтуса."
-              price={`${formatCurrency(pricing.ceiling.shadowBase)} ₽ / м² + ${formatCurrency(pricing.ceiling.shadowProfilePerM)} ₽ / м.п.`}
-              onClick={()=>update({ shadowEnabled: !room.shadowEnabled })} />
-            <CeilingOption active={room.floatingEnabled} kind="floating" title="Парящий потолок"
-              description="Подсвеченный контур — потолок визуально отделён от стен."
-              price={`${formatCurrency(pricing.ceiling.floatingBase)} ₽ / м² + ${formatCurrency(pricing.ceiling.floatingProfilePerM)} ₽ / м.п.`}
-              onClick={()=>update({ floatingEnabled: !room.floatingEnabled })} />
-            <p className="pk-diagram-note">Можно сочетать теневой и парящий профиль на разных участках. Далее уточним метраж. Изображения — схемы, не монтажные чертежи.</p>
-          </> : <div className="pk-premium-invite">
-            <p>Хотите потолок без плинтуса или мягкий свет по контуру?</p>
-            <button type="button" onClick={() => engine.chooseScenario("modern")}>Показать теневой и парящий профиль →</button>
-            <p className="pk-diagram-note">Просмотр вариантов ничего не добавляет в смету. Световые линии, треки и скрытые карнизы можно выбрать дальше.</p>
-          </div>}
+        <div className="space-y-3">
+          <OptionCard
+            active={isSimple}
+            title="Простой потолок"
+            meta={formatFrom(pricing.ceiling.standard, "м²")}
+            onClick={()=>update({ ceilingType:"standard", shadowEnabled:false, floatingEnabled:false })}
+          />
+          {engine.solutionScenario !== "standard" && (
+            <>
+              <OptionCard
+                active={room.shadowEnabled}
+                title="Теневой потолок"
+                meta={`${formatCurrency(pricing.ceiling.shadowBase)} ₽ / м² + ${formatCurrency(pricing.ceiling.shadowProfilePerM)} ₽ / м.п.`}
+                onClick={()=>update({ shadowEnabled: !room.shadowEnabled })}
+              />
+              <OptionCard
+                active={room.floatingEnabled}
+                title="Парящий потолок"
+                meta={`${formatCurrency(pricing.ceiling.floatingBase)} ₽ / м² + ${formatCurrency(pricing.ceiling.floatingProfilePerM)} ₽ / м.п.`}
+                onClick={()=>update({ floatingEnabled: !room.floatingEnabled })}
+              />
+            </>
+          )}
+          {engine.solutionScenario === "standard" && (
+            <button
+              type="button"
+              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-left text-sm font-medium text-slate-700 hover:border-slate-400"
+              onClick={() => {
+                // T-005: включаем современный сценарий, площадь не теряется
+                engine.chooseScenario("modern");
+                update({ ceilingType: "shadow", shadowEnabled: true, shadowLength: room.shadowLength || Math.max(4, Math.round(Math.sqrt(room.area) * 4)) });
+              }}
+            >
+              Показать теневой и парящий профиль →
+            </button>
+          )}
         </div>
       </SectionCard>
     );
@@ -227,7 +242,7 @@ export function ParamScreen({ roomId, param, engine, onConfirm }:{
           <div className="mt-4 space-y-4">
             <RangeField id="cornice-v2" label="Длина карниза" value={room.corniceLength} min={1} max={50} step={1} unit="м.п." onChange={v=>update({corniceLength:v})} />
             <div className="grid gap-3 sm:grid-cols-2">
-              <OptionCard active={!room.corniceLightingEnabled} title="Без подсветки" meta="Только карниз" onClick={()=>update({corniceLightingEnabled:false})} />
+              <OptionCard active={!room.corniceLightingEnabled} title="Без подсветки" meta="Только узел" onClick={()=>update({corniceLightingEnabled:false})} />
               <OptionCard active={!!room.corniceLightingEnabled} title="Добавить подсветку" meta={`+${formatCurrency(calculator.corniceLighting.ratePerMeter)} ₽/м.п. + блок ${formatCurrency(calculator.corniceLighting.powerSupplyRate)} ₽`} onClick={()=>update({corniceLightingEnabled:true, corniceLightingLength: room.corniceLength, corniceLightingPowerSupplies:1})} />
             </div>
             {room.corniceLightingEnabled && (

@@ -9,10 +9,10 @@ describe("T-028 - copyright Shaga 2 po intentu", () => {
     expect(ceiling.formTitle).toBe("Записаться на бесплатный замер");
     expect(ceiling.submitLabel).toBe("Записаться на замер");
     expect(ceiling.chips).toEqual([
-      "Состав сметы",
-      "Условия до монтажа",
-      "Потолок и свет",
-      "Компания ПОТОЛКОВО",
+      "Договор",
+      "Гарантия 2 года",
+      "Монтаж за 1 день",
+      "Уборка после",
     ]);
     expect(ceiling.showFulfilment).toBe(false);
   });
@@ -22,7 +22,7 @@ describe("T-028 - copyright Shaga 2 po intentu", () => {
     expect(copy.formTitle).toBe("Получить счёт на комплект");
     expect(copy.submitLabel).toBe("Получить счёт");
     expect(copy.chips).toEqual([
-      "Проверим совместимость",
+      "Проверю совместимость",
       "Наличие и цена перед счётом",
       "Гарантия производителя",
     ]);
@@ -49,7 +49,7 @@ describe("T-028 - copyright Shaga 2 po intentu", () => {
 
   it("kazhdyy intent nachinaet 'chto dalshe' s perezvona", () => {
     for (const intent of ["ceiling_only", "lighting_only", "advanced"] as const) {
-      expect(resolveStep2Copy(intent).nextSteps[0]).toBe("Перезвоним {callbackWindow}");
+      expect(resolveStep2Copy(intent).nextSteps[0]).toBe("Перезвоню {callbackWindow}");
       expect(resolveStep2Copy(intent).nextSteps).toHaveLength(3);
     }
   });
@@ -58,13 +58,13 @@ describe("T-028 - copyright Shaga 2 po intentu", () => {
 describe("T-028 - podstanovka okna perezvona", () => {
   it("podstavlyaet znachenie s servera", () => {
     const steps = fillCallbackWindow(resolveStep2Copy("lighting_only").nextSteps, "сегодня до 21:00");
-    expect(steps[0]).toBe("Перезвоним сегодня до 21:00");
+    expect(steps[0]).toBe("Перезвоню сегодня до 21:00");
     expect(steps[2]).toBe("Самовывоз или доставка");
   });
 
   it("pustoe okno -> nejtralnyy fallback", () => {
-    expect(fillCallbackWindow(["Перезвоним {callbackWindow}"], "  ")).toEqual([
-      "Перезвоним в ближайшее время",
+    expect(fillCallbackWindow(["Перезвоню {callbackWindow}"], "  ")).toEqual([
+      "Перезвоню в ближайшее время",
     ]);
   });
 });

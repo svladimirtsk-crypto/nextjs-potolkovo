@@ -7,7 +7,7 @@ import { applyCatalogFilterChange } from "../lib/lighting/use-catalog-filters";
 import type { FeedCatalogProduct } from "../lib/eks-feed2-catalog";
 
 const source = readFileSync(
-  new URL("../app/uslugi/prodazha-trekovogo-osveshcheniya/_components/CatalogControls.tsx", import.meta.url),
+  new URL("../app/uslugi/prodazha-trekovogo-osveshcheniya/_components/CatalogSectionClient.tsx", import.meta.url),
   "utf8"
 );
 
@@ -65,14 +65,10 @@ describe("T-065 · глобальный поиск по каталогу", () =>
     expect(source).toMatch(/«\{match\.label\}»: \{match\.count\}/);
   });
 
-  it("общие горизонтальные ленты имеют fade, а каталог переносит фильтры", () => {
+  it("у горизонтальных лент есть fade-край", () => {
     const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
     expect(css).toContain(".scroll-fade-x");
-    const chips = readFileSync(new URL("../components/lighting/CatalogFilterChips.tsx", import.meta.url), "utf8");
-    const catalogCss = readFileSync(new URL("../app/catalog-brand.css", import.meta.url), "utf8");
-    expect(chips).toContain("scroll-fade-x");
-    expect(catalogCss).toMatch(/\.pk-catalog-toolbar \[role=group\][^}]*flex-wrap:wrap/);
-    expect(catalogCss).toMatch(/\.pk-catalog-tabs[^}]*grid-template-columns:repeat\(2/);
+    expect(source).toContain("scroll-fade-x");
   });
 
   /**

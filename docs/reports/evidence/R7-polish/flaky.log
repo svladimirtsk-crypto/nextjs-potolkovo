@@ -1,6 +1,0 @@
-
-> nextjs@0.1.0 check:e2e-flaky
-> node scripts/check-e2e-flaky.mjs
-
-[e2e-flaky] всего: 258 passed, 0 failed, 0 flaky, 12 skipped
-[e2e-flaky] ok — повторных попыток не потребовалось, результат стабильный

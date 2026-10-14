@@ -1,5 +1,3 @@
-import Link from "next/link";
-import { BrandLogo } from "@/components/brand/brand-logo";
 import { contacts, isLegalFieldFilled } from "@/content/contacts";
 import { homepage } from "@/content/homepage";
 import { legal } from "@/content/legal";
@@ -10,15 +8,16 @@ import { ServiceLinksList } from "./service-links-list";
 
 export function HomeFooter() {
   return (
-    <footer className="pk-footer border-t border-slate-200">
+    <footer className="border-t border-slate-200 bg-white">
       <Container className="py-12 sm:py-14">
         <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr_1fr]">
           <div>
-            <BrandLogo />
+            <p className="font-mono text-sm font-bold uppercase tracking-[0.24em] text-slate-950">
+              {contacts.brandName}
+            </p>
             <p className="mt-4 max-w-md text-sm leading-7 text-slate-600">
               {homepage.footer.footerNote}
             </p>
-            <nav className="pk-footer-editorial" aria-label="О компании и свете"><Link href="/o-kompanii">Компания</Link><Link href="/umnoe-osveshchenie">Умный свет</Link></nav>
           </div>
 
           <div>

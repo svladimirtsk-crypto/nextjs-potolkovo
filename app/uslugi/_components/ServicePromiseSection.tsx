@@ -13,7 +13,7 @@ export function ServicePromiseSection({ service }: ServicePromiseSectionProps) {
     <section
       id="promise"
       aria-labelledby={`${service.slug}-promise-title`}
-      className="pk-service-process bg-white py-16 sm:py-20"
+      className="bg-white py-16 sm:py-20"
     >
       <Container>
         <div className="mx-auto max-w-3xl text-center">

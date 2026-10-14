@@ -8,10 +8,8 @@
  * Drawer работает с той же общей корзиной (`useLightingCart`), поэтому
  * правки здесь мгновенно видны и в модалке.
  */
-import { useDialogFocus } from "@/lib/use-dialog-focus";
-import { ProductImage } from "@/components/feed2/ProductImage";
 import { pricing } from "@/content/pricing";
-import { useCallback, useRef, type ReactNode } from "react";
+import { useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 
 import type { CartEntry } from "@/lib/lighting/use-lighting-cart";
@@ -25,7 +23,6 @@ export type LightingCartDrawerProps = {
   open: boolean;
   onClose: () => void;
   entries: CartEntry[];
-  kitReview?: ReactNode;
   totalRub: number;
   discountedTotalRub: number;
   withCeilingTotalRub: number;
@@ -38,7 +35,6 @@ export function LightingCartDrawer({
   open,
   onClose,
   entries,
-  kitReview,
   totalRub,
   discountedTotalRub,
   withCeilingTotalRub,
@@ -46,8 +42,17 @@ export function LightingCartDrawer({
   onRemove,
   onCheckout,
 }: LightingCartDrawerProps) {
-  const dialogRef = useRef<HTMLElement>(null);
-  useDialogFocus(open, dialogRef, onClose);
+  // Подписка на клавиатуру — внешняя система, эффект здесь уместен.
+  useEffect(() => {
+    if (!open) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose, open]);
 
   const step = useCallback(
     (entry: CartEntry, direction: 1 | -1) => {
@@ -62,7 +67,7 @@ export function LightingCartDrawer({
   const extraCeilingBenefit = Math.max(0, discountedTotalRub - withCeilingTotalRub);
 
   return createPortal(
-    <div style={{ zIndex: "var(--z-confirm, 200)" }} className="pk-lighting-drawer fixed inset-0">
+    <div style={{ zIndex: "var(--z-confirm, 200)" }} className="fixed inset-0">
       <button
         type="button"
         aria-label="Закрыть корзину"
@@ -71,8 +76,6 @@ export function LightingCartDrawer({
       />
 
       <aside
-        ref={dialogRef}
-        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label="Корзина света"
@@ -86,7 +89,6 @@ export function LightingCartDrawer({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Закрыть корзину"
             className="h-10 w-10 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50"
           >
             ✕
@@ -94,22 +96,19 @@ export function LightingCartDrawer({
         </header>
 
         <div className="flex-1 overflow-y-auto p-4">
-          {kitReview}
           {entries.length === 0 ? (
             <p className="text-sm text-slate-600">Пока ничего не выбрано.</p>
           ) : (
             <ul className="space-y-3">
               {entries.map((entry) => (
-                <li key={entry.productId} className="pk-drawer-item rounded-2xl border border-slate-200 p-3">
-                  <ProductImage src={toText(entry.product.coverImage)} alt={toText(entry.product.name)} productId={entry.productId} kind={toText(entry.product.kind)} containerClassName="pk-drawer-image" />
-                  <p className="pk-drawer-sku">{toText(entry.product.vendorCode)}</p>
+                <li key={entry.productId} className="rounded-2xl border border-slate-200 p-3">
                   <p className="text-sm font-medium text-slate-950">{toText(entry.product.name)}</p>
 
-                  <div className="pk-drawer-quantity mt-2 flex items-center justify-between gap-3">
+                  <div className="mt-2 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        aria-label={`Уменьшить: ${toText(entry.product.name)}`}
+                        aria-label="Уменьшить"
                         onClick={() => step(entry, -1)}
                         className="h-10 w-10 rounded-xl border border-slate-300 text-slate-900 hover:bg-slate-50"
                       >
@@ -121,7 +120,7 @@ export function LightingCartDrawer({
                       </span>
                       <button
                         type="button"
-                        aria-label={`Увеличить: ${toText(entry.product.name)}`}
+                        aria-label="Увеличить"
                         onClick={() => step(entry, 1)}
                         className="h-10 w-10 rounded-xl border border-slate-300 text-slate-900 hover:bg-slate-50"
                       >
@@ -129,12 +128,11 @@ export function LightingCartDrawer({
                       </button>
                     </div>
 
-                    <span className="text-xs text-slate-600">{fmt(entry.totalRub)} ₽<small className="block">до скидки</small></span>
+                    <span className="text-sm font-semibold text-slate-950">{fmt(entry.totalRub)} ₽</span>
                   </div>
 
                   <button
                     type="button"
-                    aria-label={`Удалить: ${toText(entry.product.name)}`}
                     onClick={() => onRemove(entry.productId)}
                     className="mt-2 text-xs text-slate-500 underline decoration-slate-300 underline-offset-2 hover:text-rose-700"
                   >
@@ -155,12 +153,11 @@ export function LightingCartDrawer({
               Только свет −{pricing.lightingDiscount.lightingOnlyPct}%: <span className="font-semibold">{fmt(discountedTotalRub)} ₽</span>
             </p>
             <p className="text-blue-700">
-              С потолком −{pricing.lightingDiscount.withCeilingPct}%: <span className="font-semibold">{fmt(withCeilingTotalRub)} ₽</span> · выгода ещё{" "}
+              С потолком −25%: <span className="font-semibold">{fmt(withCeilingTotalRub)} ₽</span> · выгода ещё{" "}
               {fmt(extraCeilingBenefit)} ₽
             </p>
           </div>
 
-          <p className="pk-drawer-note">Предварительная стоимость оборудования, без монтажа. Наличие, питание и совместимость проверим перед счётом.</p>
           <button
             type="button"
             disabled={entries.length === 0}

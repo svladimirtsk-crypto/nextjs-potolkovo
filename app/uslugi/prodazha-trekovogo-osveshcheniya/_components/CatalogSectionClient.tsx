@@ -1,21 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 import { useCalculatorStore } from "@/lib/calculator/store";
 import { CATALOG_PAGE_SIZE, CatalogGrid } from "@/components/lighting/CatalogGrid";
 import { CatalogFreshness } from "./CatalogFreshness";
 import { CatalogWarnings } from "./CatalogWarnings";
-import { CatalogNavigation, CatalogToolbar } from "./CatalogControls";
-import { CatalogCartBar } from "./CatalogCartBar";
-import { catalogViewProducts, sortCatalogProducts, type CatalogSort } from "@/lib/lighting/catalog-presentation";
-import { isSmartProduct } from "@/lib/lighting/product-predicates";
+import { CatalogFilterChipGroup, CatalogFilterChipsRow } from "@/components/lighting/CatalogFilterChips";
 import {
   buildCatalogLightingSnapshot,
   cartToLightingItems,
 } from "@/lib/lighting/catalog-checkout";
 import {
+  filterCatalogProducts,
   searchMatchesBySection,
 } from "@/lib/lighting/catalog-filters";
 import { toText } from "@/lib/feed2-snapshot-normalize";
@@ -24,6 +22,7 @@ import {
   nextCatalogSnapshot,
 } from "@/lib/lighting/track-sale-snapshot";
 import { Container } from "@/components/ui/container";
+import { Heading } from "@/components/ui/heading";
 import { Section } from "@/components/ui/section";
 
 import type { FeedCatalogResult } from "@/lib/eks-feed2-catalog";
@@ -39,11 +38,30 @@ import {
   LIGHTING_WITH_CEILING_DISCOUNT_PERCENT,
 } from "@/lib/lighting-formulas";
 
-import { isRemovedColibriVendorCode } from "@/lib/catalog-ui-config";
+import {
+  CATALOG_SECTIONS,
+  POINT_SUBTYPES,
+  TRACK_GROUPS,
+  TRACK_SYSTEMS,
+  isRemovedColibriVendorCode,
+  LAMP_SOCKETS,
+} from "@/lib/catalog-ui-config";
 
 import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
 import { useCatalogFilters } from "@/lib/lighting/use-catalog-filters";
 import { useCatalogIndex } from "@/lib/lighting/use-catalog-index";
+
+
+function fmt(value: number): string {
+  return new Intl.NumberFormat("ru-RU").format(Math.round(value));
+}
+
+
+
+
+
+
+
 
 
 type Props = { data: FeedCatalogResult };
@@ -71,7 +89,6 @@ export function CatalogSectionClient({ data }: Props) {
   });
   const { section, trackSystem, trackGroup, pointSubtype, lampSocket, query } = catalogFilters;
   const [smartOnly, setSmartOnly] = useState(false);
-  const [sort, setSort] = useState<CatalogSort>("photo");
   /**
    * T-031: корзина общая с модалкой (`lightingDraft`), локального состояния нет —
    * счётчики страницы и калькулятора всегда совпадают, комплект не теряется.
@@ -79,7 +96,6 @@ export function CatalogSectionClient({ data }: Props) {
   const lightingCart = useLightingCart(resolveProduct);
   const [visibleCount, setVisibleCount] = useState(24);
   const [cartOpen, setCartOpen] = useState(false);
-  const closeCart = useCallback(() => setCartOpen(false), []);
 
   /* ─── Корзина страницы и её производные (PT-018: `use-track-sale-cart`) ───
    * Правила — в `catalog-kit-gaps` и `catalog-checkout`; хук их только собирает.
@@ -222,75 +238,242 @@ export function CatalogSectionClient({ data }: Props) {
   );
 
   const filteredProducts = useMemo(
-    () => sortCatalogProducts(catalogViewProducts(products, filters), sort),
-    [products, filters, sort],
+    () => filterCatalogProducts(products, filters),
+    [products, filters],
   );
 
   const searchMatches = useMemo(
-    () => searchMatchesBySection(smartOnly ? products.filter(isSmartProduct) : products, query, section),
-    [products, query, section, smartOnly],
+    () => searchMatchesBySection(products, query, section),
+    [products, query, section],
   );
 
-  const resetFilters = () => {
-    catalogFilters.selectTrackSystem("COLIBRI_220");
-    catalogFilters.selectTrackGroup("TRACK_FIXTURE");
-    catalogFilters.selectPointSubtype("GX53");
-    catalogFilters.selectLampSocket("GX53");
-    catalogFilters.selectSection("track-systems");
-    catalogFilters.resetQuery();
-    setSmartOnly(false);
-    setSort("photo");
-    setVisibleCount(CATALOG_PAGE_SIZE);
-  };
-
-  const gapCount = clarusPsuOptions.length > 0 ? 1 + missingMounts.length + missingLamps.length : missingMounts.length + missingLamps.length;
-  const kitReview = gapCount > 0 ? <details className="pk-kit-review">
-    <summary>Комплектация: подсказок для проверки — {gapCount}</summary>
-    <p>Это подсказки по текущим правилам каталога, не подтверждение полной совместимости. Мощность, питание и управление проверим отдельно.</p>
-
-          <CatalogWarnings
-            psuOptions={clarusPsuOptions}
-            missingMounts={missingMounts}
-            missingLamps={missingLamps}
-            onAddPsu={setClarusPsu}
-            onAddMount={addMountOneToOne}
-            onAddLamp={(socket, cheapestLampId) => {
-              addLampOneToOneCheapest(socket, cheapestLampId);
-              // Ведём человека туда, куда только что добавили лампу.
-              catalogFilters.selectSection("lamps");
-              catalogFilters.selectLampSocket(socket);
-            }}
-          />
-
-  </details> : null;
-
   return (
-    <Section id="price" className={`pk-catalog ${selectedEntries.length ? "pk-catalog-has-cart" : ""}`}>
+    <Section id="price" className={selectedEntries.length > 0 ? "scroll-mt-24 py-10 pb-36 max-sm:pb-44" : "scroll-mt-24 py-10"}>
       <Container>
-        <header className="pk-catalog-heading">
-          <div><p className="pk-catalog-label">ПОТОЛКОВО / Свет для вашего проекта</p>
-            <h2>Каталог освещения</h2>
-            <p>От одного светильника до комплекта с потолком. Выберите позиции — питание, управление и состав проверим перед заказом.</p>
-          </div>
-          <button type="button" onClick={openInCalculator}>Собрать в калькуляторе <span aria-hidden="true">↗</span></button>
-        </header>
-        <div className="pk-catalog-pricing">
-          <p><span>Только оборудование</span><strong>−{LIGHTING_ONLY_DISCOUNT_PERCENT}% <small>на свет</small></strong></p>
-          <p><span>Вместе с потолком</span><strong>−{LIGHTING_WITH_CEILING_DISCOUNT_PERCENT}% <small>на свет</small></strong></p>
-          <div><b>В карточках — цена только света.</b><CatalogFreshness updatedAt={toText(data.updatedAt)} /></div>
+        <div className="flex items-start justify-between gap-6">
+          <Heading title="Каталог освещения" />
+
+          <button
+            type="button"
+            onClick={openInCalculator}
+            className="min-h-11 rounded-[var(--radius-md)] bg-[var(--color-accent)] px-4 text-sm font-semibold text-white hover:bg-[var(--color-accent-hover)]"
+          >
+Собрать в калькуляторе →
+          </button>
         </div>
-        <div className="pk-catalog-layout">
-          <CatalogNavigation filters={catalogFilters} smartOnly={smartOnly} onSmartChange={() => {
-            const next = !smartOnly;
-            setSmartOnly(next);
-            setVisibleCount(CATALOG_PAGE_SIZE);
-            trackSmartInterestSelected({ placement: "catalog", enabled: next, source: "track-sale-page" });
-          }} />
-          <div className="pk-catalog-content">
-            <CatalogToolbar filters={catalogFilters} smartOnly={smartOnly} sort={sort}
-              onSort={(value) => { setSort(value); setVisibleCount(CATALOG_PAGE_SIZE); }}
-              onReset={resetFilters} matches={searchMatches ?? []} count={filteredProducts.length} visibleCount={visibleCount} />
-            {kitReview}
+
+        {/* Controls */}
+        {/*
+          T-064: секции каталога — это настоящие вкладки, поэтому размечены
+          как tablist/tab. Скринридер теперь сообщает «вкладка 2 из 6» и
+          состояние выбора, чего не давал набор обычных кнопок.
+        */}
+        <div className="mt-8 flex gap-2 overflow-x-auto pb-1 no-scrollbar scroll-fade-x sm:flex-wrap">
+          <div role="tablist" aria-label="Разделы каталога" className="contents">
+            {CATALOG_SECTIONS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                id={`catalog-tab-${item.id}`}
+                aria-selected={section === item.id}
+                aria-controls="catalog-panel"
+                onClick={() => {
+                  // T-065: запрос сохраняется при смене раздела — человек
+                  // ищет «диммер», а не «диммер в разделе Трековые системы».
+                  catalogFilters.selectSection(item.id);
+                }}
+                className={[
+                  "inline-flex min-h-11 items-center whitespace-nowrap rounded-[var(--radius-sm)] px-3.5 text-sm font-medium",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2",
+                  section === item.id
+                    ? "border-[var(--color-accent)] bg-[var(--color-accent)] text-white"
+                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+                  "border",
+                ].join(" ")}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setSmartOnly((prev) => {
+                const next = !prev;
+                trackSmartInterestSelected({ placement: "catalog", enabled: next, source: "track-sale-page" });
+                if (next) catalogFilters.selectSection("track-systems");
+                return next;
+              });
+            }}
+            className={[
+              "whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium border",
+              smartOnly ? "border-violet-600 bg-violet-600 text-white" : "border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100",
+            ].join(" ")}
+          >
+            SMART
+          </button>
+        </div>
+
+        {smartOnly ? (
+          <div className="mt-4 rounded-2xl border border-violet-200 bg-violet-50 p-4 text-sm leading-6 text-violet-950">
+            Показаны SMART-позиции: светильники, панели управления и аксессуары. Управление лучше подбирать под сценарии помещения — зафиксирую интерес и предложу вариант лично.
+          </div>
+        ) : null}
+
+        {section === "track-systems" ? (
+          <CatalogFilterChipsRow ariaLabel="Система и группа трека">
+            <CatalogFilterChipGroup
+              options={TRACK_SYSTEMS}
+              active={trackSystem}
+              onSelect={catalogFilters.selectTrackSystem}
+            />
+            <CatalogFilterChipGroup
+              options={TRACK_GROUPS}
+              active={trackGroup}
+              onSelect={catalogFilters.selectTrackGroup}
+            />
+          </CatalogFilterChipsRow>
+        ) : null}
+
+        {section === "point-fixtures" ? (
+          <CatalogFilterChipsRow ariaLabel="Тип точечного светильника">
+            <CatalogFilterChipGroup
+              options={POINT_SUBTYPES}
+              active={pointSubtype}
+              onSelect={catalogFilters.selectPointSubtype}
+            />
+          </CatalogFilterChipsRow>
+        ) : null}
+
+        {section === "lamps" ? (
+          <CatalogFilterChipsRow ariaLabel="Цоколь лампы">
+            <CatalogFilterChipGroup
+              options={LAMP_SOCKETS.map((socket) => ({ id: socket, label: socket }))}
+              active={lampSocket}
+              onSelect={catalogFilters.selectLampSocket}
+            />
+          </CatalogFilterChipsRow>
+        ) : null}
+
+        <div className="relative mt-4">
+          <span aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+              <circle cx="9" cy="9" r="5.5" />
+              <path d="M13.5 13.5L17 17" strokeLinecap="round" />
+            </svg>
+          </span>
+          <input
+          value={query}
+          onChange={(event) => catalogFilters.setQuery(String(event.target.value ?? ""))}
+          placeholder="Поиск по всему каталогу"
+          aria-label="Поиск по каталогу"
+          className="w-full rounded-[var(--radius-md)] border border-slate-300 bg-white pl-10 pr-10 py-3 text-sm text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] focus:ring-offset-2"
+        />
+          {query ? (
+            <button
+              type="button"
+              onClick={catalogFilters.resetQuery}
+              aria-label="Очистить поиск"
+              className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+            >
+              ✕
+            </button>
+          ) : null}
+        </div>
+
+        {/*
+          T-065: найденное в других разделах. Без этой строки поиск выглядел
+          сломанным — совпадения в соседней секции просто не существовали
+          для пользователя.
+        */}
+        {searchMatches && searchMatchesBySection.length > 0 ? (
+          <div aria-live="polite" className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-slate-600">Найдено ещё:</span>
+            {searchMatches.map((match) => (
+              <button
+                key={match.id}
+                type="button"
+                onClick={() => catalogFilters.selectSection(match.id)}
+                className="inline-flex min-h-9 items-center rounded-full border border-slate-300 bg-white px-3 text-sm font-medium text-slate-800 hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
+              >
+                «{match.label}»: {match.count}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {/*
+          T-045: один липкий бар вместо трёх конкурирующих кнопок.
+          Выбор режима скидки перенесён в экран интента — раньше человек должен
+          был решить «свет −10 %» или «потолок −25 %» прямо в баре, не понимая
+          разницы.
+        */}
+        {selectedEntries.length > 0 ? (
+          <div data-cart-bar data-count={selectedEntries.length} style={{ zIndex: "var(--z-cart, 45)" }} className="fixed bottom-4 left-1/2 hidden w-[min(1120px,calc(100vw-2rem))] -translate-x-1/2 rounded-[1.5rem] border border-slate-200 bg-white/95 p-4 shadow-[0_14px_42px_rgba(15,23,42,0.16)] backdrop-blur sm:block">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              {/* T-064: сумма меняется от кликов по карточкам — озвучиваем. */}
+              <p aria-live="polite" aria-atomic="true" className="min-w-0 text-sm font-semibold text-slate-950">
+                Корзина · {selectedEntries.length} поз. · {fmt(lightingOnlySelectedTotal)} ₽
+              </p>
+
+              <div className="flex shrink-0 gap-2">
+                <button
+                  type="button"
+                  onClick={openSelectedList}
+                  className="min-h-11 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                >
+                  Посмотреть
+                </button>
+                <button
+                  type="button"
+                  onClick={openCheckoutIntent}
+                  className="min-h-11 rounded-[var(--radius-sm)] bg-[var(--color-accent)] px-4 text-sm font-semibold text-white hover:bg-[var(--color-accent-hover)]"
+                >
+                  Оформить
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {selectedEntries.length > 0 ? (
+          <div data-cart-bar data-count={selectedEntries.length} style={{ zIndex: "var(--z-cart, 45)", paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }} className="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white/95 p-3 shadow-[0_-8px_28px_rgba(15,23,42,0.12)] backdrop-blur sm:hidden">
+            <div className="flex items-center justify-between gap-3">
+              <p aria-live="polite" aria-atomic="true" className="min-w-0 text-xs font-semibold text-slate-950">
+                Корзина · {selectedEntries.length} поз. · {fmt(lightingOnlySelectedTotal)} ₽
+              </p>
+              <div className="flex shrink-0 gap-1.5">
+                <button
+                  type="button"
+                  onClick={openSelectedList}
+                  className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700"
+                >
+                  Посмотреть
+                </button>
+                <button
+                  type="button"
+                  onClick={openCheckoutIntent}
+                  className="min-h-11 rounded-xl bg-slate-950 px-3 text-xs font-semibold text-white"
+                >
+                  Оформить
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {/* T-044: режим скидки — одной строкой над сеткой, а не в каждой карточке */}
+        <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800">
+          Цены со скидкой −{LIGHTING_ONLY_DISCOUNT_PERCENT} % на свет · −{LIGHTING_WITH_CEILING_DISCOUNT_PERCENT} % при заказе с потолком
+        </div>
+
+        {/*
+          T-045: честная оговорка про источник цен. Прайс поставщика меняется,
+          и обещать неизменную цену до проверки наличия нельзя.
+        */}
+        <CatalogFreshness updatedAt={toText(data.updatedAt)} />
+
         <CatalogGrid
           products={filteredProducts}
           visibleCount={visibleCount}
@@ -307,40 +490,47 @@ export function CatalogSectionClient({ data }: Props) {
             })
           }
           sectionId={section}
-          searchMatches={searchMatches ?? []}
+          searchMatches={searchMatches && searchMatchesBySection.length > 0 ? searchMatches : []}
           onPickSection={catalogFilters.selectSection}
           query={query}
           onResetQuery={catalogFilters.resetQuery}
-          onResetFilters={resetFilters}
         />
 
-
-          </div>
-        </div>
-        <CatalogCartBar count={selectedEntries.length} total={lightingOnlySelectedTotal} onView={openSelectedList} onCheckout={openCheckoutIntent} />
+        {/* Dependencies / warnings */}
+        {selectedEntries.length > 0 ? (
+          <CatalogWarnings
+            psuOptions={clarusPsuOptions}
+            missingMounts={missingMounts}
+            missingLamps={missingLamps}
+            onAddPsu={setClarusPsu}
+            onAddMount={addMountOneToOne}
+            onAddLamp={(socket, cheapestLampId) => {
+              addLampOneToOneCheapest(socket, cheapestLampId);
+              // Ведём человека туда, куда только что добавили лампу.
+              catalogFilters.selectSection("lamps");
+              catalogFilters.selectLampSocket(socket);
+            }}
+          />
+        ) : null}
 
         <LightingCartDrawer
           open={cartOpen}
-          onClose={closeCart}
+          onClose={() => setCartOpen(false)}
           entries={lightingCart.entries}
-          kitReview={kitReview}
           totalRub={lightingCart.totalRub}
           discountedTotalRub={lightingCart.discountedTotalRub}
           withCeilingTotalRub={lightingCart.withCeilingTotalRub}
           onSetQty={(entry, qty) => lightingCart.setQty(entry.product, qty)}
           onRemove={(productId) => lightingCart.remove(productId)}
           onCheckout={() => {
-            // The drawer trigger disappears. Give the choice dialog a persistent
-            // return target so Escape does not strand keyboard focus on <body>.
-            document.querySelector<HTMLButtonElement>("[data-cart-bar] .pk-cart-bar-actions button:last-child")?.focus({ preventScroll: true });
             setCartOpen(false);
-            void openCheckoutIntent();
+            openLightingOrder();
           }}
         />
 
         {!data.ok ? (
           <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-950">
-            Каталог временно не загрузился. Напишите в ПОТОЛКОВО — обсудим состав комплекта.
+            Каталог временно не загрузился. Напишите мне — подберу комплект вручную.
           </div>
         ) : null}
       </Container>

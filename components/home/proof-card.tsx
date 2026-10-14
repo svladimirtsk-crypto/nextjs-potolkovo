@@ -57,7 +57,7 @@ export function ProofCard({ item, mode, onOpen, onWantSame }: ProofCardProps) {
   return (
     <article
       className={[
-        "pk-proof-card overflow-hidden border border-slate-200 bg-white text-slate-950 shadow-[0_8px_24px_rgba(2,6,23,0.12)]",
+        "overflow-hidden border border-slate-200 bg-white text-slate-950 shadow-[0_8px_24px_rgba(2,6,23,0.12)]",
         isMobile
           ? "snap-start w-[78vw] max-w-[18.5rem] flex-none rounded-[1.5rem]"
           : "h-full rounded-[1.5rem]",

@@ -21,9 +21,6 @@ export function RoomEditScreen({ roomId, engine, onEditParam, onBack, onDelete }
   const items: Array<{ id: ParamId; label: string; value: string }> = [
     { id: "area", label: "Площадь", value: `${room.area} м²` },
     { id: "ceiling", label: "Тип потолка", value: ceilingLabel(room.ceilingType) },
-    ...(room.shadowEnabled ? [{ id: "shadowProfile" as const, label: room.floatingEnabled ? "Теневой / парящий профиль" : "Теневой профиль", value: room.floatingEnabled ? `${room.shadowLength} / ${room.floatingLength} м.п.` : `${room.shadowLength} м.п.` }] : []),
-    ...(!room.shadowEnabled && room.floatingEnabled ? [{ id: "floatingProfile" as const, label: "Парящий профиль", value: `${room.floatingLength} м.п.` }] : []),
-    ...(engine.solutionScenario !== "standard" ? [{ id: "lightLines" as const, label: "Световые линии", value: room.lightLinesEnabled ? `${room.lightLinesLength} м.п.` : "Не нужны" }] : []),
     { id: "cornice", label: "Карниз", value: corniceLabel(room.corniceType) },
     { id: "track", label: "Трек", value: trackLabel(room.trackType) },
     { id: "chandeliers", label: "Люстры", value: room.chandeliersEnabled ? `${room.chandeliersCount} шт.` : "Не нужно" },
@@ -31,7 +28,7 @@ export function RoomEditScreen({ roomId, engine, onEditParam, onBack, onDelete }
   ];
 
   return (
-    <section className="pk-question rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
       <h3 className="text-lg font-semibold">Карточка комнаты — {room.label}</h3>
       <p className="text-sm text-slate-600 mt-1">Выберите параметр для редактирования</p>
       <div className="mt-4 rounded-2xl bg-slate-50 p-4">

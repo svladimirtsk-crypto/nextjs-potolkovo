@@ -12,7 +12,7 @@ export function ServiceAboutSection({ service }: { service: ServicePageContent }
   if (paragraphs.length === 0) return null;
 
   return (
-    <Section className="pk-service-about bg-white py-12 sm:py-16">
+    <Section className="bg-white py-12 sm:py-16">
       <Container>
         <Heading eyebrow="Подробнее" title={service.about.sectionTitle} />
 

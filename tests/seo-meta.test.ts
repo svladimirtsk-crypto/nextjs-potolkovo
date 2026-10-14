@@ -46,8 +46,8 @@ describe("og:image", () => {
     expect(size).toBeLessThanOrEqual(200 * 1024);
   });
 
-  it("формат JPEG для совместимости карточек ссылок", () => {
-    expect(homepage.metadata.ogImageSrc.endsWith(".jpg")).toBe(true);
+  it("формат webp — он легче jpeg при том же качестве", () => {
+    expect(homepage.metadata.ogImageSrc.endsWith(".webp")).toBe(true);
   });
 });
 

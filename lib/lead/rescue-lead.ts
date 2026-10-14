@@ -266,7 +266,7 @@ export async function submitRescueLead(
       leadId: result.leadId,
       callbackWindow: result.callbackWindow,
       message: result.leadId
-        ? `Заявка №${result.leadId} сохранена${result.callbackWindow ? `. Перезвоним ${result.callbackWindow}` : ""}.`
+        ? `Заявка №${result.leadId} сохранена${result.callbackWindow ? `. Перезвоню ${result.callbackWindow}` : ""}.`
         : "Заявка сохранена.",
     };
   }

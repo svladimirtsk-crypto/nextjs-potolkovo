@@ -14,9 +14,9 @@ export function SummaryScreen({ engine, onEditRoom, onAddRoom, onPrimaryCta, onS
   secondaryLabel?: string;
 }) {
   return (
-    <section className="pk-question rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm">
       <div className="rounded-2xl bg-slate-950 p-5 text-white">
-        <p className="text-sm text-white/70">Предварительный расчёт</p>
+        <p className="text-sm text-white/70">Готовый расчёт</p>
         {/* T-041: сумма меняется по ходу правок — озвучиваем её скринридеру. */}
         <p aria-live="polite" className="text-3xl font-semibold">
           {engine.totalRub.toLocaleString("ru-RU")} ₽

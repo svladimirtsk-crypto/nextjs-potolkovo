@@ -25,7 +25,7 @@ export async function askCheckoutIntent(): Promise<CheckoutIntentAction> {
   const outcome = await showChoiceDialog<CheckoutIntentChoice>({
     title: "Как оформляем комплект?",
     message:
-      "Только оборудование — скидка 10 %, пришлём счёт после проверки наличия. " +
+      "Только оборудование — скидка 10 %, пришлю счёт после проверки наличия. " +
       "С натяжным потолком — скидка на свет 25 %, сначала посчитаем потолок.",
     primary: { id: "with-ceiling", label: "С потолком −25 %" },
     secondary: { id: "lighting-only", label: "Только оборудование −10 %" },

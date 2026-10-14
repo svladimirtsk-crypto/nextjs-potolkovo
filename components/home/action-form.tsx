@@ -53,11 +53,11 @@ import { Input } from "@/components/ui/input";
 
 const COPY = {
   successTitle: "Заявка отправлена",
-  successMessage: "Спасибо!\nПерезвоним в ближайшее время — уточним детали и предложим решение.",
+  successMessage: "Спасибо!\nПерезвоню в ближайшее время — уточню детали и предложу решение.",
   submitButtonLabel: "Записаться на бесплатный замер",
   submitButtonLabelPending: "Отправляю...",
   helperText:
-    "Перезвоним, чтобы уточнить детали. Можно указать район — так проще сориентироваться.",
+    "Перезвоню, чтобы уточнить детали. Можно указать район — так проще сориентироваться.",
   addressFieldHint: "Необязательно.\nПоможет быстрее сориентироваться по выезду.",
 } as const;
 
@@ -370,7 +370,7 @@ export function ActionForm({
     setStatus("success");
     setMessage(
       result.callbackWindow
-        ? `Заявка сохранена. Перезвоним ${result.callbackWindow}.`
+        ? `Заявка сохранена. Перезвоню ${result.callbackWindow}.`
         : COPY.successMessage
     );
 
@@ -424,7 +424,7 @@ export function ActionForm({
       {(ceilingLines.length > 0 || lightingLines.length > 0) ? (
         compactCalculationSummary ? (
           <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-950">
-            Этот расчёт будет приложен к заявке
+            К заявке приложу этот расчёт
           </div>
         ) : (
           <details className="rounded-2xl border border-slate-200 bg-slate-50">
@@ -457,7 +457,7 @@ export function ActionForm({
 
       {placement === "modal" && !hasRooms && !hasLighting ? (
         <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          Расчёт не приложится — это нормально, уточним по телефону.
+          Расчёт не приложится — это нормально, уточню по телефону.
         </p>
       ) : null}
 

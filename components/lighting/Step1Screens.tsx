@@ -497,7 +497,7 @@ export function LampsScreen({
               onQtyChange={onQtyChange}
               onZoom={onZoom}
               discountPercent={discountPercent}
-              emptyText="Подходящие лампы сейчас не найдены в каталоге. Уточним вариант при звонке."
+              emptyText="Подходящие лампы сейчас не найдены в каталоге. Я уточню вариант при звонке."
             />
           </div>
         );

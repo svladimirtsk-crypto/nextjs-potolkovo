@@ -24,15 +24,15 @@ export function ServiceMidCta() {
    */
   if (page.presetDisabled) {
     return (
-      <section aria-label="Обсуждение проекта" className="pk-service-mid bg-white pb-4">
+      <section aria-label="Обсуждение проекта" className="bg-white pb-4">
         <Container>
           <div className="flex flex-col items-center gap-4 rounded-[1.75rem] bg-slate-950 px-6 py-6 text-center sm:flex-row sm:justify-between sm:text-left">
             <div>
               <p className="text-base font-semibold text-white sm:text-lg">
-                Такие задачи считаем по замеру
+                Такие задачи считаю по замеру
               </p>
               <p className="mt-1 text-sm text-white/70">
-                Опишите конструкцию или пришлите план — подготовим предложение.
+                Опишите конструкцию или пришлите план — вернусь со сметой.
               </p>
             </div>
 
@@ -50,7 +50,7 @@ export function ServiceMidCta() {
   }
 
   return (
-    <section aria-label="Быстрый расчёт" className="pk-service-mid bg-white pb-4">
+    <section aria-label="Быстрый расчёт" className="bg-white pb-4">
       <Container>
         <div className="flex flex-col items-center gap-4 rounded-[1.75rem] bg-slate-950 px-6 py-6 text-center sm:flex-row sm:justify-between sm:text-left">
           <div>

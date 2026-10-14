@@ -39,7 +39,6 @@ export type CatalogGridProps = {
   onPickSection: (id: CatalogSectionId) => void;
   query: string;
   onResetQuery: () => void;
-  onResetFilters?: () => void;
 };
 
 export function CatalogGrid({
@@ -54,7 +53,6 @@ export function CatalogGrid({
   onPickSection,
   query,
   onResetQuery,
-  onResetFilters,
 }: CatalogGridProps) {
   const hidden = products.length - visibleCount;
 
@@ -64,7 +62,7 @@ export function CatalogGrid({
         id="catalog-panel"
         role="tabpanel"
         aria-labelledby={`catalog-tab-${sectionId}`}
-        className="pk-catalog-grid mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
+        className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
       >
         {products.slice(0, visibleCount).map((product) => {
           const id = toText(product.productId);
@@ -97,7 +95,7 @@ export function CatalogGrid({
       ) : null}
 
       {products.length === 0 ? (
-        <div className="pk-catalog-empty mt-6 rounded-[var(--radius-lg)] border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+        <div className="mt-6 rounded-[var(--radius-lg)] border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
           {searchMatches.length > 0 ? (
             <>
               <p className="font-semibold text-slate-950">
@@ -118,8 +116,7 @@ export function CatalogGrid({
             </>
           ) : (
             <>
-              <p><strong>Ничего не найдено.</strong></p>
-              <p>Попробуйте другое название или артикул, отключите SMART или сбросьте фильтры.</p>
+              <p>Ничего не найдено.</p>
               {query ? (
                 <button
                   type="button"
@@ -131,7 +128,6 @@ export function CatalogGrid({
               ) : null}
             </>
           )}
-          {onResetFilters && <button type="button" onClick={onResetFilters} className="pk-empty-reset">Вернуть полный каталог</button>}
         </div>
       ) : null}
     </>
