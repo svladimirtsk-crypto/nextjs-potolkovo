@@ -90,12 +90,12 @@ export function applyViewChoice(
   };
 }
 
-/** Пустое «Выбранное» показывать нечем — молча показываем каталог. */
+/** B8-005: respect the explicit tab; an empty selection has its own recovery action. */
 export function shownCatalogViewOf(
   view: CatalogViewMode,
   selectedCount: number
 ): CatalogViewMode {
-  return view === "selected" && selectedCount === 0 ? "browse" : view;
+  return view === "selected" && selectedCount === 0 ? "selected" : view;
 }
 
 export type UseStep1TabsInput = Step1TabBase & {

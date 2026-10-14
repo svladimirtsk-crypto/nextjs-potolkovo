@@ -7,6 +7,8 @@
  * со степперами, удалением и блоком итогов. Ничего от внутреннего состояния
  * мастера не зависит — только от корзины и режима скидки.
  */
+import { StatePanel } from "@/components/brand/state-panel";
+import { Button } from "@/components/ui/button";
 import { ProductImage } from "@/components/feed2/ProductImage";
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import { toText } from "@/lib/feed2-snapshot-normalize";
@@ -38,6 +40,7 @@ export type SelectedListProps = {
   onRemove: (productId: string) => void;
   onGoToSummary: () => void;
   goToSummaryDisabled: boolean;
+  onBrowse?: () => void;
 };
 
 /** Шаг количества: метры добавляются по половине, штучные позиции — по одной. */
@@ -53,12 +56,14 @@ export function SelectedList({
   onRemove,
   onGoToSummary,
   goToSummaryDisabled,
+  onBrowse,
 }: SelectedListProps) {
   if (items.length === 0) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
-        <p className="text-sm text-slate-600">Пока ничего не выбрано.</p>
-      </div>
+      <StatePanel title="Пока ничего не выбрано" testId="selected-empty"
+        description="Добавьте подходящие товары из каталога. Параметры потолка при переходе не изменятся.">
+        {onBrowse && <Button size="sm" onClick={onBrowse}>Перейти в каталог</Button>}
+      </StatePanel>
     );
   }
 

@@ -102,7 +102,7 @@ export function useRescueOffer(): RescueOffer {
       submit: {
         pendingLabel: "Отправка…",
         retryLabel: "Повторить",
-        dismissLabel: "Закрыть без отправки",
+        dismissLabel: "Закрыть диалог",
         run: async (phone, consent) => {
           if (!acceptedTracked) {
             acceptedTracked = true;

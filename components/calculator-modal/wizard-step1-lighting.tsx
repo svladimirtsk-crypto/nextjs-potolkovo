@@ -20,6 +20,7 @@ import {
 } from "@/lib/catalog-ui-config";
 
 import { decideOrphanTrackAction } from "@/lib/lighting/orphan-track";
+import { CatalogLoadState } from "@/components/lighting/catalog-load-state";
 import { Step1CatalogTab } from "@/components/lighting/Step1CatalogTab";
 // PT-018: чистые селекторы Шага 1 (B-F104) — правила выдачи каталога,
 // профили/светильники/системы и итоги «Выбранного» вынесены из компонента.
@@ -132,7 +133,7 @@ export function WizardStep1Lighting() {
 
   /* ─── Products index ─── */
   // T-029: каталог приезжает отдельным чанком, а не из фида в бандле.
-  const { products: catalogProductsFromIndex } = useCatalogProducts();
+  const { products: catalogProductsFromIndex, isLoading, error: catalogError, retry: retryCatalog } = useCatalogProducts();
   const products = catalogProductsFromIndex;
 
   /**
@@ -410,6 +411,10 @@ export function WizardStep1Lighting() {
    * промахнуться. Сброс теперь один, при размонтировании.
    */
   useLayoutEffect(() => {
+    if (isLoading || catalogError) {
+      setStep1FooterAction({ label: isLoading ? "Загрузка каталога…" : "Каталог недоступен", disabled: true, onClick: () => {} });
+      return;
+    }
     setStep1FooterAction(
       buildStep1FooterAction(footerDescriptor, {
         missingAction,
@@ -419,7 +424,7 @@ export function WizardStep1Lighting() {
       })
     );
   }, [finishAction, footerDescriptor, footerHandlers, goToMissingAction, missingAction,
-    setStep1FooterAction]);
+    setStep1FooterAction, isLoading, catalogError]);
 
   /** Шаг 1 ушёл с экрана — его кнопка не должна остаться в футере. */
   useEffect(() => () => setStep1FooterAction(null), [setStep1FooterAction]);
@@ -451,6 +456,10 @@ export function WizardStep1Lighting() {
   /* ═══════════════════════════════════════════════════
      RENDER
      ═══════════════════════════════════════════════════ */
+  if (isLoading || catalogError) return <div ref={rootRef} className="pk-lighting-stage space-y-4">
+    <CatalogLoadState loading={isLoading} onRetry={() => { void retryCatalog(); }} onBack={() => goToStep(0)} />
+  </div>;
+
   return (
     <div ref={rootRef} className="pk-lighting-stage space-y-4">
       <div className="pk-lighting-intro"><h3>Свет под ваш интерьер</h3><p>Выберите оборудование через подбор или каталог. Состав и совместимость проверим отдельно; настройка управления зависит от конкретного комплекта.</p></div>
@@ -516,6 +525,7 @@ export function WizardStep1Lighting() {
           fmt={fmt}
           onQtyChange={setProductQty}
           onRemoveProduct={lightingCart.remove}
+          onBrowse={openCatalogBrowse}
           onZoom={setZoomImage}
           lamps={{
             missing: missingLamps,

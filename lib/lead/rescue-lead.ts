@@ -193,7 +193,7 @@ export function rescueFailureMessage(failure: {
       ? failure.serverMessage
       : leadSubmitFailureReason(failure);
 
-  return `${reason} Позвоните ${contacts.phoneDisplay} — расчёт продиктуете за минуту.`;
+  return `${reason} Позвоните ${contacts.phoneDisplay} — обсудим детали расчёта.`;
 }
 
 export type SubmitRescueLeadOptions = SubmitLeadOptions & {

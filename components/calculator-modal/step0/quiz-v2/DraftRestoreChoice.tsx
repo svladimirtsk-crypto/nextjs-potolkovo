@@ -38,7 +38,7 @@ export function DraftRestoreChoice({
 
   return (
     <div
-      className="rounded-2xl border border-slate-200 bg-white p-5"
+      className="pk-draft-choice rounded-2xl border border-slate-200 bg-white p-5"
       data-draft-choice={variant}
       data-draft-origin={origin}
     >
@@ -68,8 +68,8 @@ export function DraftRestoreChoice({
           </p>
           <p className="mt-2 text-sm leading-6 text-slate-600">
             Сохранённые параметры не читаются — вероятно, расчёт создан другой
-            версией калькулятора. Ничего не сломалось: начните заново, прежняя
-            запись будет удалена.
+            версией калькулятора. Можно начать новый расчёт. Прежняя запись будет удалена
+            только после вашего выбора.
           </p>
         </>
       )}

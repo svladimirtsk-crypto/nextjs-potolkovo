@@ -42,9 +42,11 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
     "button:not([disabled])",
     "input:not([disabled])",
     "textarea:not([disabled])",
-    'button:not([tabindex="-1"])',
   ].join(", ");
-  return Array.from(container.querySelectorAll<HTMLElement>(selector));
+  return Array.from(container.querySelectorAll<HTMLElement>(selector)).filter(element =>
+    element.tabIndex >= 0 && !element.matches(":disabled") && !element.closest("[inert]") &&
+    element.getClientRects().length > 0 && getComputedStyle(element).visibility !== "hidden"
+  );
 }
 
 export function ConfirmDialogPortal() {
@@ -118,6 +120,13 @@ function ConfirmDialogPanel({
     return () => cancelAnimationFrame(frame);
   }, []);
 
+  // Focus after the failed state has committed and the retry button is enabled.
+  useEffect(() => {
+    if (phase !== "failed") return;
+    const frame = requestAnimationFrame(() => retryButtonRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [phase]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -134,12 +143,19 @@ function ConfirmDialogPanel({
       if (e.key !== "Tab" || !dialogRef.current) return;
 
       const focusable = getFocusableElements(dialogRef.current);
-      if (focusable.length === 0) return;
+      if (focusable.length === 0) {
+        e.preventDefault();
+        dialogRef.current.focus();
+        return;
+      }
 
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
 
-      if (e.shiftKey && document.activeElement === first) {
+      if (!focusable.includes(document.activeElement as HTMLElement)) {
+        e.preventDefault();
+        (e.shiftKey ? last : first).focus();
+      } else if (e.shiftKey && document.activeElement === first) {
         e.preventDefault();
         last.focus();
       } else if (!e.shiftKey && document.activeElement === last) {
@@ -191,7 +207,6 @@ function ConfirmDialogPanel({
 
       setFailureMessage(outcome.message);
       setPhase("failed");
-      requestAnimationFrame(() => retryButtonRef.current?.focus());
     },
     /**
      * PT-014 · `consentCapture` в зависимостях обязателен: без него замыкание
@@ -239,7 +254,7 @@ function ConfirmDialogPanel({
     info: {
       confirmBg: "bg-slate-950 hover:bg-slate-800",
       iconBg: "bg-slate-100 text-slate-600",
-      icon: "✕",
+      icon: "i",
     },
   };
 
@@ -254,27 +269,29 @@ function ConfirmDialogPanel({
 
   const cancelLabel =
     phase === "failed"
-      ? (options.submit?.dismissLabel ?? "Закрыть без отправки")
+      ? (options.submit?.dismissLabel ?? "Закрыть диалог")
       : (options.cancelLabel ?? "Отмена");
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+      className="pk-confirm-overlay fixed inset-0 z-[200] flex items-center justify-center p-4"
       style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
       onClick={handleOverlayClick}
     >
       <div
         ref={dialogRef}
         role="alertdialog"
+        tabIndex={-1}
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
         aria-describedby="confirm-dialog-message"
         aria-busy={isSubmitting || undefined}
-        className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl animate-fade-slide-in"
+        className="pk-confirm-panel relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl animate-fade-slide-in"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-4">
           <span
+            aria-hidden="true"
             className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg ${colors.iconBg}`}
           >
             {colors.icon}
@@ -300,6 +317,7 @@ function ConfirmDialogPanel({
                   type="tel"
                   inputMode="tel"
                   autoComplete="tel"
+                  aria-describedby={options.phoneField.hint ? "confirm-dialog-phone-hint" : undefined}
                   value={phone}
                   disabled={isSubmitting}
                   onChange={(e) => setPhone(e.target.value)}
@@ -307,7 +325,7 @@ function ConfirmDialogPanel({
                   className="mt-2 h-11 w-full rounded-xl border border-slate-200 px-3 text-sm text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 disabled:opacity-60"
                 />
                 {options.phoneField.hint ? (
-                  <p className="mt-2 text-xs text-slate-500">{options.phoneField.hint}</p>
+                  <p id="confirm-dialog-phone-hint" className="mt-2 text-xs text-slate-500">{options.phoneField.hint}</p>
                 ) : null}
 
                 {consent ? (
@@ -345,7 +363,7 @@ function ConfirmDialogPanel({
               <p
                 role="alert"
                 data-testid="confirm-dialog-error"
-                className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs leading-5 text-rose-950"
+                className="pk-dialog-error mt-4 px-3 py-2 text-xs leading-5"
               >
                 {failureMessage}
               </p>
@@ -353,7 +371,7 @@ function ConfirmDialogPanel({
           </div>
         </div>
 
-        <div className="mt-6 flex items-center justify-end gap-3">
+        <div className="pk-confirm-actions mt-6 flex items-center justify-end gap-3">
           <button
             type="button"
             data-testid="confirm-dialog-cancel"

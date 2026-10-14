@@ -51,6 +51,7 @@ export type Step1CatalogTabProps = {
 
   onQtyChange: (product: FeedCatalogProduct, qty: number) => void;
   onRemoveProduct: (productId: string) => void;
+  onBrowse?: () => void;
   onZoom: (image: { src: string; alt: string }) => void;
 
   lamps: {
@@ -91,6 +92,7 @@ export function Step1CatalogTab({
   fmt,
   onQtyChange,
   onRemoveProduct,
+  onBrowse,
   onZoom,
   lamps,
   orphan,
@@ -154,6 +156,7 @@ export function Step1CatalogTab({
           onRemove={onRemoveProduct}
           onGoToSummary={selected.onGoToSummary}
           goToSummaryDisabled={selected.goToSummaryDisabled}
+          onBrowse={onBrowse}
         />
       ) : (
         <>

@@ -15,6 +15,7 @@
  */
 import { useEffect, useState } from "react";
 
+import { StatePanel } from "@/components/brand/state-panel";
 import { Button } from "@/components/ui/button";
 import {
   formatRetryCountdown,
@@ -63,11 +64,9 @@ export function LeadFormAlert({
     : 0;
 
   return (
-    <div
-      className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-950"
-      role="alert"
-      data-testid="lead-error-alert"
-    >
+    <StatePanel tone="error" announce="assertive" testId="lead-error-alert"
+      title={view.kind === "validation" ? "Проверьте данные" : view.kind === "ratelimit" ? "Нужно немного подождать"
+        : view.outcomeUnknown ? "Не получили подтверждение" : "Не удалось завершить отправку"}>
       <p className="whitespace-pre-line font-medium">{view.message}</p>
 
       {view.invalidFields.length > 0 ? (
@@ -108,6 +107,6 @@ export function LeadFormAlert({
           вернёт номер уже сохранённой.
         </p>
       ) : null}
-    </div>
+    </StatePanel>
   );
 }

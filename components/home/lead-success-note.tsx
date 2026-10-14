@@ -8,6 +8,7 @@
  * сделать прямо сейчас, — прислать фотографии помещения: по ним видно
  * геометрию, ниши и высоту, и часть выездов «просто посмотреть» отпадает.
  */
+import { StatePanel } from "@/components/brand/state-panel";
 import { contacts } from "@/content/contacts";
 import { TelegramPhotoCta } from "@/components/home/telegram-photo-cta";
 
@@ -21,16 +22,13 @@ export function LeadSuccessNote({
   message: string;
 }) {
   return (
-    <div
-      className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"
-      aria-live="polite"
-    >
+    <StatePanel tone="success" announce="polite"
+      title={leadId ? `Заявка №${leadId} сохранена` : title}>
       {/*
         PT-013 · «сохранена», а не «принята»: доставка асинхронная (PT-003), и
         на момент ответа заявка лежит в базе, но мастер её ещё не видел.
         Обещать просмотр — значит отвечать за чужой канал.
       */}
-      <p className="font-semibold">{leadId ? `Заявка №${leadId} сохранена` : title}</p>
       <p className="mt-2 whitespace-pre-line">{message}</p>
 
       <TelegramPhotoCta leadCode={leadId} className="mt-3" />
@@ -49,6 +47,6 @@ export function LeadSuccessNote({
           Написать в Telegram
         </a>
       </p>
-    </div>
+    </StatePanel>
   );
 }

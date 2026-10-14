@@ -7,6 +7,8 @@
  * их состав зависит от раздела и живёт в оркестраторе, — а всё, что ниже,
  * одинаково для любого раздела.
  */
+import { StatePanel } from "@/components/brand/state-panel";
+import { Button } from "@/components/ui/button";
 import type { ReactNode } from "react";
 
 import { ProductCard } from "@/components/lighting/CatalogPieces";
@@ -65,6 +67,7 @@ export function CatalogBrowse({
           value={query}
           onChange={(event) => onQueryChange(event.target.value ?? "")}
           placeholder="Поиск в текущем разделе"
+          aria-label="Поиск в текущем разделе"
           className="w-full rounded-2xl border border-slate-300 bg-white pl-10 pr-4 py-2.5 text-sm text-slate-950 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
         />
       </div>
@@ -106,9 +109,12 @@ export function CatalogBrowse({
       </div>
 
       {products.length === 0 ? (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-          Ничего не найдено
-        </div>
+        <StatePanel title="Ничего не найдено" announce="polite" testId="modal-catalog-empty"
+          description="В текущем разделе нет совпадений. Измените название или артикул либо выберите другой раздел. Выбранные товары останутся в расчёте.">
+          <div className="pk-state-actions">
+            {query && <Button size="sm" variant="secondary" onClick={() => onQueryChange("")}>Сбросить поиск</Button>}
+          </div>
+        </StatePanel>
       ) : null}
     </>
   );
