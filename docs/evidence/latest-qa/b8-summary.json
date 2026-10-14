@@ -1,0 +1,62 @@
+{
+  "date": "2026-10-14",
+  "productCommit": "3de577ec4ea6e2a1f245c710516bacc44c504b0f",
+  "generatedPageDatesSHA256": "4ec7bf4dcc5b1384ccbeda037860ee85c3a5bb8bfb1c60d27fe42e8dfed13bc1",
+  "scope": "B8-001 company voice, follow-up UI; B8-002 digital identity masters and brandbook",
+  "unit": {
+    "passed": 1243,
+    "files": 96,
+    "skipped": 0,
+    "failed": 0,
+    "database": "local PostgreSQL 17; fake providers"
+  },
+  "e2e": {
+    "startTime": "2026-10-14T18:15:12.767Z",
+    "duration": 370028.79299999995,
+    "expected": 272,
+    "skipped": 12,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 18
+  },
+  "types": "passed",
+  "buildAndPrebuild": "passed",
+  "flowPassed": 8,
+  "homeBundleGzipKB": 225.7,
+  "newTests": {
+    "unit": 32,
+    "e2e": 2
+  },
+  "brandbook": {
+    "pages": 10,
+    "responsiveWidths": [
+      320,
+      390,
+      1440
+    ],
+    "footerOverlap": false,
+    "externalRequests": 0,
+    "reviewedPages": [
+      1,
+      3,
+      8
+    ]
+  },
+  "limitations": [
+    "Real iOS/Android, screen reader and manual acceptance not performed",
+    "No production delivery/DB verification",
+    "Owner sign-off, trademark review and CMYK print proof pending",
+    "Local gitleaks unavailable; no new secrets scan asserted",
+    "Initial unit attempt inherited preview LEAD_API_ENABLED=0 and returned 503; all tests rerun with isolated test env, no code/test weakening. Initial log retained in workspace."
+  ],
+  "unchanged": [
+    "API and database schema",
+    "pricing and calculator engine",
+    "service URLs and presets",
+    "review quotations and legal paragraphs"
+  ],
+  "previewOnly": true
+}
