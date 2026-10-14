@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { PHOTO_PENDING_LABEL, hasLocalPhoto, isPhotoPending } from "@/lib/catalog-photo";
 
@@ -114,6 +114,10 @@ export function ProductImage({
   kind,
 }: ProductImageProps) {
   const [failed, setFailed] = useState(false);
+  // SSR images can fail before hydration attaches onError. Check on DOM attach too.
+  const checkImage = useCallback((node: HTMLImageElement | null) => {
+    if (node?.complete && node.naturalWidth === 0) setFailed(true);
+  }, []);
 
   const safeSrc = useMemo(() => String(src ?? "").trim(), [src]);
   const safeAlt = useMemo(() => String(alt ?? ""), [alt]);
@@ -131,8 +135,8 @@ export function ProductImage({
    * моргания битой картинки и без лишнего 404 в сети покупателя.
    */
   const pending = useMemo(
-    () => isPhotoPending({ productId, coverImage: safeSrc }),
-    [productId, safeSrc],
+    () => !local && isPhotoPending({ productId, coverImage: safeSrc }),
+    [productId, safeSrc, local],
   );
 
   const imageSrc = failed || pending
@@ -150,8 +154,9 @@ export function ProductImage({
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
+        ref={checkImage}
         src={imageSrc}
-        srcSet={local ? `/catalog/${local}-256.webp 256w, /catalog/${local}-512.webp 512w` : undefined}
+        srcSet={local && !failed && !pending ? `/catalog/${local}-256.webp 256w, /catalog/${local}-512.webp 512w` : undefined}
         sizes={local ? "(max-width: 768px) 45vw, 256px" : undefined}
         alt={safeAlt}
         width={512}

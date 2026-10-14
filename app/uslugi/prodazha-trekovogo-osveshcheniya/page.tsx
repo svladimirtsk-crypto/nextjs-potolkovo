@@ -18,7 +18,6 @@ import { TrackSaleOrderingSection } from "./_components/TrackSaleOrderingSection
 import { TrackSaleTermsSection } from "./_components/TrackSaleTermsSection";
 import { ServiceAboutSection } from "../_components/ServiceAboutSection";
 import { ServiceUseCasesSection } from "../_components/ServiceUseCasesSection";
-import snapshotData from "@/data/eks-feed2-snapshot.json";
 
 const service = getRequiredServicePageBySlug("prodazha-trekovogo-osveshcheniya");
 
@@ -39,15 +38,7 @@ export default function ProdazhaTrekovogoOsveshcheniyaPage() {
   const kitsAnchorRub = getKitsPriceAnchorRub();
   const { kits, topProducts } = getTrackSaleProductOffers();
 
-  /** N-040 (F-42): наличие и дата прайса — то, чего не было на первом экране. */
-  const priceListDate = new Date(String((snapshotData as { updatedAt?: unknown }).updatedAt ?? ""));
-  const availabilityNote = Number.isNaN(priceListDate.getTime())
-    ? "Со склада поставщика · сроки уточню при заказе"
-    : `Со склада поставщика · наличие по прайсу от ${priceListDate.toLocaleDateString("ru-RU", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      })}`;
+  const availabilityNote = "Со склада поставщика — после подтверждения наличия и сроков.";
   /**
    * N-040 (F-42): «от 2 418 ₽» — точность до рубля в слове «от».
    * Округляем вниз до 100 ₽ общим roundFromAnchor из N-031: вниз, чтобы

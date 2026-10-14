@@ -128,7 +128,7 @@ test("R7 calculator: lighting-only has no ceiling charge and uses invoice CTA", 
   await page.setViewportSize({ width: 390, height: 844 });
   const leads = await interceptLeadApi(page);
   await page.goto("/uslugi/prodazha-trekovogo-osveshcheniya#price");
-  await page.getByRole("button", { name: "+", exact: true }).first().click();
+  await page.getByRole("button", { name: "Увеличить", exact: true }).first().click();
   await page.locator("[data-cart-bar]").last().getByRole("button", { name: "Оформить" }).click();
   await page.getByLabel("Как оформляем комплект?").getByRole("button", { name: /Только оборудование/ }).click();
   const modal = page.locator(MODAL);
