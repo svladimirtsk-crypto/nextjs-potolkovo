@@ -1,0 +1,140 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 /home/user/repo
+
+ ✓  unit  tests/lead-delivery-channels.test.ts (16 tests) 253ms
+stderr | tests/lead-delivery-integration-db.test.ts > PT-020 · доставка: настоящая БД + фейковый HTTP-сервер > идемпотентность (PT-009) насквозь > повтор с тем же requestId не отправляет второе сообщение
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 18000 ₽ {
+  phone: '+79161112233',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 1 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 18000 ₽ (расхождение 71.0 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79161112233', known: false, required: false }
+
+stderr | tests/lead-delivery-integration-db.test.ts > PT-020 · доставка: настоящая БД + фейковый HTTP-сервер > идемпотентность (PT-009) насквозь > два параллельных запроса с одним requestId — одна заявка и одна отправка
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 18000 ₽ {
+  phone: '+79161112234',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 1 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 18000 ₽ (расхождение 71.0 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79161112234', known: false, required: false }
+
+stderr | tests/lead-delivery-integration-db.test.ts > PT-020 · доставка: настоящая БД + фейковый HTTP-сервер > идемпотентность (PT-009) насквозь > два параллельных запроса с одним requestId — одна заявка и одна отправка
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 18000 ₽ {
+  phone: '+79161112234',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 1 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 18000 ₽ (расхождение 71.0 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79161112234', known: false, required: false }
+
+stderr | tests/lead-delivery-integration-db.test.ts > PT-020 · доставка: настоящая БД + фейковый HTTP-сервер > идемпотентность (PT-009) насквозь > тот же requestId с другим содержимым — 409 и никакой отправки
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 18000 ₽ {
+  phone: '+79161112235',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 1 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 18000 ₽ (расхождение 71.0 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79161112235', known: false, required: false }
+
+stderr | tests/lead-delivery-integration-db.test.ts > PT-020 · доставка: настоящая БД + фейковый HTTP-сервер > приём заявки при недоступных каналах > заявка сохраняется, а задания падают в failed с текстом ошибки
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 18000 ₽ {
+  phone: '+79161112236',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 1 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 18000 ₽ (расхождение 71.0 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79161112236', known: false, required: false }
+
+stderr | tests/lead-delivery-integration-db.test.ts > PT-020 · доставка: настоящая БД + фейковый HTTP-сервер > приём заявки при недоступных каналах > обрыв соединения у канала не теряет заявку
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 18000 ₽ {
+  phone: '+79161112237',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 1 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 18000 ₽ (расхождение 71.0 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79161112237', known: false, required: false }
+
+ ✓  db  tests/lead-delivery-integration-db.test.ts (19 tests) 1512ms
+       ✓ повтор с тем же requestId не отправляет второе сообщение  546ms
+
+ Test Files  2 passed (2)
+      Tests  35 passed (35)
+   Start at  17:38:35
+   Duration  2.69s (transform 567ms, setup 0ms, import 648ms, tests 1.77s, environment 0ms)

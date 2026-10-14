@@ -1,0 +1,40 @@
+{
+  "date": "2026-10-14",
+  "mainRefVerifiedBy": "git ls-remote origin refs/heads/main",
+  "mainSha": "f3d7b69c6145067087f21ca1a9f4d48228923431",
+  "previewBaseSha": "a7a67f0c3c943cfde26c473fd78208b35003ca45",
+  "type": "documentation reconciliation and targeted PT-020 regression",
+  "sources": [
+    {
+      "path": "POTOLKOVO-TZ-V5-FINAL.md",
+      "sha256": "76ccec533d6e8a4bfcd17ed2d4b16991470b21b3f4335de4fb738047b227ad88",
+      "gitCommit": "f3d7b69c6145067087f21ca1a9f4d48228923431"
+    },
+    {
+      "path": "TZv5 допы/03-TZv5-addendum-PT038-PT049.md",
+      "sha256": "115028bc1ea9c05c5ddedcff337a1e4f3d5bbaada962e5e7f35f420fc1c330a7",
+      "gitCommit": "f3d7b69c6145067087f21ca1a9f4d48228923431"
+    }
+  ],
+  "sameAsMain": {
+    "tests/helpers/fake-delivery.ts": "e6c0feae93ab4b6a8ff93f559504e14c6ae46c933d2ec97a7f44be90b4e0cdf2",
+    "tests/lead-delivery-channels.test.ts": "0984e13205837a79f83372abd5c6beca61d918391e5827e8e4dfd75fb3c733a2",
+    "tests/lead-delivery-integration-db.test.ts": "08aa2fa29ea30a60ebbb379bb92dc56f38b547c5052b22ce40579bd05913cbac",
+    "lib/lead/store-pg.ts": "e33dd86cb2530023022849781dd3412df4a52ce9ac0a572784a42714da37e92c",
+    "db/schema.ts": "7d91fcd2fb0428876c4a90b6e4406acfa1023923c4b6ad94b0d0790698331a98",
+    "app/api/lead/route.ts": "17ac01b79dc8c617239e25f2ee8e7465e5e25225aa8a179977cbeb185f35002d",
+    "app/api/lead/retry/route.ts": "d3a3a893d51ccc90412fb158fe9d61f91c207fac9fddfa7128baf7a941478ebd",
+    "vitest.config.ts": "18f95fb9f1271fe9921f9dc84c414eacfd5ec00bb7e6eaddfa168c36b597e57b"
+  },
+  "tests": {
+    "passed": 35,
+    "files": 2,
+    "skipped": 0,
+    "database": "local PostgreSQL 17",
+    "delivery": "fake HTTP only",
+    "command": "TEST_DATABASE_URL=<local-test-db> CRON_SECRET=<test-secret> npx vitest run tests/lead-delivery-channels.test.ts tests/lead-delivery-integration-db.test.ts",
+    "log": "pt020-continuation.log"
+  },
+  "runtimeChanges": false,
+  "fullE2ERerun": false
+}
