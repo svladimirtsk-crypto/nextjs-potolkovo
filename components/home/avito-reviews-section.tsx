@@ -10,10 +10,11 @@ const INITIAL_COUNT = 4;
 
 function StarRating({ value }: { value: number }) {
   return (
-    <div className="flex items-center gap-0.5" aria-label={`Рейтинг ${value} из 5`}>
+    <div role="img" className="flex items-center gap-0.5" aria-label={`Рейтинг ${value} из 5`}>
       {[1, 2, 3, 4, 5].map((star) => (
         <svg
           key={star}
+          aria-hidden="true"
           className={`h-4 w-4 ${star <= Math.round(value) ? "text-amber-400" : "text-slate-200"}`}
           fill="currentColor"
           viewBox="0 0 20 20"
@@ -98,7 +99,7 @@ export function AvitoReviewsSection({ filter }: { filter?: "light" } = {}) {
           <Heading
             eyebrow="Отзывы"
             title="Что говорят клиенты"
-            description="Реальные отзывы с Avito — 19 отзывов, рейтинг 5.0"
+            description="Отзывы из профиля основателя на Avito. Цитаты клиентов сохранены без изменений."
           />
 
           {honestNote ? (

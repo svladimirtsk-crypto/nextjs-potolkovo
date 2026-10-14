@@ -53,11 +53,11 @@ import { Input } from "@/components/ui/input";
 
 const COPY = {
   successTitle: "Заявка отправлена",
-  successMessage: "Спасибо!\nПерезвоню в ближайшее время — уточню детали и предложу решение.",
+  successMessage: "Спасибо!\nПерезвоним в ближайшее время — уточним детали и предложим решение.",
   submitButtonLabel: "Записаться на бесплатный замер",
   submitButtonLabelPending: "Отправляю...",
   helperText:
-    "Перезвоню, чтобы уточнить детали. Можно указать район — так проще сориентироваться.",
+    "Перезвоним, чтобы уточнить детали. Можно указать район — так проще сориентироваться.",
   addressFieldHint: "Необязательно.\nПоможет быстрее сориентироваться по выезду.",
 } as const;
 
@@ -370,7 +370,7 @@ export function ActionForm({
     setStatus("success");
     setMessage(
       result.callbackWindow
-        ? `Заявка сохранена. Перезвоню ${result.callbackWindow}.`
+        ? `Заявка сохранена. Перезвоним ${result.callbackWindow}.`
         : COPY.successMessage
     );
 
@@ -457,7 +457,7 @@ export function ActionForm({
 
       {placement === "modal" && !hasRooms && !hasLighting ? (
         <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          Расчёт не приложится — это нормально, уточню по телефону.
+          Расчёт не приложится — это нормально, уточним по телефону.
         </p>
       ) : null}
 

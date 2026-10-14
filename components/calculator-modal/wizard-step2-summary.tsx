@@ -524,7 +524,7 @@ export function WizardStep2Summary() {
           <p className="text-lg font-semibold text-emerald-950">
             {leadPublicCode ? `Заявка №${leadPublicCode} сохранена` : "Спасибо!"}
           </p>
-          <p className="mt-1 text-sm text-emerald-800">Перезвоню {callbackWindow}.</p>
+          <p className="mt-1 text-sm text-emerald-800">Перезвоним {callbackWindow}.</p>
           <p className="mt-2 text-sm text-emerald-900">
             <a href={contacts.phoneHref} className="font-semibold underline underline-offset-2">
               {contacts.phoneDisplay}

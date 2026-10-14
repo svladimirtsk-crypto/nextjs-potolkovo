@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Container } from "@/components/ui/container";
 import { JsonLd } from "@/components/seo/json-ld";
 import { Picture } from "@/components/ui/picture";
-import { contacts } from "@/content/contacts";
+import { BrandLogo } from "@/components/brand/brand-logo";
 import { phase2Services } from "@/content/services";
 import { buildBreadcrumbSchema } from "@/lib/seo-schema";
 
@@ -66,17 +66,11 @@ export default function UslugiHubPage() {
 
       <header className="border-b border-slate-200 bg-white">
         <Container className="flex min-h-[var(--header-height)] items-center justify-between gap-4">
-          <Link
-            href="/"
-            aria-label={contacts.brandName}
-            className="inline-flex shrink-0 items-center font-mono text-sm font-bold uppercase tracking-[0.24em] text-slate-950 sm:text-[15px]"
-          >
-            {contacts.brandShortName}
-          </Link>
+          <BrandLogo />
 
           <Link
             href="/#action"
-            className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+            className="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold !text-white transition hover:bg-slate-800"
           >
             Записаться на замер
           </Link>
@@ -100,7 +94,7 @@ export default function UslugiHubPage() {
 
             <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
               Девять направлений — от простого полотна до световых линий и трековых систем.
-              Работаю лично: замер, смета и монтаж без посредников. Цены ниже — стартовые,
+              Состав работ и условия согласовываются до монтажа. Цены ниже — стартовые,
               точная сумма считается на замере.
             </p>
           </Container>
@@ -155,14 +149,14 @@ export default function UslugiHubPage() {
         <section className="border-t border-slate-200 bg-slate-950 text-white">
           <Container className="py-14 text-center sm:py-16">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              Не знаете, какой узел подойдёт?
+              Не знаете, какое решение подойдёт?
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-base leading-7 text-white/70">
-              Приеду на замер бесплатно, посмотрю геометрию и предложу решение под бюджет.
+              Приедем на замер бесплатно, посмотрим геометрию и предложим решение под бюджет.
             </p>
             <Link
               href="/#action"
-              className="mt-7 inline-flex rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
+              className="mt-7 inline-flex rounded-full bg-white px-6 py-3 text-sm font-semibold !text-slate-950 transition hover:bg-slate-100"
             >
               Записаться на бесплатный замер
             </Link>

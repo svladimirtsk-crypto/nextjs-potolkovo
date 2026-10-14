@@ -64,7 +64,7 @@ function getVariantClasses(variant: ButtonVariant) {
     case "primary":
     default:
       /*
-       * T-064: primary — акцентный синий, а не чёрный. Раньше главная кнопка
+       * T-064: R7: primary — цвет компании, задаваемый дизайн-токеном. Раньше главная кнопка
        * визуально не отличалась от тёмных секций и служебных элементов,
        * поэтому «Записаться на замер» терялась среди slate-950.
        */
@@ -85,7 +85,7 @@ export function Button(props: ButtonProps) {
   const size = props.size ?? "md";
 
   const baseClassName = [
-    "inline-flex items-center justify-center rounded-full font-semibold",
+    "pk-button inline-flex items-center justify-center rounded-full font-semibold",
     getSizeClasses(size),
     "transition-colors",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2",

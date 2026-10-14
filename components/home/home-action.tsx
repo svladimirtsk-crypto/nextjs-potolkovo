@@ -24,7 +24,7 @@ export function HomeAction() {
 
             <div className="mt-6 flex flex-wrap gap-2.5">
               {[
-                "Перезвоню лично",
+                "Свяжемся по заявке",
                 "Замер бесплатно",
                 "Смета до старта",
               ].map((item) => (
@@ -58,7 +58,7 @@ export function HomeAction() {
             <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950">
               <p className="font-semibold">Что получите после заявки</p>
               <p className="mt-1 text-emerald-900/80">
-                Уточню задачу, сориентирую по решению и заранее проговорю, из чего сложится смета.
+                Уточним задачу, сориентируем по решению и заранее проговорим, из чего сложится смета.
               </p>
             </div>
 

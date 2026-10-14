@@ -7,6 +7,7 @@ import { buildLocalBusinessSchema } from "@/lib/seo-schema";
 
 import { Providers } from "./providers";
 import "./globals.css";
+import "./brand.css";
 
 const inter = Inter({
   subsets:  ["latin", "cyrillic"],
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
     template: "%s | ПОТОЛКОВО",
   },
   description:
-    "Современные натяжные потолки в Москве и Московской области. Личный монтаж, договор и гарантия.",
+    "Современные натяжные потолки в Москве и Московской области. Теневые и парящие потолки, световые линии, подбор освещения и монтаж.",
   alternates: {
     canonical: "/",
   },
@@ -46,12 +47,12 @@ export default function RootLayout({
 
         <JsonLd data={buildLocalBusinessSchema()} />
 
-        <noscript
+        {process.env.NEXT_PUBLIC_PREVIEW_MODE !== "1" && <noscript
           dangerouslySetInnerHTML={{
             __html:
               '<div><img src="https://mc.yandex.ru/watch/107200362" style="position:absolute;left:-9999px" alt="" /></div>',
           }}
-        />
+        />}
 
         <Providers>{children}</Providers>
       </body>

@@ -26,7 +26,7 @@ export function ServiceCompareSection() {
           </p>
         </div>
 
-        <div className="mt-10 overflow-x-auto">
+        <div className="mt-10 overflow-x-auto" tabIndex={0} role="region" aria-labelledby="compare-title">
           <table className="w-full min-w-[640px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-slate-200">

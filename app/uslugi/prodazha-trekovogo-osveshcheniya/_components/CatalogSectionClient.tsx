@@ -317,7 +317,7 @@ export function CatalogSectionClient({ data }: Props) {
 
         {smartOnly ? (
           <div className="mt-4 rounded-2xl border border-violet-200 bg-violet-50 p-4 text-sm leading-6 text-violet-950">
-            Показаны SMART-позиции: светильники, панели управления и аксессуары. Управление лучше подбирать под сценарии помещения — зафиксирую интерес и предложу вариант лично.
+            Показаны SMART-позиции: светильники, панели управления и аксессуары. Управление лучше подбирать под сценарии помещения — зафиксируем пожелания и проверим возможности конкретного комплекта.
           </div>
         ) : null}
 
@@ -530,7 +530,7 @@ export function CatalogSectionClient({ data }: Props) {
 
         {!data.ok ? (
           <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-950">
-            Каталог временно не загрузился. Напишите мне — подберу комплект вручную.
+            Каталог временно не загрузился. Напишите в ПОТОЛКОВО — обсудим состав комплекта.
           </div>
         ) : null}
       </Container>
