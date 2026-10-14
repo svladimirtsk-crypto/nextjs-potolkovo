@@ -98,7 +98,7 @@ export function LeadFormAlert({
           disabled={isPending}
           onClick={onRetry}
         >
-          {isPending ? "Отправляю..." : "Повторить отправку"}
+          {isPending ? "Отправка…" : "Повторить отправку"}
         </Button>
       ) : null}
 

@@ -180,7 +180,7 @@ function ConfirmDialogPanel({
         });
       } catch {
         // Обработчик не должен бросать исключений (`submitLead` их глотает),
-        // но если бросил — честнее показать отказ, чем зависнуть в «Отправляю…».
+        // но если бросил — честнее показать отказ, чем зависнуть в «Отправка…».
         outcome = { ok: false, message: "Не удалось отправить заявку. Попробуйте ещё раз." };
       }
 
@@ -247,7 +247,7 @@ function ConfirmDialogPanel({
   const isSubmitting = phase === "submitting";
 
   const confirmLabel = isSubmitting
-    ? (options.submit?.pendingLabel ?? "Отправляю…")
+    ? (options.submit?.pendingLabel ?? "Отправка…")
     : phase === "failed"
       ? (options.submit?.retryLabel ?? "Повторить")
       : (options.confirmLabel ?? "Подтвердить");

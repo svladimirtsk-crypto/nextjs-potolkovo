@@ -55,7 +55,7 @@ export function ServiceMidCta() {
         <div className="flex flex-col items-center gap-4 rounded-[1.75rem] bg-slate-950 px-6 py-6 text-center sm:flex-row sm:justify-between sm:text-left">
           <div>
             <p className="text-base font-semibold text-white sm:text-lg">
-              Ориентир для вашей комнаты за 2 минуты
+              Предварительный расчёт для вашей комнаты
             </p>
             <p className="mt-1 text-sm text-white/70">
               Без замера и звонка — сразу увидите порядок суммы.

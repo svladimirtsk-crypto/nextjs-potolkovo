@@ -221,7 +221,7 @@ export function RecommendationsTab({
           onQtyChange={cart.onQtyChange}
           onZoom={cart.onZoom}
           discountPercent={cart.discountPercent}
-          emptyText="Люстры сейчас не найдены в каталоге. Подберу вариант при звонке."
+          emptyText="Люстры сейчас не найдены в каталоге. Обсудим подходящие варианты при звонке."
         />
       ) : null}
 

@@ -1,0 +1,203 @@
+{
+  "version": "8.1",
+  "date": "2026-10-14",
+  "status": "digital masters; owner approval and trademark/print checks pending",
+  "sourceMark": "components/brand/brand-logo.tsx",
+  "font": "Inter / SIL OFL 1.1",
+  "fontSHA256": "07657bb80bc1fbfaf19caeb50c47c47fa710b24406cc7af63315e1805355264b",
+  "colorSpace": "sRGB, not CMYK production art",
+  "files": [
+    {
+      "file": "exports/potolkovo-horizontal-ink.svg",
+      "layout": "horizontal",
+      "tone": "ink",
+      "width": 253.82,
+      "height": 56,
+      "sha256": "9ee7555d9b2444bd8e415fd3dc04332df5c6018d753705a76952020a309bdad1"
+    },
+    {
+      "file": "exports/potolkovo-horizontal-reverse.svg",
+      "layout": "horizontal",
+      "tone": "reverse",
+      "width": 253.82,
+      "height": 56,
+      "sha256": "c325bf8e405a3db5962f883376401a0ac57952492a99428320c9f40c56354cd2"
+    },
+    {
+      "file": "exports/potolkovo-horizontal-black.svg",
+      "layout": "horizontal",
+      "tone": "black",
+      "width": 253.82,
+      "height": 56,
+      "sha256": "93b5597756ad3bb74a2fe7a17da2e326dbf1a2fce33a27659dc8da04e3852d17"
+    },
+    {
+      "file": "exports/potolkovo-horizontal-white.svg",
+      "layout": "horizontal",
+      "tone": "white",
+      "width": 253.82,
+      "height": 56,
+      "sha256": "965df9bfb2c8b441daf2dbf11a8000f80b6a24ec7a74467d168237459a3ee472"
+    },
+    {
+      "file": "exports/potolkovo-compact-ink.svg",
+      "layout": "compact",
+      "tone": "ink",
+      "width": 188.83,
+      "height": 114,
+      "sha256": "f305c8c6313c476f78605cf186eb0e3b409dfa0792752716f77c53ab5cacb1dc"
+    },
+    {
+      "file": "exports/potolkovo-compact-reverse.svg",
+      "layout": "compact",
+      "tone": "reverse",
+      "width": 188.83,
+      "height": 114,
+      "sha256": "5baa9d4ae5140fa2a8196b96a66531842804b3eaaef8b4c5c866bbbb4deac8c2"
+    },
+    {
+      "file": "exports/potolkovo-compact-black.svg",
+      "layout": "compact",
+      "tone": "black",
+      "width": 188.83,
+      "height": 114,
+      "sha256": "934dc849e8d3c0db20c6055a98c7beb9c241d536b8b7e85751474b6e1724e057"
+    },
+    {
+      "file": "exports/potolkovo-compact-white.svg",
+      "layout": "compact",
+      "tone": "white",
+      "width": 188.83,
+      "height": 114,
+      "sha256": "22fcea2a04d41c1e432ed08990af7ffa76034e7be88a59e2dbb5a00c56f5b4cc"
+    },
+    {
+      "file": "exports/potolkovo-symbol-ink.svg",
+      "layout": "symbol",
+      "tone": "ink",
+      "width": 48,
+      "height": 48,
+      "sha256": "c25a258cfdd73cd12b89c75111e73a019753e7b56c1a7a268d8d09037baf6a13"
+    },
+    {
+      "file": "exports/potolkovo-symbol-reverse.svg",
+      "layout": "symbol",
+      "tone": "reverse",
+      "width": 48,
+      "height": 48,
+      "sha256": "dd6428e387dbb901f38dc2959f434a720d94025bd6f02d64a7b61dce8dad14c2"
+    },
+    {
+      "file": "exports/potolkovo-symbol-black.svg",
+      "layout": "symbol",
+      "tone": "black",
+      "width": 48,
+      "height": 48,
+      "sha256": "10d2c22eadb1df267133e63544df2701c89257f0582f9611a4889f4a35592636"
+    },
+    {
+      "file": "exports/potolkovo-symbol-white.svg",
+      "layout": "symbol",
+      "tone": "white",
+      "width": 48,
+      "height": 48,
+      "sha256": "d8025a87c9fc5313cf9183430e3082c7685d22a8ed511cb10c9ea6c56cf65705"
+    },
+    {
+      "file": "exports/potolkovo-horizontal-ink.png",
+      "layout": "horizontal",
+      "tone": "ink",
+      "width": 1600,
+      "height": 353,
+      "sha256": "0d9742f38add06f40e855031ea0628cb1542722ead36e7c501510c6fe72138a1"
+    },
+    {
+      "file": "exports/potolkovo-horizontal-reverse.png",
+      "layout": "horizontal",
+      "tone": "reverse",
+      "width": 1600,
+      "height": 353,
+      "sha256": "ef90c46410757d7c275138d9d4107c6bfa52fc9f06689bcdadcd7e92fed36bdf"
+    },
+    {
+      "file": "exports/potolkovo-horizontal-black.png",
+      "layout": "horizontal",
+      "tone": "black",
+      "width": 1600,
+      "height": 353,
+      "sha256": "26d3e3b5a180c9a1e8741385359dc6a6fde843797c29835c7c627e10c5e320c0"
+    },
+    {
+      "file": "exports/potolkovo-horizontal-white.png",
+      "layout": "horizontal",
+      "tone": "white",
+      "width": 1600,
+      "height": 353,
+      "sha256": "905d6f1761379dbd3b2b69fd217a131a642a09385a75f393e4a2ad887f63eb02"
+    },
+    {
+      "file": "exports/potolkovo-compact-ink.png",
+      "layout": "compact",
+      "tone": "ink",
+      "width": 1600,
+      "height": 966,
+      "sha256": "641095719986e1e7822de6a044168f3ab9af72b625eed0d5c5c38001220ff9a9"
+    },
+    {
+      "file": "exports/potolkovo-compact-reverse.png",
+      "layout": "compact",
+      "tone": "reverse",
+      "width": 1600,
+      "height": 966,
+      "sha256": "93b2e085637fd6dd9701b0603ca54a602db948dd6a8ee0caf53f5f511a57bfec"
+    },
+    {
+      "file": "exports/potolkovo-compact-black.png",
+      "layout": "compact",
+      "tone": "black",
+      "width": 1600,
+      "height": 966,
+      "sha256": "f9c9e4de071e81c2115e4b4d92a5278342c84335c962acbea314cdca14907f75"
+    },
+    {
+      "file": "exports/potolkovo-compact-white.png",
+      "layout": "compact",
+      "tone": "white",
+      "width": 1600,
+      "height": 966,
+      "sha256": "ac65170ca7953fc943cd78c0b335b4995d509abf4c056785288be11441142d4c"
+    },
+    {
+      "file": "exports/potolkovo-symbol-ink.png",
+      "layout": "symbol",
+      "tone": "ink",
+      "width": 512,
+      "height": 512,
+      "sha256": "7e135ced50d31d4980b7f56567c2f15d32c21903071d00c06523c9c9f9d04f70"
+    },
+    {
+      "file": "exports/potolkovo-symbol-reverse.png",
+      "layout": "symbol",
+      "tone": "reverse",
+      "width": 512,
+      "height": 512,
+      "sha256": "7ffb40c22df868024be971b625cc6cca8f550c498d6ae1dc61946591d61931c3"
+    },
+    {
+      "file": "exports/potolkovo-symbol-black.png",
+      "layout": "symbol",
+      "tone": "black",
+      "width": 512,
+      "height": 512,
+      "sha256": "b64719498efc7173901e985d6b8ce6e1562a1af12477c2fa7bffe7585c6a7551"
+    },
+    {
+      "file": "exports/potolkovo-symbol-white.png",
+      "layout": "symbol",
+      "tone": "white",
+      "width": 512,
+      "height": 512,
+      "sha256": "787012947cf05b1e529e0aa3ea62bf875ba1b42c02c01cd7c0acfa69907d9981"
+    }
+  ]
+}

@@ -78,15 +78,15 @@ export function useRescueOffer(): RescueOffer {
     let acceptedTracked = false;
 
     await showConfirmDialog({
-      title: "Сохранить расчёт и получить его на телефон?",
+      title: "Сохранить расчёт и обсудить детали?",
       message:
-        "Пришлю расчёт и отвечу на вопросы. Если не нужно — просто закройте, ничего не отправится.",
+        "Оставьте номер — свяжемся, обсудим расчёт и ответим на вопросы. Если не нужно — просто закройте, ничего не отправится.",
       confirmLabel: "Отправить",
       cancelLabel: "Просто закрыть",
       variant: "info",
       phoneField: {
         label: "Телефон",
-        hint: "Перезвоним в удобное время, спама не будет.",
+        hint: "Номер нужен для связи по этой заявке.",
         /**
          * PT-004: текст и ссылка — те же, что в основной форме (T-047), из
          * единого `content/legal.ts`. Придумывать отдельную формулировку для
@@ -100,7 +100,7 @@ export function useRescueOffer(): RescueOffer {
         },
       },
       submit: {
-        pendingLabel: "Отправляю…",
+        pendingLabel: "Отправка…",
         retryLabel: "Повторить",
         dismissLabel: "Закрыть без отправки",
         run: async (phone, consent) => {

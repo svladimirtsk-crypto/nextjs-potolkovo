@@ -223,7 +223,7 @@ export function PointsScreen({
       onQtyChange={onQtyChange}
       onZoom={onZoom}
       discountPercent={discountPercent}
-      emptyText="Светильники сейчас не найдены в каталоге. Подберу вариант при звонке."
+      emptyText="Светильники сейчас не найдены в каталоге. Обсудим подходящие варианты при звонке."
       beforeGrid={
         <PointKindPicker
           {...picker}
