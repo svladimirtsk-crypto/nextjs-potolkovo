@@ -1,0 +1,74 @@
+{
+  "date": "2026-10-15",
+  "productCommit": "2aca11b99eb63463cef32064c45257d5d2e12eaf",
+  "baseCommit": "569ad5542f2a8147d5c2cd56591ebd91091f873d",
+  "unit": {
+    "passed": 1323,
+    "files": 100,
+    "failed": 0,
+    "skipped": 0,
+    "database": "local PostgreSQL 17"
+  },
+  "e2e": {
+    "startTime": "2026-10-14T23:59:51.817Z",
+    "duration": 431985.738,
+    "expected": 304,
+    "skipped": 12,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "newTests": {
+    "unit": 18,
+    "e2e": 16
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 9
+  },
+  "typecheck": "passed",
+  "buildPrebuild": "passed with RAYON_NUM_THREADS=1 and heap 640 MB",
+  "flowPassed": 8,
+  "homeJsGzipKb": 227.6,
+  "protectedFilesSHA256": {
+    "content/pricing.ts": "79f1042676d5884f3234fd06af2d19e09d20abee2ac3d038b2846252be478885",
+    "lib/calculator/pricing.ts": "d782997dacb1b4e72cc11a160d5991410dca51de88039d4f1469feba62f8b9bf",
+    "lib/calculator/room-snapshot.ts": "493522a8b7ca26600c0d59d92cd11f32a094db42932945a5c5198065697f3820",
+    "lib/lighting-formulas.ts": "496b21a2c61214015fa2430f4b0edf1ec89f9759e35208ab76773eac02878392",
+    "app/api/lead/route.ts": "17ac01b79dc8c617239e25f2ee8e7465e5e25225aa8a179977cbeb185f35002d",
+    "db/schema.ts": "7d91fcd2fb0428876c4a90b6e4406acfa1023923c4b6ad94b0d0790698331a98",
+    "content/catalog-retired.json": "7282763e8ad80040ffdb0479a7baa5b55b630a9eb02780c4f4f6b6011f9e095a",
+    "lib/lighting/product-role.ts": "687c9378c3173d9c495cd24b6cc5f130901d5b131b35cade0317a3fa55989b14"
+  },
+  "e2eFileSHA256": "70c9f7b335c111b969780d474fb541c1b09a0a9a777bf240c47e668454bad3e5",
+  "delivered": [
+    "active room context and navigation",
+    "transactional save/cancel and return",
+    "explicit delete and stable restored ids",
+    "last-room removal retains equipment, removes ceiling totals and restores equipment-only discount/intent",
+    "partial new draft completion metadata, legacy compatibility",
+    "actual question count and functional summary footer",
+    "short-screen inputs tested using elementFromPoint, not only DOM presence"
+  ],
+  "infrastructure": "Initial heap-1024 build exhausted the 2 GB sandbox and was stopped; not a passing build. Registered builds with heap 640 passed. No simultaneous heavy build and browser run.",
+  "diagnosticCorrections": [
+    "Ambiguous duplicate summary heading renamed to identify ceiling scope",
+    "Old first-screen Back test exercised a no-op: now asserts absence of a false navigation control",
+    "Draft parity test reads the unchanged amount independently of the new caption",
+    "A 400px-high viewport revealed input/footer overlap; short-screen sticky context and scroll padding were corrected and a hit-target regression added"
+  ],
+  "futureNotImplemented": [
+    "independent features/scenarios per room",
+    "full scope conversion and legacy prefill provenance",
+    "LED zones and electrical BOM",
+    "full final-price breakdown",
+    "PT-024 analytics value repair",
+    "standalone cart reload persistence"
+  ],
+  "manualNotVerified": [
+    "real iOS/Android keyboard",
+    "screen reader",
+    "full 200% zoom acceptance"
+  ],
+  "gitleaks": "unavailable locally; no new secrets scan claimed",
+  "preExistingWorktreeChange": "Executable bit of scripts/check-e2e-flaky.mjs preserved and excluded from commits"
+}

@@ -1,0 +1,30 @@
+
+> nextjs@0.1.0 lint
+> eslint
+
+
+/home/user/repo/app/uslugi/_components/ServiceRelatedServices.tsx
+  4:34  warning  'servicePageContent' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/user/repo/components/calculator-modal/lighting-footer-progress.tsx
+  7:15  warning  'FeedCatalogParam' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/user/repo/components/home/action-form.tsx
+  80:10  warning  'buildLeadMessage' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/user/repo/components/home/mobile-sticky-cta.tsx
+  120:9  warning  'hasLightingInSnapshot' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  144:9  warning  'handleActionClick' is assigned a value but never used      @typescript-eslint/no-unused-vars
+
+/home/user/repo/components/ui/picture.tsx
+  92:8  warning  Unused eslint-disable directive (no problems were reported from '@next/next/no-img-element')
+
+/home/user/repo/lib/calculator/selectors.ts
+  225:3  warning  'ctx' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/user/repo/tests/lead-api.test.ts
+  106:22  warning  '_consent' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  111:26  warning  '_oi' is assigned a value but never used       @typescript-eslint/no-unused-vars
+
+✖ 9 problems (0 errors, 9 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.

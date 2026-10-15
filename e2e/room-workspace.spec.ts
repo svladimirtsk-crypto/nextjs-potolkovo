@@ -135,9 +135,11 @@ test('Room UX: deleting the last room keeps equipment and correctly switches to 
   await m.getByRole('button',{name:'Продолжить только со светом',exact:true}).click();
   await expect(m.getByTestId('estimate-card')).not.toContainText('Потолок и работы');
   await submitLeadForm(page,{scope:m});await expect.poll(()=>leads.length).toBe(1);
-  const snap=leads[0].snapshot as {rooms:unknown[];lighting:{items:Array<{qty:number}>};totals:{grand:number;lightingEffective:number;discountPct:number}};
+  const snap=leads[0].snapshot as {rooms:unknown[];lighting:{items:Array<{qty:number}>;discountMode:string;discountPercentApplied:number;effectiveTotalRub:number};totals:{grand:number;lightingEffective:number;discountPct:number}};
   expect(snap.rooms).toHaveLength(0);expect(snap.lighting.items).toHaveLength(1);expect(snap.lighting.items[0].qty).toBe(1);
   expect(snap.totals.discountPct).toBe(10);expect(snap.totals.grand).toBe(snap.totals.lightingEffective);
+  expect(snap.lighting.discountMode).toBe("lighting-only");expect(snap.lighting.discountPercentApplied).toBe(10);
+  expect(snap.lighting.effectiveTotalRub).toBe(snap.totals.lightingEffective);expect(leads[0].orderIntent).toBe("lighting_only");
 });
 
 test('Room UX: a second-room area input remains reachable on a 400px-high screen', async ({ page }) => {
