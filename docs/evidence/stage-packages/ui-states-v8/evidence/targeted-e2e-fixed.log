@@ -1,0 +1,13 @@
+
+Running 8 tests using 2 workers
+
+  ✓  1 [chromium-desktop] › e2e/ui-states.spec.ts:23:5 › B8 states: server failure, retry and saved request preserve input and request ID (4.4s)
+  ✓  2 [chromium-mobile] › e2e/ui-states.spec.ts:23:5 › B8 states: server failure, retry and saved request preserve input and request ID (6.2s)
+  ✓  3 [chromium-desktop] › e2e/ui-states.spec.ts:40:5 › B8 states: empty selection and empty search have an explicit way back without changing the estimate (3.3s)
+  ✓  4 [chromium-mobile] › e2e/ui-states.spec.ts:40:5 › B8 states: empty selection and empty search have an explicit way back without changing the estimate (3.3s)
+  ✓  5 [chromium-desktop] › e2e/ui-states.spec.ts:60:5 › B8 states: pending rescue traps keyboard focus and error actions fit a short screen (3.2s)
+  ✓  6 [chromium-mobile] › e2e/ui-states.spec.ts:60:5 › B8 states: pending rescue traps keyboard focus and error actions fit a short screen (3.4s)
+  ✓  7 [chromium-desktop] › e2e/ui-states.spec.ts:109:5 › B8 states: delayed catalog, failure and explicit recovery keep the same page and ceiling estimate (3.3s)
+  ✓  8 [chromium-mobile] › e2e/ui-states.spec.ts:109:5 › B8 states: delayed catalog, failure and explicit recovery keep the same page and ceiling estimate (3.2s)
+
+  8 passed (17.2s)

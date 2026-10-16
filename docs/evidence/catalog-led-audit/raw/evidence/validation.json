@@ -1,0 +1,28 @@
+{
+  "auditedCommit": "4239468b4aa574eb00b4d3b837cdd09620e1a4c7",
+  "date": "2026-10-14",
+  "findings": 15,
+  "futureAcceptanceScenarios": 26,
+  "scenariosImplemented": false,
+  "runtimeChanges": false,
+  "browserViewports": [
+    "390x844",
+    "1440x1000"
+  ],
+  "fullE2ERerun": false,
+  "realLeadSent": false,
+  "xmlOffers": 696,
+  "ledCategoryOffers": 72,
+  "hardwareMislabelledMeters": 36,
+  "ledGroupAliasChanges": 58,
+  "allAliasChanges": 186,
+  "feedSHA256": "adc8d0a94ffb121c8fb950458a14f2b793442b4ece7ea10912a3179471646f2d",
+  "xlsxRows": 72,
+  "aliasesSheetRows": 186,
+  "fullBOMVerified": false,
+  "nominalExamplesArithmetic": "checked",
+  "docx": "OOXML checked, not layout-rendered in Word",
+  "overview": "15 details; 320/390/1440 no horizontal overflow; no external assets",
+  "protectedRuntimePaths": "no diff",
+  "preExistingWorktreeChange": "scripts/check-e2e-flaky.mjs executable bit only, left untouched"
+}

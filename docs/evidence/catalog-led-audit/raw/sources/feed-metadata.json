@@ -1,0 +1,13 @@
+{
+  "url": "https://eksmarket.ru/api/personal/feed2/",
+  "feedDate": "2026-10-14 21:00",
+  "offerCount": 696,
+  "sha256": "adc8d0a94ffb121c8fb950458a14f2b793442b4ece7ea10912a3179471646f2d",
+  "bytes": 782921,
+  "categoryMissing": 696,
+  "available": {
+    "true": 696
+  },
+  "retrievedAtUtc": "2026-10-14T19:47:15.168211+00:00",
+  "sourceTimezone": "not specified in XML"
+}

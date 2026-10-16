@@ -1,0 +1,52 @@
+
+Running 6 tests using 2 workers
+
+  ✘  2 [chromium-mobile] › e2e/catalog-owner-corrections.spec.ts:6:5 › Owner corrections: true panels exclude controls, accessories have their own category, retired SKU is absent (6.2s)
+  ✓  1 [chromium-desktop] › e2e/catalog-owner-corrections.spec.ts:6:5 › Owner corrections: true panels exclude controls, accessories have their own category, retired SKU is absent (7.2s)
+  ✓  3 [chromium-desktop] › e2e/catalog-owner-corrections.spec.ts:30:5 › Owner corrections: track controls remain equipment, do not create fixture installation or lamp demand (5.0s)
+  ✓  4 [chromium-mobile] › e2e/catalog-owner-corrections.spec.ts:30:5 › Owner corrections: track controls remain equipment, do not create fixture installation or lamp demand (5.4s)
+  ✓  5 [chromium-desktop] › e2e/catalog-owner-corrections.spec.ts:54:5 › Owner withdrawal: restored old quote shows unavailable item and removes it only on explicit action (3.2s)
+  ✓  6 [chromium-mobile] › e2e/catalog-owner-corrections.spec.ts:54:5 › Owner withdrawal: restored old quote shows unavailable item and removes it only on explicit action (3.4s)
+
+
+  1) [chromium-mobile] › e2e/catalog-owner-corrections.spec.ts:6:5 › Owner corrections: true panels exclude controls, accessories have their own category, retired SKU is absent 
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 14
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "id": "color-contrast",
+    +     "nodes": Array [
+    +       Object {
+    +         "target": Array [
+    +           "#catalog-tab-fixture-accessories > span",
+    +         ],
+    +         "why": "Fix any of the following:
+    +   Element has insufficient color contrast of 1.19 (foreground color: #ffffff, background color: #e8eddf, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1",
+    +       },
+    +     ],
+    +   },
+    + ]
+
+      21 |   await expect(page.locator(".pk-product").first()).toContainText("Дополнение к светильнику");
+      22 |   const result = await new AxeBuilder({ page }).include(".pk-catalog").withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
+    > 23 |   expect(result.violations.map(v => ({ id: v.id, nodes: v.nodes.map(n => ({ target: n.target, why: n.failureSummary })) }))).toEqual([]);
+         |                                                                                                                              ^
+      24 |   if (process.env.CALC_AUDIT_CAPTURE) await page.locator(".pk-catalog-grid").screenshot({ path: `${process.env.CALC_AUDIT_CAPTURE}/accessories-${test.info().project.name}.jpg`, type: "jpeg", quality: 85, scale: "css" });
+      25 |   await page.getByLabel("Поиск по каталогу").fill("0У-00001341");
+      26 |   await expect(page.locator(".pk-product")).toHaveCount(0);
+        at /home/user/repo/e2e/catalog-owner-corrections.spec.ts:23:126
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/catalog-owner-corrections--80e0e-egory-retired-SKU-is-absent-chromium-mobile/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/catalog-owner-corrections--80e0e-egory-retired-SKU-is-absent-chromium-mobile/error-context.md
+
+  1 failed
+    [chromium-mobile] › e2e/catalog-owner-corrections.spec.ts:6:5 › Owner corrections: true panels exclude controls, accessories have their own category, retired SKU is absent 
+  5 passed (17.6s)

@@ -1,0 +1,165 @@
+
+Running 6 tests using 2 workers
+
+  ✓  2 [chromium-desktop] › e2e/catalog-owner-corrections.spec.ts:6:5 › Owner corrections: true panels exclude controls, accessories have their own category, retired SKU is absent (6.0s)
+  ✘  1 [chromium-mobile] › e2e/catalog-owner-corrections.spec.ts:6:5 › Owner corrections: true panels exclude controls, accessories have their own category, retired SKU is absent (8.0s)
+  ✘  3 [chromium-desktop] › e2e/catalog-owner-corrections.spec.ts:30:5 › Owner corrections: track controls remain equipment, do not create fixture installation or lamp demand (5.3s)
+  ✘  4 [chromium-mobile] › e2e/catalog-owner-corrections.spec.ts:30:5 › Owner corrections: track controls remain equipment, do not create fixture installation or lamp demand (5.8s)
+  ✘  5 [chromium-desktop] › e2e/catalog-owner-corrections.spec.ts:54:5 › Owner withdrawal: restored old quote shows unavailable item and removes it only on explicit action (3.5s)
+  ✘  6 [chromium-mobile] › e2e/catalog-owner-corrections.spec.ts:54:5 › Owner withdrawal: restored old quote shows unavailable item and removes it only on explicit action (3.0s)
+
+
+  1) [chromium-desktop] › e2e/catalog-owner-corrections.spec.ts:30:5 › Owner corrections: track controls remain equipment, do not create fixture installation or lamp demand 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('[data-testid="calculator-modal"][data-open="true"]').getByText('КОЛИБРИ СМАРТ Панель управления для трековой системы, белая', { exact: true })
+    Expected: visible
+    Error: strict mode violation: locator('[data-testid="calculator-modal"][data-open="true"]').getByText('КОЛИБРИ СМАРТ Панель управления для трековой системы, белая', { exact: true }) resolved to 2 elements:
+        1) <p class="break-words text-sm font-semibold text-slate-950 leading-snug max-sm:text-[12px] max-sm:leading-4">КОЛИБРИ СМАРТ Панель управления для трековой сист…</p> aka getByRole('paragraph').filter({ hasText: 'КОЛИБРИ СМАРТ Панель управления для трековой системы, белая' })
+        2) <p>КОЛИБРИ СМАРТ Панель управления для трековой сист…</p> aka getByLabel('Свет в проекте').getByText('КОЛИБРИ СМАРТ Панель управления для трековой системы, белая')
+
+    Call log:
+      - Expect "toBeVisible" with timeout 10000ms
+      - waiting for locator('[data-testid="calculator-modal"][data-open="true"]').getByText('КОЛИБРИ СМАРТ Панель управления для трековой системы, белая', { exact: true })
+
+
+      47 |   await m.getByRole("button", { name: "Каталог", exact: true }).click();
+      48 |   await m.getByRole("button", { name: "Управление", exact: true }).click();
+    > 49 |   await expect(m.getByText("КОЛИБРИ СМАРТ Панель управления для трековой системы, белая", { exact: true })).toBeVisible();
+         |                                                                                                             ^
+      50 |   if (process.env.CALC_AUDIT_CAPTURE) await m.screenshot({ path: `${process.env.CALC_AUDIT_CAPTURE}/track-controls-${test.info().project.name}.jpg`, type: "jpeg", quality: 85, scale: "css" });
+      51 | });
+      52 |
+        at /home/user/repo/e2e/catalog-owner-corrections.spec.ts:49:109
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/catalog-owner-corrections--9697f-installation-or-lamp-demand-chromium-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/catalog-owner-corrections--9697f-installation-or-lamp-demand-chromium-desktop/error-context.md
+
+  2) [chromium-desktop] › e2e/catalog-owner-corrections.spec.ts:54:5 › Owner withdrawal: restored old quote shows unavailable item and removes it only on explicit action 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('[data-testid="calculator-modal"][data-open="true"]').getByTestId('retired-catalog-notice')
+    Expected substring: "В расчёте есть снятые позиции"
+    Error: strict mode violation: locator('[data-testid="calculator-modal"][data-open="true"]').getByTestId('retired-catalog-notice') resolved to 2 elements:
+        1) <div data-ui-state="warning" class="pk-state pk-state--warning" data-testid="retired-catalog-notice">…</div> aka getByTestId('retired-catalog-notice').first()
+        2) <div data-ui-state="warning" class="pk-state pk-state--warning" data-testid="retired-catalog-notice">…</div> aka getByTestId('retired-catalog-notice').nth(1)
+
+    Call log:
+      - Expect "toContainText" with timeout 10000ms
+      - waiting for locator('[data-testid="calculator-modal"][data-open="true"]').getByTestId('retired-catalog-notice')
+
+
+      64 |   await m.getByRole("button", { name: "Продолжить расчёт", exact: true }).click();
+      65 |   await m.getByRole("button", { name: /К итогу/ }).first().click();
+    > 66 |   await expect(m.getByTestId("retired-catalog-notice")).toContainText("В расчёте есть снятые позиции");
+         |                                                         ^
+      67 |   await expect(m.getByTestId("retired-catalog-notice")).toContainText("0У-00001341");
+      68 |   await m.getByRole("button", { name: "Проверить снятые позиции", exact: true }).click();
+      69 |   await m.getByRole("button", { name: "Убрать из расчёта", exact: true }).click();
+        at /home/user/repo/e2e/catalog-owner-corrections.spec.ts:66:57
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/catalog-owner-corrections--1d3e9--it-only-on-explicit-action-chromium-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/catalog-owner-corrections--1d3e9--it-only-on-explicit-action-chromium-desktop/error-context.md
+
+  3) [chromium-mobile] › e2e/catalog-owner-corrections.spec.ts:6:5 › Owner corrections: true panels exclude controls, accessories have their own category, retired SKU is absent 
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "color-contrast",
+    + ]
+
+      21 |   await expect(page.locator(".pk-product").first()).toContainText("Дополнение к светильнику");
+      22 |   const result = await new AxeBuilder({ page }).include(".pk-catalog").withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
+    > 23 |   expect(result.violations.map(v => v.id)).toEqual([]);
+         |                                            ^
+      24 |   if (process.env.CALC_AUDIT_CAPTURE) await page.locator(".pk-catalog-grid").screenshot({ path: `${process.env.CALC_AUDIT_CAPTURE}/accessories-${test.info().project.name}.jpg`, type: "jpeg", quality: 85, scale: "css" });
+      25 |   await page.getByLabel("Поиск по каталогу").fill("0У-00001341");
+      26 |   await expect(page.locator(".pk-product")).toHaveCount(0);
+        at /home/user/repo/e2e/catalog-owner-corrections.spec.ts:23:44
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/catalog-owner-corrections--80e0e-egory-retired-SKU-is-absent-chromium-mobile/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/catalog-owner-corrections--80e0e-egory-retired-SKU-is-absent-chromium-mobile/error-context.md
+
+  4) [chromium-mobile] › e2e/catalog-owner-corrections.spec.ts:30:5 › Owner corrections: track controls remain equipment, do not create fixture installation or lamp demand 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('[data-testid="calculator-modal"][data-open="true"]').getByText('КОЛИБРИ СМАРТ Панель управления для трековой системы, белая', { exact: true })
+    Expected: visible
+    Error: strict mode violation: locator('[data-testid="calculator-modal"][data-open="true"]').getByText('КОЛИБРИ СМАРТ Панель управления для трековой системы, белая', { exact: true }) resolved to 2 elements:
+        1) <p class="break-words text-sm font-semibold text-slate-950 leading-snug max-sm:text-[12px] max-sm:leading-4">КОЛИБРИ СМАРТ Панель управления для трековой сист…</p> aka getByRole('paragraph').filter({ hasText: 'КОЛИБРИ СМАРТ Панель управления для трековой системы, белая' })
+        2) <p>КОЛИБРИ СМАРТ Панель управления для трековой сист…</p> aka getByLabel('Свет в проекте').getByText('КОЛИБРИ СМАРТ Панель управления для трековой системы, белая')
+
+    Call log:
+      - Expect "toBeVisible" with timeout 10000ms
+      - waiting for locator('[data-testid="calculator-modal"][data-open="true"]').getByText('КОЛИБРИ СМАРТ Панель управления для трековой системы, белая', { exact: true })
+
+
+      47 |   await m.getByRole("button", { name: "Каталог", exact: true }).click();
+      48 |   await m.getByRole("button", { name: "Управление", exact: true }).click();
+    > 49 |   await expect(m.getByText("КОЛИБРИ СМАРТ Панель управления для трековой системы, белая", { exact: true })).toBeVisible();
+         |                                                                                                             ^
+      50 |   if (process.env.CALC_AUDIT_CAPTURE) await m.screenshot({ path: `${process.env.CALC_AUDIT_CAPTURE}/track-controls-${test.info().project.name}.jpg`, type: "jpeg", quality: 85, scale: "css" });
+      51 | });
+      52 |
+        at /home/user/repo/e2e/catalog-owner-corrections.spec.ts:49:109
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/catalog-owner-corrections--9697f-installation-or-lamp-demand-chromium-mobile/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/catalog-owner-corrections--9697f-installation-or-lamp-demand-chromium-mobile/error-context.md
+
+  5) [chromium-mobile] › e2e/catalog-owner-corrections.spec.ts:54:5 › Owner withdrawal: restored old quote shows unavailable item and removes it only on explicit action 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('[data-testid="calculator-modal"][data-open="true"]').getByTestId('retired-catalog-notice')
+    Expected substring: "В расчёте есть снятые позиции"
+    Error: strict mode violation: locator('[data-testid="calculator-modal"][data-open="true"]').getByTestId('retired-catalog-notice') resolved to 2 elements:
+        1) <div data-ui-state="warning" class="pk-state pk-state--warning" data-testid="retired-catalog-notice">…</div> aka getByTestId('retired-catalog-notice').first()
+        2) <div data-ui-state="warning" class="pk-state pk-state--warning" data-testid="retired-catalog-notice">…</div> aka getByTestId('retired-catalog-notice').nth(1)
+
+    Call log:
+      - Expect "toContainText" with timeout 10000ms
+      - waiting for locator('[data-testid="calculator-modal"][data-open="true"]').getByTestId('retired-catalog-notice')
+
+
+      64 |   await m.getByRole("button", { name: "Продолжить расчёт", exact: true }).click();
+      65 |   await m.getByRole("button", { name: /К итогу/ }).first().click();
+    > 66 |   await expect(m.getByTestId("retired-catalog-notice")).toContainText("В расчёте есть снятые позиции");
+         |                                                         ^
+      67 |   await expect(m.getByTestId("retired-catalog-notice")).toContainText("0У-00001341");
+      68 |   await m.getByRole("button", { name: "Проверить снятые позиции", exact: true }).click();
+      69 |   await m.getByRole("button", { name: "Убрать из расчёта", exact: true }).click();
+        at /home/user/repo/e2e/catalog-owner-corrections.spec.ts:66:57
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/catalog-owner-corrections--1d3e9--it-only-on-explicit-action-chromium-mobile/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/catalog-owner-corrections--1d3e9--it-only-on-explicit-action-chromium-mobile/error-context.md
+
+  5 failed
+    [chromium-desktop] › e2e/catalog-owner-corrections.spec.ts:30:5 › Owner corrections: track controls remain equipment, do not create fixture installation or lamp demand 
+    [chromium-desktop] › e2e/catalog-owner-corrections.spec.ts:54:5 › Owner withdrawal: restored old quote shows unavailable item and removes it only on explicit action 
+    [chromium-mobile] › e2e/catalog-owner-corrections.spec.ts:6:5 › Owner corrections: true panels exclude controls, accessories have their own category, retired SKU is absent 
+    [chromium-mobile] › e2e/catalog-owner-corrections.spec.ts:30:5 › Owner corrections: track controls remain equipment, do not create fixture installation or lamp demand 
+    [chromium-mobile] › e2e/catalog-owner-corrections.spec.ts:54:5 › Owner withdrawal: restored old quote shows unavailable item and removes it only on explicit action 
+  1 passed (21.3s)

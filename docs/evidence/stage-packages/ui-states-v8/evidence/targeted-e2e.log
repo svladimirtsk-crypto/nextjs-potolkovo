@@ -1,0 +1,203 @@
+
+Running 8 tests using 2 workers
+
+  ✓  1 [chromium-desktop] › e2e/ui-states.spec.ts:23:5 › B8 states: server failure, retry and saved request preserve input and request ID (4.3s)
+  ✓  2 [chromium-mobile] › e2e/ui-states.spec.ts:23:5 › B8 states: server failure, retry and saved request preserve input and request ID (6.2s)
+  ✘  3 [chromium-desktop] › e2e/ui-states.spec.ts:40:5 › B8 states: empty selection and empty search have an explicit way back without changing the estimate (12.1s)
+  ✘  4 [chromium-mobile] › e2e/ui-states.spec.ts:40:5 › B8 states: empty selection and empty search have an explicit way back without changing the estimate (12.2s)
+  ✘  5 [chromium-desktop] › e2e/ui-states.spec.ts:60:5 › B8 states: pending rescue traps keyboard focus and error actions fit a short screen (12.1s)
+  ✘  6 [chromium-mobile] › e2e/ui-states.spec.ts:60:5 › B8 states: pending rescue traps keyboard focus and error actions fit a short screen (12.2s)
+  ✘  7 [chromium-desktop] › e2e/ui-states.spec.ts:109:5 › B8 states: delayed catalog, failure and explicit recovery keep the same page and ceiling estimate (12.0s)
+  ✘  8 [chromium-mobile] › e2e/ui-states.spec.ts:109:5 › B8 states: delayed catalog, failure and explicit recovery keep the same page and ceiling estimate (12.1s)
+
+
+  1) [chromium-desktop] › e2e/ui-states.spec.ts:40:5 › B8 states: empty selection and empty search have an explicit way back without changing the estimate 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('[data-testid="calculator-modal"][data-open="true"]').getByTestId('selected-empty')
+    Expected substring: "Пока ничего не выбрано"
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toContainText" with timeout 10000ms
+      - waiting for locator('[data-testid="calculator-modal"][data-open="true"]').getByTestId('selected-empty')
+
+
+      43 |   await modal.getByRole("button", { name: "Изменить свет", exact: true }).click();
+      44 |   await modal.getByRole("button", { name: "Выбранное (0)", exact: true }).click();
+    > 45 |   await expect(modal.getByTestId("selected-empty")).toContainText("Пока ничего не выбрано");
+         |                                                     ^
+      46 |   await capture(page, '[data-testid="selected-empty"]', "selection-empty");
+      47 |   await modal.getByRole("button", { name: "Перейти в каталог", exact: true }).click();
+      48 |   const search = modal.getByRole("textbox", { name: "Поиск в текущем разделе", exact: true });
+        at /home/user/repo/e2e/ui-states.spec.ts:45:53
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/ui-states-B8-states-empty--b1322-thout-changing-the-estimate-chromium-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/ui-states-B8-states-empty--b1322-thout-changing-the-estimate-chromium-desktop/error-context.md
+
+  2) [chromium-desktop] › e2e/ui-states.spec.ts:60:5 › B8 states: pending rescue traps keyboard focus and error actions fit a short screen 
+
+    Error: expect(locator).toBeFocused() failed
+
+    Locator:  getByRole('alertdialog').getByTestId('confirm-dialog-submit')
+    Expected: focused
+    Received: inactive
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toBeFocused" with timeout 10000ms
+      - waiting for getByRole('alertdialog').getByTestId('confirm-dialog-submit')
+        24 × locator resolved to <button type="button" data-testid="confirm-dialog-submit" class="h-10 rounded-xl px-4 text-sm font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 bg-slate-950 hover:bg-slate-800">Повторить</button>
+           - unexpected value "inactive"
+
+
+      81 |   release();
+      82 |   await expect(dialog.getByTestId("confirm-dialog-error")).toBeVisible();
+    > 83 |   await expect(dialog.getByTestId("confirm-dialog-submit")).toBeFocused();
+         |                                                             ^
+      84 |   for (const width of [320, 390, 1440]) {
+      85 |     await page.setViewportSize({ width, height: width < 500 ? 400 : 900 });
+      86 |     expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+        at /home/user/repo/e2e/ui-states.spec.ts:83:61
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/ui-states-B8-states-pendin-3f2ff--actions-fit-a-short-screen-chromium-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/ui-states-B8-states-pendin-3f2ff--actions-fit-a-short-screen-chromium-desktop/error-context.md
+
+  3) [chromium-desktop] › e2e/ui-states.spec.ts:109:5 › B8 states: delayed catalog, failure and explicit recovery keep the same page and ceiling estimate 
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator: locator('[data-testid="calculator-modal"][data-open="true"]').getByTestId('catalog-load-state')
+    Expected: "error"
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toHaveAttribute" with timeout 10000ms
+      - waiting for locator('[data-testid="calculator-modal"][data-open="true"]').getByTestId('catalog-load-state')
+        5 × locator resolved to <div role="status" data-ui-state="loading" data-testid="catalog-load-state" class="pk-state pk-state--loading">…</div>
+          - unexpected value "loading"
+
+
+      123 |   await capture(page, '[data-testid="catalog-load-state"]', "catalog-loading");
+      124 |   release();
+    > 125 |   await expect(modal.getByTestId("catalog-load-state")).toHaveAttribute("data-ui-state", "error");
+          |                                                         ^
+      126 |   await capture(page, '[data-testid="catalog-load-state"]', "catalog-error");
+      127 |   await modal.getByRole("button", { name: "Повторить загрузку", exact: true }).click();
+      128 |   await expect(modal.getByTestId("catalog-load-state")).toHaveCount(0);
+        at /home/user/repo/e2e/ui-states.spec.ts:125:57
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/ui-states-B8-states-delaye-2328c-e-page-and-ceiling-estimate-chromium-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/ui-states-B8-states-delaye-2328c-e-page-and-ceiling-estimate-chromium-desktop/error-context.md
+
+  4) [chromium-mobile] › e2e/ui-states.spec.ts:40:5 › B8 states: empty selection and empty search have an explicit way back without changing the estimate 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('[data-testid="calculator-modal"][data-open="true"]').getByTestId('selected-empty')
+    Expected substring: "Пока ничего не выбрано"
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toContainText" with timeout 10000ms
+      - waiting for locator('[data-testid="calculator-modal"][data-open="true"]').getByTestId('selected-empty')
+
+
+      43 |   await modal.getByRole("button", { name: "Изменить свет", exact: true }).click();
+      44 |   await modal.getByRole("button", { name: "Выбранное (0)", exact: true }).click();
+    > 45 |   await expect(modal.getByTestId("selected-empty")).toContainText("Пока ничего не выбрано");
+         |                                                     ^
+      46 |   await capture(page, '[data-testid="selected-empty"]', "selection-empty");
+      47 |   await modal.getByRole("button", { name: "Перейти в каталог", exact: true }).click();
+      48 |   const search = modal.getByRole("textbox", { name: "Поиск в текущем разделе", exact: true });
+        at /home/user/repo/e2e/ui-states.spec.ts:45:53
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/ui-states-B8-states-empty--b1322-thout-changing-the-estimate-chromium-mobile/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/ui-states-B8-states-empty--b1322-thout-changing-the-estimate-chromium-mobile/error-context.md
+
+  5) [chromium-mobile] › e2e/ui-states.spec.ts:60:5 › B8 states: pending rescue traps keyboard focus and error actions fit a short screen 
+
+    Error: expect(locator).toBeFocused() failed
+
+    Locator:  getByRole('alertdialog').getByTestId('confirm-dialog-submit')
+    Expected: focused
+    Received: inactive
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toBeFocused" with timeout 10000ms
+      - waiting for getByRole('alertdialog').getByTestId('confirm-dialog-submit')
+        24 × locator resolved to <button type="button" data-testid="confirm-dialog-submit" class="h-10 rounded-xl px-4 text-sm font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 bg-slate-950 hover:bg-slate-800">Повторить</button>
+           - unexpected value "inactive"
+
+
+      81 |   release();
+      82 |   await expect(dialog.getByTestId("confirm-dialog-error")).toBeVisible();
+    > 83 |   await expect(dialog.getByTestId("confirm-dialog-submit")).toBeFocused();
+         |                                                             ^
+      84 |   for (const width of [320, 390, 1440]) {
+      85 |     await page.setViewportSize({ width, height: width < 500 ? 400 : 900 });
+      86 |     expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+        at /home/user/repo/e2e/ui-states.spec.ts:83:61
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/ui-states-B8-states-pendin-3f2ff--actions-fit-a-short-screen-chromium-mobile/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/ui-states-B8-states-pendin-3f2ff--actions-fit-a-short-screen-chromium-mobile/error-context.md
+
+  6) [chromium-mobile] › e2e/ui-states.spec.ts:109:5 › B8 states: delayed catalog, failure and explicit recovery keep the same page and ceiling estimate 
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator: locator('[data-testid="calculator-modal"][data-open="true"]').getByTestId('catalog-load-state')
+    Expected: "error"
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toHaveAttribute" with timeout 10000ms
+      - waiting for locator('[data-testid="calculator-modal"][data-open="true"]').getByTestId('catalog-load-state')
+        4 × locator resolved to <div role="status" data-ui-state="loading" data-testid="catalog-load-state" class="pk-state pk-state--loading">…</div>
+          - unexpected value "loading"
+
+
+      123 |   await capture(page, '[data-testid="catalog-load-state"]', "catalog-loading");
+      124 |   release();
+    > 125 |   await expect(modal.getByTestId("catalog-load-state")).toHaveAttribute("data-ui-state", "error");
+          |                                                         ^
+      126 |   await capture(page, '[data-testid="catalog-load-state"]', "catalog-error");
+      127 |   await modal.getByRole("button", { name: "Повторить загрузку", exact: true }).click();
+      128 |   await expect(modal.getByTestId("catalog-load-state")).toHaveCount(0);
+        at /home/user/repo/e2e/ui-states.spec.ts:125:57
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/ui-states-B8-states-delaye-2328c-e-page-and-ceiling-estimate-chromium-mobile/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/ui-states-B8-states-delaye-2328c-e-page-and-ceiling-estimate-chromium-mobile/error-context.md
+
+  6 failed
+    [chromium-desktop] › e2e/ui-states.spec.ts:40:5 › B8 states: empty selection and empty search have an explicit way back without changing the estimate 
+    [chromium-desktop] › e2e/ui-states.spec.ts:60:5 › B8 states: pending rescue traps keyboard focus and error actions fit a short screen 
+    [chromium-desktop] › e2e/ui-states.spec.ts:109:5 › B8 states: delayed catalog, failure and explicit recovery keep the same page and ceiling estimate 
+    [chromium-mobile] › e2e/ui-states.spec.ts:40:5 › B8 states: empty selection and empty search have an explicit way back without changing the estimate 
+    [chromium-mobile] › e2e/ui-states.spec.ts:60:5 › B8 states: pending rescue traps keyboard focus and error actions fit a short screen 
+    [chromium-mobile] › e2e/ui-states.spec.ts:109:5 › B8 states: delayed catalog, failure and explicit recovery keep the same page and ceiling estimate 
+  2 passed (45.1s)

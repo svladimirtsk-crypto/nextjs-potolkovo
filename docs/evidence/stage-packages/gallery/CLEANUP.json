@@ -1,0 +1,45 @@
+{
+  "reason": "Exact screenshots retained inside the overview HTML and verified handoff ZIP",
+  "removed": [
+    {
+      "file": "evidence/budget-1440.jpg",
+      "bytes": 123304,
+      "sha256": "47f0a22757b3ada3404f5f92ed87ac75af5cfa010381dd17dd999c15d261e569"
+    },
+    {
+      "file": "evidence/budget-390.jpg",
+      "bytes": 44689,
+      "sha256": "8ab51efc02056a5daa0283f24b9eb67dcbc81f3f430534eb9e13cddb3a4539fa"
+    },
+    {
+      "file": "evidence/filtered-1440.jpg",
+      "bytes": 120287,
+      "sha256": "f1d9e793ac0e2ab88c74f8a46d3d3dd0c9d3b61d215e0456cc72abd516272677"
+    },
+    {
+      "file": "evidence/filtered-390.jpg",
+      "bytes": 72482,
+      "sha256": "30abf93d374ee0d365de389ca1bba4ef88f8e9aa05f2a3d400338d2a12f39913"
+    },
+    {
+      "file": "evidence/gallery-1440.jpg",
+      "bytes": 279596,
+      "sha256": "be5834d68e3c2dbe78ce1e14fc475a6d2e9043b04e0b440dfdd6f1403e030a2a"
+    },
+    {
+      "file": "evidence/gallery-390.jpg",
+      "bytes": 213678,
+      "sha256": "3f57aa1e8cc3695557377e00871ab0bf52be4774a6b1251550dc221954271fe5"
+    },
+    {
+      "file": "evidence/viewer-1440.jpg",
+      "bytes": 124542,
+      "sha256": "fdc062711506c0043ac57fd4e7a730875f2d446e21a2eecf06b49cc4b633b1c6"
+    },
+    {
+      "file": "evidence/viewer-390.jpg",
+      "bytes": 44229,
+      "sha256": "0d79b707814d57e0b1ad3bde366bc343f8d621401d24d0c3138764c03cc6d4d2"
+    }
+  ]
+}

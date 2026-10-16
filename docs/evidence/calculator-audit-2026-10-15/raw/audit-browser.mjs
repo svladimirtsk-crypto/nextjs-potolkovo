@@ -1,0 +1,25 @@
+import {chromium,expect} from '/home/user/repo/node_modules/@playwright/test/index.mjs';
+import fs from 'node:fs/promises';
+const O='/home/user/audit/calculator-2026-10-15',base='http://127.0.0.1:3100',M='[data-testid="calculator-modal"][data-open="true"]';
+const b=await chromium.launch({headless:true,args:['--no-sandbox','--disable-gpu']});const records=[];
+async function fresh(width=390){const c=await b.newContext({viewport:{width,height:width===390?844:1000}});const p=await c.newPage();await p.route('**/api/lead',r=>r.abort());return {c,p};}
+async function open(p,url='/'){await p.goto(base+url);await p.getByRole('button',{name:/Рассчитать стоимость|Рассчитать/}).first().click();await p.locator(M).waitFor();return p.locator(M);}
+async function record(p,label,capture=false){const m=p.locator(M);const data=await m.evaluate(el=>({text:el.innerText,progress:el.querySelector('.pk-wizard-caption')?.textContent,stage:el.querySelector('[aria-current="step"]')?.textContent,screen:el.querySelector('[data-active-screen]')?.getAttribute('data-active-screen'),headings:[...el.querySelectorAll('h3')].filter(x=>x.getClientRects().length).map(x=>x.textContent),buttons:[...el.querySelectorAll('button')].filter(x=>x.getClientRects().length).map(x=>({text:x.textContent,disabled:x.disabled,h:x.getBoundingClientRect().height})),overflow:el.scrollWidth>el.clientWidth}));records.push({label,width:p.viewportSize().width,...data});await fs.writeFile(`${O}/evidence/browser-before.json`,JSON.stringify(records,null,2));if(capture)await m.screenshot({path:`${O}/screenshots/${label}.jpg`,type:'jpeg',quality:85,scale:'css',animations:'disabled'});}
+async function finish(p,label){const m=p.locator(M);for(let i=0;i<15;i++){if(await m.getByRole('heading',{name:'Проверка',exact:true}).count())break;await record(p,label+'-'+i);const next=m.locator('.calculator-modal-footer button').filter({hasText:/^Подтвердить/});await next.click();}await record(p,label+'-review',true);}
+try{
+ for(const width of [390,1440]){
+  const {c,p}=await fresh(width);const m=await open(p);await record(p,`01-first-${width}`,true);
+  await m.getByRole('button',{name:/Назвать помещение/}).click();await m.getByLabel('Название помещения').fill('Кухня');await m.locator('#area-v2').fill('12');await finish(p,`02-default-${width}`);
+  await m.getByRole('button',{name:/добавить помещение/}).click();await record(p,`03-room-picker-${width}`,true);
+  await m.getByRole('button',{name:'+ Спальня',exact:true}).click();await m.locator('#area-v2').fill('8');await finish(p,`04-second-room-${width}`);
+  await m.getByRole('button',{name:'Редактировать: Кухня',exact:true}).click();await record(p,`05-room-edit-${width}`,true);
+  await m.locator('.flex.items-center.justify-between').filter({hasText:'Площадь:'}).getByRole('button',{name:'Изменить',exact:true}).click();await m.locator('#area-v2').fill('15');await m.locator('.calculator-modal-footer button').filter({hasText:/^Подтвердить/}).click();await record(p,`06-after-area-edit-${width}`,true);await finish(p,`07-edit-replay-${width}`);
+  await m.getByRole('button',{name:'Редактировать: Спальня',exact:true}).click();await m.getByRole('button',{name:'Удалить текущее помещение',exact:true}).click();await record(p,`08-after-delete-${width}`,true);
+  await m.getByRole('button',{name:/К итогу/}).first().click();await record(p,`09-final-${width}`,true);
+  await m.getByRole('button',{name:'Изменить свет',exact:true}).click();await record(p,`10-light-step-${width}`,true);await c.close();
+ }
+ {const {c,p}=await fresh();const m=await open(p);await m.locator('#area-v2').fill('18');await m.locator('.calculator-modal-footer button').filter({hasText:/^Подтвердить/}).click();await m.getByRole('button',{name:/Показать теневой и парящий/}).click();await record(p,'11-premium-options',true);await m.locator('[data-ceiling-option="floating"]').click();await finish(p,'12-floating');await m.getByRole('button',{name:/Подобрать свет/}).first().click();await record(p,'13-floating-light-step',true);await c.close();}
+ {const {c,p}=await fresh();const m=await open(p);await m.getByRole('button',{name:'Всю квартиру или дом',exact:false}).click();await record(p,'14-object-scope',true);await finish(p,'15-object');await c.close();}
+ {const {c,p}=await fresh();await p.goto(base+'/uslugi/prodazha-trekovogo-osveshcheniya#price');await p.getByRole('tab',{name:'Точечные светильники',exact:true}).click();await p.getByRole('button',{name:'Панели',exact:true}).click();const names=await p.locator('.pk-product').allTextContents();records.push({label:'16-panels-before',names});await p.getByLabel('Поиск по каталогу').fill('управления');records.push({label:'17-management-in-fixtures',text:await p.locator('.pk-catalog-content').innerText()});await p.locator('.pk-catalog-content').screenshot({path:`${O}/screenshots/17-management-in-fixtures.jpg`,type:'jpeg',quality:85,scale:'css',animations:'disabled'});await c.close();}
+ await fs.writeFile(`${O}/evidence/browser-before.json`,JSON.stringify(records,null,2));console.log('Recorded',records.length,'states; no real leads');
+}finally{await b.close()}

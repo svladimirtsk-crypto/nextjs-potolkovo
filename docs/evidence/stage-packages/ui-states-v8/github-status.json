@@ -1,0 +1,11 @@
+{
+  "branch": "feat/company-rebrand-v7-preview",
+  "head": "4239468b4aa574eb00b4d3b837cdd09620e1a4c7",
+  "remoteHead": "4239468b4aa574eb00b4d3b837cdd09620e1a4c7",
+  "productCommit": "55b6f79724a964bccee48bb8cfd6a8f55271fdb0",
+  "mainBefore": "f3d7b69c6145067087f21ca1a9f4d48228923431",
+  "mainAfter": "f3d7b69c6145067087f21ca1a9f4d48228923431",
+  "mainUnchanged": true,
+  "newPullRequest": false,
+  "push": "success"
+}

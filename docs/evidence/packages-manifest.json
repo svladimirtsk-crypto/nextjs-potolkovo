@@ -1,0 +1,983 @@
+{
+  "date": "2026-10-16",
+  "moved": [
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/make_overview.py",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/make_overview.py",
+      "bytes": 15474,
+      "sha256": "22a8eb26577573e81520ae80bafbd76e093ea04e02143a1a60380f75e9c58a92"
+    },
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/POTOLKOVO-EKS-LED-MATRIX.xlsx",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/POTOLKOVO-EKS-LED-MATRIX.xlsx",
+      "bytes": 44284,
+      "sha256": "df86095dcbcdfbd2c803eb83950664de77f45a4e1641191401304595121bfc59"
+    },
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/export_audit.py",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/export_audit.py",
+      "bytes": 18362,
+      "sha256": "a2630e296461112c437e754b26041fcd1b3257d511020ceda2d9f714034ec8be"
+    },
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/browser-audit.mjs",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/browser-audit.mjs",
+      "bytes": 6189,
+      "sha256": "b02b0af1fd46a5aba7d7015ebf80257e3853d1ed40f5f54f9bc13e5ea96e1729"
+    },
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/POTOLKOVO-CATALOG-AUDIT.docx",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/POTOLKOVO-CATALOG-AUDIT.docx",
+      "bytes": 101626,
+      "sha256": "5fc8364e44eed9e003a450d66861dcdc30b84a19550f66061c074129a18e0752"
+    },
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/github-status.json",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/github-status.json",
+      "bytes": 451,
+      "sha256": "a7ba1cfdec4dea75d75b1324a4c1acbedffe65a60fbce41507f1779a50377bc2"
+    },
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/package_audit.py",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/package_audit.py",
+      "bytes": 3602,
+      "sha256": "df26836e521deac8926ccfc2fe3667781a4fcb5f7ad9793da6d8f647df4d172f"
+    },
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/POTOLKOVO-CATALOG-LED-TZ.docx",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/POTOLKOVO-CATALOG-LED-TZ.docx",
+      "bytes": 105167,
+      "sha256": "3ac3ed06a0d13e9c39d6d5a13fcd29c240d5684e41bf20f7ef123f3956a7868e"
+    },
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/POTOLKOVO-CATALOG-AUDIT.html",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/POTOLKOVO-CATALOG-AUDIT.html",
+      "bytes": 101885,
+      "sha256": "5548b860a9a11f6c7a37e50fb5d6a955587cda9134040dd006723ba489ace595"
+    },
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/sources/feed-metadata.json",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/sources/feed-metadata.json",
+      "bytes": 374,
+      "sha256": "903273a92e8195b9c8e8390a6805d9dc4a44270c2a5738d730628b3f5d80dd95"
+    },
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/sources/offers.json",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/sources/offers.json",
+      "bytes": 1099367,
+      "sha256": "525e69b9332c10e51e651057ebe7a4596118c20acd73f8eb20dd0c83e84e017c"
+    },
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/sources/eks-feed.xml",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/sources/eks-feed.xml",
+      "bytes": 782921,
+      "sha256": "adc8d0a94ffb121c8fb950458a14f2b793442b4ece7ea10912a3179471646f2d"
+    },
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/sources/led-assortment.json",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/sources/led-assortment.json",
+      "bytes": 88243,
+      "sha256": "43d43d9b49496f1555d0395bf1aa2f432047994ee881961eb5e4313c862566df"
+    },
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/evidence/commit.log",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/evidence/commit.log",
+      "bytes": 3219,
+      "sha256": "e1dc1c6ac764f5f47bb65d041111bcdf253d58222a9fb2ccca265c4a94b90b18"
+    },
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/evidence/preview-build.log",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/evidence/preview-build.log",
+      "bytes": 3966,
+      "sha256": "76505a578a1125927aec6e587e68b3a76a5551194e873d22a5c9fcb0b74098dc"
+    },
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/evidence/browser-run.log",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/evidence/browser-run.log",
+      "bytes": 6489,
+      "sha256": "bf7a1d079218de8a9affd9c9aae73e31d7912b3b82677c4698a2eb37ffb7f4da"
+    },
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/evidence/data-audit.json",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/evidence/data-audit.json",
+      "bytes": 38416,
+      "sha256": "7fb8463f5c7d62592b10c60d4be73ab1dc905ea0a9ccbc2180c267d14813024c"
+    },
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/evidence/refresh-xml-dry-run.log",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/evidence/refresh-xml-dry-run.log",
+      "bytes": 71,
+      "sha256": "a55cf0554b33d13c4ab1b01f599401477bb8aa8c60a814c8391cb8a58e4f2fde"
+    },
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/evidence/validation.json",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/evidence/validation.json",
+      "bytes": 927,
+      "sha256": "6e41213633bd5b390af02d702263fafaffa237ae8f9e7c3c907eae4e9021c3e1"
+    },
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/evidence/environment.log",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/evidence/environment.log",
+      "bytes": 22091,
+      "sha256": "a3f17f53fa0d2315954eeb78bf55d89589cf3a22eaa253195dc0008be85829f8"
+    },
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/evidence/push.log",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/evidence/push.log",
+      "bytes": 75928,
+      "sha256": "778ab1f8648f7875564840360ac7c0562c64be009928af80dbbc4c9a81cac6d0"
+    },
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/evidence/test-db-schema.log",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/evidence/test-db-schema.log",
+      "bytes": 261,
+      "sha256": "c2a8a526cab6ff1fbe7a6f9c8f86f038354d2e6778c5d6a9acc2da8484219483"
+    },
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/evidence/git-recovery.log",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/evidence/git-recovery.log",
+      "bytes": 74,
+      "sha256": "9dd8820368716aa7d8826614c76e98658fbe2d8f09b3be0d05d3804e2f0eac89"
+    },
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/evidence/browser-audit.json",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/evidence/browser-audit.json",
+      "bytes": 16888,
+      "sha256": "8dbfcad61282d9ad2697438319eb4aa77cab25277966feb42c5a635d6a1ea48a"
+    },
+    {
+      "from": "/home/user/audit/catalog-led-2026-10-14/evidence/postgres-setup.log",
+      "to": "repo/docs/evidence/catalog-led-audit/raw/evidence/postgres-setup.log",
+      "bytes": 6631,
+      "sha256": "d759fed7b6be43f59a04de467a1f8be409bf267e097d848c77fc30b2aa7a2322"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/POTOLKOVO-CALCULATOR-AUDIT.html",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/POTOLKOVO-CALCULATOR-AUDIT.html",
+      "bytes": 180119,
+      "sha256": "8367529c0d9143cfafd446ff7d63c59dfb37e1f450e3517e907a91bd2d12d953"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/POTOLKOVO-CALCULATOR-UX-TZ.docx",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/POTOLKOVO-CALCULATOR-UX-TZ.docx",
+      "bytes": 99007,
+      "sha256": "c63a07ec9fbab915433f10d20cc9bfeef5f959414e1867e4ca52ec02645b3cd4"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/extract-fixtures.ts",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/extract-fixtures.ts",
+      "bytes": 1857,
+      "sha256": "e1877c923f5ad153ffdb7814e5e820f170972b34632de123ef511d4ff287d2bb"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/export_deliverables.py",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/export_deliverables.py",
+      "bytes": 17469,
+      "sha256": "bb123372d338bbc60e18ede5ffbad51b3825f599783f279dea0d977a4e5c9aa5"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/POTOLKOVO-FIXTURE-ROLE-AUDIT.xlsx",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/POTOLKOVO-FIXTURE-ROLE-AUDIT.xlsx",
+      "bytes": 87527,
+      "sha256": "00ea3000bdcbbaa78ff18ddbd40785c2a8a60ea1b0e943007b1376969c5c46b3"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/audit-browser.mjs",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/audit-browser.mjs",
+      "bytes": 5440,
+      "sha256": "94d4e1f87fbee469afc07c70691ccca4edfaedea63eab285098b0159ecc6f5d5"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/github-status.json",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/github-status.json",
+      "bytes": 419,
+      "sha256": "993dc435864fd30c15360d44824657e817b1bf928a0b81d53a3d6e4f2ca39b5d"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/POTOLKOVO-CALCULATOR-AUDIT.docx",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/POTOLKOVO-CALCULATOR-AUDIT.docx",
+      "bytes": 101049,
+      "sha256": "512f317e7a1e7a4e5cab406f6799173270dee441d6767b6a6beeb79df737254f"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/package_deliverables.py",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/package_deliverables.py",
+      "bytes": 3549,
+      "sha256": "19a4d7fc09709529cf81b4dde4c564344f898b6d4c8a66bc5108557cbd3d2376"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/targeted-unit.log",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/targeted-unit.log",
+      "bytes": 2021,
+      "sha256": "3767c2b33d30db0521bae1c93cebf506ec5473ee503ab810f912b967d1cbf814"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/build-targeted-fixed.log",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/build-targeted-fixed.log",
+      "bytes": 3965,
+      "sha256": "a49729828ea10de46aef53142ce516a28e01c79df62f677040b7ab9981a9639f"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/browser-run.log",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/browser-run.log",
+      "bytes": 34,
+      "sha256": "3842327d852727ec99630eba2043c01257e5921f68aa49261ccc58c0a313aa39"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/flow.log",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/flow.log",
+      "bytes": 1833,
+      "sha256": "803556928105795fcd6e8ae8e2a5adbec810a094157c6f7db168ee1743a8823d"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/e2e.log",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/e2e.log",
+      "bytes": 60823,
+      "sha256": "c54bd416e62c31e56194076b9b9621c5574a539edff74aabfab1ecc6f7911ce0"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/product-commit.log",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/product-commit.log",
+      "bytes": 3190,
+      "sha256": "46a42a9339a43aa87959c263396d152e3be5921e79c7c2107a59e607f9f25f0a"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/targeted-e2e-2.log",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/targeted-e2e-2.log",
+      "bytes": 3962,
+      "sha256": "bc1ddd1409d1ea3e8acccd1bd74c396aef5bb7f17d1b8d4dad1443c53998b106"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/build.log",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/build.log",
+      "bytes": 3964,
+      "sha256": "a35a88a3dfbc820b1f79d249371f9fb2246deca38b8d9e765b0baff301daa3c8"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/build-targeted-final.log",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/build-targeted-final.log",
+      "bytes": 3965,
+      "sha256": "bb422496919a4c6f25b5ecaba6c020cafad28e8885195a1c4984c96117cfc111"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/types.log",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/types.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/targeted-e2e.log",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/targeted-e2e.log",
+      "bytes": 15842,
+      "sha256": "21f894439ffacf5840b3074c4e5ede06e4359d4dcd103ec54a54704a7e983373"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/browser-before.json",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/browser-before.json",
+      "bytes": 170489,
+      "sha256": "4280841aa50cf4bbef128a3e3a0d354f574843154052a7fb0f812b09864ab055"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/bundle.log",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/bundle.log",
+      "bytes": 792,
+      "sha256": "b2b5b159e10a971f768d109b357cc0c1319fb549396604c5b9e0ca2362752a81"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/qa.json",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/qa.json",
+      "bytes": 2285,
+      "sha256": "5733cacad6ae91e05dc3935b745eb0fdaf08ace635bb8f9d4b856d112200de38"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/build-before.log",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/build-before.log",
+      "bytes": 3967,
+      "sha256": "2c77f50f012360f543f6a4f6d77473d296a575b21b485f61c5b6fffa60ec9e3f"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/lint.log",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/lint.log",
+      "bytes": 3683,
+      "sha256": "723fc9f12555dcf526072443bad26382f2e5ef43e2470dca265d257e7d4a4db5"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/qa-commit.log",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/qa-commit.log",
+      "bytes": 2963,
+      "sha256": "661adf6fb013c6b9fdea16a045d27cdc5fac70372c5d90b2095bbcfb91dd2283"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/push.log",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/push.log",
+      "bytes": 76186,
+      "sha256": "fbb6ed04309b637c17200b89f105ac851a25ad9ea58479c67ce76ba559f099b6"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/setup.log",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/setup.log",
+      "bytes": 22093,
+      "sha256": "feb9a8f71be7a5c2fc162a06f21ef3eff06cc47f957418875c774f8dc5e319bb"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/fixture-audit.json",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/fixture-audit.json",
+      "bytes": 308532,
+      "sha256": "3671c2e165ebe06d7780eda9a72eafb88e7783f8f51ef450f9e35963f93145dc"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/postgres-setup.log",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/postgres-setup.log",
+      "bytes": 6630,
+      "sha256": "e52a66e9b3b6f272d93920a18f171a15288f8360e9425f6bf1cec5b26ca908e0"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/targeted-e2e-fixed.log",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/targeted-e2e-fixed.log",
+      "bytes": 1183,
+      "sha256": "47adb3af5d4382fdd5f97205a3406e4c54ecd07bd49dc232a148bcccaba33d3c"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/flaky.log",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/flaky.log",
+      "bytes": 260,
+      "sha256": "67681d04ddd157f90e60a46e0e008624f992a19be5283e1dff7f94a2b0d4710a"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/git-recovery.json",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/git-recovery.json",
+      "bytes": 203,
+      "sha256": "3bf9b269e15312294e8296292c9cc491f33ccef880b5bcb88ec177e68f3f9b96"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/unit.log",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/unit.log",
+      "bytes": 91181,
+      "sha256": "7756a1f537a53f06a695453ac03e0763a530dbedb9281182e581c6e35763e1b1"
+    },
+    {
+      "from": "/home/user/audit/calculator-2026-10-15/evidence/build-targeted.log",
+      "to": "repo/docs/evidence/calculator-audit-2026-10-15/raw/evidence/build-targeted.log",
+      "bytes": 3965,
+      "sha256": "adc2fd0b2c0dabdc428e6a1adde2c5d3d36afd5456a3c9031773b4f81c896335"
+    },
+    {
+      "from": "/home/user/rebrand/POTOLKOVO-VISUAL-CONCEPT-V7.html",
+      "to": "repo/docs/evidence/brand-concept-v7/raw/POTOLKOVO-VISUAL-CONCEPT-V7.html",
+      "bytes": 635753,
+      "sha256": "d25cf9e2a4c2182fd7cb9740a5c27bf14bfb8795118a91800d25a5d838c22403"
+    },
+    {
+      "from": "/home/user/rebrand/capture_screens.cjs",
+      "to": "repo/docs/evidence/brand-concept-v7/raw/capture_screens.cjs",
+      "bytes": 2090,
+      "sha256": "4bf1d46df67cbbd01f39cc8a2d7e13dc60dc1a30210707897977bef1e119b50c"
+    },
+    {
+      "from": "/home/user/rebrand/export_documents.py",
+      "to": "repo/docs/evidence/brand-concept-v7/raw/export_documents.py",
+      "bytes": 16221,
+      "sha256": "7100da019a2c1858b4b35b371cd9a0e17848b0347ff57038a3705cdc42c357e3"
+    },
+    {
+      "from": "/home/user/rebrand/prototype-checks.json",
+      "to": "repo/docs/evidence/brand-concept-v7/raw/prototype-checks.json",
+      "bytes": 7001,
+      "sha256": "de081f0b8819f16feea742ee15d04157d1b86e3d1e34758f22fbeb24ee889a91"
+    },
+    {
+      "from": "/home/user/rebrand/build_visual_deck.py",
+      "to": "repo/docs/evidence/brand-concept-v7/raw/build_visual_deck.py",
+      "bytes": 16292,
+      "sha256": "9306bed8c710375d9967e44055320803b864f8f8cddbe36f5aae08e0a6aab715"
+    },
+    {
+      "from": "/home/user/rebrand/README-FIRST.md",
+      "to": "repo/docs/evidence/brand-concept-v7/raw/README-FIRST.md",
+      "bytes": 740,
+      "sha256": "8a7696e84c57a0253e77261549841bdaa7efd633e79c003505c1cc0fe085b528"
+    },
+    {
+      "from": "/home/user/rebrand/build_concept.py",
+      "to": "repo/docs/evidence/brand-concept-v7/raw/build_concept.py",
+      "bytes": 1506,
+      "sha256": "529a205f072e716c43202bec63561ddaeede68b9ab095e6024e9d6eeb8220842"
+    },
+    {
+      "from": "/home/user/rebrand/POTOLKOVO-CONCEPT-V7.html",
+      "to": "repo/docs/evidence/brand-concept-v7/raw/POTOLKOVO-CONCEPT-V7.html",
+      "bytes": 577760,
+      "sha256": "9da982e4fa3b2e8547ef942152477d40d011b1924f5f1cbfda4adaab36c38c01"
+    },
+    {
+      "from": "/home/user/rebrand/POTOLKOVO-VISUAL-CONCEPT-V7.pdf",
+      "to": "repo/docs/evidence/brand-concept-v7/raw/POTOLKOVO-VISUAL-CONCEPT-V7.pdf",
+      "bytes": 4096724,
+      "sha256": "b1375264d3d0580509273216607d837cd3791098a182bfda043515b200daa57b"
+    },
+    {
+      "from": "/home/user/rebrand/check_prototype.cjs",
+      "to": "repo/docs/evidence/brand-concept-v7/raw/check_prototype.cjs",
+      "bytes": 4554,
+      "sha256": "28f927ffde36d8db4e6b812a4f15c696ce24b17b3aee2837c4a65b2c0212c9a8"
+    },
+    {
+      "from": "/home/user/rebrand/apply_company_copy.py",
+      "to": "repo/docs/evidence/brand-concept-v7/raw/apply_company_copy.py",
+      "bytes": 15296,
+      "sha256": "cae6f9852fc1d575df56d7f41961a9a8f9e82bad3da43c6b355e23f75c85bb92"
+    },
+    {
+      "from": "/home/user/rebrand/prototype-checks.log",
+      "to": "repo/docs/evidence/brand-concept-v7/raw/prototype-checks.log",
+      "bytes": 122,
+      "sha256": "ac545c6e3e970296527a87feb7b5765302c82fbc315189c912510dc738c7064e"
+    },
+    {
+      "from": "/home/user/rebrand/concept.template.html",
+      "to": "repo/docs/evidence/brand-concept-v7/raw/concept.template.html",
+      "bytes": 56493,
+      "sha256": "ce87bdd1c0f1b523ce8ac7f560a7f1211a0df03903d6d1a0d3a0608ecc042801"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::ui-states-v8/github-status.json",
+      "to": "repo/docs/evidence/stage-packages/ui-states-v8/github-status.json",
+      "bytes": 419,
+      "sha256": "45fdc99cd70feebfb63c239b51cf88a3b4abdcf0b8b3747b4422cca80febb680"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::ui-states-v8/make_handoff.py",
+      "to": "repo/docs/evidence/stage-packages/ui-states-v8/make_handoff.py",
+      "bytes": 7371,
+      "sha256": "54ebf289aa40f63353e34577f35be56e70b5c316b314ca2a604c7cf37fcf4365"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::ui-states-v8/POTOLKOVO-UI-STATES-V8.html",
+      "to": "repo/docs/evidence/stage-packages/ui-states-v8/POTOLKOVO-UI-STATES-V8.html",
+      "bytes": 548149,
+      "sha256": "98c676a0b2d611db9f1e74ac0852ed3046f15e56670862d047df4fe101dbe804"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::ui-states-v8/evidence/build-targeted.log",
+      "to": "repo/docs/evidence/stage-packages/ui-states-v8/evidence/build-targeted.log",
+      "bytes": 3965,
+      "sha256": "fd7bcb83da9eb080da77c956ef6eaaa8cd0198eac15e58bfd3aa599217b6333c"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::ui-states-v8/evidence/build-initial.log",
+      "to": "repo/docs/evidence/stage-packages/ui-states-v8/evidence/build-initial.log",
+      "bytes": 3965,
+      "sha256": "7b867c6e59480ceeee16db13bfcc93f613090c416c454bdad716686b2cfcfa9c"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::ui-states-v8/evidence/unit.log",
+      "to": "repo/docs/evidence/stage-packages/ui-states-v8/evidence/unit.log",
+      "bytes": 91013,
+      "sha256": "386ba7f779a79c9bc35c42976c0ef149aeca8cb57bb0c25e0bbb06601b46a588"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::ui-states-v8/evidence/targeted-e2e-fixed.log",
+      "to": "repo/docs/evidence/stage-packages/ui-states-v8/evidence/targeted-e2e-fixed.log",
+      "bytes": 1338,
+      "sha256": "56eceea12523d993b4882daa70d94f52eae64c9a2afb7fe9bb774ecb7cb41e6b"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::ui-states-v8/evidence/postgres-setup.log",
+      "to": "repo/docs/evidence/stage-packages/ui-states-v8/evidence/postgres-setup.log",
+      "bytes": 6630,
+      "sha256": "00d797bfb120fdf6e041d012aac8f65d13aceea1570dc01b8c63d36acf6bd562"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::ui-states-v8/evidence/browser-setup.log",
+      "to": "repo/docs/evidence/stage-packages/ui-states-v8/evidence/browser-setup.log",
+      "bytes": 14561,
+      "sha256": "b0a9a7a99b3cc0b17b3bc19aeced34afd334cd2c6eb73a8a0032c3271e8ce230"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::ui-states-v8/evidence/push.log",
+      "to": "repo/docs/evidence/stage-packages/ui-states-v8/evidence/push.log",
+      "bytes": 75919,
+      "sha256": "f0a0d0b5f19e1caf03dcfa00e8da2fab3e640fd7959c9ac65a77219b859d60a6"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::ui-states-v8/evidence/qa-commit.log",
+      "to": "repo/docs/evidence/stage-packages/ui-states-v8/evidence/qa-commit.log",
+      "bytes": 2894,
+      "sha256": "55364ca0d3b45cc63cb3344bc5fc1804c11a395a78b6a60fcd1290d4693c7aca"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::ui-states-v8/evidence/targeted-e2e.log",
+      "to": "repo/docs/evidence/stage-packages/ui-states-v8/evidence/targeted-e2e.log",
+      "bytes": 15402,
+      "sha256": "6dc193b150006e06cbe07182db64ad819b24ff0dc12aa0c9c410bbce2e7df862"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::ui-states-v8/evidence/build.log",
+      "to": "repo/docs/evidence/stage-packages/ui-states-v8/evidence/build.log",
+      "bytes": 3965,
+      "sha256": "5514186dbbba7cef486347efb20a964a6473ad1d66339688eec7de13fd7e24f5"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::ui-states-v8/evidence/targeted-unit.log",
+      "to": "repo/docs/evidence/stage-packages/ui-states-v8/evidence/targeted-unit.log",
+      "bytes": 1740,
+      "sha256": "688a0d98f2dd41d9ce3b8adb071edad6c4cc0819fb3fcf0cb3055ee5fa3b8ff0"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::ui-states-v8/evidence/commit.log",
+      "to": "repo/docs/evidence/stage-packages/ui-states-v8/evidence/commit.log",
+      "bytes": 2637,
+      "sha256": "791f2ddce090434b4397b47a4da5ed173de63eaa4503034f464e06b7948fe1ea"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::client-materials-v8/github-status.json",
+      "to": "repo/docs/evidence/stage-packages/client-materials-v8/github-status.json",
+      "bytes": 383,
+      "sha256": "f9eb71f9d705bcb28e30a1295206707ba8ffc423fcf6099554440c3e6f50cf72"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::client-materials-v8/package_materials.py",
+      "to": "repo/docs/evidence/stage-packages/client-materials-v8/package_materials.py",
+      "bytes": 3825,
+      "sha256": "5ea761207b5c50f33896f3580baa0ac1bf8505dd1bf08c6acfd56df4a1438ba3"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::client-materials-v8/extract-data.ts",
+      "to": "repo/docs/evidence/stage-packages/client-materials-v8/extract-data.ts",
+      "bytes": 1075,
+      "sha256": "50782995e2ca87a0974cd83d50039634457179ca0f0ab5197ce2e57fc3d65083"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::client-materials-v8/evidence/unit.log",
+      "to": "repo/docs/evidence/stage-packages/client-materials-v8/evidence/unit.log",
+      "bytes": 90895,
+      "sha256": "c0dd33b7e61a916e0af31e7c03e3f3dcfac0e5b6d78f365779d583dafb67f75c"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::client-materials-v8/evidence/template-tests.log",
+      "to": "repo/docs/evidence/stage-packages/client-materials-v8/evidence/template-tests.log",
+      "bytes": 1613,
+      "sha256": "029512420bd29f20084e301905b04e0f8fe5f6d159723317a06b3512680a2bea"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::client-materials-v8/evidence/push.log",
+      "to": "repo/docs/evidence/stage-packages/client-materials-v8/evidence/push.log",
+      "bytes": 75885,
+      "sha256": "c36cc2fac30884037fbac118a17dee18dcad7935227e5ae5604f17a943cd61c3"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::client-materials-v8/evidence/commit.log",
+      "to": "repo/docs/evidence/stage-packages/client-materials-v8/evidence/commit.log",
+      "bytes": 3952,
+      "sha256": "d1b34e8e5cc7dd544394f29783a4c9103a2366f46b458121dc01f316c2dcd999"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::brand-kit-v8/package_kit.py",
+      "to": "repo/docs/evidence/stage-packages/brand-kit-v8/package_kit.py",
+      "bytes": 3075,
+      "sha256": "75850b5e6884d390854f153e71a104a4bcbdea52f3f0eb64c00d8b1eb5dce763"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::brand-kit-v8/github-status.json",
+      "to": "repo/docs/evidence/stage-packages/brand-kit-v8/github-status.json",
+      "bytes": 419,
+      "sha256": "6c51aba4d90c8693932a46e3861be51a80f743ccc8ce2dea2dadb1b7d60f5213"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::brand-kit-v8/evidence/unit.log",
+      "to": "repo/docs/evidence/stage-packages/brand-kit-v8/evidence/unit.log",
+      "bytes": 90761,
+      "sha256": "876751e17437f7f4bbd97b339de482ede4bd75a468417ed449a211ff5bc8fef8"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::brand-kit-v8/evidence/push.log",
+      "to": "repo/docs/evidence/stage-packages/brand-kit-v8/evidence/push.log",
+      "bytes": 75822,
+      "sha256": "07de26a301cac726f2195c9983933926ebcb48b5e8bba136c49aab591092659a"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::brand-kit-v8/evidence/qa-commit.log",
+      "to": "repo/docs/evidence/stage-packages/brand-kit-v8/evidence/qa-commit.log",
+      "bytes": 2857,
+      "sha256": "c4364a9804722287842851b2ee45f21a4b5f5ff045b2cb93bc423c56c7e840e7"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::brand-kit-v8/evidence/build.log",
+      "to": "repo/docs/evidence/stage-packages/brand-kit-v8/evidence/build.log",
+      "bytes": 3964,
+      "sha256": "6d9bdcf1f02fc40d0a8bba4cd2200e61dca6ab38b768f79eb3111ee0a61bdb61"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::brand-kit-v8/evidence/targeted-unit.log",
+      "to": "repo/docs/evidence/stage-packages/brand-kit-v8/evidence/targeted-unit.log",
+      "bytes": 1877,
+      "sha256": "3ba61d8b20f54ec02401759434dc41e3050d44db051c6693573c0bc3692b24e7"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::brand-kit-v8/evidence/unit-preview-env-error.log",
+      "to": "repo/docs/evidence/stage-packages/brand-kit-v8/evidence/unit-preview-env-error.log",
+      "bytes": 94970,
+      "sha256": "77e4fa4dd6ddcaebffa192647c41aedb365f19f6b38e96c9a00720af664d89f5"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::brand-kit-v8/evidence/commit.log",
+      "to": "repo/docs/evidence/stage-packages/brand-kit-v8/evidence/commit.log",
+      "bytes": 4819,
+      "sha256": "da168ee5ee009e141ef4794644d04d96c8e403c42a40bf744acaa11b4cac27a6"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::documentation-v8/pt-push.log",
+      "to": "repo/docs/evidence/stage-packages/documentation-v8/pt-push.log",
+      "bytes": 75763,
+      "sha256": "70b20721155e65092c7d15fec339c5afef25bb032be1b345070c7137e8581581"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::documentation-v8/SHA256SUMS.txt",
+      "to": "repo/docs/evidence/stage-packages/documentation-v8/SHA256SUMS.txt",
+      "bytes": 15284,
+      "sha256": "6876c0ae5a98aa4391cfe84a3bf9eab57b55205676d3df4d00fcd3dc4d7cad38"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::documentation-v8/POTOLKOVO-TECHNICAL-TZ-V8.docx",
+      "to": "repo/docs/evidence/stage-packages/documentation-v8/POTOLKOVO-TECHNICAL-TZ-V8.docx",
+      "bytes": 55618,
+      "sha256": "e2bf0e37593787a4c5f29234fff42d3ef8c6e20125f75425426adcb3f327b7d9"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::documentation-v8/push.log",
+      "to": "repo/docs/evidence/stage-packages/documentation-v8/push.log",
+      "bytes": 75764,
+      "sha256": "98b36c2d146bbcb584ecdc7d7790168e782cc4500f9d7e064bcf7943bb9b4aa2"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::documentation-v8/pt-commit.log",
+      "to": "repo/docs/evidence/stage-packages/documentation-v8/pt-commit.log",
+      "bytes": 2513,
+      "sha256": "9ef4445b4e14173d4cd11743c0087d1ec4e775c1bd4efcd647f173477aa33192"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::documentation-v8/github-status.json",
+      "to": "repo/docs/evidence/stage-packages/documentation-v8/github-status.json",
+      "bytes": 429,
+      "sha256": "9a6023e666a944b0332cef5f72d09d4577d303d026c2f27010885f1059bb50da"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::documentation-v8/export_current.py",
+      "to": "repo/docs/evidence/stage-packages/documentation-v8/export_current.py",
+      "bytes": 11780,
+      "sha256": "af7841f58022d533f684b095146b5cd877abd38a1e83a0ef0528755f6e55c752"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::documentation-v8/POTOLKOVO-BRAND-REDESIGN-TZ-V8.docx",
+      "to": "repo/docs/evidence/stage-packages/documentation-v8/POTOLKOVO-BRAND-REDESIGN-TZ-V8.docx",
+      "bytes": 45615,
+      "sha256": "65a4e82728d15fb072bbe4dd902092663349fd37f61ec2db60349b1ae5518a28"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::documentation-v8/update_pt_continuation.py",
+      "to": "repo/docs/evidence/stage-packages/documentation-v8/update_pt_continuation.py",
+      "bytes": 28741,
+      "sha256": "70d7cbdbfee8f639b562417e1d7d722f5202cba6da3e97deedc3802a8b224e24"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::documentation-v8/validation.json",
+      "to": "repo/docs/evidence/stage-packages/documentation-v8/validation.json",
+      "bytes": 345,
+      "sha256": "8112d6defc67fe2b1f63530ed7ae9a5840f6fdb678bdcf93007ce1a06a1b996c"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::documentation-v8/POTOLKOVO-PLAN-V8.html",
+      "to": "repo/docs/evidence/stage-packages/documentation-v8/POTOLKOVO-PLAN-V8.html",
+      "bytes": 22974,
+      "sha256": "2763d8998185198a2dd649b68afc6834d8244bf403bd75b8a35bd23e1262a27d"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::documentation-v8/POTOLKOVO-PT-CONTINUATION-TZ.docx",
+      "to": "repo/docs/evidence/stage-packages/documentation-v8/POTOLKOVO-PT-CONTINUATION-TZ.docx",
+      "bytes": 58269,
+      "sha256": "a9b30d8f6ff16860acbf5cf41a174341b77a880a6c0e99286ad6a08e06bdb9d5"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::documentation-v8/cleanup_docs.py",
+      "to": "repo/docs/evidence/stage-packages/documentation-v8/cleanup_docs.py",
+      "bytes": 5522,
+      "sha256": "d331653a1f265e7a708a0f40588022c2d98b5b934d9f7f2d208925d088a1fb4e"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::catalog/POTOLKOVO-CATALOG-OVERVIEW.html",
+      "to": "repo/docs/evidence/stage-packages/catalog/POTOLKOVO-CATALOG-OVERVIEW.html",
+      "bytes": 836722,
+      "sha256": "7cbe6d5aa8cd4c2cfef6cfc8ed41ea9fe347b7d6aea3d93693ab30720fd66372"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::catalog/capture.cjs",
+      "to": "repo/docs/evidence/stage-packages/catalog/capture.cjs",
+      "bytes": 2344,
+      "sha256": "07f97ae44eb79c73a61e9e9eb7412f91bfbdcc787787c304c509ff559e9bdde9"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::catalog/build-overview.py",
+      "to": "repo/docs/evidence/stage-packages/catalog/build-overview.py",
+      "bytes": 10597,
+      "sha256": "02407b4df0086827342b2d3265ecfd9612c92abb99f7f7c25a7e507bbefab210"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::editorial/POTOLKOVO-EDITORIAL-OVERVIEW.html",
+      "to": "repo/docs/evidence/stage-packages/editorial/POTOLKOVO-EDITORIAL-OVERVIEW.html",
+      "bytes": 765494,
+      "sha256": "fafe817c6dfaa0da55dab0bc51f9895c79d60353586bcea5479d6e6eec396e8f"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::editorial/build-overview.py",
+      "to": "repo/docs/evidence/stage-packages/editorial/build-overview.py",
+      "bytes": 10490,
+      "sha256": "e2584c8a8a0bdc43034952161bbfdab28eab3e1fba41c1046bad710661d1d705"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::gallery/github-status.json",
+      "to": "repo/docs/evidence/stage-packages/gallery/github-status.json",
+      "bytes": 356,
+      "sha256": "8fcf830b72d160eba9a00cb6173ae68efbf0a79e243cfe7559bfb275d0f6666d"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::gallery/CLEANUP.json",
+      "to": "repo/docs/evidence/stage-packages/gallery/CLEANUP.json",
+      "bytes": 1401,
+      "sha256": "5e1e93a4fd232e32d8571e4bdf5599997791c178451b26145adc278cc49d1cb1"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::gallery/POTOLKOVO-GALLERY-OVERVIEW.html",
+      "to": "repo/docs/evidence/stage-packages/gallery/POTOLKOVO-GALLERY-OVERVIEW.html",
+      "bytes": 1370822,
+      "sha256": "32607ff1706c752500bc863bb48a7fee0ee66eed422936be6f84b4e952d731cb"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::gallery/deployment.json",
+      "to": "repo/docs/evidence/stage-packages/gallery/deployment.json",
+      "bytes": 232,
+      "sha256": "916191865e5bd8d4876c6d35ca311712a8f2ef586197503a3a6559965d3b4b3e"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::calculator/apply-ui.py",
+      "to": "repo/docs/evidence/stage-packages/calculator/apply-ui.py",
+      "bytes": 9720,
+      "sha256": "99c01ef5abe0ccc1b2b49771f5db293daacefaebe712d44743fb67e42ebaf139"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::calculator/POTOLKOVO-CALCULATOR-OVERVIEW.html",
+      "to": "repo/docs/evidence/stage-packages/calculator/POTOLKOVO-CALCULATOR-OVERVIEW.html",
+      "bytes": 967265,
+      "sha256": "00d7b16f899e0747834ae10a915abf7cb0a2b485856606f4e8e34ef77971037e"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::calculator/capture.cjs",
+      "to": "repo/docs/evidence/stage-packages/calculator/capture.cjs",
+      "bytes": 2489,
+      "sha256": "141f78190c2d1135fce88254ffb3b5b396ae3817108395bdd4d84538ea1edf37"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::calculator/build-overview.py",
+      "to": "repo/docs/evidence/stage-packages/calculator/build-overview.py",
+      "bytes": 9500,
+      "sha256": "81f8dac4a5750234772a636c5f1f7d758efa8bfe1efded27755788bc715893e4"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::services/POTOLKOVO-SERVICES-OVERVIEW.html",
+      "to": "repo/docs/evidence/stage-packages/services/POTOLKOVO-SERVICES-OVERVIEW.html",
+      "bytes": 2028097,
+      "sha256": "5d4b1070da23c9497c85b6f6a5fb2eaad582f055cabf8a7748ef30a9eefd22d5"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::services/capture.cjs",
+      "to": "repo/docs/evidence/stage-packages/services/capture.cjs",
+      "bytes": 1418,
+      "sha256": "0c8b7ab29d4ca1bb4f19a347f2f3ed6d48f021777551f063ca6d70818a349bbe"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::services/build-overview.py",
+      "to": "repo/docs/evidence/stage-packages/services/build-overview.py",
+      "bytes": 10517,
+      "sha256": "f0c986a2097d266f6b431811b650a598be954a000d1011f803491f5da5c64815"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::polish/build-handoff.py",
+      "to": "repo/docs/evidence/stage-packages/polish/build-handoff.py",
+      "bytes": 15156,
+      "sha256": "d0e338b3a32c93622ca0d0c9da5382939351ab170fcd4d336cdb2f1410ce3816"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::polish/CLEANUP.json",
+      "to": "repo/docs/evidence/stage-packages/polish/CLEANUP.json",
+      "bytes": 2194,
+      "sha256": "838c9e3a981b1ad4e8438f3d391ca6648f8796223b36693dfdf4ebe74cc9a838"
+    },
+    {
+      "from": "POTOLKOVO-STAGE-PACKAGES.zip::polish/POTOLKOVO-POLISH-OVERVIEW.html",
+      "to": "repo/docs/evidence/stage-packages/polish/POTOLKOVO-POLISH-OVERVIEW.html",
+      "bytes": 1730327,
+      "sha256": "86a768855d84a146b00b6e35ff2132cfd44c6f51649b7c80896edd88eb03597a"
+    },
+    {
+      "from": "POTOLKOVO-R7-HANDOFF.zip::SHA256SUMS.txt",
+      "to": "repo/docs/evidence/r7-handoff/SHA256SUMS.txt",
+      "bytes": 522,
+      "sha256": "794e5293d9c06f8b4d8bc2e4adcf98e2405ec743ab4c8a6fe657c7506b557563"
+    },
+    {
+      "from": "POTOLKOVO-R7-HANDOFF.zip::IMAGE-REPLACEMENT.md",
+      "to": "repo/docs/evidence/r7-handoff/IMAGE-REPLACEMENT.md",
+      "bytes": 3839,
+      "sha256": "a43f4a7b4f5b856e49aba23ee20065a82d2268377694996dc88645082c9f5345"
+    },
+    {
+      "from": "POTOLKOVO-R7-HANDOFF.zip::R7-IMPLEMENTATION.md",
+      "to": "repo/docs/evidence/r7-handoff/R7-IMPLEMENTATION.md",
+      "bytes": 11998,
+      "sha256": "33f4ee04088705395c714ddcbaf91c701e3286494ced8c782d5cb7e00f8c46e1"
+    },
+    {
+      "from": "POTOLKOVO-R7-HANDOFF.zip::README-HANDOFF.md",
+      "to": "repo/docs/evidence/r7-handoff/README-HANDOFF.md",
+      "bytes": 5272,
+      "sha256": "0a19b409a66ad088c0c7c18df8478b039715ac69c98927e7efcb5fd72eb8ecd4"
+    },
+    {
+      "from": "POTOLKOVO-R7-HANDOFF.zip::POTOLKOVO-R7-OVERVIEW.html",
+      "to": "repo/docs/evidence/r7-handoff/POTOLKOVO-R7-OVERVIEW.html",
+      "bytes": 487261,
+      "sha256": "abdffae7ff1fd0d3c8544be2a37ea8d6a8909d2bb1151284a4c262e9abbf0c0a"
+    },
+    {
+      "from": "POTOLKOVO-R7-HANDOFF.zip::evidence/unit.log",
+      "to": "repo/docs/evidence/r7-handoff/evidence/unit.log",
+      "bytes": 39763,
+      "sha256": "631dcbddc565a0781ac692d48772e032d1e1a146e7e03010b0dc94020ceccad7"
+    },
+    {
+      "from": "POTOLKOVO-R7-HANDOFF.zip::evidence/browser-checks-final.json",
+      "to": "repo/docs/evidence/r7-handoff/evidence/browser-checks-final.json",
+      "bytes": 8716,
+      "sha256": "ae410b47778b638709ccc3af3212c01bf3ecf87724db3bb319b3e071550c6788"
+    },
+    {
+      "from": "POTOLKOVO-R7-HANDOFF.zip::evidence/e2e-summary.json",
+      "to": "repo/docs/evidence/r7-handoff/evidence/e2e-summary.json",
+      "bytes": 3188,
+      "sha256": "532d5d32354d28a9deafd37e41327dfbc5d88a2b39b20ccad2549a9abcd7cc1d"
+    },
+    {
+      "from": "POTOLKOVO-R7-HANDOFF.zip::evidence/bundle.log",
+      "to": "repo/docs/evidence/r7-handoff/evidence/bundle.log",
+      "bytes": 728,
+      "sha256": "abc1da2785ac691f920cf44f3fad69e87b7ed995a918fee07b2c348416aafb63"
+    },
+    {
+      "from": "POTOLKOVO-R7-HANDOFF.zip::evidence/build.log",
+      "to": "repo/docs/evidence/r7-handoff/evidence/build.log",
+      "bytes": 3003,
+      "sha256": "164ccbe4fc80043576a30ae31b844b9378ffbda4c213098c10ef1ce0178626fa"
+    },
+    {
+      "from": "POTOLKOVO-R7-HANDOFF.zip::evidence/e2e.log",
+      "to": "repo/docs/evidence/r7-handoff/evidence/e2e.log",
+      "bytes": 45438,
+      "sha256": "98c23352ffdfd28d22a18a9eee7dd0413d552436fe3306cf8de2f8e349998138"
+    },
+    {
+      "from": "POTOLKOVO-R7-HANDOFF.zip::evidence/flow.log",
+      "to": "repo/docs/evidence/r7-handoff/evidence/flow.log",
+      "bytes": 1832,
+      "sha256": "c90407f5426dad52889ccda3186706e4e04c80a95c0f920140aac67262f5fab2"
+    },
+    {
+      "from": "/home/user/audit/README-FIRST.md",
+      "to": "repo/docs/evidence/audit-hub/README-FIRST.md",
+      "bytes": 789,
+      "sha256": "69591ce4963dd60e07f37ea1fc0823141fbcde971a14a813315c41c9a0a2d8e1"
+    },
+    {
+      "from": "/home/user/audit/build_deliverables.py",
+      "to": "repo/docs/evidence/audit-hub/build_deliverables.py",
+      "bytes": 37231,
+      "sha256": "a5415be2fad3b4b8789bc83bfc9e383f2ef624099ba1d57c558b29500997aad2"
+    },
+    {
+      "from": "/home/user/audit/render_formats.py",
+      "to": "repo/docs/evidence/audit-hub/render_formats.py",
+      "bytes": 11815,
+      "sha256": "efabe022a11385be3f9b3b07e1d8b108fb1986f13d82ddae63274748ffa07e00"
+    },
+    {
+      "from": "/home/user/audit/tools/package-lock.json",
+      "to": "repo/docs/evidence/audit-hub/tools/package-lock.json",
+      "bytes": 1413,
+      "sha256": "17825d2955908d4f0c9e5ccdc9d365f658330f7ad2d9e55a77b7611507596daf"
+    },
+    {
+      "from": "/home/user/audit/tools/package.json",
+      "to": "repo/docs/evidence/audit-hub/tools/package.json",
+      "bytes": 66,
+      "sha256": "74a4f94656a10efb13f08996bfea1585aca512fda3ed24b713fe6a14442434e4"
+    },
+    {
+      "to": "repo/docs/evidence/calculator-ux-room/pack/POTOLKOVO-ROOMS-UX.html",
+      "bytes": 260547,
+      "sha256": "47b0ded89ce3147d4a363a2904e77310b091fa46d3633c7dc302d6e57c5ccb4b"
+    },
+    {
+      "to": "repo/docs/evidence/calculator-ux-room/pack/GIT.json",
+      "bytes": 419,
+      "sha256": "a8ad02087b5b77bd405de3e812264f9a36074b57f20db5b25bd35951d1ca63b6"
+    },
+    {
+      "to": "repo/docs/evidence/calculator-ux-room/pack/SHA256SUMS.txt",
+      "bytes": 4215,
+      "sha256": "1aee04a02094db06a5dde052b2c2dbeba486831a07654e95e9ecc4cb3399068e"
+    },
+    {
+      "to": "repo/docs/evidence/calculator-ux-room/pack/README-FIRST.txt",
+      "bytes": 362,
+      "sha256": "5ccbcdbc270a8f6deae434e293b89812f8dfac3a75dbabff07d61808804cc85a"
+    }
+  ],
+  "skipped_in_git": 34,
+  "skipped_rebuildable": [
+    {
+      "path": "/home/user/audit/catalog-led-2026-10-14/POTOLKOVO-CATALOG-AUDIT-PACK.zip",
+      "bytes": 3340559,
+      "sha256": "8c7474f069a1e1ea7257e04cbe2f53f446e80ec34ca5ab2d543f08fd4804a9df",
+      "reason": "контейнер/патч; содержимое перенесено пофайлово либо восстановимо из git"
+    },
+    {
+      "path": "/home/user/audit/calculator-2026-10-15/POTOLKOVO-CALCULATOR-AUDIT-PACK.zip",
+      "bytes": 961945,
+      "sha256": "825d75fd3a8078f1bb23729871c5a9600a331128e9099808e5e0a48c4193c782",
+      "reason": "контейнер/патч; содержимое перенесено пофайлово либо восстановимо из git"
+    },
+    {
+      "path": "/home/user/rebrand/POTOLKOVO-REBRAND-PACKAGE-V7.zip",
+      "bytes": 6213435,
+      "sha256": "a14a5cfcb1e6e8945b74a0a2cedc929e3f525b765b8609386d799ec767024e36",
+      "reason": "контейнер; содержимое перенесено пофайлово"
+    }
+  ],
+  "archives_removed": [],
+  "archive_hashes_before_removal": {
+    "stage_packages_zip": "894dfa2f3a815fcfc9fbca74e7453ac3750018cfc75e6e7a3b48326e49018d25",
+    "r7_handoff_zip": "d68c9a5df4a7892064f89a7ef2a1734cdf5535c537be9e69227941990ef2a12c",
+    "rebrand_package_zip": "a14a5cfcb1e6e8945b74a0a2cedc929e3f525b765b8609386d799ec767024e36",
+    "catalog_audit_pack_zip": "8c7474f069a1e1ea7257e04cbe2f53f446e80ec34ca5ab2d543f08fd4804a9df",
+    "calculator_audit_pack_zip": "825d75fd3a8078f1bb23729871c5a9600a331128e9099808e5e0a48c4193c782"
+  },
+  "moved_total_bytes": 19602240,
+  "moved_total_files": 157,
+  "coverage_check": "полное покрытие: уникальных файлов вне repo не осталось",
+  "secret_scan": "чисто",
+  "screenshots_not_moved": {
+    "decision": "решение владельца 16.10.2026: отчётные скриншоты не хранить в репо — отработанный мусор",
+    "removed_tracked_bytes": 15382847,
+    "removed_untracked_bytes": 3653833,
+    "kept": "docs/evidence/catalog-led-audit/raw/sources/eks-label-*.png — фото наклеек поставщика (label_observed), не скриншот интерфейса",
+    "note": "скриншоты исключены из HEAD; в истории ветки до этих коммитов они остаются — при желании чистится force-push по отдельной команде владельца"
+  }
+}

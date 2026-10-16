@@ -1,0 +1,11 @@
+
+Running 6 tests using 2 workers
+
+  ✓  1 [chromium-desktop] › e2e/catalog-owner-corrections.spec.ts:6:5 › Owner corrections: true panels exclude controls, accessories have their own category, retired SKU is absent (5.8s)
+  ✓  2 [chromium-mobile] › e2e/catalog-owner-corrections.spec.ts:6:5 › Owner corrections: true panels exclude controls, accessories have their own category, retired SKU is absent (6.9s)
+  ✓  3 [chromium-desktop] › e2e/catalog-owner-corrections.spec.ts:30:5 › Owner corrections: track controls remain equipment, do not create fixture installation or lamp demand (4.7s)
+  ✓  4 [chromium-mobile] › e2e/catalog-owner-corrections.spec.ts:30:5 › Owner corrections: track controls remain equipment, do not create fixture installation or lamp demand (5.2s)
+  ✓  5 [chromium-desktop] › e2e/catalog-owner-corrections.spec.ts:54:5 › Owner withdrawal: restored old quote shows unavailable item and removes it only on explicit action (3.6s)
+  ✓  6 [chromium-mobile] › e2e/catalog-owner-corrections.spec.ts:54:5 › Owner withdrawal: restored old quote shows unavailable item and removes it only on explicit action (3.3s)
+
+  6 passed (16.6s)

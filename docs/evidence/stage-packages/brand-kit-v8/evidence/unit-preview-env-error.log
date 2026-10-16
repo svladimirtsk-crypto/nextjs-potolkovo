@@ -1,0 +1,1317 @@
+
+> nextjs@0.1.0 test
+> vitest run
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/home/user/repo[39m
+
+ [32m✓[39m [30m[42m unit [49m[39m tests/rescue-lead.test.ts [2m([22m[2m20 tests[22m[2m)[22m[33m 765[2mms[22m[39m
+     [33m[2m✓[22m[39m setevaya oshibka -> ok:false, bez uspeha [33m 703[2mms[22m[39m
+ [31m❯[39m [30m[42m unit [49m[39m tests/lead-storage-guard.test.ts [2m([22m[2m7 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[33m 523[2mms[22m[39m
+     [32m✓[39m прод без DATABASE_URL — не готов[32m 228[2mms[22m[39m
+     [32m✓[39m прод с DATABASE_URL — готов[32m 6[2mms[22m[39m
+     [32m✓[39m разработка без базы — готов: in-memory здесь осознанный режим[32m 4[2mms[22m[39m
+     [32m✓[39m пустая строка в DATABASE_URL равна отсутствию адреса[32m 4[2mms[22m[39m
+[31m     [31m×[31m в проде без базы отвечает 503, а не мнимым успехом[39m[32m 248[2mms[22m[39m
+     [32m✓[39m не выдаёт номер заявки, которого не существует[32m 16[2mms[22m[39m
+[31m     [31m×[31m просит повторить позже — сбой хранилища обычно временный[39m[32m 15[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/api-health.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 268[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-delivery-channels.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 239[2mms[22m[39m
+[90mstderr[2m | tests/delivery-alert.test.ts[2m > [22m[2mPT-015 · проверка на хранилище (полный цикл)[2m > [22m[2mсерия из двух заявок — алерт отправлен и записан в журнал
+[22m[39m[delivery-alert] отправлен алерт через webhook: 4 неудачных попыток подряд, заявок в серии 2
+
+[90mstderr[2m | tests/delivery-alert.test.ts[2m > [22m[2mPT-015 · проверка на хранилище (полный цикл)[2m > [22m[2mповторная проверка в пределах охлаждения — второго алерта нет
+[22m[39m[delivery-alert] отправлен алерт через webhook: 4 неудачных попыток подряд, заявок в серии 2
+
+[90mstderr[2m | tests/delivery-alert.test.ts[2m > [22m[2mPT-015 · проверка на хранилище (полный цикл)[2m > [22m[2mвсе приёмники отказали — запись в журнале всё равно есть (иначе шторм)
+[22m[39m[delivery-alert] алерт о сбое доставки НЕ доставлен (webhook: HTTP 502): 4 неудачных попыток подряд в каналы web3forms, telegram
+
+[90mstderr[2m | tests/delivery-alert.test.ts[2m > [22m[2mPT-015 · проверка на хранилище (полный цикл)[2m > [22m[2mалерт не содержит телефон заявителя, даже если он есть в ошибке канала
+[22m[39m[delivery-alert] отправлен алерт через webhook: 4 неудачных попыток подряд, заявок в серии 2
+
+[90mstderr[2m | tests/delivery-alert.test.ts[2m > [22m[2mPT-015 · проверка встроена в оба места отправки[2m > [22m[2mкрон: серия неудач в оба канала — алерт отправлен, прежние поля ответа не изменились
+[22m[39m[delivery-alert] отправлен алерт через webhook: 4 неудачных попыток подряд, заявок в серии 2
+
+[90mstdout[2m | tests/delivery-alert.test.ts[2m > [22m[2mPT-015 · проверка встроена в оба места отправки[2m > [22m[2mPOST /api/lead: упавшая доставка запускает проверку, не задерживая ответ клиенту
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/delivery-alert.test.ts[2m > [22m[2mPT-015 · проверка встроена в оба места отправки[2m > [22m[2mPOST /api/lead: упавшая доставка запускает проверку, не задерживая ответ клиенту
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+[90mstderr[2m | tests/delivery-alert.test.ts[2m > [22m[2mPT-015 · проверка встроена в оба места отправки[2m > [22m[2mPOST /api/lead: упавшая доставка запускает проверку, не задерживая ответ клиенту
+[22m[39m[delivery-alert] отправлен алерт через webhook: 2 неудачных попыток подряд, заявок в серии 1
+
+[90mstdout[2m | tests/delivery-alert.test.ts[2m > [22m[2mPT-015 · проверка встроена в оба места отправки[2m > [22m[2mPOST /api/lead: доставка прошла — проверки алерта не происходит
+[22m[39m[lead] пересчёт цены: unverified {
+  issues: [
+    [32m'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'[39m
+  ]
+}
+
+[90mstderr[2m | tests/delivery-alert.test.ts[2m > [22m[2mPT-015 · проверка встроена в оба места отправки[2m > [22m[2mPOST /api/lead: доставка прошла — проверки алерта не происходит
+[22m[39m[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: [32m'+79055219909'[39m, known: [33mfalse[39m, required: [33mfalse[39m }
+
+ [32m✓[39m [30m[42m unit [49m[39m tests/delivery-alert.test.ts [2m([22m[2m40 tests[22m[2m)[22m[32m 198[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/check-env-script.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 161[2mms[22m[39m
+ [31m❯[39m [30m[42m unit [49m[39m tests/lead-idempotency.test.ts [2m([22m[2m15 tests[22m[2m | [22m[31m15 failed[39m[2m)[22m[32m 42[2mms[22m[39m
+[31m     [31m×[31m двойная отправка одного payload -> одна запись и один комплект доставки[39m[32m 17[2mms[22m[39m
+[31m     [31m×[31m повтор после таймаута отдаёт тот же код заявки, а не новую строку[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m тот же requestId с другим payload -> 409, второй записи нет[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m два параллельных запроса с одним requestId -> одна запись, оба ответа успешны[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m повтор не тратит бюджет серверного rate-limit[39m[32m 3[2mms[22m[39m
+[31m     [31m×[31m разные requestId при одном payload -> дедуп по телефону и отпечатку[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m rescue -> полная заявка в течение 10 минут создаёт вторую запись[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m полная заявка сохраняет свой состав, а не подменяется rescue[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m изменившийся состав заказа с тем же телефоном -> новая запись[39m[32m 1[2mms[22m[39m
+[31m     [31m×[31m без requestId дедуп по телефону и содержимому продолжает работать[39m[32m 1[2mms[22m[39m
+[31m     [31m×[31m без requestId заявка с другим составом всё равно создаётся[39m[32m 1[2mms[22m[39m
+[31m     [31m×[31m requestId короче 8 символов отклоняется как невалидное поле[39m[32m 1[2mms[22m[39m
+[31m     [31m×[31m повтор requestId больше не разбирается: срабатывает прежний дедуп по телефону[39m[32m 1[2mms[22m[39m
+[31m     [31m×[31m тот же requestId с другим payload не даёт 409[39m[32m 1[2mms[22m[39m
+[31m     [31m×[31m возвращается прежний дефект: полная заявка после rescue получает её код[39m[32m 1[2mms[22m[39m
+ [31m❯[39m [30m[42m unit [49m[39m tests/lead-outbox.test.ts [2m([22m[2m7 tests[22m[2m | [22m[31m4 failed[39m[2m)[22m[32m 24[2mms[22m[39m
+[31m     [31m×[31m задания существуют на каждый канал сразу после ответа[39m[32m 14[2mms[22m[39m
+[31m     [31m×[31m ответ приходит, не дожидаясь внешних сервисов[39m[32m 1[2mms[22m[39m
+[31m     [31m×[31m ответ не обещает доставку, которой ещё не было[39m[32m 3[2mms[22m[39m
+[31m     [31m×[31m падение доставки не мешает ответу и попадает в очередь ретрая[39m[32m 2[2mms[22m[39m
+     [32m✓[39m задание в статусе pending видно крону[32m 1[2mms[22m[39m
+     [32m✓[39m после успешной отправки задание уходит из очереди[32m 1[2mms[22m[39m
+     [32m✓[39m список каналов постоянный — иначе канал останется без задания[32m 1[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/popular-points.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 105[2mms[22m[39m
+ [31m❯[39m [30m[42m unit [49m[39m tests/lead-route-recalc.test.ts [2m([22m[2m7 tests[22m[2m | [22m[31m7 failed[39m[2m)[22m[32m 26[2mms[22m[39m
+[31m     [31m×[31m заниженная сумма не попадает в хранилище — пишется серверная[39m[32m 15[2mms[22m[39m
+[31m     [31m×[31m письмо мастеру содержит серверную сумму и служебную пометку[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m неизвестный SKU отклоняется 422 и не создаёт заявку[39m[32m 1[2mms[22m[39m
+[31m     [31m×[31m дробное количество штучного товара отклоняется 422[39m[32m 1[2mms[22m[39m
+[31m     [31m×[31m честная заявка проходит без пометки расхождения[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m rescue-заявка без снапшота принимается с суммой клиента[39m[32m 1[2mms[22m[39m
+[31m     [31m×[31m сумма клиента проходит как есть, неизвестный SKU больше не отклоняется[39m[32m 1[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-submit.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 73[2mms[22m[39m
+ [31m❯[39m [30m[42m unit [49m[39m tests/lead-route.test.ts [2m([22m[2m8 tests[22m[2m | [22m[31m8 failed[39m[2m)[22m[32m 27[2mms[22m[39m
+[31m     [31m×[31m 201 + zapis v hranilishche + dostavka v oba kanala[39m[32m 14[2mms[22m[39m
+[31m     [31m×[31m 422 na nevalidnom telefone[39m[32m 1[2mms[22m[39m
+[31m     [31m×[31m honeypot: otvechaem ok, no lead ne sozdaetsya[39m[32m 1[2mms[22m[39m
+[31m     [31m×[31m dedup: povtor s tem zhe telefonom vozvrashchaet tot zhe leadId[39m[32m 4[2mms[22m[39m
+[31m     [31m×[31m 6-y zapros za 10 min -> 429 s Retry-After[39m[32m 1[2mms[22m[39m
+[31m     [31m×[31m upavshaya dostavka ne roniaet otvet i pishetsya kak failed[39m[32m 1[2mms[22m[39m
+[31m     [31m×[31m rescue-lead sohranyaetsya so statusom rescue[39m[32m 1[2mms[22m[39m
+[31m     [31m×[31m bitiy JSON -> 400[39m[32m 1[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-submit-retry.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 56[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/step1-selectors.test.ts [2m([22m[2m39 tests[22m[2m)[22m[32m 55[2mms[22m[39m
+[90mstderr[2m | tests/availability-admin-route.test.ts[2m > [22m[2mPT-016 · доступ к админке календаря[2m > [22m[2mверный токен проходит проверку доступа (и упирается уже в БД)
+[22m[39m[availability-admin] GET: connect ECONNREFUSED 127.0.0.1:1
+
+ [32m✓[39m [30m[42m unit [49m[39m tests/availability-admin-route.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 50[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-request-id.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 45[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/brand-polish.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/catalog-index.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/brand-voice-kit.test.ts [2m([22m[2m32 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-api.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-server-recalc.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+[90mstderr[2m | tests/availability-api.test.ts[2m > [22m[2mPT-016 · GET /api/availability[2m > [22m[2mнедоступная БД не роняет роут: 200 и запасная строка
+[22m[39m[availability] календарь из БД не прочитался — показываю запасной: connect ECONNREFUSED 127.0.0.1:1
+
+ [32m✓[39m [30m[42m unit [49m[39m tests/availability-api.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/availability-slots.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-server-recalc-rejections.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/catalog-photo.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/product-predicates.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/proof-gallery.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/catalog-presentation.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/draft.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/availability-snapshot.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/copy-lint.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/kit-rules.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/selectors.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/product-image-pending.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/attribution-normalize.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/design-tokens.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/env.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/safe-storage.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lighting.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/cart-derived.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/step0-fsm.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/service-page-actions.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/step1-cart-rules.test.ts [2m([22m[2m33 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/company-rebrand.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/analytics.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/rooms-snapshot.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-failure-view.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/entry-context.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/step1-progress.test.ts [2m([22m[2m33 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/service-price-anchor.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/reducer.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/service-faq.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/use-step1-tabs.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-snapshot.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lead-consent.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/calculator-pricing.test.ts [2m([22m[2m22 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/catalog-kit-gaps.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/step1-footer-action.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/home-price-anchor.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/catalog-filters.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/snapshot-merge.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/presets.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/image-manifest.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/pricing.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/catalog-search.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/editorial-pages.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/kit-offer.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/privacy-policy.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/telegram-link.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/lighting-first.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/catalog-images.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/catalog-coverage.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/step2-copy.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/service-presentation.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/strip-state.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/track-sale-snapshot.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/orphan-track.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/use-catalog-filters.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/whatsapp-contact.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/seo-hub.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/seo-meta.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/privacy-requisites.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/catalog-index-resolve.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/catalog-sections.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/catalog-checkout.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/catalog-stale.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/system-entry-price.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/checkout-intent.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/availability-window.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/discount-mode.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m tests/availability-legal.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [31m❯[39m [30m[45m db [49m[39m tests/lead-delivery-integration-db.test.ts [2m([22m[2m19 tests[22m[2m | [22m[31m5 failed[39m[2m)[22m[33m 703[2mms[22m[39m
+       [32m✓[39m заявка и задания на доставку появляются вместе[32m 46[2mms[22m[39m
+       [32m✓[39m сбой вставки задания откатывает и заявку[32m 16[2mms[22m[39m
+       [32m✓[39m заявка без каналов не создаёт заданий, но сохраняется[32m 7[2mms[22m[39m
+       [32m✓[39m уникальный индекс (lead_id, channel) не даёт завести второе задание на канал[32m 9[2mms[22m[39m
+[31m       [31m×[31m повтор с тем же requestId не отправляет второе сообщение[39m[32m 237[2mms[22m[39m
+[31m       [31m×[31m два параллельных запроса с одним requestId — одна заявка и одна отправка[39m[32m 5[2mms[22m[39m
+[31m       [31m×[31m тот же requestId с другим содержимым — 409 и никакой отправки[39m[32m 3[2mms[22m[39m
+       [32m✓[39m доводит недошедшее задание и закрывает его[32m 51[2mms[22m[39m
+       [32m✓[39m сбой канала оставляет задание крону, следующий прогон восстанавливает[32m 61[2mms[22m[39m
+       [32m✓[39m задание с исчерпанными попытками крон больше не трогает[32m 17[2mms[22m[39m
+       [32m✓[39m крон с неверным CRON_SECRET не отправляет ничего[32m 7[2mms[22m[39m
+[31m       [31m×[31m заявка сохраняется, а задания падают в failed с текстом ошибки[39m[32m 4[2mms[22m[39m
+[31m       [31m×[31m обрыв соединения у канала не теряет заявку[39m[32m 3[2mms[22m[39m
+       [32m✓[39m арендованное задание крон не забирает — его ещё отправляют[32m 8[2mms[22m[39m
+       [32m✓[39m два параллельных claim не отдают одно задание дважды[32m 16[2mms[22m[39m
+       [32m✓[39m строка без lease_until (наследие фазы expand) считается свободной[32m 9[2mms[22m[39m
+       [32m✓[39m два параллельных прогона крона не отправляют одно задание дважды[32m 15[2mms[22m[39m
+       [32m✓[39m приём заявки и крон, запущенные одновременно, не отправляют задание дважды[32m 14[2mms[22m[39m
+       [32m✓[39m флаг отката LEAD_OUTBOX_CLAIM_ENABLED=0 возвращает прежнее поведение[32m 169[2mms[22m[39m
+ [31m❯[39m [30m[45m db [49m[39m tests/lead-route-db.test.ts [2m([22m[2m15 tests[22m[2m | [22m[31m15 failed[39m[2m)[22m[32m 187[2mms[22m[39m
+[31m     [31m×[31m сохраняет заявку в БД со снапшотом из двух комнат[39m[32m 124[2mms[22m[39m
+[31m     [31m×[31m дедуп по телефону переживает потерю памяти процесса[39m[32m 16[2mms[22m[39m
+[31m     [31m×[31m 6-й запрос с одного IP → 429 даже после сброса in-memory лимитера[39m[32m 7[2mms[22m[39m
+[31m     [31m×[31m PT-009: повтор requestId возвращает прежний код и не создаёт вторую строку[39m[32m 3[2mms[22m[39m
+[31m     [31m×[31m PT-009: тот же requestId с другим payload → 409[39m[32m 3[2mms[22m[39m
+[31m     [31m×[31m PT-009: unique-индекс ловит параллельную вставку с одним requestId[39m[32m 5[2mms[22m[39m
+[31m     [31m×[31m PT-009: rescue → полная заявка с тем же телефоном создаёт вторую запись[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m GET /api/lead/:code находит заявку по коду с CRON_SECRET[39m[32m 9[2mms[22m[39m
+[31m     [31m×[31m PT-012: длинная рекламная ссылка в атрибуции не даёт 422 и нормализуется в БД[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m PT-014: версия и момент согласия сохраняются в отдельных колонках[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m PT-014: без версии клиента — NULL, момент ставит сервер[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m PT-014: невозможное время согласия заменяется серверным[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m PT-014: мусор в consentVersion не доезжает до БД[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m PT-014: LEAD_CONSENT_VERSION_REQUIRED=1 отклоняет устаревшую версию[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m PT-014: по умолчанию устаревшая версия принимается и логируется[39m[32m 2[2mms[22m[39m
+[90mstderr[2m | tests/delivery-alert-db.test.ts[2m > [22m[2mPT-015 · алерт о сбоях доставки на PostgreSQL[2m > [22m[2mоба канала упали N раз подряд — алерт отправлен и записан в журнал
+[22m[39m[delivery-alert] отправлен алерт через webhook: 4 неудачных попыток подряд, заявок в серии 2
+
+[90mstderr[2m | tests/delivery-alert-db.test.ts[2m > [22m[2mPT-015 · алерт о сбоях доставки на PostgreSQL[2m > [22m[2mохлаждение хранится в БД и переживает новый экземпляр хранилища
+[22m[39m[delivery-alert] отправлен алерт через webhook: 4 неудачных попыток подряд, заявок в серии 2
+
+[90mstderr[2m | tests/delivery-alert-db.test.ts[2m > [22m[2mPT-015 · алерт о сбоях доставки на PostgreSQL[2m > [22m[2mприёмник алерта отказал — запись всё равно есть, шторма нет
+[22m[39m[delivery-alert] алерт о сбое доставки НЕ доставлен (webhook: HTTP 502): 4 неудачных попыток подряд в каналы web3forms, telegram
+
+ [32m✓[39m [30m[45m db [49m[39m tests/delivery-alert-db.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 483[2mms[22m[39m
+ [32m✓[39m [30m[45m db [49m[39m tests/lead-store-pg.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 166[2mms[22m[39m
+ [32m✓[39m [30m[45m db [49m[39m tests/availability-db.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 147[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 56 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m [30m[45m db [49m[39m tests/lead-delivery-integration-db.test.ts[2m > [22mPT-020 · доставка: настоящая БД + фейковый HTTP-сервер[2m > [22mидемпотентность (PT-009) насквозь[2m > [22mповтор с тем же requestId не отправляет второе сообщение
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-delivery-integration-db.test.ts:[2m276:30[22m[39m
+    [90m274|[39m
+    [90m275|[39m         [35mconst[39m first [33m=[39m [35mawait[39m [33mPOST[39m([34mleadRequest[39m(body))[33m;[39m
+    [90m276|[39m         [34mexpect[39m(first[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                              [31m^[39m
+    [90m277|[39m         // Маршрут не ждёт доставку: ждём, пока фон дойдёт до фейковог…
+    [90m278|[39m         await vi.waitFor(() => expect(fake.count("telegram")).toBe(1),…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[45m db [49m[39m tests/lead-delivery-integration-db.test.ts[2m > [22mPT-020 · доставка: настоящая БД + фейковый HTTP-сервер[2m > [22mидемпотентность (PT-009) насквозь[2m > [22mдва параллельных запроса с одним requestId — одна заявка и одна отправка
+[31m[1mAssertionError[22m: expected [ 503, 503 ] to deeply equal [ 200, 201 ][39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[2m  [[22m
+[32m-   200,[39m
+[32m-   201,[39m
+[31m+   503,[39m
+[31m+   503,[39m
+[2m  ][22m
+
+[36m [2m❯[22m tests/lead-delivery-integration-db.test.ts:[2m301:69[22m[39m
+    [90m299|[39m         ])[33m;[39m
+    [90m300|[39m         // Кто-то создал заявку (201), второй получил её же код (200) …
+    [90m301|[39m         expect(responses.map((response) => response.status).sort()).to…
+    [90m   |[39m                                                                     [31m^[39m
+    [90m302|[39m
+    [90m303|[39m         const [first, second] = await Promise.all(responses.map((respo…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[45m db [49m[39m tests/lead-delivery-integration-db.test.ts[2m > [22mPT-020 · доставка: настоящая БД + фейковый HTTP-сервер[2m > [22mидемпотентность (PT-009) насквозь[2m > [22mтот же requestId с другим содержимым — 409 и никакой отправки
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-delivery-integration-db.test.ts:[2m324:30[22m[39m
+    [90m322|[39m
+    [90m323|[39m         const first = await POST(leadRequest(makePayload("+79161112235…
+    [90m324|[39m         [34mexpect[39m(first[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                              [31m^[39m
+    [90m325|[39m         await vi.waitFor(() => expect(fake.count("telegram")).toBe(1),…
+    [90m326|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[45m db [49m[39m tests/lead-delivery-integration-db.test.ts[2m > [22mPT-020 · доставка: настоящая БД + фейковый HTTP-сервер[2m > [22mприём заявки при недоступных каналах[2m > [22mзаявка сохраняется, а задания падают в failed с текстом ошибки
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-delivery-integration-db.test.ts:[2m430:33[22m[39m
+    [90m428|[39m         [35mconst[39m { [33mPOST[39m } [33m=[39m [35mawait[39m [35mimport[39m([32m"@/app/api/lead/route"[39m)[33m;[39m
+    [90m429|[39m         const response = await POST(leadRequest(makePayload("+79161112…
+    [90m430|[39m         [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                                 [31m^[39m
+    [90m431|[39m
+    [90m432|[39m         [35mawait[39m vi[33m.[39m[34mwaitFor[39m(
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[45m db [49m[39m tests/lead-delivery-integration-db.test.ts[2m > [22mPT-020 · доставка: настоящая БД + фейковый HTTP-сервер[2m > [22mприём заявки при недоступных каналах[2m > [22mобрыв соединения у канала не теряет заявку
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-delivery-integration-db.test.ts:[2m451:33[22m[39m
+    [90m449|[39m         [35mconst[39m { [33mPOST[39m } [33m=[39m [35mawait[39m [35mimport[39m([32m"@/app/api/lead/route"[39m)[33m;[39m
+    [90m450|[39m         const response = await POST(leadRequest(makePayload("+79161112…
+    [90m451|[39m         [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                                 [31m^[39m
+    [90m452|[39m
+    [90m453|[39m         [35mawait[39m vi[33m.[39m[34mwaitFor[39m(
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[45m db [49m[39m tests/lead-route-db.test.ts[2m > [22mN-001 · POST /api/lead с PostgreSQL[2m > [22mсохраняет заявку в БД со снапшотом из двух комнат
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route-db.test.ts:[2m99:29[22m[39m
+    [90m 97|[39m
+    [90m 98|[39m     [35mconst[39m response [33m=[39m [35mawait[39m [33mPOST[39m([34mrequest[39m([34mleadBody[39m([32m"+79161112233"[39m)))[33m;[39m
+    [90m 99|[39m     [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                             [31m^[39m
+    [90m100|[39m
+    [90m101|[39m     [35mconst[39m json [33m=[39m ([35mawait[39m response[33m.[39m[34mjson[39m()) [35mas[39m { leadId[33m:[39m string }[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[45m db [49m[39m tests/lead-route-db.test.ts[2m > [22mN-001 · POST /api/lead с PostgreSQL[2m > [22mдедуп по телефону переживает потерю памяти процесса
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route-db.test.ts:[2m133:26[22m[39m
+    [90m131|[39m
+    [90m132|[39m     [35mconst[39m first [33m=[39m [35mawait[39m [33mPOST[39m([34mrequest[39m([34mleadBody[39m([32m"+79162223344"[39m)))[33m;[39m
+    [90m133|[39m     [34mexpect[39m(first[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                          [31m^[39m
+    [90m134|[39m     [35mconst[39m firstJson [33m=[39m ([35mawait[39m first[33m.[39m[34mjson[39m()) [35mas[39m { leadId[33m:[39m string }[33m;[39m
+    [90m135|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[45m db [49m[39m tests/lead-route-db.test.ts[2m > [22mN-001 · POST /api/lead с PostgreSQL[2m > [22m6-й запрос с одного IP → 429 даже после сброса in-memory лимитера
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route-db.test.ts:[2m152:31[22m[39m
+    [90m150|[39m     [35mfor[39m ([35mlet[39m i [33m=[39m [34m0[39m[33m;[39m i [33m<[39m [34m5[39m[33m;[39m i [33m+=[39m [34m1[39m) {
+    [90m151|[39m       const response = await POST(request(leadBody(`+7916000${1000 + i…
+    [90m152|[39m       [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                               [31m^[39m
+    [90m153|[39m       // Сбрасываем память перед каждым запросом — «холодный старт» на…
+    [90m154|[39m       [34mresetRateLimitForTests[39m()[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[45m db [49m[39m tests/lead-route-db.test.ts[2m > [22mN-001 · POST /api/lead с PostgreSQL[2m > [22mPT-009: повтор requestId возвращает прежний код и не создаёт вторую строку
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route-db.test.ts:[2m176:26[22m[39m
+    [90m174|[39m
+    [90m175|[39m     [35mconst[39m first [33m=[39m [35mawait[39m [33mPOST[39m([34mrequest[39m(body))[33m;[39m
+    [90m176|[39m     [34mexpect[39m(first[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                          [31m^[39m
+    [90m177|[39m     [35mconst[39m firstJson [33m=[39m ([35mawait[39m first[33m.[39m[34mjson[39m()) [35mas[39m { leadId[33m:[39m string }[33m;[39m
+    [90m178|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[45m db [49m[39m tests/lead-route-db.test.ts[2m > [22mN-001 · POST /api/lead с PostgreSQL[2m > [22mPT-009: тот же requestId с другим payload → 409
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route-db.test.ts:[2m201:26[22m[39m
+    [90m199|[39m
+    [90m200|[39m     const first = await POST(request({ ...leadBody("+79167770011"), re…
+    [90m201|[39m     [34mexpect[39m(first[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                          [31m^[39m
+    [90m202|[39m
+    [90m203|[39m     [35mconst[39m conflict [33m=[39m [35mawait[39m [33mPOST[39m(
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[45m db [49m[39m tests/lead-route-db.test.ts[2m > [22mN-001 · POST /api/lead с PostgreSQL[2m > [22mPT-009: unique-индекс ловит параллельную вставку с одним requestId
+[31m[1mAssertionError[22m: expected [ 503, 503 ] to deeply equal [ 200, 201 ][39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[2m  [[22m
+[32m-   200,[39m
+[32m-   201,[39m
+[31m+   503,[39m
+[31m+   503,[39m
+[2m  ][22m
+
+[36m [2m❯[22m tests/lead-route-db.test.ts:[2m223:22[22m[39m
+    [90m221|[39m
+    [90m222|[39m     // Один запрос создал заявку, второй получил повтор — но оба успеш…
+    [90m223|[39m     [34mexpect[39m(statuses)[33m.[39m[34mtoEqual[39m([[34m200[39m[33m,[39m [34m201[39m])[33m;[39m
+    [90m   |[39m                      [31m^[39m
+    [90m224|[39m     [34mexpect[39m(bodies[33m.[39m[34mevery[39m((body) [33m=>[39m body[33m.[39mok))[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m225|[39m     [34mexpect[39m(bodies[[34m0[39m][33m.[39mleadId)[33m.[39m[34mtoBe[39m(bodies[[34m1[39m][33m.[39mleadId)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[45m db [49m[39m tests/lead-route-db.test.ts[2m > [22mN-001 · POST /api/lead с PostgreSQL[2m > [22mPT-009: rescue → полная заявка с тем же телефоном создаёт вторую запись
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route-db.test.ts:[2m243:27[22m[39m
+    [90m241|[39m       })
+    [90m242|[39m     )[33m;[39m
+    [90m243|[39m     [34mexpect[39m(rescue[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                           [31m^[39m
+    [90m244|[39m     [35mconst[39m rescueJson [33m=[39m ([35mawait[39m rescue[33m.[39m[34mjson[39m()) [35mas[39m { leadId[33m:[39m string }[33m;[39m
+    [90m245|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[45m db [49m[39m tests/lead-route-db.test.ts[2m > [22mN-001 · POST /api/lead с PostgreSQL[2m > [22mGET /api/lead/:code находит заявку по коду с CRON_SECRET
+[31m[1mTypeError[22m: Cannot read properties of undefined (reading 'toUpperCase')[39m
+[36m [2m❯[22m PgLeadStore.getLeadByPublicCode lib/lead/store-pg.ts:[2m423:40[22m[39m
+    [90m421|[39m       [33m.[39m[34mselect[39m()
+    [90m422|[39m       [33m.[39m[35mfrom[39m(leads)
+    [90m423|[39m       [33m.[39m[34mwhere[39m([34meq[39m(leads[33m.[39mpublicCode[33m,[39m code[33m.[39m[34mtoUpperCase[39m()))
+    [90m   |[39m                                        [31m^[39m
+    [90m424|[39m       [33m.[39m[34mlimit[39m([34m1[39m)[33m;[39m
+    [90m425|[39m
+[90m [2m❯[22m GET app/api/lead/[code]/route.ts:[2m28:37[22m[39m
+[90m [2m❯[22m tests/lead-route-db.test.ts:[2m269:24[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[45m db [49m[39m tests/lead-route-db.test.ts[2m > [22mN-001 · POST /api/lead с PostgreSQL[2m > [22mPT-012: длинная рекламная ссылка в атрибуции не даёт 422 и нормализуется в БД
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route-db.test.ts:[2m312:29[22m[39m
+    [90m310|[39m     )[33m;[39m
+    [90m311|[39m
+    [90m312|[39m     [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                             [31m^[39m
+    [90m313|[39m
+    [90m314|[39m     [35mconst[39m { leadId } [33m=[39m ([35mawait[39m response[33m.[39m[34mjson[39m()) [35mas[39m { leadId[33m:[39m string }[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[45m db [49m[39m tests/lead-route-db.test.ts[2m > [22mN-001 · POST /api/lead с PostgreSQL[2m > [22mPT-014: версия и момент согласия сохраняются в отдельных колонках
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route-db.test.ts:[2m343:29[22m[39m
+    [90m341|[39m     )[33m;[39m
+    [90m342|[39m
+    [90m343|[39m     [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                             [31m^[39m
+    [90m344|[39m
+    [90m345|[39m     [35mconst[39m { leadId } [33m=[39m ([35mawait[39m response[33m.[39m[34mjson[39m()) [35mas[39m { leadId[33m:[39m string }[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[45m db [49m[39m tests/lead-route-db.test.ts[2m > [22mN-001 · POST /api/lead с PostgreSQL[2m > [22mPT-014: без версии клиента — NULL, момент ставит сервер
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route-db.test.ts:[2m359:29[22m[39m
+    [90m357|[39m     [35mconst[39m after [33m=[39m [33mDate[39m[33m.[39m[34mnow[39m()[33m;[39m
+    [90m358|[39m
+    [90m359|[39m     [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                             [31m^[39m
+    [90m360|[39m
+    [90m361|[39m     [35mconst[39m { leadId } [33m=[39m ([35mawait[39m response[33m.[39m[34mjson[39m()) [35mas[39m { leadId[33m:[39m string }[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[45m db [49m[39m tests/lead-route-db.test.ts[2m > [22mN-001 · POST /api/lead с PostgreSQL[2m > [22mPT-014: невозможное время согласия заменяется серверным
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route-db.test.ts:[2m382:29[22m[39m
+    [90m380|[39m     )[33m;[39m
+    [90m381|[39m
+    [90m382|[39m     [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                             [31m^[39m
+    [90m383|[39m
+    [90m384|[39m     [35mconst[39m { leadId } [33m=[39m ([35mawait[39m response[33m.[39m[34mjson[39m()) [35mas[39m { leadId[33m:[39m string }[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[45m db [49m[39m tests/lead-route-db.test.ts[2m > [22mN-001 · POST /api/lead с PostgreSQL[2m > [22mPT-014: мусор в consentVersion не доезжает до БД
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route-db.test.ts:[2m404:29[22m[39m
+    [90m402|[39m     )[33m;[39m
+    [90m403|[39m
+    [90m404|[39m     [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                             [31m^[39m
+    [90m405|[39m
+    [90m406|[39m     [35mconst[39m { leadId } [33m=[39m ([35mawait[39m response[33m.[39m[34mjson[39m()) [35mas[39m { leadId[33m:[39m string }[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[45m db [49m[39m tests/lead-route-db.test.ts[2m > [22mN-001 · POST /api/lead с PostgreSQL[2m > [22mPT-014: LEAD_CONSENT_VERSION_REQUIRED=1 отклоняет устаревшую версию
+[31m[1mAssertionError[22m: expected 503 to be 422 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 422[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route-db.test.ts:[2m429:28[22m[39m
+    [90m427|[39m         request({ ...leadBody("+79161110005"), consentVersion: "2020-0…
+    [90m428|[39m       )[33m;[39m
+    [90m429|[39m       [34mexpect[39m(stale[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m422[39m)[33m;[39m
+    [90m   |[39m                            [31m^[39m
+    [90m430|[39m       const staleBody = (await stale.json()) as { error: string; code?…
+    [90m431|[39m       [34mexpect[39m(staleBody[33m.[39mcode)[33m.[39m[34mtoBe[39m([32m"consent_version_stale"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[45m db [49m[39m tests/lead-route-db.test.ts[2m > [22mN-001 · POST /api/lead с PostgreSQL[2m > [22mPT-014: по умолчанию устаревшая версия принимается и логируется
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route-db.test.ts:[2m456:31[22m[39m
+    [90m454|[39m         request({ ...leadBody("+79161110008"), consentVersion: "2020-0…
+    [90m455|[39m       )[33m;[39m
+    [90m456|[39m       [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                               [31m^[39m
+    [90m457|[39m       expect(warn.mock.calls.some((call) => String(call[0]).includes("…
+    [90m458|[39m     } [35mfinally[39m {
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-idempotency.test.ts[2m > [22mPT-009 - идемпотентность: один requestId[2m > [22mдвойная отправка одного payload -> одна запись и один комплект доставки
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-idempotency.test.ts:[2m101:26[22m[39m
+    [90m 99|[39m     const second = await send({ ...fullPayload, requestId: "req-double…
+    [90m100|[39m
+    [90m101|[39m     [34mexpect[39m(first[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                          [31m^[39m
+    [90m102|[39m     [34mexpect[39m(first[33m.[39mjson[33m.[39mok)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m103|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-idempotency.test.ts[2m > [22mPT-009 - идемпотентность: один requestId[2m > [22mповтор после таймаута отдаёт тот же код заявки, а не новую строку
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m tests/lead-idempotency.test.ts:[2m123:27[22m[39m
+    [90m121|[39m     const retry = await send({ ...fullPayload, requestId: "req-timeout…
+    [90m122|[39m
+    [90m123|[39m     [34mexpect[39m(retry[33m.[39mjson[33m.[39mok)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   |[39m                           [31m^[39m
+    [90m124|[39m     [34mexpect[39m(retry[33m.[39mjson[33m.[39mleadId)[33m.[39m[34mtoBe[39m(first[33m.[39mjson[33m.[39mleadId)[33m;[39m
+    [90m125|[39m     [34mexpect[39m(retry[33m.[39mjson[33m.[39midempotentReplay)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-idempotency.test.ts[2m > [22mPT-009 - идемпотентность: один requestId[2m > [22mтот же requestId с другим payload -> 409, второй записи нет
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-idempotency.test.ts:[2m136:26[22m[39m
+    [90m134|[39m     })[33m;[39m
+    [90m135|[39m
+    [90m136|[39m     [34mexpect[39m(first[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                          [31m^[39m
+    [90m137|[39m     [34mexpect[39m(conflict[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m409[39m)[33m;[39m
+    [90m138|[39m     [34mexpect[39m(conflict[33m.[39mjson[33m.[39mok)[33m.[39m[34mtoBe[39m([35mfalse[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-idempotency.test.ts[2m > [22mPT-009 - идемпотентность: один requestId[2m > [22mдва параллельных запроса с одним requestId -> одна запись, оба ответа успешны
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m tests/lead-idempotency.test.ts:[2m155:23[22m[39m
+    [90m153|[39m     [35mconst[39m [a[33m,[39m b] [33m=[39m [35mawait[39m [33mPromise[39m[33m.[39m[34mall[39m([[34msend[39m(body)[33m,[39m [34msend[39m(body)])[33m;[39m
+    [90m154|[39m
+    [90m155|[39m     [34mexpect[39m(a[33m.[39mjson[33m.[39mok)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   |[39m                       [31m^[39m
+    [90m156|[39m     [34mexpect[39m(b[33m.[39mjson[33m.[39mok)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m157|[39m     [34mexpect[39m(a[33m.[39mjson[33m.[39mleadId)[33m.[39m[34mtoBe[39m(b[33m.[39mjson[33m.[39mleadId)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[24/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-idempotency.test.ts[2m > [22mPT-009 - идемпотентность: один requestId[2m > [22mповтор не тратит бюджет серверного rate-limit
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-idempotency.test.ts:[2m176:25[22m[39m
+    [90m174|[39m     }
+    [90m175|[39m
+    [90m176|[39m     [34mexpect[39m(statuses[[34m0[39m])[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                         [31m^[39m
+    [90m177|[39m     [34mexpect[39m(statuses[33m.[39m[34mslice[39m([34m1[39m))[33m.[39m[34mtoEqual[39m([[34m200[39m[33m,[39m [34m200[39m[33m,[39m [34m200[39m[33m,[39m [34m200[39m])[33m;[39m
+    [90m178|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[25/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-idempotency.test.ts[2m > [22mPT-009 - идемпотентность: один requestId[2m > [22mразные requestId при одном payload -> дедуп по телефону и отпечатку
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-idempotency.test.ts:[2m187:26[22m[39m
+    [90m185|[39m     const second = await send({ ...fullPayload, requestId: "req-bravo"…
+    [90m186|[39m
+    [90m187|[39m     [34mexpect[39m(first[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                          [31m^[39m
+    [90m188|[39m     // Ключ другой, значит идемпотентность не при чём — срабатывает ан…
+    [90m189|[39m     [90m// эвристика: тот же телефон и то же содержимое в пределах окна.[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[26/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-idempotency.test.ts[2m > [22mPT-009 - тот же телефон, другой состав[2m > [22mrescue -> полная заявка в течение 10 минут создаёт вторую запись
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-idempotency.test.ts:[2m205:27[22m[39m
+    [90m203|[39m     [35mconst[39m full [33m=[39m [35mawait[39m [34msend[39m({ [33m...[39mfullPayload[33m,[39m requestId[33m:[39m [32m"req-full"[39m })[33m;[39m
+    [90m204|[39m
+    [90m205|[39m     [34mexpect[39m(rescue[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                           [31m^[39m
+    [90m206|[39m     [34mexpect[39m(full[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m207|[39m     // Ключевой критерий приёмки: код полной заявки — НЕ код rescue-за…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[27/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-idempotency.test.ts[2m > [22mPT-009 - тот же телефон, другой состав[2m > [22mполная заявка сохраняет свой состав, а не подменяется rescue
+[31m[1mAssertionError[22m: expected undefined to be 'rescue' // Object.is equality[39m
+
+[32m- Expected:[39m
+"rescue"
+
+[31m+ Received:[39m
+undefined
+
+[36m [2m❯[22m tests/lead-idempotency.test.ts:[2m223:42[22m[39m
+    [90m221|[39m     const fullLead = await store.getLeadByPublicCode(String(full.json.…
+    [90m222|[39m
+    [90m223|[39m     [34mexpect[39m(rescueLead[33m?.[39mpayload[33m.[39mleadKind)[33m.[39m[34mtoBe[39m([32m"rescue"[39m)[33m;[39m
+    [90m   |[39m                                          [31m^[39m
+    [90m224|[39m     [34mexpect[39m(fullLead[33m?.[39mpayload[33m.[39mleadKind)[33m.[39m[34mtoBe[39m([32m"direct"[39m)[33m;[39m
+    [90m225|[39m     [34mexpect[39m(fullLead[33m?.[39mpayload[33m.[39mname)[33m.[39m[34mtoBe[39m([32m"Иван"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[28/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-idempotency.test.ts[2m > [22mPT-009 - тот же телефон, другой состав[2m > [22mизменившийся состав заказа с тем же телефоном -> новая запись
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-idempotency.test.ts:[2m242:26[22m[39m
+    [90m240|[39m     })[33m;[39m
+    [90m241|[39m
+    [90m242|[39m     [34mexpect[39m(first[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                          [31m^[39m
+    [90m243|[39m     [34mexpect[39m(changed[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m244|[39m     [34mexpect[39m(changed[33m.[39mjson[33m.[39mleadId)[33m.[39mnot[33m.[39m[34mtoBe[39m(first[33m.[39mjson[33m.[39mleadId)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[29/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-idempotency.test.ts[2m > [22mPT-009 - совместимость со старым клиентом[2m > [22mбез requestId дедуп по телефону и содержимому продолжает работать
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-idempotency.test.ts:[2m258:26[22m[39m
+    [90m256|[39m     [35mconst[39m second [33m=[39m [35mawait[39m [34msend[39m(fullPayload)[33m;[39m
+    [90m257|[39m
+    [90m258|[39m     [34mexpect[39m(first[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                          [31m^[39m
+    [90m259|[39m     [34mexpect[39m(second[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m260|[39m     [34mexpect[39m(second[33m.[39mjson[33m.[39mdeduped)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[30/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-idempotency.test.ts[2m > [22mPT-009 - совместимость со старым клиентом[2m > [22mбез requestId заявка с другим составом всё равно создаётся
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-idempotency.test.ts:[2m271:26[22m[39m
+    [90m269|[39m     [35mconst[39m second [33m=[39m [35mawait[39m [34msend[39m({ [33m...[39mfullPayload[33m,[39m name[33m:[39m [32m"Мария"[39m })[33m;[39m
+    [90m270|[39m
+    [90m271|[39m     [34mexpect[39m(first[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                          [31m^[39m
+    [90m272|[39m     [34mexpect[39m(second[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m273|[39m     [34mexpect[39m(second[33m.[39mjson[33m.[39mleadId)[33m.[39mnot[33m.[39m[34mtoBe[39m(first[33m.[39mjson[33m.[39mleadId)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[31/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-idempotency.test.ts[2m > [22mPT-009 - совместимость со старым клиентом[2m > [22mrequestId короче 8 символов отклоняется как невалидное поле
+[31m[1mAssertionError[22m: expected 503 to be 422 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 422[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-idempotency.test.ts:[2m278:29[22m[39m
+    [90m276|[39m   it("requestId короче 8 символов отклоняется как невалидное поле", as…
+    [90m277|[39m     [35mconst[39m response [33m=[39m [35mawait[39m [34msend[39m({ [33m...[39mfullPayload[33m,[39m requestId[33m:[39m [32m"abc"[39m })[33m;[39m
+    [90m278|[39m     [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m422[39m)[33m;[39m
+    [90m   |[39m                             [31m^[39m
+    [90m279|[39m     [34mexpect[39m(response[33m.[39mjson[33m.[39missues)[33m.[39m[34mtoContain[39m([32m"requestId"[39m)[33m;[39m
+    [90m280|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[32/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-idempotency.test.ts[2m > [22mPT-009 - флаг LEAD_IDEMPOTENCY_ENABLED=0[2m > [22mповтор requestId больше не разбирается: срабатывает прежний дедуп по телефону
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-idempotency.test.ts:[2m308:26[22m[39m
+    [90m306|[39m     [35mconst[39m second [33m=[39m [35mawait[39m [34msend[39m(body)[33m;[39m
+    [90m307|[39m
+    [90m308|[39m     [34mexpect[39m(first[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                          [31m^[39m
+    [90m309|[39m     [34mexpect[39m(second[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m310|[39m     [90m// Признак идемпотентного повтора не выдаётся — ветка выключена.[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[33/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-idempotency.test.ts[2m > [22mPT-009 - флаг LEAD_IDEMPOTENCY_ENABLED=0[2m > [22mтот же requestId с другим payload не даёт 409
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-idempotency.test.ts:[2m320:26[22m[39m
+    [90m318|[39m     const second = await send({ ...fullPayload, name: "Пётр", requestI…
+    [90m319|[39m
+    [90m320|[39m     [34mexpect[39m(first[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                          [31m^[39m
+    [90m321|[39m     [34mexpect[39m(second[33m.[39mstatus)[33m.[39mnot[33m.[39m[34mtoBe[39m([34m409[39m)[33m;[39m
+    [90m322|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[34/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-idempotency.test.ts[2m > [22mPT-009 - флаг LEAD_IDEMPOTENCY_ENABLED=0[2m > [22mвозвращается прежний дефект: полная заявка после rescue получает её код
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-idempotency.test.ts:[2m333:27[22m[39m
+    [90m331|[39m     const full = await send({ ...fullPayload, requestId: "req-flag-ful…
+    [90m332|[39m
+    [90m333|[39m     [34mexpect[39m(rescue[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                           [31m^[39m
+    [90m334|[39m     [34mexpect[39m(full[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m335|[39m     [34mexpect[39m(full[33m.[39mjson[33m.[39mdeduped)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[35/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-outbox.test.ts[2m > [22mPT-003 · задание на доставку создаётся вместе с заявкой[2m > [22mзадания существуют на каждый канал сразу после ответа
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-outbox.test.ts:[2m59:29[22m[39m
+    [90m 57|[39m   it("задания существуют на каждый канал сразу после ответа", async ()…
+    [90m 58|[39m     [35mconst[39m response [33m=[39m [35mawait[39m [33mPOST[39m([34mmakeRequest[39m(payload))[33m;[39m
+    [90m 59|[39m     [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                             [31m^[39m
+    [90m 60|[39m
+    [90m 61|[39m     [35mconst[39m store [33m=[39m [34mgetLeadStore[39m()[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[36/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-outbox.test.ts[2m > [22mPT-003 · задание на доставку создаётся вместе с заявкой[2m > [22mответ приходит, не дожидаясь внешних сервисов
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-outbox.test.ts:[2m101:29[22m[39m
+    [90m 99|[39m     [35mconst[39m elapsed [33m=[39m [33mDate[39m[33m.[39m[34mnow[39m() [33m-[39m started[33m;[39m
+    [90m100|[39m
+    [90m101|[39m     [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                             [31m^[39m
+    [90m102|[39m     // Порог с большим запасом: важно, что ответ не привязан к доставк…
+    [90m103|[39m     [34mexpect[39m(elapsed)[33m.[39m[34mtoBeLessThan[39m([34m1000[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[37/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-outbox.test.ts[2m > [22mPT-003 · задание на доставку создаётся вместе с заявкой[2m > [22mответ не обещает доставку, которой ещё не было
+[31m[1mAssertionError[22m: expected undefined to be 'queued' // Object.is equality[39m
+
+[32m- Expected:[39m
+"queued"
+
+[31m+ Received:[39m
+undefined
+
+[36m [2m❯[22m tests/lead-outbox.test.ts:[2m113:25[22m[39m
+    [90m111|[39m
+    [90m112|[39m     // «Принято и поставлено в очередь» — единственное, что известно д…
+    [90m113|[39m     [34mexpect[39m(json[33m.[39mstatus)[33m.[39m[34mtoBe[39m([32m"queued"[39m)[33m;[39m
+    [90m   |[39m                         [31m^[39m
+    [90m114|[39m     [34mexpect[39m(json[33m.[39mdelivered)[33m.[39m[34mtoBeUndefined[39m()[33m;[39m
+    [90m115|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[38/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-outbox.test.ts[2m > [22mPT-003 · задание на доставку создаётся вместе с заявкой[2m > [22mпадение доставки не мешает ответу и попадает в очередь ретрая
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-outbox.test.ts:[2m121:29[22m[39m
+    [90m119|[39m
+    [90m120|[39m     [35mconst[39m response [33m=[39m [35mawait[39m [33mPOST[39m([34mmakeRequest[39m(payload))[33m;[39m
+    [90m121|[39m     [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                             [31m^[39m
+    [90m122|[39m
+    [90m123|[39m     [35mawait[39m vi[33m.[39m[34mwaitFor[39m([35masync[39m () [33m=>[39m {
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[39/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-route-recalc.test.ts[2m > [22mPT-010 · POST /api/lead пересчитывает цену на сервере[2m > [22mзаниженная сумма не попадает в хранилище — пишется серверная
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route-recalc.test.ts:[2m163:29[22m[39m
+    [90m161|[39m   it("заниженная сумма не попадает в хранилище — пишется серверная", a…
+    [90m162|[39m     const response = await POST(makeRequest(await tamperedBody("+79161…
+    [90m163|[39m     [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                             [31m^[39m
+    [90m164|[39m
+    [90m165|[39m     [35mconst[39m stored [33m=[39m [35mawait[39m [34mgetLeadStore[39m()[33m.[39m[34mgetLead[39m([34m1[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[40/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-route-recalc.test.ts[2m > [22mPT-010 · POST /api/lead пересчитывает цену на сервере[2m > [22mписьмо мастеру содержит серверную сумму и служебную пометку
+[31m[1mAssertionError[22m: expected undefined to be truthy[39m
+
+[32m- Expected:[39m
+true
+
+[31m+ Received:[39m
+undefined
+
+[36m [2m❯[22m tests/lead-route-recalc.test.ts:[2m186:21[22m[39m
+    [90m184|[39m     [35mconst[39m stored [33m=[39m [35mawait[39m [34mgetLeadStore[39m()[33m.[39m[34mgetLead[39m([34m1[39m)[33m;[39m
+    [90m185|[39m     [35mconst[39m payload [33m=[39m stored[33m?.[39mpayload[33m;[39m
+    [90m186|[39m     [34mexpect[39m(payload)[33m.[39m[34mtoBeTruthy[39m()[33m;[39m
+    [90m   |[39m                     [31m^[39m
+    [90m187|[39m
+    [90m188|[39m     const expected = (await honestGrand()).toLocaleString("ru-RU").rep…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[41/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-route-recalc.test.ts[2m > [22mPT-010 · POST /api/lead пересчитывает цену на сервере[2m > [22mнеизвестный SKU отклоняется 422 и не создаёт заявку
+[31m[1mAssertionError[22m: expected 503 to be 422 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 422[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route-recalc.test.ts:[2m204:29[22m[39m
+    [90m202|[39m
+    [90m203|[39m     [35mconst[39m response [33m=[39m [35mawait[39m [33mPOST[39m([34mmakeRequest[39m(body))[33m;[39m
+    [90m204|[39m     [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m422[39m)[33m;[39m
+    [90m   |[39m                             [31m^[39m
+    [90m205|[39m
+    [90m206|[39m     const json = (await response.json()) as { ok: boolean; error: stri…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[42/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-route-recalc.test.ts[2m > [22mPT-010 · POST /api/lead пересчитывает цену на сервере[2m > [22mдробное количество штучного товара отклоняется 422
+[31m[1mAssertionError[22m: expected 503 to be 422 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 422[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route-recalc.test.ts:[2m217:29[22m[39m
+    [90m215|[39m
+    [90m216|[39m     [35mconst[39m response [33m=[39m [35mawait[39m [33mPOST[39m([34mmakeRequest[39m(body))[33m;[39m
+    [90m217|[39m     [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m422[39m)[33m;[39m
+    [90m   |[39m                             [31m^[39m
+    [90m218|[39m     [34mexpect[39m([35mawait[39m [34mgetLeadStore[39m()[33m.[39m[34mgetLead[39m([34m1[39m))[33m.[39m[34mtoBeNull[39m()[33m;[39m
+    [90m219|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[43/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-route-recalc.test.ts[2m > [22mPT-010 · POST /api/lead пересчитывает цену на сервере[2m > [22mчестная заявка проходит без пометки расхождения
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route-recalc.test.ts:[2m299:29[22m[39m
+    [90m297|[39m     )[33m;[39m
+    [90m298|[39m
+    [90m299|[39m     [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                             [31m^[39m
+    [90m300|[39m     [35mconst[39m stored [33m=[39m [35mawait[39m [34mgetLeadStore[39m()[33m.[39m[34mgetLead[39m([34m1[39m)[33m;[39m
+    [90m301|[39m     [34mexpect[39m(stored[33m?.[39mgrandTotal)[33m.[39m[34mtoBe[39m(grand)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[44/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-route-recalc.test.ts[2m > [22mPT-010 · POST /api/lead пересчитывает цену на сервере[2m > [22mrescue-заявка без снапшота принимается с суммой клиента
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route-recalc.test.ts:[2m319:29[22m[39m
+    [90m317|[39m     )[33m;[39m
+    [90m318|[39m
+    [90m319|[39m     [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                             [31m^[39m
+    [90m320|[39m     [35mconst[39m stored [33m=[39m [35mawait[39m [34mgetLeadStore[39m()[33m.[39m[34mgetLead[39m([34m1[39m)[33m;[39m
+    [90m321|[39m     [34mexpect[39m(stored[33m?.[39mstatus)[33m.[39m[34mtoBe[39m([32m"rescue"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[45/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-route-recalc.test.ts[2m > [22mPT-010 · флаг аварийного отката LEAD_SERVER_RECALC_ENABLED=0[2m > [22mсумма клиента проходит как есть, неизвестный SKU больше не отклоняется
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route-recalc.test.ts:[2m334:29[22m[39m
+    [90m332|[39m   it("сумма клиента проходит как есть, неизвестный SKU больше не откло…
+    [90m333|[39m     const response = await POST(makeRequest(await tamperedBody("+79161…
+    [90m334|[39m     [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                             [31m^[39m
+    [90m335|[39m
+    [90m336|[39m     [35mconst[39m stored [33m=[39m [35mawait[39m [34mgetLeadStore[39m()[33m.[39m[34mgetLead[39m([34m1[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[46/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-route.test.ts[2m > [22mT-027 - POST /api/lead[2m > [22m201 + zapis v hranilishche + dostavka v oba kanala
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route.test.ts:[2m46:29[22m[39m
+    [90m 44|[39m   it("201 + zapis v hranilishche + dostavka v oba kanala", async () =>…
+    [90m 45|[39m     [35mconst[39m response [33m=[39m [35mawait[39m [33mPOST[39m([34mmakeRequest[39m(payload))[33m;[39m
+    [90m 46|[39m     [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                             [31m^[39m
+    [90m 47|[39m
+    [90m 48|[39m     [35mconst[39m json [33m=[39m ([35mawait[39m response[33m.[39m[34mjson[39m()) [35mas[39m {
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[47/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-route.test.ts[2m > [22mT-027 - POST /api/lead[2m > [22m422 na nevalidnom telefone
+[31m[1mAssertionError[22m: expected 503 to be 422 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 422[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route.test.ts:[2m79:29[22m[39m
+    [90m 77|[39m   [34mit[39m([32m"422 na nevalidnom telefone"[39m[33m,[39m [35masync[39m () [33m=>[39m {
+    [90m 78|[39m     const response = await POST(makeRequest({ ...payload, phone: "123"…
+    [90m 79|[39m     [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m422[39m)[33m;[39m
+    [90m   |[39m                             [31m^[39m
+    [90m 80|[39m     const json = (await response.json()) as { ok: boolean; error: stri…
+    [90m 81|[39m     [34mexpect[39m(json[33m.[39mok)[33m.[39m[34mtoBe[39m([35mfalse[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[48/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-route.test.ts[2m > [22mT-027 - POST /api/lead[2m > [22mhoneypot: otvechaem ok, no lead ne sozdaetsya
+[31m[1mAssertionError[22m: expected 503 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route.test.ts:[2m87:29[22m[39m
+    [90m 85|[39m   [34mit[39m([32m"honeypot: otvechaem ok, no lead ne sozdaetsya"[39m[33m,[39m [35masync[39m () [33m=>[39m {
+    [90m 86|[39m     const response = await POST(makeRequest({ ...payload, botcheck: "s…
+    [90m 87|[39m     [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   |[39m                             [31m^[39m
+    [90m 88|[39m     const json = (await response.json()) as { ok: boolean; leadId: nul…
+    [90m 89|[39m     [34mexpect[39m(json[33m.[39mok)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[49/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-route.test.ts[2m > [22mT-027 - POST /api/lead[2m > [22mdedup: povtor s tem zhe telefonom vozvrashchaet tot zhe leadId
+[31m[1mAssertionError[22m: expected undefined to be true // Object.is equality[39m
+
+[32m- Expected:[39m
+true
+
+[31m+ Received:[39m
+undefined
+
+[36m [2m❯[22m tests/lead-route.test.ts:[2m102:32[22m[39m
+    [90m100|[39m
+    [90m101|[39m     [34mexpect[39m(secondJson[33m.[39mleadId)[33m.[39m[34mtoBe[39m(firstJson[33m.[39mleadId)[33m;[39m
+    [90m102|[39m     [34mexpect[39m(secondJson[33m.[39mdeduped)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m   |[39m                                [31m^[39m
+    [90m103|[39m     [34mexpect[39m(deliverToTelegram)[33m.[39m[34mtoHaveBeenCalledTimes[39m([34m1[39m)[33m;[39m
+    [90m104|[39m   })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[50/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-route.test.ts[2m > [22mT-027 - POST /api/lead[2m > [22m6-y zapros za 10 min -> 429 s Retry-After
+[31m[1mAssertionError[22m: запрос 1: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route.test.ts:[2m109:43[22m[39m
+    [90m107|[39m     [35mfor[39m ([35mlet[39m i [33m=[39m [34m0[39m[33m;[39m i [33m<[39m [34m5[39m[33m;[39m i [33m+=[39m [34m1[39m) {
+    [90m108|[39m       const r = await POST(makeRequest({ ...payload, phone: `+79055219…
+    [90m109|[39m       [34mexpect[39m(r[33m.[39mstatus[33m,[39m [32m`запрос [39m[36m${[39mi [33m+[39m [34m1[39m[36m}[39m[32m`[39m)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                                           [31m^[39m
+    [90m110|[39m     }
+    [90m111|[39m     const blocked = await POST(makeRequest({ ...payload, phone: "+7905…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[51/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-route.test.ts[2m > [22mT-027 - POST /api/lead[2m > [22mupavshaya dostavka ne roniaet otvet i pishetsya kak failed
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route.test.ts:[2m122:29[22m[39m
+    [90m120|[39m
+    [90m121|[39m     [35mconst[39m response [33m=[39m [35mawait[39m [33mPOST[39m([34mmakeRequest[39m(payload))[33m;[39m
+    [90m122|[39m     [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                             [31m^[39m
+    [90m123|[39m     // Ответ успешен независимо от исхода доставки: заявка уже в храни…
+    [90m124|[39m     const json = (await response.json()) as { ok: boolean; status: str…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[52/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-route.test.ts[2m > [22mT-027 - POST /api/lead[2m > [22mrescue-lead sohranyaetsya so statusom rescue
+[31m[1mAssertionError[22m: expected 503 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route.test.ts:[2m149:29[22m[39m
+    [90m147|[39m       })
+    [90m148|[39m     )[33m;[39m
+    [90m149|[39m     [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   |[39m                             [31m^[39m
+    [90m150|[39m     [35mconst[39m stored [33m=[39m [35mawait[39m [34mgetLeadStore[39m()[33m.[39m[34mgetLead[39m([34m1[39m)[33m;[39m
+    [90m151|[39m     [34mexpect[39m(stored[33m?.[39mstatus)[33m.[39m[34mtoBe[39m([32m"rescue"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[53/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-route.test.ts[2m > [22mT-027 - POST /api/lead[2m > [22mbitiy JSON -> 400
+[31m[1mAssertionError[22m: expected 503 to be 400 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 400[39m
+[31m+ 503[39m
+
+[36m [2m❯[22m tests/lead-route.test.ts:[2m162:29[22m[39m
+    [90m160|[39m     })[33m;[39m
+    [90m161|[39m     [35mconst[39m response [33m=[39m [35mawait[39m [33mPOST[39m(request)[33m;[39m
+    [90m162|[39m     [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m400[39m)[33m;[39m
+    [90m   |[39m                             [31m^[39m
+    [90m163|[39m   })[33m;[39m
+    [90m164|[39m })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[54/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-storage-guard.test.ts[2m > [22mPOST /api/lead при недоступном хранилище[2m > [22mв проде без базы отвечает 503, а не мнимым успехом
+[31m[1mAssertionError[22m: expected 'disabled' to be 'storage_unavailable' // Object.is equality[39m
+
+Expected: [32m"[7mstorage_unavail[27mable"[39m
+Received: [31m"[7mdis[27mable[7md[27m"[39m
+
+[36m [2m❯[22m tests/lead-storage-guard.test.ts:[2m97:24[22m[39m
+    [90m 95|[39m     [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m503[39m)[33m;[39m
+    [90m 96|[39m     [34mexpect[39m(body[33m.[39mok)[33m.[39m[34mtoBe[39m([35mfalse[39m)[33m;[39m
+    [90m 97|[39m     [34mexpect[39m(body[33m.[39merror)[33m.[39m[34mtoBe[39m([32m"storage_unavailable"[39m)[33m;[39m
+    [90m   |[39m                        [31m^[39m
+    [90m 98|[39m   })[33m;[39m
+    [90m 99|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[55/56]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[42m unit [49m[39m tests/lead-storage-guard.test.ts[2m > [22mPOST /api/lead при недоступном хранилище[2m > [22mпросит повторить позже — сбой хранилища обычно временный
+[31m[1mAssertionError[22m: expected null to be truthy[39m
+
+[32m- Expected:[39m
+true
+
+[31m+ Received:[39m
+null
+
+[36m [2m❯[22m tests/lead-storage-guard.test.ts:[2m119:49[22m[39m
+    [90m117|[39m     [35mconst[39m { response } [33m=[39m [35mawait[39m [34mpostLead[39m()[33m;[39m
+    [90m118|[39m
+    [90m119|[39m     [34mexpect[39m(response[33m.[39mheaders[33m.[39m[35mget[39m([32m"Retry-After"[39m))[33m.[39m[34mtoBeTruthy[39m()[33m;[39m
+    [90m   |[39m                                                 [31m^[39m
+    [90m120|[39m   })[33m;[39m
+    [90m121|[39m })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[56/56]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m7 failed[39m[22m[2m | [22m[1m[32m89 passed[39m[22m[90m (96)[39m
+[2m      Tests [22m [1m[31m56 failed[39m[22m[2m | [22m[1m[32m1187 passed[39m[22m[90m (1243)[39m
+[2m   Start at [22m 18:13:27
+[2m   Duration [22m 27.34s[2m (transform 2.29s, setup 0ms, import 8.85s, tests 5.35s, environment 10ms)[22m
+

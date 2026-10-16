@@ -1,0 +1,11 @@
+{
+  "branch": "feat/company-rebrand-v7-preview",
+  "head": "fa3c2ac8626d790719fc7cddeda84a2c2e3d74c0",
+  "remoteHead": "fa3c2ac8626d790719fc7cddeda84a2c2e3d74c0",
+  "mainBefore": "f3d7b69c6145067087f21ca1a9f4d48228923431",
+  "mainAfter": "f3d7b69c6145067087f21ca1a9f4d48228923431",
+  "mainUnchanged": true,
+  "push": "success",
+  "newPullRequest": false,
+  "changeType": "documentation and targeted PT-020 regression evidence"
+}
