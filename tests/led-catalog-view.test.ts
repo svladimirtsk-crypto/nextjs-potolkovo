@@ -47,6 +47,7 @@ const RF_CCT = "Контроллер для светодиодной ленты 
 const REMOTE = "Пульт для светодиодной ленты CCT 4 канала RC02RF черный, 12-24В";
 const KIT = "Пульт с контролером для светодиодной ленты монохром 1 канал DC12-24В EKS6A*2, 50";
 const WIFI_MONO = "Контроллер для светодиодной ленты WIFI TUYA монохром C01 15A,12-24В";
+const WIFI_5IN1 = "Контроллер для светодиодной ленты WIFI TUYA 5в1 WB5 15A,12-24В";
 
 const catalog = [product(STRIP), product(PSU_100), product(PSU_150), product(WIFI_CCT), product(RF_CCT), product(REMOTE), product(KIT), product(WIFI_MONO)];
 
@@ -89,6 +90,17 @@ describe("LED-раздел · подбор питания по метражу", 
     // 100 Вт не проходит, 150 Вт < 156 Вт расчётных — берём следующий подходящий.
     expect(psuWattsOf(plan)).toBe(null); // в этой сетке ничего ≥ 156 Вт нет
     expect(plan.warnings.join(" ")).toContain("нет позиции");
+  });
+
+  it("универсальный 5-в-1 виден в плане как альтернатива для монохромной ленты", () => {
+    const plan = ledPlanFor({
+      products: [...catalog, product(WIFI_5IN1)],
+      strip: parseStripSpec(STRIP)!,
+      meters: 6,
+    })!;
+    expect(plan.controller?.spec.model).toBe("C01");
+    expect(plan.controllerScope).toBe("kind");
+    expect(plan.universalController?.spec.model).toBe("WB5");
   });
 
   it("на 6 м хватает БП 100 Вт, а рейки считаются по 5 м", () => {
@@ -155,6 +167,29 @@ describe("LED-раздел · статусы управления", () => {
     expect(status.alice).toBe("owner-verified");
     expect(status.detail).toContain("подтверждена владельцем на его комплекте");
     expect(status.detail).not.toContain("паспорт");
+  });
+
+  it("Wi-Fi 5-в-1 описан как универсальный: работает со всеми лентами", () => {
+    const status = controlStatusOf({
+      role: "controller",
+      controller: parseControllerSpec("Контроллер для светодиодной ленты WIFI TUYA 5в1 WB5 15A,12-24В"),
+    });
+    expect(status.title).toBe("Wi-Fi 5-в-1 контроллер");
+    expect(status.detail).toContain("монохром, CCT, RGB, RGBW и RGB+CCT");
+    expect(status.detail).toContain("подтверждено владельцем на его комплекте");
+    expect(status.alice).toBe("owner-verified");
+    // Про мощность обещания нет: это подтверждение режимов, не паспорт.
+    expect(status.detail).not.toContain("любой мощности");
+  });
+
+  it("RF 5-в-1: один на все ленты, но без умного дома", () => {
+    const status = controlStatusOf({
+      role: "controller",
+      controller: parseControllerSpec("Контроллер для светодиодной ленты 5в1 LM051 15A, 12-24В"),
+    });
+    expect(status.title).toBe("RF 5-в-1 контроллер");
+    expect(status.detail).toContain("только пультом");
+    expect(status.alice).toBe("no");
   });
 
   it("RF-контроллер и пульт честно говорят, что умного дома нет", () => {

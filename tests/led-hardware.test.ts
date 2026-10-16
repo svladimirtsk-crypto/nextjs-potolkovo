@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   PSU_MARGIN_PERCENT,
   isAliceCapable,
+  isUniversalController,
   ledRoleOf,
   parseControllerSpec,
   parsePsuSpec,
@@ -139,6 +140,31 @@ describe("LED · расчёт питания по метражу", () => {
     expect(plan.controller?.spec.model).toBe("C02");
     expect(plan.controller && isAliceCapable(plan.controller.spec)).toBe(true);
     expect(plan.remote).toBeNull(); // Wi-Fi не требует пульта
+  });
+
+  it("5-в-1 Wi-Fi работает со всеми лентами и предлагается как универсальная альтернатива", () => {
+    const withUniversal = [
+      ...catalog,
+      product("Контроллер для светодиодной ленты WIFI TUYA монохром C01 15A,12-24В", "LED_STRIP"),
+      product("Контроллер для светодиодной ленты 5в1 LM051 15A, 12-24В", "LED_STRIP"),
+      product("Контроллер для светодиодной ленты WIFI TUYA 5в1 WB5 15A,12-24В", "LED_STRIP"),
+    ];
+    expect(isUniversalController(parseControllerSpec("Контроллер для светодиодной ленты WIFI TUYA 5в1 WB5 15A,12-24В")!)).toBe(true);
+    expect(isUniversalController(parseControllerSpec("Контроллер для светодиодной ленты WIFI TUYA CCT C02 15A,12-24В")!)).toBe(false);
+
+    // Монохром: основной подбор — модель под тип ленты, но 5-в-1 виден как альтернатива.
+    const mono = planLedPower({ strip: parseStripSpec(STRIP_10W)!, meters: 12, products: withUniversal });
+    expect(mono.controller?.spec.model).toBe("C01");
+    expect(mono.controllerScope).toBe("kind");
+    expect(mono.universalController?.spec.model).toBe("WB5");
+    expect(mono.universalController?.spec.wifi).toBe(true);
+
+    // RGBW: точного соответствия нет, поэтому основным становится 5-в-1 — и это тот же вариант.
+    const rgbw = parseStripSpec("Светодиодная лента RGBW 24V 60 диода 14,4W катушка 5 м ЧЗ")!;
+    const plan = planLedPower({ strip: rgbw, meters: 5, products: withUniversal });
+    expect(plan.controller?.spec.model).toBe("WB5");
+    expect(plan.controllerScope).toBe("universal");
+    expect(plan.universalController?.spec.model).toBe("WB5");
   });
 
   it("при равном токе выбирается Wi-Fi-контроллер: пульт не нужен", () => {

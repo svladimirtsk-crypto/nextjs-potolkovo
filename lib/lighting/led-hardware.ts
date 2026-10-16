@@ -203,6 +203,20 @@ export function isAliceCapable(spec: ControllerSpec): boolean {
   return spec.wifi;
 }
 
+/**
+ * 5-в-1 — универсальный контроллер: один и тот же работает с монохромом, CCT,
+ * RGB, RGBW и RGB+CCT. Владелец подтвердил 16.10.2026, что Wi-Fi 5-в-1 (WB5)
+ * работает со всеми лентами его ассортимента.
+ *
+ * Это подтверждение про **поддержку режимов**, а не про мощность: ток, полную
+ * нагрузку и белый канал сверяем по паспорту.
+ */
+export const UNIVERSAL_CONTROL_KIND: ControlKind = "rgb-cct";
+
+export function isUniversalController(spec: ControllerSpec): boolean {
+  return spec.controlKind === UNIVERSAL_CONTROL_KIND;
+}
+
 export type PowerPlanOption<T> = { product: FeedCatalogProduct; spec: T };
 
 export type PowerPlan = {
@@ -213,6 +227,10 @@ export type PowerPlan = {
   marginPercent: number;
   psu: PowerPlanOption<PsuSpec> | null;
   controller: PowerPlanOption<ControllerSpec> | null;
+  /** Универсальная модель (5-в-1), если она есть в каталоге: подходит любой ленте. */
+  universalController: PowerPlanOption<ControllerSpec> | null;
+  /** Подобранный контроллер под конкретный тип ленты или универсальный. */
+  controllerScope: "kind" | "universal" | null;
   remote: PowerPlanOption<RemoteSpec> | null;
   status: "ok" | "needs_review";
   warnings: string[];
@@ -290,19 +308,24 @@ export function planLedPower(input: {
     strip.kind === "mono" ? "mono" : strip.kind === "cct" ? "cct" : strip.kind === "rgb" ? "rgb" : "rgb-cct";
 
   /*
-   * При равном токе выбираем Wi-Fi-модель: ей не нужен пульт, и владелец
-   * подтвердил работу Wi-Fi-контроллеров с Алисой. RF остаётся, когда Wi-Fi
-   * варианта нет — тогда пульт добавляется в подбор отдельной позицией.
+   * Порядок выбора: сначала модель под конкретный тип ленты, потом универсальный
+   * 5-в-1. Внутри каждой группы — по току, при равном токе Wi-Fi (ей не нужен
+   * пульт, и владелец подтвердил работу Wi-Fi-контроллеров с Алисой), затем по
+   * цене. Для RGBW и RGB+CCT точного соответствия нет: их тип и есть 5-в-1.
    */
-  const suitable = controllerOptions
-    .filter((option) => option.spec.controlKind === wantedControl)
-    .sort(
-      (a, b) =>
-        (b.spec.amps ?? 0) - (a.spec.amps ?? 0) ||
-        Number(b.spec.wifi) - Number(a.spec.wifi) ||
-        a.product.priceRub - b.product.priceRub
-    );
-  const controller = suitable[0] ?? null;
+  const bySuitability = (a: PowerPlanOption<ControllerSpec>, b: PowerPlanOption<ControllerSpec>) =>
+    (b.spec.amps ?? 0) - (a.spec.amps ?? 0) ||
+    Number(b.spec.wifi) - Number(a.spec.wifi) ||
+    a.product.priceRub - b.product.priceRub;
+
+  const exactMatches = controllerOptions
+    .filter((option) => option.spec.controlKind === wantedControl && !isUniversalController(option.spec))
+    .sort(bySuitability);
+  const universalOptions = controllerOptions.filter((option) => isUniversalController(option.spec)).sort(bySuitability);
+  const controller = exactMatches[0] ?? universalOptions[0] ?? null;
+  const universalController = universalOptions[0] ?? null;
+  const controllerScope: "kind" | "universal" | null =
+    controller === null ? null : isUniversalController(controller.spec) ? "universal" : "kind";
 
   if (!controller) {
     warnings.push(
@@ -335,6 +358,8 @@ export function planLedPower(input: {
     marginPercent: PSU_MARGIN_PERCENT,
     psu,
     controller,
+    universalController,
+    controllerScope,
     remote,
     status: warnings.length === 0 ? "ok" : "needs_review",
     warnings,

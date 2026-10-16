@@ -10,7 +10,7 @@ import snapshot from "../data/eks-feed2-snapshot.json";
  * «нужна проверка» вместо выдуманных позиций и вход по задаче с метражом.
  */
 
-const products = (snapshot as { products: { name: string; vendorCode: string }[] }).products;
+const products = (snapshot as { products: { name: string; vendorCode: string; productId: string }[] }).products;
 const strip10 = products.find((p) => p.name.includes("10W") && p.name.includes("Светодиодная лента"))!;
 
 async function openCornice(page: import("@playwright/test").Page, query = "") {
@@ -62,6 +62,9 @@ test("LED: 12 м при 10 Вт/м считаются с запасом 30 % и 
   await expect(panel.getByTestId("led-controller")).toContainText("WIFI TUYA монохром C01");
   await expect(panel.getByTestId("led-alice-note")).toContainText("подтверждена владельцем на его комплекте");
   await expect(panel.getByTestId("led-remote")).toHaveCount(0);
+  // 5-в-1 Wi-Fi показан как вариант на любую ленту (подтверждение владельца).
+  await expect(panel.getByTestId("led-controller-alt")).toContainText("WB5");
+  await expect(panel.getByTestId("led-controller-alt")).toContainText("Подходит любой ленте");
   await expect(panel.getByTestId("led-warnings")).toHaveCount(0);
   await expect(panel.getByTestId("led-plan-status")).toContainText("Расчёт сошёлся");
 });
@@ -101,6 +104,23 @@ test("LED: метраж приходит из задачи света — вхо
   await page.goto("/uslugi/prodazha-trekovogo-osveshcheniya?led=1&meters=abc#price", { waitUntil: "domcontentloaded" });
   await page.getByRole("tab", { name: "Подсветка карниза", exact: true }).click();
   await expect(page.getByTestId("led-meters")).toHaveValue("");
+});
+
+test("LED: для RGBW основным становится 5-в-1 Wi-Fi, без дубля альтернативы", async ({ page }) => {
+  await openCornice(page);
+  const panel = page.getByTestId("led-kit-panel");
+  const rgbw = products.find((p) => p.name.includes("RGBW") && p.name.includes("Светодиодная лента"))!;
+
+  await panel.getByTestId("led-strip").selectOption(rgbw.productId);
+  await panel.getByTestId("led-meters").fill("10");
+
+  await expect(panel.getByTestId("led-controller")).toContainText("WB5");
+  await expect(panel.getByTestId("led-controller")).toContainText("работает со всеми лентами, подтверждено владельцем");
+  // 5-в-1 уже основной: второй строкой он не повторяется.
+  await expect(panel.getByTestId("led-controller-alt")).toHaveCount(0);
+  // Белый канал 5-в-1 по названию не доказывается — статус остаётся «нужна проверка».
+  await expect(panel.getByTestId("led-plan-status")).toContainText("Нужна проверка");
+  await expect(panel.getByTestId("led-warnings")).toContainText("Каналы W");
 });
 
 test("LED: поиск и остальные разделы каталога не ломаются панелью", async ({ page }) => {

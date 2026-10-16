@@ -15,6 +15,7 @@ import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import {
   PSU_MARGIN_PERCENT,
   isAliceCapable,
+  isUniversalController,
   ledRoleOf,
   parseStripSpec,
   planLedPower,
@@ -173,12 +174,32 @@ export function controlStatusOf(input: {
     };
   }
   if (controller?.wifi) {
+    /*
+     * 5-в-1 — универсальный: владелец подтвердил 16.10.2026, что Wi-Fi 5-в-1
+     * (WB5) работает со всеми лентами его ассортимента. Формулировка держится
+     * про поддержку режимов и не превращается в обещание мощности.
+     */
+    if (isUniversalController(controller)) {
+      return {
+        title: "Wi-Fi 5-в-1 контроллер",
+        detail:
+          "Один контроллер на все типы лент: монохром, CCT, RGB, RGBW и RGB+CCT — работает со всеми лентами, подтверждено владельцем на его комплекте. Управление со смартфона и голосом.",
+        alice: "owner-verified",
+      };
+    }
     return {
       title: "Wi-Fi-контроллер",
       detail: isAliceCapable(controller)
         ? "Управление со смартфона и голосом — работа с Алисой подтверждена владельцем на его комплекте."
         : "Управление со смартфона.",
       alice: "owner-verified",
+    };
+  }
+  if (controller && isUniversalController(controller)) {
+    return {
+      title: "RF 5-в-1 контроллер",
+      detail: "Один контроллер на все типы лент, но управляется только пультом: Алиса и умный дом не поддерживаются.",
+      alice: "no",
     };
   }
   return {

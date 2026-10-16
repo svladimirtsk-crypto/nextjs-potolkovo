@@ -300,6 +300,16 @@ export function LedKitPanel({
               "led-controller",
               1
             )}
+            {plan?.universalController &&
+            plan.universalController.product.productId !== plan.controller?.product.productId
+              ? pick(
+                  "5-в-1 на любую ленту",
+                  plan.universalController.product,
+                  "Подходит любой ленте: монохром, CCT, RGB, RGBW и RGB+CCT — работает со всеми лентами, подтверждено владельцем на его комплекте.",
+                  "led-controller-alt",
+                  1
+                )
+              : null}
             {plan?.remote
               ? pick(
                   "Пульт",
