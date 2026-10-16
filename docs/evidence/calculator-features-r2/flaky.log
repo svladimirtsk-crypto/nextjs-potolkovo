@@ -1,0 +1,2 @@
+[e2e-flaky] отчёт test-results/results.json не прочитан: ENOENT — пропускаю (не блокирующий режим).
+FLAKY_EXIT=0

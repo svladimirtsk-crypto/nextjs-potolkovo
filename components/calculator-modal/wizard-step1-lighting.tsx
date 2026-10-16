@@ -20,6 +20,8 @@ import {
 } from "@/lib/catalog-ui-config";
 
 import { decideOrphanTrackAction } from "@/lib/lighting/orphan-track";
+import { snapshotLightingTasks } from "@/lib/lighting/project-lighting-tasks";
+import { ProjectLightingTasks } from "@/components/lighting/project-lighting-tasks";
 import { RetiredCatalogNotice, retiredLightingItems } from "@/components/lighting/retired-catalog-notice";
 import { CatalogLoadState } from "@/components/lighting/catalog-load-state";
 import { Step1CatalogTab } from "@/components/lighting/Step1CatalogTab";
@@ -82,6 +84,7 @@ import { useCatalogIndex } from "@/lib/lighting/use-catalog-index";
 
 export function WizardStep1Lighting() {
   const { snapshot } = useCalculatorStore();
+  const projectTasks = useMemo(() => snapshotLightingTasks(snapshot), [snapshot]);
   const {
     lightingDraft, options,
     step1CatalogView, setStep1CatalogView,
@@ -225,7 +228,7 @@ export function WizardStep1Lighting() {
     [showCeilingInUi, requiredTrackMeters, trackMountType, products]
   );
 
-  const hasRecommendations = recommendedTrackProfiles.length > 0 || requiredPointQty > 0;
+  const hasRecommendations = recommendedTrackProfiles.length > 0 || requiredPointQty > 0 || projectTasks.length > 0;
 
   /* ─── T-024: трек выключен, но в корзине есть трековые позиции ───
    * Раньше эффект молча вычищал корзину. Если набор собран в каталоге
@@ -465,6 +468,8 @@ export function WizardStep1Lighting() {
     <div ref={rootRef} className="pk-lighting-stage space-y-4">
       <div className="pk-lighting-intro"><h3>Свет под ваш интерьер</h3><p>Выберите оборудование через подбор или каталог. Состав и совместимость проверим отдельно; настройка управления зависит от конкретного комплекта.</p></div>
 
+      <ProjectLightingTasks tasks={projectTasks} onContinue={goToSummary} />
+
       {/* ─── Compact image preview — not fullscreen ─── */}
       <ImageQuickPreview image={zoomImage} onClose={() => setZoomImage(null)} />
 
@@ -490,6 +495,7 @@ export function WizardStep1Lighting() {
           ═══════════════════════════════════════════════ */}
       {activeTab === "recommendations" && (
         <Step1Recommendations
+          projectTasksPresent={projectTasks.length > 0}
           cart={step1Cart}
           wizard={wizard}
           screens={screens}

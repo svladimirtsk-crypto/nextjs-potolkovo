@@ -1,3 +1,4 @@
+import { lightingTaskLines } from "@/lib/lighting/project-lighting-tasks";
 /**
  * T-027 · Единый формат письма/сообщения по заявке.
  *
@@ -101,6 +102,11 @@ export function formatLeadBody(payload: LeadPayload, leadCode?: string): string 
     if (snapshot.totals.minimumApplied) {
       lines.push("  ! применён минимальный заказ");
     }
+  }
+
+  if (snapshot) {
+    const tasks = lightingTaskLines(snapshot.rooms);
+    if (tasks.length) lines.push("", ...tasks);
   }
 
   if (snapshot && snapshot.totals.installExtra > 0) {

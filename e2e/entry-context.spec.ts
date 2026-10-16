@@ -288,10 +288,20 @@ test.describe("PT-008 · приёмка: кейс «18 м² / 19 м тенево
     // (3) Длина теневого профиля из кейса — 19 м, а не round(4·√18) = 17 м.
     await expect(await walkToField(modal, SHADOW_LENGTH_LABEL)).toHaveValue("19");
 
-    // (4) Длина трека из кейса — 10 м, а не 17/4 = 4 м.
-    await expect(await walkToField(modal, TRACK_LENGTH_LABEL)).toHaveValue("10");
-
+    /**
+     * (4) UX-R2 · трек пришёл из кейса (вход «Хочу похожее решение») — в квизе
+     * его метраж не переспрашиваем. Значение 10 м обязано быть видно в карточке
+     * помещения и редактироваться оттуда, а не теряться вместе с вопросом.
+     */
     await walkToReview(modal);
+    await modal.getByRole("button", { name: /Редактировать: Кухня-гостиная/ }).click();
+    await expect(modal.getByText("Трек:")).toBeVisible();
+    await modal.locator('[data-edit-param="track"]').click();
+    await expect(modal.getByLabel(TRACK_LENGTH_LABEL, { exact: true })).toHaveValue("10");
+    await modal.getByRole("button", { name: "Сохранить изменения", exact: true }).click();
+    await modal.getByRole("button", { name: "К помещениям", exact: true }).click();
+    await expect(modal.getByRole("heading", { name: "Проверка", exact: true })).toBeVisible();
+
     await modal.locator("button:visible").filter({ hasText: /К итогу/ }).first().click();
     await submitLeadForm(page, { scope: modal });
 

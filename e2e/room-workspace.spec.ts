@@ -91,14 +91,16 @@ test('Room UX: closing a pending edit asks explicitly and does not send unsaved 
 test('Room UX: only new dependent parameters are checked after changing the ceiling', async ({ page }) => {
   const m=await start(page);
   await m.getByRole('button',{name:'Редактировать: Кухня',exact:true}).click();await m.locator('[data-edit-param="ceiling"]').click();
-  await m.getByRole('button',{name:/Показать теневой и парящий/}).click();await m.locator('[data-ceiling-option="shadow"]').click();
+  await m.locator('[data-ceiling-option="shadow"]').click();
   await m.getByRole('button',{name:'Сохранить изменения',exact:true}).click();
   await m.locator('.calculator-modal-footer').getByRole('button',{name:"К помещениям",exact:true}).click();
   await m.getByRole('button',{name:/Продолжить заполнение/}).click();
-  for(const title of ['Теневой профиль','Световые линии','Трековое освещение']) {
-    await expect(m.getByRole('heading',{name:title,exact:true})).toBeVisible();
-    await m.locator('.calculator-modal-footer button').filter({hasText:/^Подтвердить/}).click();
-  }
+  /* UX-R2: включается только тот вопрос, который стал нужен: теневой профиль.
+     Световые линии и трек спрашиваются лишь тогда, когда их выбрали в комнате. */
+  await expect(m.getByRole('heading',{name:'Теневой профиль',exact:true})).toBeVisible();
+  await m.locator('.calculator-modal-footer button').filter({hasText:/^Подтвердить/}).click();
+  await expect(m.getByRole('heading',{name:'Световые линии',exact:true})).toHaveCount(0);
+  await expect(m.getByRole('heading',{name:'Трековое освещение',exact:true})).toHaveCount(0);
   await expect(m.locator('.pk-wizard-caption')).toHaveText('Параметры потолка заполнены');
 });
 

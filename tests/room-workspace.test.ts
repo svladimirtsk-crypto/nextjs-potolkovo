@@ -1,6 +1,7 @@
 import { nextRoomSequence } from "@/lib/calculator/reducer";
 import { describe, expect, it } from "vitest";
 import { calcProgress, getEnabledParams } from "@/lib/calculator/fsm";
+import { setTrackFeature } from "@/lib/calculator/room-features";
 import { changedRoomFields, confirmationsAfterEdit, createRoomEdit, firstRoomPending, paramsForRoom, parseRoomConfirmations, patchRoomEdit, snapshotAfterLastRoom } from "@/lib/calculator/room-workspace";
 import type { RoomConfig } from "@/lib/calculator/use-calculator-engine";
 import type { LightingSnapshot } from "@/lib/calculator-modal-types";
@@ -11,7 +12,7 @@ const room: RoomConfig = {
   corniceType: "none", corniceLength: 2, corniceLightingEnabled: false, corniceLightingLength: 2, corniceLightingPowerSupplies: 1,
   trackType: "none", trackLength: 2, chandeliersEnabled: false, chandeliersCount: 1, lightsEnabled: false, lightsCount: 6,
 };
-const full = Object.fromEntries(paramsForRoom(room, "standard").map(p => [p, true]));
+const full = Object.fromEntries(paramsForRoom(room).map(p => [p, true]));
 
 describe("Room edit transaction", () => {
   it("edits a separate draft, not the saved room or source quote", () => {
@@ -36,17 +37,17 @@ describe("Room edit transaction", () => {
     const e = patchRoomEdit(createRoomEdit(room, "ceiling", "modern"), { shadowEnabled: true });
     const flags = confirmationsAfterEdit(e, { ...full, shadowProfile: true, floatingProfile: true });
     expect(flags.ceiling).toBe(true); expect(flags.shadowProfile).toBeUndefined(); expect(flags.floatingProfile).toBeUndefined();
-    expect(firstRoomPending([e.draft], "modern", { r1: flags }, new Set())?.param).toBe("shadowProfile");
+    expect(firstRoomPending([e.draft], { r1: flags }, new Set())?.param).toBe("shadowProfile");
   });
   it("does not confuse two rooms with identical labels", () => {
     const other = { ...room, id: "r2" };
-    expect(firstRoomPending([room, other], "standard", { r1: full }, new Set())).toMatchObject({ roomId: "r2", param: "area" });
+    expect(firstRoomPending([room, other], { r1: full }, new Set())).toMatchObject({ roomId: "r2", param: "area" });
   });
 });
 
 describe("Draft completion metadata and actual progress", () => {
   it("legacy drafts can be reviewed without forcing a new full questionnaire", () => {
-    expect(firstRoomPending([room], "standard", {}, new Set([room.id]))).toBeNull();
+    expect(firstRoomPending([room], {}, new Set([room.id]))).toBeNull();
     expect(parseRoomConfirmations(undefined)).toBeUndefined();
   });
   it("keeps only explicit true answers and known parameter names", () => {
@@ -55,7 +56,7 @@ describe("Draft completion metadata and actual progress", () => {
   });
   it("a partial new draft remains partial, not implicitly ready", () => {
     const map = parseRoomConfirmations({ r1: { area: true } })!;
-    expect(firstRoomPending([room], "standard", map, new Set())?.param).toBe("ceiling");
+    expect(firstRoomPending([room], map, new Set())?.param).toBe("ceiling");
   });
   for (const scenario of ["standard", "modern", "advanced"] as const) {
     it(`${scenario}: counts actual enabled questions and completes the summary`, () => {
@@ -67,7 +68,7 @@ describe("Draft completion metadata and actual progress", () => {
     });
   }
   it("picker and editor are not numbered questions", () => {
-    const ctx = { scenario: "standard" as const, enabledParams: paramsForRoom(room, "standard") };
+    const ctx = { scenario: "standard" as const, enabledParams: paramsForRoom(room) };
     expect(calcProgress({ t: "roomPicker", mode: "first" }, ctx).done).toBe(0);
     expect(calcProgress({ t: "roomEdit", roomId: "r1" }, ctx).done).toBe(0);
   });
@@ -93,5 +94,58 @@ describe("Stable room identities after deletion and restore", () => {
     expect(nextRoomSequence([{ id: "room-2" }])).toBe(3);
     expect(nextRoomSequence([{ id: "room-1" }, { id: "room-7" }])).toBe(8);
     expect(nextRoomSequence([{ id: "custom-room" }, { id: "object-1" }])).toBe(3);
+  });
+});
+
+/**
+ * UX-R2: потолок и световые решения выбираются независимо от «уровня».
+ * Уровень остаётся только в сохранённых данных старых черновиков.
+ */
+describe("Independent room features (UX-R2)", () => {
+  it("keeps all ceiling options available without choosing a scenario", () => {
+    expect(paramsForRoom(room)).toEqual(["area", "ceiling", "cornice", "chandeliers", "lights"]);
+  });
+  it("adds the metres question only for features actually enabled in this room", () => {
+    expect(paramsForRoom({ ...room, shadowEnabled: true, ceilingType: "shadow" })).toContain("shadowProfile");
+    expect(paramsForRoom({ ...room, floatingEnabled: true, ceilingType: "floating" })).toContain("floatingProfile");
+    expect(paramsForRoom({ ...room, lightLinesEnabled: true })).toContain("lightLines");
+    expect(paramsForRoom({ ...room, trackType: "built-in" })).toContain("track");
+    expect(paramsForRoom({ ...room, shadowEnabled: true, lightLinesEnabled: true, trackType: "surface" }))
+      .toEqual(["area", "ceiling", "shadowProfile", "lightLines", "cornice", "track", "chandeliers", "lights"]);
+  });
+  it("does not answer for the user: a freshly enabled feature keeps its metre question open", () => {
+    const answered = Object.fromEntries(paramsForRoom({ ...room, lightLinesEnabled: true }).map(p => [p, true]));
+    const e = patchRoomEdit(createRoomEdit(room, "ceiling", "standard"), { lightLinesEnabled: true });
+    const flags = confirmationsAfterEdit(e, answered);
+    expect(flags.lightLines).toBeUndefined();
+    expect(firstRoomPending([e.draft], { r1: flags }, new Set())?.param).toBe("lightLines");
+  });
+  it("treats the answer given on the feature screen itself as confirmation", () => {
+    const e = patchRoomEdit(createRoomEdit({ ...room, lightLinesEnabled: true }, "lightLines", "standard"), { lightLinesLength: 4 });
+    const flags = confirmationsAfterEdit(e, {});
+    expect(flags.lightLines).toBe(true);
+    expect(paramsForRoom(e.draft)).toContain("lightLines");
+  });
+  it("revokes dependent confirmations only for the new feature and only for this room", () => {
+    const base = { ...room, trackType: "built-in" as const };
+    const e = patchRoomEdit(createRoomEdit(base, "ceiling", "standard"), { lightLinesEnabled: true });
+    const fullBase = Object.fromEntries(paramsForRoom(base).map(p => [p, true]));
+    const otherRoom = { r2: { lightLines: true } };
+    const flags = confirmationsAfterEdit(e, { ...fullBase, lightLines: true });
+    expect(flags.lightLines).toBeUndefined();
+    expect(flags.track).toBe(true);
+    expect(flags.area).toBe(true);
+    /* Подтверждения другой комнаты живут в своей записи и не меняются. */
+    expect(otherRoom).toEqual({ r2: { lightLines: true } });
+  });
+  it("keeps existing metres and remembers the mount type across off/on", () => {
+    const off = patchRoomEdit(createRoomEdit({ ...room, lightLinesEnabled: true, lightLinesLength: 6 }, "ceiling", "standard"), { lightLinesEnabled: false });
+    expect(off.draft.lightLinesLength).toBe(6);
+    expect(paramsForRoom(off.draft)).not.toContain("lightLines");
+    const on = patchRoomEdit(off, { lightLinesEnabled: true });
+    expect(on.draft.lightLinesLength).toBe(6);
+    const trackOff = patchRoomEdit(createRoomEdit({ ...room, trackType: "surface" }, "ceiling", "standard"), setTrackFeature({ ...room, trackType: "surface" }, false));
+    expect(paramsForRoom(trackOff.draft)).not.toContain("track");
+    expect(trackOff.draft.lastTrackType).toBe("surface");
   });
 });

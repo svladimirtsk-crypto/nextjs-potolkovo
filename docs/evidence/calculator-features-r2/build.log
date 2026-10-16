@@ -1,0 +1,49 @@
+▲ Next.js 16.3.5 (Turbopack)
+✓ Running next.config.ts took 34ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 872ms
+  Running TypeScript ...
+  Finished TypeScript in 5.3s ...
+  Collecting page data using 1 worker ...
+  Generating static pages using 1 worker (0/23) ...
+  Generating static pages using 1 worker (5/23)
+  Generating static pages using 1 worker (11/23)
+  Generating static pages using 1 worker (17/23)
+✓ Generating static pages using 1 worker (23/23) in 913ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /admin/availability
+├ ƒ /api/admin/availability
+├ ƒ /api/availability
+├ ƒ /api/catalog
+├ ƒ /api/health
+├ ƒ /api/lead
+├ ƒ /api/lead/[code]
+├ ƒ /api/lead/retry
+├ ○ /icon.svg
+├ ○ /manifest.webmanifest
+├ ○ /o-kompanii
+├ ○ /privacy
+├ ○ /robots.txt
+├ ○ /sitemap.xml
+├ ○ /umnoe-osveshchenie
+├ ○ /uslugi
+├ ○ /uslugi/individualnye-proekty
+├ ○ /uslugi/paryashchie-potolki
+├ ○ /uslugi/prodazha-trekovogo-osveshcheniya
+├ ○ /uslugi/prostye-potolki
+├ ○ /uslugi/skrytye-karnizy
+├ ○ /uslugi/svetoprozrachnye-potolki
+├ ○ /uslugi/svetovye-linii
+├ ○ /uslugi/tenevoy-profil
+└ ○ /uslugi/trekovoe-osveshchenie
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+BUILD_EXIT=0

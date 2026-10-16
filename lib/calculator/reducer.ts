@@ -57,11 +57,9 @@ export function createInitialState(
     rooms: [],
     activeRoomId: null,
     roomSeq: 1,
-    // Непустой сценарий приходит со страницы услуги — экран выбора пропускаем
-    // и сразу спрашиваем помещение (режим расчёта живёт на экране площади).
-    screenHistory: [
-      scenario !== "standard" ? { t: "roomPicker", mode: "first" } : { t: "scenario" },
-    ],
+    // UX-R2: отдельного экрана «стандартный/современный/продвинутый» нет —
+    // решения выбираются в карточке помещения, поэтому старт всегда со списка комнат.
+    screenHistory: [{ t: "roomPicker", mode: "first" }],
     confirmed: {},
     prefilled: {},
     presetNote: null,
@@ -265,7 +263,7 @@ export function calculatorReducer(
 
 /** Текущий экран квиза. */
 export function selectScreen(state: CalculatorState): Step0Screen {
-  return state.screenHistory[state.screenHistory.length - 1] ?? { t: "scenario" };
+  return state.screenHistory[state.screenHistory.length - 1] ?? { t: "roomPicker", mode: "first" };
 }
 
 /** Подтверждён ли параметр в конкретной комнате. */

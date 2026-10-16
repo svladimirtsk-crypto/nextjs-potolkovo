@@ -98,6 +98,19 @@ describe("T-022 - LeadSnapshotV2", () => {
     lightingDiscountPercentApplied: 25,
   } as unknown as CalculatorLeadSnapshot;
 
+  it("UX-R2: scenario описывает решения комнат, а не остаток старого уровня", () => {
+    const withShadow = buildLeadSnapshotV2({
+      snapshot: { ...base, roomBreakdown: [room("kuhnya", { shadowEnabled: true, shadowLength: 19 })].map(buildRoomBreakdown) },
+      ceilingEffectiveTotal: 30000, lightingRegularTotal: 0, lightingEffectiveTotal: 0, source: "hero",
+    });
+    expect(withShadow.scenario).toBe("modern");
+    const simple = buildLeadSnapshotV2({
+      snapshot: { ...base, roomBreakdown: [room("kuhnya")].map(buildRoomBreakdown) },
+      ceilingEffectiveTotal: 30000, lightingRegularTotal: 0, lightingEffectiveTotal: 0, source: "hero",
+    });
+    expect(simple.scenario).toBe("standard");
+  });
+
   it("sobiraet scenario, scope, rooms i totals", () => {
     const lead = buildLeadSnapshotV2({
       snapshot: base,
@@ -109,7 +122,12 @@ describe("T-022 - LeadSnapshotV2", () => {
     });
 
     expect(lead.version).toBe(2);
-    expect(lead.scenario).toBe("modern");
+    /**
+     * UX-R2: поле `scenario` описывает фактические решения комнат, а не
+     * выбранный когда-то уровень. В этой заявке комнаты простые — значит
+     * «standard», даже если старый черновик нёс «modern».
+     */
+    expect(lead.scenario).toBe("standard");
     expect(lead.scope).toBe("object");
     expect(lead.rooms).toHaveLength(2);
     expect(lead.rooms[1].lightsCount).toBe(6);

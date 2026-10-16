@@ -121,6 +121,8 @@ export function presetToRoom(
   if (preset?.trackType && preset.trackType !== "none") {
     room.trackType = preset.trackType;
     room.trackLength = Number(preset.trackLengthDefault ?? 0) || Math.max(2, Math.round(perimeter / 4));
+    /* Трек задан входом (комплект/страница) — в квизе его метраж не переспрашиваем. */
+    room.trackFromEntry = true;
     prefilled.push("track");
   }
 

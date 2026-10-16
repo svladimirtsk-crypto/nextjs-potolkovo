@@ -31,9 +31,8 @@ export function useRoomWorkspace(engine: CeilingEngine, setHistory: Dispatch<Set
     if (!edit || !engine.rooms.some(r => r.id === edit.roomId)) return;
     const patch = changedRoomFields(edit);
     if (Object.keys(patch).length) engine.updateRoom(edit.roomId, patch);
-    if (edit.scenario !== engine.solutionScenario) engine.chooseScenario(edit.scenario);
     const saved = legacyRestored.has(edit.roomId)
-      ? Object.fromEntries(paramsForRoom(edit.before, edit.beforeScenario).map(p => [p, true]))
+      ? Object.fromEntries(paramsForRoom(edit.before).map(p => [p, true]))
       : confirmed[edit.roomId] ?? {};
     setConfirmed(prev => ({ ...prev, [edit.roomId]: confirmationsAfterEdit(edit, saved) }));
     setLegacyRestored(prev => new Set([...prev].filter(id => id !== edit.roomId)));
@@ -73,10 +72,10 @@ export function useRoomWorkspace(engine: CeilingEngine, setHistory: Dispatch<Set
       } else setHistory([{ t: "summary" }]);
     } finally { deleting.current = false; }
   }
-  const pending = firstRoomPending(engine.rooms, engine.solutionScenario, confirmed, legacyRestored);
+  const pending = firstRoomPending(engine.rooms, confirmed, legacyRestored);
   const roomStatus = (room: RoomConfig): string => {
     if (legacyRestored.has(room.id)) return "Сохранённые параметры · проверьте";
-    const params = paramsForRoom(room, engine.solutionScenario);
+    const params = paramsForRoom(room);
     const done = params.filter(p => confirmed[room.id]?.[p]).length;
     return done === params.length ? "Параметры заполнены" : `Заполнено ${done} из ${params.length}`;
   };
@@ -89,8 +88,9 @@ export function useRoomWorkspace(engine: CeilingEngine, setHistory: Dispatch<Set
   const confirmationsForDraft = useMemo(() => Object.fromEntries(engine.rooms.map(r => [r.id, confirmed[r.id] ?? {}])), [engine.rooms, confirmed]);
   return { confirmed, markConfirmed, edit, begin, save, cancel, openRoom, resume, remove, pending, roomStatus, viewEngine, reviewRoom,
     finishReview: () => setReviewRoom(null),
-    restore: (rooms: readonly RoomConfig[], flags: RoomConfirmations | undefined, scenario = engine.solutionScenario) => {
-      setConfirmed(flags ?? Object.fromEntries(rooms.map(r => [r.id, Object.fromEntries(paramsForRoom(r, scenario).map(p => [p, true]))]))); setLegacyRestored(new Set(flags ? [] : rooms.map(r => r.id)));
+    /* UX-R2: восстановленные вопросы считаются по решениям комнат, не по уровню черновика. */
+    restore: (rooms: readonly RoomConfig[], flags: RoomConfirmations | undefined) => {
+      setConfirmed(flags ?? Object.fromEntries(rooms.map(r => [r.id, Object.fromEntries(paramsForRoom(r).map(p => [p, true]))]))); setLegacyRestored(new Set(flags ? [] : rooms.map(r => r.id)));
     },
     confirmationsForDraft,
   };

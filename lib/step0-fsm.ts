@@ -68,6 +68,8 @@ export function getEnabledParams(opts: {
   shadowEnabled: boolean;
   floatingEnabled: boolean;
   showModernOptions: boolean;
+  lightLinesEnabled?: boolean;
+  trackEnabled?: boolean;
 }): ParamId[] {
   const p: ParamId[] = ["area", "ceiling"];
   if (opts.shadowEnabled && opts.floatingEnabled) {
@@ -76,9 +78,9 @@ export function getEnabledParams(opts: {
     if (opts.shadowEnabled) p.push("shadowProfile");
     if (opts.floatingEnabled) p.push("floatingProfile");
   }
-  if (opts.showModernOptions) p.push("lightLines");
+  if (opts.lightLinesEnabled ?? opts.showModernOptions) p.push("lightLines");
   p.push("cornice");
-  if (opts.showModernOptions) p.push("track");
+  if (opts.trackEnabled ?? opts.showModernOptions) p.push("track");
   p.push("chandeliers", "lights");
   return p;
 }

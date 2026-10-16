@@ -1,0 +1,20 @@
+[bundle] First Load JS (gzip) по страницам:
+    240.6 КБ  /uslugi/prodazha-trekovogo-osveshcheniya
+    228.4 КБ  /
+    218.2 КБ  /uslugi/tenevoy-profil
+    217.3 КБ  /uslugi/individualnye-proekty
+    217.3 КБ  /uslugi/paryashchie-potolki
+    217.3 КБ  /uslugi/prostye-potolki
+    217.3 КБ  /uslugi/skrytye-karnizy
+    217.3 КБ  /uslugi/svetoprozrachnye-potolki
+    217.3 КБ  /uslugi/svetovye-linii
+    217.3 КБ  /uslugi/trekovoe-osveshchenie
+    202.7 КБ  /umnoe-osveshchenie
+    200.9 КБ  /o-kompanii
+    200.9 КБ  /uslugi
+    191.2 КБ  /admin/availability
+    187.9 КБ  /_not-found
+    187.9 КБ  /privacy
+    166.9 КБ  /_global-error
+[bundle] ok — / 228.4 КБ ≤ 300 КБ
+BUNDLE_EXIT=0

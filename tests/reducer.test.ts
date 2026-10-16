@@ -46,11 +46,12 @@ function withRooms(...rooms: RoomConfig[]): CalculatorState {
 }
 
 describe("T-030 - reducer: sessiya", () => {
-  it("startovyy ekran zavisit ot scenariya", () => {
-    expect(selectScreen(createInitialState("standard")).t).toBe("scenario");
-    // Сценарий со страницы услуги уже выбран — экран выбора пропускаем
-    // и сразу спрашиваем помещение (T-041: экран режима расчёта удалён).
+  it("UX-R2: startovyy ekran — spisok pomeshcheniy dlya lyubogo scenariya", () => {
+    // Экрана «стандартный/современный/продвинутый» нет: решения выбираются
+    // в карточке помещения, поэтому уровень больше не влияет на первый экран.
+    expect(selectScreen(createInitialState("standard")).t).toBe("roomPicker");
     expect(selectScreen(createInitialState("modern")).t).toBe("roomPicker");
+    expect(selectScreen(createInitialState("advanced")).t).toBe("roomPicker");
   });
 
   it("session/reset ochishchaet komnaty i inkrementiruet sessionId", () => {
@@ -229,7 +230,7 @@ describe("T-030 - reducer: podtverzhdeniya i ekrany", () => {
     state = calculatorReducer(state, { type: "screen/pop" });
     state = calculatorReducer(state, { type: "screen/pop" });
     expect(state.screenHistory).toHaveLength(1);
-    expect(selectScreen(state).t).toBe("scenario");
+    expect(selectScreen(state).t).toBe("roomPicker");
   });
 
   it("screen/replace menyaet tekushchiy ekran bez rosta istorii", () => {

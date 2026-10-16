@@ -26,10 +26,14 @@ function pluralizeRu(n: number, one: string, few: string, many: string): string 
   return many;
 }
 
+/**
+ * UX-R2: уровней-экранов больше нет, поэтому подпись описывает фактический
+ * состав расчёта, а не выбранный когда-то «сценарий».
+ */
 const SCENARIO_SUBTITLES: Record<SolutionScenario, string> = {
-  standard: "Стандартный сценарий",
-  modern: "Современный сценарий",
-  advanced: "Продвинутый сценарий · обсудим состав",
+  standard: "Потолок",
+  modern: "Потолок и свет",
+  advanced: "Индивидуальный проект · обсудим состав",
 };
 
 function Tag({ children }: { children: ReactNode }) {
@@ -142,9 +146,12 @@ export function Step0SectionSummary() {
   } = useStep0Context();
   const { goToStep } = useCalculatorModal();
 
+  /* UX-R2: маршрут зависит от фактических решений комнат, а не от уровня. */
+  const hasLightingTasks = effectiveRooms.some(room =>
+    Boolean(room.floatingLength || room.lightLinesLength || room.corniceLightingLength || room.trackLabel));
   const routing = useMemo(
-    () => resolveStep0SummaryActions({ scenario: solutionScenario, hasLighting }),
-    [solutionScenario, hasLighting]
+    () => resolveStep0SummaryActions({ scenario: solutionScenario, hasLighting, hasLightingTasks }),
+    [solutionScenario, hasLighting, hasLightingTasks]
   );
   const hasPrimaryDiscount = routing.primary.label.includes("−25%");
   const hasSecondaryDiscount = routing.secondary ? routing.secondary.label.includes("−25%") : false;
@@ -256,13 +263,15 @@ export function Step0SectionSummary() {
         ) : null}
       </div>
 
-      {/* Подсказка: сценарий адаптирует дальнейший путь */}
+      {/* Подсказка описывает текущий расчёт, а не выбранный уровень. */}
       <p className="text-xs leading-5 text-slate-500">
         {solutionScenario === "modern"
-          ? "Современный сценарий — подберите свет из каталога, чтобы зафиксировать скидку −25% при заказе потолка."
+          ? hasLightingTasks
+            ? "В расчёте есть решения со светом (контур, линии, подсветка карниза или трек). Подберите освещение, чтобы зафиксировать скидку −25% при заказе потолка."
+            : "Подберите свет из каталога, чтобы зафиксировать скидку −25% при заказе потолка."
           : solutionScenario === "advanced"
-            ? "Продвинутый сценарий — SMART-свет и сценарии управления обсудим по телефону после замера."
-            : "Стандартный сценарий — потолок без обязательного подбора света. Можно подобрать свет из каталога со скидкой −25% или сразу записаться на замер."}
+            ? "Индивидуальный проект — SMART-свет и сценарии управления обсудим по телефону после замера."
+            : "Потолок без обязательного подбора света. Можно подобрать свет из каталога со скидкой −25% или сразу записаться на замер."}
       </p>
 
     </div>

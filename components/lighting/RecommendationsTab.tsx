@@ -39,6 +39,7 @@ export type WizardStepId =
   | "done";
 
 export type RecommendationsTabProps = {
+  projectTasksPresent?: boolean;
   step: WizardStepId;
 
   /** Общая корзина и оформление карточек. */
@@ -149,6 +150,7 @@ export type RecommendationsTabProps = {
 };
 
 export function RecommendationsTab({
+  projectTasksPresent = false,
   step,
   cart,
   products,
@@ -170,7 +172,7 @@ export function RecommendationsTab({
 
   return (
     <div key="rec-tab" className="animate-fade-in space-y-4">
-      {step === "none" ? manualPick : null}
+      {step === "none" && !projectTasksPresent ? manualPick : null}
 
       {step === "system"
         ? track.systemOptions.length > 0
@@ -185,7 +187,7 @@ export function RecommendationsTab({
                 onSkipToSummary={nav.onGoToSummary}
               />
             )
-          : manualPick
+          : !projectTasksPresent ? manualPick : null
         : null}
 
       {step === "trackProfile" ? (
@@ -225,7 +227,7 @@ export function RecommendationsTab({
         />
       ) : null}
 
-      {step === "corniceLighting" ? (
+      {step === "corniceLighting" && !projectTasksPresent ? (
         <ProductPickerScreen
           title="Подсветка карниза"
           hint={`${fmtMeters(nav.corniceMeters)} м по расчёту. Нужны лента, блок питания и управление.`}

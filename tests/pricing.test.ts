@@ -88,6 +88,7 @@ describe("T-005 · человеческие лейблы", () => {
   });
 
   it("сценарий переводится на русский", () => {
-    expect(scenarioLabel("modern")).toBe("Современный сценарий");
+    expect(scenarioLabel("modern")).toBe("Потолок и свет");
+    expect(scenarioLabel("standard")).toBe("Потолок");
   });
 });

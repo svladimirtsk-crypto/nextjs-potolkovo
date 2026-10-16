@@ -1,0 +1,120 @@
+{
+  "date": "2026-10-15",
+  "stage": "UX-R2 · потолок и световые решения без уровней",
+  "productCommit": null,
+  "baseCommit": "f9814fb",
+  "baseCommitNote": "База f9814fb; коммит 797c836 — локальный, ждёт push владельца",
+  "unit": {
+    "passed": 1361,
+    "files": 103,
+    "failed": 0,
+    "skipped": 0,
+    "database": "local PostgreSQL 17 (db/init.sql + drizzle-kit push --force)",
+    "env": "RAYON_NUM_THREADS=1 NODE_OPTIONS=--max-old-space-size=768 TEST_DATABASE_URL=... DATABASE_URL=... CRON_SECRET=test-cron-secret",
+    "note": "Без CRON_SECRET один db-тест (GET /api/lead/:code) отдаёт 401 — это env-пробел песочницы, не регрессия; предыдущий прогон без CRON_SECRET дал 1360/1361"
+  },
+  "e2e": {
+    "startTime": "2026-10-15T20:47:38.907Z",
+    "duration": 458108.179,
+    "expected": 310,
+    "skipped": 16,
+    "unexpected": 0,
+    "flaky": 0,
+    "log": "e2e.log",
+    "note": "полный прогон --workers=2 на сборке этого блока; 0 повторов, check-e2e-flaky зелёный"
+  },
+  "targetedE2E": {
+    "specs": [
+      "e2e/entry-context.spec.ts",
+      "e2e/room-features-r2.spec.ts",
+      "e2e/home-price-examples.spec.ts",
+      "e2e/lighting-first.spec.ts"
+    ],
+    "passed": 31,
+    "skipped": 7,
+    "failed": 0,
+    "log": "targeted-e2e.log"
+  },
+  "newTests": {
+    "unit": 33,
+    "e2e": 10,
+    "note": "+6 прошедших и +4 skip относительно базы f9814fb"
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 9,
+    "note": "предупреждение exhaustive-deps в PriceCalculatorQuizV2 снято переносом scenarioFromRooms в useMemo; UX-R1-порог не превышен"
+  },
+  "typecheck": "passed",
+  "buildPrebuild": "passed: RAYON_NUM_THREADS=1, heap 640 MB, BUILD_EXIT=0",
+  "flowPassed": 8,
+  "homeJsGzipKb": 228.4,
+  "bundleLimitKb": 300,
+  "protectedFilesSHA256": {
+    "content/pricing.ts": "79f1042676d5884f3234fd06af2d19e09d20abee2ac3d038b2846252be478885",
+    "lib/calculator/pricing.ts": "d782997dacb1b4e72cc11a160d5991410dca51de88039d4f1469feba62f8b9bf",
+    "lib/calculator/room-snapshot.ts": "493522a8b7ca26600c0d59d92cd11f32a094db42932945a5c5198065697f3820",
+    "lib/lighting-formulas.ts": "496b21a2c61214015fa2430f4b0edf1ec89f9759e35208ab76773eac02878392",
+    "app/api/lead/route.ts": "17ac01b79dc8c617239e25f2ee8e7465e5e25225aa8a179977cbeb185f35002d",
+    "db/schema.ts": "7d91fcd2fb0428876c4a90b6e4406acfa1023923c4b6ad94b0d0790698331a98",
+    "content/catalog-retired.json": "7282763e8ad80040ffdb0479a7baa5b55b630a9eb02780c4f4f6b6011f9e095a",
+    "lib/lighting/product-role.ts": "687c9378c3173d9c495cd24b6cc5f130901d5b131b35cade0317a3fa55989b14"
+  },
+  "protectedFilesVerdict": "Хеши не изменились относительно UX-R1: ставки, формулы, схема заявки, состав БД и роли каталога в этом блоке не трогались",
+  "changedCoreFilesSHA256": {
+    "lib/calculator/room-features.ts": "new",
+    "lib/lighting/project-lighting-tasks.ts": "new",
+    "lib/calculator/types.ts": "changed (scenarioFromRooms)",
+    "lib/calculator/use-calculator-engine.ts": "changed (buildLightingPatch: trackFromEntry)",
+    "components/calculator-modal/ceiling-room-options.tsx": "new",
+    "components/lighting/project-lighting-tasks.tsx": "new",
+    "components/calculator-modal/step0/step0-section-summary.tsx": "changed (подписи без уровней)",
+    "lib/calculator/labels.ts": "changed (SCENARIO_LABELS — состав вместо уровня)"
+  },
+  "e2eFileSHA256": {
+    "e2e/room-features-r2.spec.ts": "db744cddd73553b910d61712568afd3b38165768fb743d68d9736a30c9952889",
+    "e2e/home-price-examples.spec.ts": "5c1423c48a355fb522ba45a427fb67a18197c0fd5e7fcbb33a94be14366e7a1a",
+    "e2e/entry-context.spec.ts": "8929f7f058796bff51ba72ad8255108adc0acb896c0dd1a68e45171d389f5b4e"
+  },
+  "delivered": [
+    "Простого, теневого и парящего потолка достаточно для старта: экран-уровень не спрашивается",
+    "Световые линии и трек — решения конкретной комнаты, включаются и выключаются независимо от типа потолка",
+    "Вопросы комнаты выводятся из её решений; выбор в одной комнате не добавляет вопросы другим",
+    "Метраж профиля не обнуляется при выключении решения; тип трека запоминается и возвращается при включении",
+    "Трек из готового комплекта/кейса не переспрашивается, но остаётся видимым и редактируемым в карточке помещения",
+    "Парящий контур, световые линии и подсветка карниза превращаются в задачи «помещение → задача → метраж» на шаге «Свет» и в шаге 2",
+    "Задачи уходят в заявку блоком «LED-ЗАДАЧИ ПО ПОМЕЩЕНИЯМ — НУЖЕН ПОДБОР» с пометкой «нужна проверка»",
+    "Фальшивое «свет не задан» убрано; товары в задачу автоматически не добавляются",
+    "Сводка и подсказка описывают состав расчёта, а не снятый уровень (labels.ts, step0-section-summary)"
+  ],
+  "infrastructure": "Сборка только RAYON_NUM_THREADS=1 с heap 640 MB через registered processes; E2E heap 512 и --workers=2. Правки e2e/** сборку не требуют, правки lib/** и components/** — требуют; последняя сборка сделана после правок кода и перед полным прогоном",
+  "diagnosticCorrections": [
+    "home-price-examples: на экране площади нет элементов потолка — ассерт перенесён после подтверждения площади",
+    "room-features-r2: старые хелперы таймаутили на «Назвать помещение» — заменены на nameRoom/answerArea без повторного открытия модалки",
+    "Мобильный оверфлоу измеряется по карточке [data-testid=project-lighting-tasks], а не по .calculator-modal-content: у полосы вкладок Шага 1 прокрутка легитимна (4 px)",
+    "entry-context PT-008: после UX-R2 метраж трека из кейса не переспрашивается — тест читает значение из карточки помещения и из payload вместо walkToField"
+  ],
+  "futureNotImplemented": [
+    "участки и несколько контуров на комнату (runId), зоны управления и питания",
+    "подбор ленты, числа рядов, БП и контроллеров по паспортной библиотеке",
+    "единый полный quote/смета по комнатам и позициям",
+    "PT-024 аналитика и PT-021/PT-011 открытые карты",
+    "standalone cart reload persistence (не разрешена отдельно)"
+  ],
+  "manualNotVerified": [
+    "реальный скринридер",
+    "iOS/Android клавиатура",
+    "полный 200% zoom",
+    "реальная доставка заявок и production-домен"
+  ],
+  "gitleaks": "недоступен локально; проверка секретов не заявлена",
+  "preExistingWorktreeChange": "Бит исполнения scripts/check-e2e-flaky.mjs (100755→100644) унаследован, не стейджится и не откатывается",
+  "e2eBaselinePrev": {
+    "expected": 304,
+    "skipped": 12,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "recovery": "Коммит 32e9422 не пережил сброс песочницы; содержимое восстановлено из рабочего дерева и патча без изменений кода, новый локальный коммит 797c836",
+  "productCommitSource": "Хеш финального локального коммита — в /home/user/implementation/STATE.json; хеш не пишется внутрь самого коммита (самоссылка). Push за владельцем."
+}

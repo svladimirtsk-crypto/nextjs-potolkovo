@@ -25,8 +25,15 @@ export type Step0SummaryActions = {
 };
 
 export type ResolveStep0SummaryActionsInput = {
-  scenario: SolutionScenario | undefined;
+  /** @deprecated Сценарий-уровень больше не решает маршрут; оставлен для совместимости старых вызовов и тестов. */
+  scenario?: SolutionScenario | undefined;
   hasLighting: boolean;
+  /**
+   * Есть ли в помещениях задачи, которые требуют подбора света: парящий контур,
+   * световые линии, подсветка карниза, трек. Выводится из фактических решений
+   * комнаты, а не из выбранного уровня.
+   */
+  hasLightingTasks?: boolean;
 };
 
 /**
@@ -39,7 +46,11 @@ export type ResolveStep0SummaryActionsInput = {
 export function resolveStep0SummaryActions({
   scenario,
   hasLighting,
+  hasLightingTasks,
 }: ResolveStep0SummaryActionsInput): Step0SummaryActions {
+  /** UX-R2: если вызывающий передал фактические задачи, уровень не используется. */
+  if (hasLightingTasks !== undefined) return lightingTaskActions(hasLighting, hasLightingTasks);
+  /** Совместимость: старые вызовы без задач по-прежнему считаются по сценарию. */
   switch (scenario) {
     case "modern":
       return {
@@ -77,6 +88,14 @@ export function resolveStep0SummaryActions({
         },
       };
   }
+}
+
+function lightingTaskActions(hasLighting: boolean, hasLightingTasks: boolean): Step0SummaryActions {
+  /* Формулировка одна на оба случая: «проверить свет», когда набор уже есть. */
+  const pickLight = { label: hasLighting ? "Проверить свет →" : "Подобрать свет −25% →", destination: 1 as const };
+  /* Задачи по контуру, линиям и карнизу делают подбор света основным действием сводки. */
+  if (hasLightingTasks) return { primary: pickLight, secondary: { label: "К итогу →", destination: 2 } };
+  return { primary: { label: "К итогу →", destination: 2 }, secondary: pickLight };
 }
 
 export type ResolveLightingDiscountModeInput = {

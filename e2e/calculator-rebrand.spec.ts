@@ -57,7 +57,8 @@ test("R7 calculator: browsing premium solutions never silently changes the estim
   const strip = modal.locator("[data-strip-state]:visible");
   await expect(strip).toHaveCount(1);
   const amount = await strip.innerText();
-  await modal.getByRole("button", { name: /Показать теневой и парящий/ }).click();
+  /* UX-R2: теневой и парящий видны сразу — уровень для них больше не нужен. */
+  await expect(modal.locator('[data-ceiling-option="shadow"]')).toBeVisible();
   await expect(strip).toHaveText(amount);
   await expect(modal.locator('[data-ceiling-option="shadow"]')).toHaveAttribute("aria-pressed", "false");
   await expect(modal.locator('[data-ceiling-option="floating"]')).toHaveAttribute("aria-pressed", "false");
@@ -71,10 +72,12 @@ test("R7 calculator: browsing premium solutions never silently changes the estim
 test("R7 calculator: premium choices and edited metres survive into the lead", async ({ page }) => {
   const leads = await interceptLeadApi(page);
   const modal = await startCeiling(page);
-  await modal.getByRole("button", { name: /Показать теневой/ }).click();
   await modal.locator('[data-ceiling-option="shadow"]').click();
+  /* UX-R2: световые линии — решение этой комнаты, а не следствие «современного» уровня. */
+  await modal.getByRole("checkbox", { name: /Световые линии/ }).check();
   await modal.getByRole("button", { name: /Подтвердить тип/ }).click();
-  await modal.getByRole("button", { name: /Частично/ }).click();
+  /* Профиль и линии — одним вопросом, если включены оба. */
+  await modal.getByRole("button", { name: /Частично/ }).first().click();
   await modal.getByLabel("Длина теневого профиля, м.п.", { exact: true }).fill("6");
   for (let i = 0; i < 12; i++) {
     if (await modal.getByRole("heading", { name: "Проверка", exact: true }).count()) break;
@@ -112,7 +115,6 @@ test("R7 calculator: axe on area, ceiling, room review, estimate and lighting", 
   await modal.locator("#area-v2").waitFor();
   await accessible(page, "area");
   await modal.getByRole("button", { name: /Подтвердить площадь/ }).click();
-  await modal.getByRole("button", { name: /Показать теневой/ }).click();
   await modal.locator('[data-ceiling-option="shadow"]').click();
   await accessible(page, "ceiling");
   await finishParameters(modal);

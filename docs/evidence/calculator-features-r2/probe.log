@@ -1,0 +1,19 @@
+
+Running 2 tests using 1 worker
+
+AREA buttons: Одну комнатуПараметры комнаты | Всю квартиру или домПрикинуть бюджет | − | + | 12 м² | 15 м² | 18 м² | 22 м² | 30 м² | Назвать помещение (например, Кухня)
+AREA inputs: 2
+AREA label button html: Назвать помещение (например, Кухня)
+  ✓  1 [chromium-desktop] › e2e/_probe.spec.ts:6:5 › probe: hero area screen DOM (1.4s)
+OVERFLOW {
+ "scrollWidth": 394,
+ "clientWidth": 390,
+ "contentRight": 390,
+ "bad": [
+  "DIV.flex gap-2 overflow-x-auto pb-1 no-scrol left=-4 right=394 text=\"ПодборКаталогВыбранное (0)\""
+ ]
+}
+  ✓  2 [chromium-desktop] › e2e/_probe.spec.ts:14:5 › probe: overflow offenders at 390 (1.6s)
+
+  2 passed (4.8s)
+PROBE_EXIT=0

@@ -3,10 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import type { ParamId } from "@/lib/step0-fsm";
 import type { CeilingEngine } from "@/lib/calculator/use-calculator-engine";
 import { SectionCard, OptionCard, RangeField } from "../ui";
-import { CeilingOption } from "@/components/calculator-modal/ceiling-option";
+import { CeilingRoomOptions } from "@/components/calculator-modal/ceiling-room-options";
 import { homepage } from "@/content/homepage";
 import { PREFILL_HINT, defaultPerimeterMeters } from "@/lib/calculator/presets";
-import { formatFrom, pricing } from "@/content/pricing";
+import { pricing } from "@/content/pricing";
 
 const calculator = homepage.price.calculator;
 
@@ -176,36 +176,13 @@ export function ParamScreen({ roomId, param, engine, onConfirm, editing = false 
     );
   }
 
-  // CEILING
+  // The choices belong to this room, not to a global scenario tier.
   if (param === "ceiling") {
-    const isSimple = !room.shadowEnabled && !room.floatingEnabled;
-    return (
-      <SectionCard headingRef={headingRef} title="Тип потолка" description={editing ? "После смены решения может потребоваться проверка метража профиля." : "Выберите вид потолка. Длину профиля укажем следующим вопросом — в метрах."}>
-        {prefillHint}
-        {kitHint}
-        <div className="pk-ceiling-options">
-          <CeilingOption active={isSimple} kind="standard" title="Простой потолок"
-            description="Ровное полотно. Привычное примыкание к стене."
-            price={formatFrom(pricing.ceiling.standard, "м²")}
-            onClick={()=>update({ ceilingType:"standard", shadowEnabled:false, floatingEnabled:false })} />
-          {engine.solutionScenario !== "standard" ? <>
-            <CeilingOption active={room.shadowEnabled} kind="shadow" title="Теневой потолок"
-              description="Чёткая линия по контуру, без потолочного плинтуса."
-              price={`${formatCurrency(pricing.ceiling.shadowBase)} ₽ / м² + ${formatCurrency(pricing.ceiling.shadowProfilePerM)} ₽ / м.п.`}
-              onClick={()=>update({ shadowEnabled: !room.shadowEnabled })} />
-            <CeilingOption active={room.floatingEnabled} kind="floating" title="Парящий потолок"
-              description="Подсвеченный контур — потолок визуально отделён от стен."
-              price={`${formatCurrency(pricing.ceiling.floatingBase)} ₽ / м² + ${formatCurrency(pricing.ceiling.floatingProfilePerM)} ₽ / м.п.`}
-              onClick={()=>update({ floatingEnabled: !room.floatingEnabled })} />
-            <p className="pk-diagram-note">Можно сочетать теневой и парящий профиль на разных участках. Далее уточним метраж. Изображения — схемы, не монтажные чертежи.</p>
-          </> : <div className="pk-premium-invite">
-            <p>Хотите потолок без плинтуса или мягкий свет по контуру?</p>
-            <button type="button" onClick={() => engine.chooseScenario("modern")}>Показать теневой и парящий профиль →</button>
-            <p className="pk-diagram-note">Просмотр вариантов ничего не добавляет в смету. Световые линии, треки и скрытые карнизы можно выбрать дальше.</p>
-          </div>}
-        </div>
-      </SectionCard>
-    );
+    return <SectionCard headingRef={headingRef} title="Тип потолка" description={editing
+      ? "Измените решение этой комнаты. Метраж новых функций проверим после сохранения."
+      : "Выберите примыкание и дополнительные решения. Их метраж уточним дальше."}>
+      {prefillHint}{kitHint}<CeilingRoomOptions room={room} onChange={update} />
+    </SectionCard>;
   }
 
   // CORNICE
@@ -233,10 +210,11 @@ export function ParamScreen({ roomId, param, engine, onConfirm, editing = false 
               <OptionCard active={!room.corniceLightingEnabled} title="Без подсветки" meta="Только карниз" onClick={()=>update({corniceLightingEnabled:false})} />
               <OptionCard active={!!room.corniceLightingEnabled} title="Добавить подсветку" meta={`+${formatCurrency(calculator.corniceLighting.ratePerMeter)} ₽/м.п. + блок ${formatCurrency(calculator.corniceLighting.powerSupplyRate)} ₽`} onClick={()=>update({corniceLightingEnabled:true, corniceLightingLength: room.corniceLength, corniceLightingPowerSupplies:1})} />
             </div>
+            {room.corniceLightingEnabled && <p className="pk-diagram-note">Количество блоков здесь влияет на предварительную стоимость, но не является подбором по мощности. Модель, нагрузку и управление нужно проверить на шаге «Свет».</p>}
             {room.corniceLightingEnabled && (
               <div className="grid gap-3 sm:grid-cols-2">
                 <RangeField id="cl-len" label="Длина подсветки" value={room.corniceLightingLength ?? room.corniceLength} min={1} max={50} step={1} unit="м.п." onChange={v=>update({corniceLightingLength:v})} />
-                <RangeField id="cl-psu" label="Блоки питания" value={room.corniceLightingPowerSupplies ?? 1} min={1} max={10} step={1} unit="шт." onChange={v=>update({corniceLightingPowerSupplies:v})} quickValues={[1,2,3]} />
+                <RangeField id="cl-psu" label="Блоки в предварительном расчёте" value={room.corniceLightingPowerSupplies ?? 1} min={1} max={10} step={1} unit="шт." onChange={v=>update({corniceLightingPowerSupplies:v})} quickValues={[1,2,3]} />
               </div>
             )}
           </div>

@@ -15,6 +15,8 @@ import { contacts } from "@/content/contacts";
 import { fillCallbackWindow, resolveStep2Copy, type Step2Intent } from "@/lib/calculator-flow";
 import { trackMessengerClick } from "@/lib/analytics";
 
+import { snapshotLightingTasks } from "@/lib/lighting/project-lighting-tasks";
+import { ProjectLightingTasks } from "@/components/lighting/project-lighting-tasks";
 import { RetiredCatalogNotice } from "@/components/lighting/retired-catalog-notice";
 import { EstimateCard } from "./estimate-card";
 import { ActionForm } from "@/components/home/action-form";
@@ -296,6 +298,7 @@ export function WizardStep2Summary() {
           ? <>С потолком: {fmt(resolvedLightingWithCeilingTotal)} ₽ −25% (−{fmt(lightingPotentialBenefit)} ₽).</> : null} />
 
       <RetiredCatalogNotice items={lighting?.items ?? []} onReview={handleEditLighting} />
+      <ProjectLightingTasks tasks={snapshotLightingTasks(snapshot)} compact />
 
       {hasRoomBreakdown ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-4">

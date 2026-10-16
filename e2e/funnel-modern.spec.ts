@@ -17,8 +17,7 @@ async function completeModernStep0(page: import("@playwright/test").Page) {
   await modal.getByRole("button", { name: "18 м²", exact: true }).click();
   await modal.getByRole("button", { name: /Подтвердить площадь/ }).click();
 
-  // Теневой и парящий спрятаны за раскрытием — сначала показываем их.
-  await modal.getByRole("button", { name: /Показать теневой и парящий/ }).click();
+  // UX-R2: теневой виден сразу, уровня «современный» больше нет.
   await modal.getByRole("button", { name: /Теневой потолок/ }).click();
 
   // Дальше у каждого экрана своя кнопка подтверждения; идём до «Проверки».

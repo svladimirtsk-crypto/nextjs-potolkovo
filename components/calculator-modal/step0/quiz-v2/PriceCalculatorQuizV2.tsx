@@ -5,13 +5,12 @@ import type { ServiceCalculatorPreset } from "@/content/services";
 import type { SolutionScenario, CalculatorFooterAction } from "@/lib/calculator-modal-types";
 import { useCeilingCalculatorEngine } from "@/lib/calculator/use-calculator-engine";
 import type { Step0Screen, ParamId } from "@/lib/step0-fsm";
-import { getEnabledParams as getEnabledParamsFsm } from "@/lib/step0-fsm";
+import { roomQuestionPlan, scenarioFromRooms } from "@/lib/calculator/room-features";
 import { calcProgress } from "@/lib/calculator/fsm";
 import { selectBackVisible, selectFooterAction } from "@/lib/calculator/selectors";
 
 import { useRoomWorkspace } from "./use-room-workspace";
 import { RoomContext } from "./room-context";
-import { ScenarioScreen } from "./screens/ScenarioScreen";
 import { RoomPickerScreen } from "./screens/RoomPickerScreen";
 import { ParamScreen } from "./screens/ParamScreen";
 import { RoomEditScreen } from "./screens/RoomEditScreen";
@@ -57,7 +56,7 @@ type Props = {
  * `offer` — черновик прочитан и его можно продолжить; `unreadable` — запись
  * есть, но не читается, и молча затирать её нельзя (раздел 3.2 ТЗ).
  */
-const FALLBACK_SCREEN: Step0Screen = { t: "scenario" };
+const FALLBACK_SCREEN: Step0Screen = { t: "roomPicker", mode: "first" };
 
 type PendingDraft =
   | { kind: "offer"; draft: CalcDraft }
@@ -84,11 +83,9 @@ export function PriceCalculatorQuizV2({
   );
 
   // --- FSM ---
-  // Auto-skip scenario screen when coming from service page with non-standard scenario
-  // T-041: экрана «что считаем» больше нет — режим переключается на экране площади.
-  const startScreen: Step0Screen = initialSolutionScenario !== "standard"
-    ? { t: "roomPicker", mode: "first" }
-    : { t: "scenario" };
+  // UX-R2: уровням «стандартный/современный» больше не нужен отдельный экран.
+  // Решения выбираются внутри карточки помещения, поэтому вход всегда в список комнат.
+  const startScreen: Step0Screen = { t: "roomPicker", mode: "first" };
   const { setStep0, setHasInteracted } = useCalculatorStore();
   const [history, setHistory] = useState<Step0Screen[]>([startScreen]);
   const screen = history[history.length - 1] ?? FALLBACK_SCREEN;
@@ -104,17 +101,9 @@ export function PriceCalculatorQuizV2({
 
   // enabled params – dynamic per room state
   const currentRoom = screen.t === "param" || screen.t === "roomEdit" ? viewEngine.rooms.find(r => r.id === screen.roomId) ?? null : engine.activeRoom;
-  const showModern = viewEngine.solutionScenario !== "standard";
-  const enabledParams: ParamId[] = useMemo(() => {
-    const shadow = currentRoom?.shadowEnabled ?? false;
-    const floating = currentRoom?.floatingEnabled ?? false;
-    return getEnabledParamsFsm({
-      scenario: viewEngine.solutionScenario,
-      shadowEnabled: shadow,
-      floatingEnabled: floating,
-      showModernOptions: showModern,
-    });
-  }, [viewEngine.solutionScenario, showModern, currentRoom?.shadowEnabled, currentRoom?.floatingEnabled]);
+  const enabledParams: ParamId[] = useMemo(() => currentRoom
+    ? roomQuestionPlan(currentRoom, screen.t === "param" ? screen.param : undefined) : [],
+    [currentRoom, screen]);
 
   /**
    * T-023 · PT-007: черновик прошлого расчёта — предлагаем продолжить.
@@ -288,12 +277,24 @@ export function PriceCalculatorQuizV2({
   }, [screen, history.length, enabledParams.length, engine.solutionScenario]);
 
   const isSummary = screen.t === "summary";
-  const routing = resolveStep0SummaryActions({ scenario: engine.solutionScenario, hasLighting: hasLightingInCart });
+  const hasLightingTasks = engine.rooms.some(room => room.floatingEnabled || room.lightLinesEnabled
+    || (room.corniceType !== "none" && room.corniceLightingEnabled) || room.trackType !== "none");
+  const routing = resolveStep0SummaryActions({ hasLighting: hasLightingInCart, hasLightingTasks });
   const runSummaryPrimary = () => {
     if (workspace.pending) { workspace.resume(workspace.pending.roomId, workspace.pending.param); return; }
     if (!engine.rooms.length) return;
     onPrimaryCtaClick?.(); goToStep(routing.primary.destination);
   };
+
+  /**
+   * UX-R2: сценарий — производная решений комнат, а не остаток от снятого
+   * экрана. Считаем мемо, чтобы эффект аналитики не зависел от всего массива
+   * комнат (иначе он перезапускался бы на каждом пересчёте).
+   */
+  const trackedScenario = useMemo(
+    () => scenarioFromRooms(engine.rooms, engine.solutionScenario),
+    [engine.rooms, engine.solutionScenario]
+  );
 
   // T-025: сводка Шага 0 + параметр визита calc_total
   const summaryTrackedRef = useRef(false);
@@ -307,10 +308,10 @@ export function PriceCalculatorQuizV2({
     trackQuizSummary({
       total: engine.totalRub,
       rooms: engine.roomsCount,
-      scenario: engine.solutionScenario,
+      scenario: trackedScenario,
       minimumApplied: engine.minimumApplied,
     });
-  }, [isSummary, engine.totalRub, engine.roomsCount, engine.solutionScenario, engine.minimumApplied]);
+  }, [isSummary, engine.totalRub, engine.roomsCount, trackedScenario, engine.minimumApplied]);
 
   const progress = useMemo(() => {
     const value = calcProgress(screen, { scenario: viewEngine.solutionScenario, enabledParams });
@@ -318,7 +319,7 @@ export function PriceCalculatorQuizV2({
       : isSummary ? (hasPending ? "Проверьте параметры помещений" : "Параметры потолка заполнены")
       : screen.t === "roomEdit" ? "Карточка помещения"
       : screen.t === "roomPicker" ? (engine.rooms.length ? "Добавление помещения" : "Добавьте первое помещение")
-      : screen.t === "scenario" ? "Выбор решения" : `Потолок · вопрос ${value.done} из ${value.total}`;
+      : `Потолок · вопрос ${value.done} из ${value.total}`;
     return { ...value, caption };
   }, [screen, viewEngine.solutionScenario, enabledParams, isEditing, isSummary, hasPending, engine.rooms.length]);
 
@@ -330,7 +331,7 @@ export function PriceCalculatorQuizV2({
     : isSummary ? { label: hasPending ? "Продолжить заполнение →" : summaryPrimaryLabel ?? routing.primary.label, disabled: !engine.rooms.length }
     : selectFooterAction(screen, { scope: engine.calculationScope }),
     [isEditing, isSummary, hasPending, summaryPrimaryLabel, routing.primary.label, engine.rooms.length, screen, engine.calculationScope]);
-  const backVisible = isEditing || (screen.t !== "roomEdit" && selectBackVisible(screen, { historyLength: history.length, scenarioPreselected: initialSolutionScenario !== "standard" }));
+  const backVisible = isEditing || (screen.t !== "roomEdit" && selectBackVisible(screen, { historyLength: history.length, scenarioPreselected: false }));
 
   /**
    * N-050 · Публикация состояния Шага 0 в стор.
@@ -434,7 +435,7 @@ export function PriceCalculatorQuizV2({
                    * количества и режим скидки (`discountMode` лежит в том же
                    * снапшоте), а не только параметры комнат.
                    */
-                  workspace.restore(draft.rooms, draft.confirmed, draft.scenario);
+                  workspace.restore(draft.rooms, draft.confirmed);
                   setLightingDraft(draft.cart);
                   /**
                    * N-050: без этого флага ActionForm не прикладывает снапшот к
@@ -469,29 +470,6 @@ export function PriceCalculatorQuizV2({
         status={isEditing ? "Изменения не сохранены" : currentRoom ? workspace.roomStatus(currentRoom) : undefined} editing={isEditing}
         onSelect={workspace.openRoom} onOverview={screen.t === "param" ? () => setHistory([{ t: "summary" }]) : undefined} />}
       {edit && <p className="pk-room-edit-note" role="status">Изменения и сумма обновятся после сохранения. «Отмена правки» оставит прежний расчёт.</p>}
-      {screen.t === "scenario" && (
-        <>
-          {initialSolutionScenario !== "standard" && history.length > 1 && (
-            <div className="mb-3">
-              <button type="button" onClick={popScreen} className="text-sm text-slate-600 hover:text-slate-900">← Назад</button>
-            </div>
-          )}
-          <ScenarioScreen
-            value={engine.solutionScenario}
-            onChoose={s => { engine.chooseScenario(s); goNext(); }}
-          />
-        </>
-      )}
-      {screen.t === "roomPicker" && initialSolutionScenario !== "standard" && history.length <= 1 ? (
-        <div className="mb-3 flex items-center gap-2 text-xs">
-          <span className="rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700">
-            {initialSolutionScenario === "modern" ? "Современный" : initialSolutionScenario === "advanced" ? "Продвинутый" : "Стандартный"}
-          </span>
-          <button type="button" onClick={() => pushScreen({ t: "scenario" })} className="text-slate-600 underline-offset-2 hover:underline">
-            изменить
-          </button>
-        </div>
-      ) : null}
       {screen.t === "roomPicker" && engine.rooms.length === 0 && hasLightingInCart && <div className="pk-room-edit-note">
         <p>Помещений пока нет. Оборудование сохранено в текущей вкладке.</p>
         <button type="button" className="min-h-11 underline" onClick={() => { resetCeilingAfterLastRoom(); goToStep(2); }}>Продолжить только со светом</button>

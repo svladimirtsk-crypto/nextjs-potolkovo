@@ -35,8 +35,8 @@ export function ManualPickScreen({
     <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
       <p className="font-semibold text-slate-950">Освещение можно подобрать вручную</p>
       <p className="mt-1 leading-5">
-        На шаге потолка не задан трек или количество точечных светильников. Откройте каталог,
-        если хотите добавить свет, или сразу переходите к итогу.
+        Выберите свет вручную или сразу переходите к итогу. Задачи по теневому и парящему
+        контуру, световым линиям и подсветке карниза уже видны выше — их подберём отдельно.
       </p>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         <button

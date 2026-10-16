@@ -5,10 +5,14 @@
 import { pricing } from "@/content/pricing";
 import type { V2RoomConfig } from "./room-snapshot";
 
+/**
+ * UX-R2: экрана-уровня нет. Слаг остался в данных для совместимости и теперь
+ * выводится производным от решений комнат, поэтому подписи описывают состав.
+ */
 export const SCENARIO_LABELS: Record<string, string> = {
-  standard: "Базовый сценарий",
-  modern: "Современный сценарий",
-  advanced: "Дизайнерский сценарий",
+  standard: "Потолок",
+  modern: "Потолок и свет",
+  advanced: "Индивидуальный проект",
 };
 
 export const CEILING_LABELS: Record<string, string> = {

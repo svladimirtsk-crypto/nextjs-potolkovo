@@ -46,6 +46,10 @@ export type RoomConfig = {
   corniceLightingLength: number;
   corniceLightingPowerSupplies: number;
   trackType: TrackType;
+  /** UI memory only: restore mount choice after explicit off/on in this room. */
+  lastTrackType?: Exclude<TrackType, "none">;
+  /** Трек пришёл из готового комплекта страницы света: не спрашивать заново (T-091). */
+  trackFromEntry?: boolean;
   trackLength: number;
   chandeliersEnabled: boolean;
   chandeliersCount: number;
@@ -86,6 +90,12 @@ function buildLightingPatch(
   } else if (meters > 0 && !touched.trackType) {
     patch.trackType = "built-in";
   }
+  /**
+   * UX-R2/T-091: трек пришёл с готовым комплектом — метраж и монтаж уже
+   * определены товаром. Отдельного вопроса в квизе не будет, пока человек сам
+   * не тронет трек в карточке комнаты.
+   */
+  if (patch.trackType) patch.trackFromEntry = true;
 
   return patch;
 }

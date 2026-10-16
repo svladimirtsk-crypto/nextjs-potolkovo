@@ -6,6 +6,7 @@
  * без пересчёта цен: суммы приходят уже посчитанными.
  */
 import type { CalculatorLeadSnapshot, CalculatorRoomBreakdown } from "@/lib/calculator/snapshot-types";
+import { scenarioFromRooms } from "@/lib/calculator/room-features";
 import type { LightingDiscountMode, LightingSnapshot, SolutionScenario } from "@/lib/calculator-modal-types";
 
 export type CalculationScope = "room" | "object";
@@ -135,7 +136,8 @@ export function buildLeadSnapshotV2({
 
   return {
     version: 2,
-    scenario: (snapshot?.solutionScenario ?? "standard") as SolutionScenario,
+    /* UX-R2: уровня-экрана нет, но поле остаётся обязательным — описываем фактические решения комнат. */
+    scenario: scenarioFromRooms(rooms, snapshot?.solutionScenario) as SolutionScenario,
     scope: (snapshot?.calculationScope ?? "room") as CalculationScope,
     rooms,
     lighting: lightingBlock,

@@ -1,14 +1,20 @@
 import type { RoomConfig } from "./use-calculator-engine";
 import type { SolutionScenario, LightingSnapshot } from "@/lib/calculator-modal-types";
 import type { CalculatorLeadSnapshot } from "./snapshot-types";
-import { ALL_PARAMS, getEnabledParams, type ParamId } from "@/lib/step0-fsm";
+import { roomQuestionPlan } from "./room-features";
+import { ALL_PARAMS, type ParamId } from "@/lib/step0-fsm";
 import { createLightingOnlySnapshot } from "@/lib/lighting/track-sale-snapshot";
 
 export type RoomConfirmations = Record<string, Partial<Record<ParamId, boolean>>>;
 export type RoomEditDraft = { roomId: string; param: ParamId; before: RoomConfig; draft: RoomConfig; beforeScenario: SolutionScenario; scenario: SolutionScenario };
 
-export function paramsForRoom(room: RoomConfig, scenario: SolutionScenario): ParamId[] {
-  return getEnabledParams({ scenario, shadowEnabled: room.shadowEnabled, floatingEnabled: room.floatingEnabled, showModernOptions: scenario !== "standard" });
+/**
+ * UX-R2 · список вопросов комнаты выводится только из её решений.
+ * Уровень проекта (`SolutionScenario`) на вопросы больше не влияет; в
+ * сохранённых черновиках и заявках он остаётся как историческое поле.
+ */
+export function paramsForRoom(room: RoomConfig): ParamId[] {
+  return roomQuestionPlan(room);
 }
 export function createRoomEdit(room: RoomConfig, param: ParamId, scenario: SolutionScenario): RoomEditDraft {
   return { roomId: room.id, param, before: { ...room }, draft: { ...room }, beforeScenario: scenario, scenario };
@@ -25,6 +31,8 @@ export function confirmationsAfterEdit(edit: RoomEditDraft, before: Partial<Reco
   if (edit.before.shadowEnabled !== edit.draft.shadowEnabled || edit.before.floatingEnabled !== edit.draft.floatingEnabled) {
     delete next.shadowProfile; delete next.floatingProfile;
   }
+  if (!edit.before.lightLinesEnabled && edit.draft.lightLinesEnabled) delete next.lightLines;
+  if (edit.before.trackType === "none" && edit.draft.trackType !== "none") delete next.track;
   return next;
 }
 /** Optional v2 addition. Legacy drafts remain readable; no truthy coercion of untrusted flags. */
@@ -34,10 +42,10 @@ export function parseRoomConfirmations(value: unknown): RoomConfirmations | unde
     Object.fromEntries(ALL_PARAMS.filter(p => (v as Record<string, unknown>)[p] === true).map(p => [p, true])),
   ]));
 }
-export function firstRoomPending(rooms: readonly RoomConfig[], scenario: SolutionScenario, confirmed: RoomConfirmations, legacyRestored: ReadonlySet<string>) {
+export function firstRoomPending(rooms: readonly RoomConfig[], confirmed: RoomConfirmations, legacyRestored: ReadonlySet<string>) {
   for (const room of rooms) {
     if (legacyRestored.has(room.id)) continue;
-    const param = paramsForRoom(room, scenario).find(p => !confirmed[room.id]?.[p]);
+    const param = paramsForRoom(room).find(p => !confirmed[room.id]?.[p]);
     if (param) return { roomId: room.id, label: room.label, param };
   }
   return null;

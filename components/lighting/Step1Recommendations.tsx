@@ -24,6 +24,7 @@ import type { useStep1Wizard } from "@/lib/lighting/use-step1-wizard";
 import { RecommendationsTab } from "@/components/lighting/RecommendationsTab";
 
 export type Step1RecommendationsProps = {
+  projectTasksPresent?: boolean;
   /** Факты корзины и действия над ней (`lib/lighting/use-step1-cart`). */
   cart: ReturnType<typeof useStep1Cart>;
   /** Экран мастера, переходы и прогресс (`lib/lighting/use-step1-wizard`). */
@@ -91,6 +92,7 @@ export function Step1Recommendations(props: Step1RecommendationsProps) {
 
   return (
       <RecommendationsTab
+        projectTasksPresent={props.projectTasksPresent}
         step={shownWStep}
         cart={{
           items: cartItems,
