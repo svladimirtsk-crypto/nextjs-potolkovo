@@ -44,6 +44,8 @@ import { isRetiredCatalogProduct } from "@/lib/catalog-retirement";
 import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
 import { useCatalogFilters } from "@/lib/lighting/use-catalog-filters";
 import { useCatalogIndex } from "@/lib/lighting/use-catalog-index";
+import { ledProductsOfGroup, type LedGroupId } from "@/lib/lighting/led-catalog-view";
+import { LedKitPanel } from "@/components/lighting/LedKitPanel";
 
 
 type Props = { data: FeedCatalogResult };
@@ -72,6 +74,8 @@ export function CatalogSectionClient({ data }: Props) {
   const { section, trackSystem, trackGroup, pointSubtype, lampSocket, query } = catalogFilters;
   const [smartOnly, setSmartOnly] = useState(false);
   const [sort, setSort] = useState<CatalogSort>("photo");
+  /** Группа комплектующих в разделе «Подсветка карниза»: одна сетка на всё не читается. */
+  const [ledGroup, setLedGroup] = useState<LedGroupId>("strips");
   /**
    * T-031: корзина общая с модалкой (`lightingDraft`), локального состояния нет —
    * счётчики страницы и калькулятора всегда совпадают, комплект не теряется.
@@ -221,9 +225,14 @@ export function CatalogSectionClient({ data }: Props) {
     [section, trackSystem, trackGroup, pointSubtype, lampSocket, smartOnly, query],
   );
 
+  const sectionProducts = useMemo(
+    () => (section === "cornice-lighting" ? ledProductsOfGroup(products, ledGroup) : products),
+    [products, section, ledGroup],
+  );
+
   const filteredProducts = useMemo(
-    () => sortCatalogProducts(catalogViewProducts(products, filters), sort),
-    [products, filters, sort],
+    () => sortCatalogProducts(catalogViewProducts(sectionProducts, filters), sort),
+    [sectionProducts, filters, sort],
   );
 
   const searchMatches = useMemo(
@@ -232,6 +241,7 @@ export function CatalogSectionClient({ data }: Props) {
   );
 
   const resetFilters = () => {
+    setLedGroup("strips");
     catalogFilters.selectTrackSystem("COLIBRI_220");
     catalogFilters.selectTrackGroup("TRACK_FIXTURE");
     catalogFilters.selectPointSubtype("GX53");
@@ -287,6 +297,18 @@ export function CatalogSectionClient({ data }: Props) {
             trackSmartInterestSelected({ placement: "catalog", enabled: next, source: "track-sale-page" });
           }} />
           <div className="pk-catalog-content">
+            {section === "cornice-lighting" ? (
+              <LedKitPanel
+                products={products}
+                cartItems={cartItems}
+                onAdd={(product, qty) => void incrementProduct(product, qty)}
+                activeGroup={ledGroup}
+                onSelectGroup={(group) => {
+                  setLedGroup(group);
+                  setVisibleCount(CATALOG_PAGE_SIZE);
+                }}
+              />
+            ) : null}
             <CatalogToolbar filters={catalogFilters} smartOnly={smartOnly} sort={sort}
               onSort={(value) => { setSort(value); setVisibleCount(CATALOG_PAGE_SIZE); }}
               onReset={resetFilters} matches={searchMatches ?? []} count={filteredProducts.length} visibleCount={visibleCount} />

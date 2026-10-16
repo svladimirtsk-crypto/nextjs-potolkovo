@@ -169,3 +169,55 @@
 .pk-kit-review summary { min-height:32px; cursor:pointer; font-weight:600; }
 .pk-kit-review > p { color:#53675e; margin:8px 0; }
 .pk-kit-review button { min-height:44px; }
+
+/* LED-комплектующие: три группы, метраж и предварительный расчёт питания. */
+.pk-led-kit { border:1px solid #d8ddd3; border-radius:6px; background:#fff; padding:22px; margin-bottom:22px; }
+.pk-led-kit-head { display:flex; justify-content:space-between; align-items:flex-start; gap:24px; }
+.pk-led-kit-head h3 { margin:12px 0 10px; font-size:23px; font-weight:550; line-height:1.25; letter-spacing:-.03em; }
+.pk-led-kit-head p:not(.pk-catalog-label) { max-width:640px; font-size:13px; line-height:1.7; color:var(--pk-muted); }
+.pk-led-status { flex-shrink:0; border:1px solid #9dab9b; border-radius:999px; padding:7px 14px; font-size:11px; font-weight:650; text-transform:uppercase; letter-spacing:.08em; }
+.pk-led-status[data-status=needs_review] { border-color:#c08a3e; color:#7a5216; background:#fdf5e7; }
+.pk-led-status[data-status=ok] { border-color:#4d7c5f; color:#2c5b41; background:#eef5ee; }
+.pk-led-groups { display:flex; flex-wrap:wrap; gap:8px; margin:20px 0 0; border-top:1px solid var(--pk-line); padding-top:18px; }
+.pk-led-groups button { display:flex; align-items:center; gap:10px; min-height:44px; border:1px solid #9dab9b; border-radius:4px; padding:9px 14px; font-size:12px; }
+.pk-led-groups button small { color:var(--pk-muted); font-size:11px; }
+.pk-led-groups button[aria-selected=true] { background:var(--pk-ink); color:#fff; border-color:var(--pk-ink); }
+.pk-led-groups button[aria-selected=true] small { color:#cfe0d5; }
+.pk-led-groups-hint { flex-basis:100%; margin-top:10px; font-size:12px; line-height:1.65; color:var(--pk-muted); }
+.pk-led-kit-body { display:grid; grid-template-columns:minmax(0,300px) minmax(0,1fr); gap:26px; margin-top:20px; }
+.pk-led-field { display:block; margin-bottom:14px; }
+.pk-led-field > span { display:block; font-size:12px; font-weight:600; margin-bottom:8px; }
+.pk-led-field input, .pk-led-field select { width:100%; min-height:48px; border:1px solid #85968a; border-radius:4px; padding:0 12px; background:#fff; font-size:15px; }
+.pk-led-field select { font-size:13px; padding:10px 12px; }
+.pk-led-note { font-size:11px; line-height:1.65; color:var(--pk-muted); margin-bottom:16px; }
+.pk-led-strip-facts { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 14px; padding:0; list-style:none; }
+.pk-led-strip-facts li { border:1px solid #c7d1c2; border-radius:3px; padding:3px 8px; font-size:11px; color:#435b4d; }
+.pk-led-numbers { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin:0 0 18px; border:1px solid var(--pk-line); border-radius:5px; padding:16px; }
+.pk-led-numbers dt { font-size:11px; line-height:1.5; color:var(--pk-muted); }
+.pk-led-numbers dd { margin:8px 0 0; font-size:21px; font-weight:550; letter-spacing:-.02em; }
+.pk-led-picks { display:grid; gap:10px; }
+.pk-led-pick { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; border:1px solid #d8ddd3; border-radius:5px; padding:14px; }
+.pk-led-pick small { display:block; font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--pk-muted); }
+.pk-led-pick b { display:block; margin:8px 0; font-size:14px; font-weight:600; line-height:1.45; }
+.pk-led-pick p { font-size:12px; line-height:1.65; color:var(--pk-muted); }
+.pk-led-pick-actions { display:flex; flex-direction:column; align-items:flex-end; gap:10px; flex-shrink:0; }
+.pk-led-pick-actions strong { font-size:17px; font-weight:600; white-space:nowrap; }
+.pk-led-pick-actions strong small { text-transform:none; letter-spacing:0; font-weight:400; font-size:11px; }
+.pk-led-pick-actions button { min-height:44px; border:1px solid var(--pk-ink); border-radius:4px; padding:10px 14px; font-size:12px; font-weight:600; white-space:nowrap; }
+.pk-led-pick-actions button:hover { background:#e9ecdf; }
+.pk-led-pick--empty { border-style:dashed; }
+.pk-led-alice { margin-top:14px; border-left:3px solid #397960; padding-left:12px; font-size:12px; line-height:1.7; }
+.pk-led-warnings { margin:14px 0 0; padding-left:18px; font-size:12px; line-height:1.7; color:#7a5216; }
+.pk-led-foot { margin-top:14px; font-size:11px; line-height:1.7; color:var(--pk-muted); }
+@media (max-width:1100px) {
+  .pk-led-kit-body { grid-template-columns:1fr; }
+  .pk-led-numbers { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:640px) {
+  .pk-led-kit { padding:16px; }
+  .pk-led-kit-head { flex-direction:column; }
+  .pk-led-numbers { grid-template-columns:1fr; }
+  .pk-led-pick { flex-direction:column; }
+  .pk-led-pick-actions { align-items:flex-start; width:100%; }
+  .pk-led-pick-actions button { width:100%; }
+}

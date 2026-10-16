@@ -59,8 +59,9 @@ test("R7 catalog: SKU finds profiles outside active subtype; reset preserves car
 test("R7 catalog: pagination, sorting reset and SMART do not change selection", async ({ page }) => {
   await open(page); await add(page);
   await page.getByRole("tab", { name: "Подсветка карниза", exact: true }).click();
+  // Раздел открывается группой «Ленты» (36 позиций): сетка постраничная, 24 + 12.
   await expect(page.locator(".pk-product")).toHaveCount(24);
-  await page.getByRole("button", { name: /Показать ещё/ }).click(); await expect(page.locator(".pk-product")).toHaveCount(48);
+  await page.getByRole("button", { name: /Показать ещё/ }).click(); await expect(page.locator(".pk-product")).toHaveCount(36);
   await page.getByLabel("Сортировка каталога").selectOption("name"); await expect(page.locator(".pk-product")).toHaveCount(24);
   await page.getByRole("button", { name: "SMART", exact: true }).click();
   await expect(page.getByRole("button", { name: "SMART", exact: true })).toHaveAttribute("aria-pressed", "true");

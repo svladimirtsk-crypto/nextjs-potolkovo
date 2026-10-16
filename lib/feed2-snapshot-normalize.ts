@@ -1,4 +1,5 @@
 import type { FeedCatalogParam, FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
+import { ledUnitOf } from "@/lib/lighting/led-hardware";
 
 export function toText(value: unknown): string {
   return String(value ?? "").trim();
@@ -50,7 +51,7 @@ export function normalizeFeedCatalogProduct(raw: unknown): FeedCatalogProduct | 
     ? product.images.map((item) => toText(item)).filter(Boolean)
     : [];
 
-  return {
+  const normalized: FeedCatalogProduct = {
     productId: toText(productId),
     vendorCode,
     offerId,
@@ -70,6 +71,12 @@ export function normalizeFeedCatalogProduct(raw: unknown): FeedCatalogProduct | 
     lengthMeters: toNumberOrNull(product.lengthMeters),
     pieceLengthMeters: toNumberOrNull(product.pieceLengthMeters),
   };
+
+  // LED-группа: пульты, контроллеры и блоки питания — штуки, хотя витрина
+  // отдаёт всю категорию в метрах. Иначе «пульт × 1 м» уезжает в корзину.
+  normalized.unit = ledUnitOf(normalized);
+
+  return normalized;
 }
 
 export function normalizeFeedCatalogProducts(rawProducts: unknown[]): FeedCatalogProduct[] {

@@ -36,6 +36,11 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image", title: service.metadata.ogTitle, description: service.metadata.ogDescription, images: [brandSocialImage(service.pathname)] },
 };
 
+/**
+ * Страница остаётся статической: метраж из задачи света (`?led=1&meters=12`)
+ * читает панель комплектующих на клиенте. Через `searchParams` страница стала бы
+ * динамической и потеряла бы преимущество предрендера ради одного числа.
+ */
 export default function ProdazhaTrekovogoOsveshcheniyaPage() {
   const kitsAnchorRub = getKitsPriceAnchorRub();
   const { kits, topProducts } = getTrackSaleProductOffers();
