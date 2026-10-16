@@ -289,9 +289,19 @@ export function planLedPower(input: {
   const wantedControl: ControlKind | null =
     strip.kind === "mono" ? "mono" : strip.kind === "cct" ? "cct" : strip.kind === "rgb" ? "rgb" : "rgb-cct";
 
+  /*
+   * При равном токе выбираем Wi-Fi-модель: ей не нужен пульт, и владелец
+   * подтвердил работу Wi-Fi-контроллеров с Алисой. RF остаётся, когда Wi-Fi
+   * варианта нет — тогда пульт добавляется в подбор отдельной позицией.
+   */
   const suitable = controllerOptions
     .filter((option) => option.spec.controlKind === wantedControl)
-    .sort((a, b) => (b.spec.amps ?? 0) - (a.spec.amps ?? 0));
+    .sort(
+      (a, b) =>
+        (b.spec.amps ?? 0) - (a.spec.amps ?? 0) ||
+        Number(b.spec.wifi) - Number(a.spec.wifi) ||
+        a.product.priceRub - b.product.priceRub
+    );
   const controller = suitable[0] ?? null;
 
   if (!controller) {

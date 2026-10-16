@@ -141,6 +141,19 @@ describe("LED · расчёт питания по метражу", () => {
     expect(plan.remote).toBeNull(); // Wi-Fi не требует пульта
   });
 
+  it("при равном токе выбирается Wi-Fi-контроллер: пульт не нужен", () => {
+    const both = [
+      ...catalog,
+      product("Контроллер для светодиодной ленты 5в1 LM051 15A, 12-24В", "LED_STRIP"),
+      product("Контроллер для светодиодной ленты WIFI TUYA 5в1 WB5 15A,12-24В", "LED_STRIP"),
+    ];
+    const rgbw = parseStripSpec("Светодиодная лента RGBW 24V 60 диода 14,4W катушка 5 м ЧЗ")!;
+    const plan = planLedPower({ strip: rgbw, meters: 10, products: both });
+    expect(plan.controller?.spec.model).toBe("WB5");
+    expect(plan.controller?.spec.wifi).toBe(true);
+    expect(plan.remote).toBeNull();
+  });
+
   it("для RF-контроллера добавляет пульт и не обещает Алису", () => {
     const rfOnly = catalog.filter((p) => !/WIFI/i.test(p.name));
     const plan = planLedPower({ strip: parseStripSpec(STRIP_CCT)!, meters: 6, products: rfOnly });
