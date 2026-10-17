@@ -65,9 +65,11 @@ export function ledStripOptions(
 }
 
 export type LedPlan = PowerPlan & {
-  /** Сколько катушек закрывает метраж (округление вверх — катушка не режется на части). */
+  /** Сколько катушек закрывает установленная длина (катушка не режется на части). */
   reels: number | null;
   marginPercent: number;
+  /** Независимых зон управления: каждая получает свой контроллер. */
+  zones: number;
 };
 
 /**
@@ -77,14 +79,21 @@ export type LedPlan = PowerPlan & {
 export function ledPlanFor(input: {
   products: readonly FeedCatalogProduct[];
   strip: StripSpec | null;
+  /** Длина конструкции в метрах (без рядов). */
   meters: number;
+  /** Рядов ленты; 6 м в два ряда — это 12 м нагрузки. */
+  rows?: number;
+  /** Независимых зон управления; каждая требует своего контроллера. */
+  zones?: number;
 }): LedPlan | null {
   const { products, strip, meters } = input;
   if (!strip) return null;
-  const plan = planLedPower({ strip, meters, products });
+  const rows = Number.isFinite(input.rows) && (input.rows ?? 0) > 0 ? Math.floor(input.rows as number) : 1;
+  const zones = Number.isFinite(input.zones) && (input.zones ?? 0) > 0 ? Math.floor(input.zones as number) : 1;
+  const plan = planLedPower({ strip, meters, rows, products });
   const reels =
-    strip.reelMeters && strip.reelMeters > 0 && meters > 0
-      ? Math.ceil(meters / strip.reelMeters)
+    strip.reelMeters && strip.reelMeters > 0 && plan.installedMeters > 0
+      ? Math.ceil(plan.installedMeters / strip.reelMeters)
       : null;
 
   /*
@@ -97,11 +106,31 @@ export function ledPlanFor(input: {
       ...plan,
       reels,
       marginPercent: PSU_MARGIN_PERCENT,
+      zones,
       status: "needs_review",
       warnings: ["Укажите метраж подсветки — без него не считается ни нагрузка, ни мощность блока питания.", ...plan.warnings],
     };
   }
-  return { ...plan, reels, marginPercent: PSU_MARGIN_PERCENT };
+
+  /*
+   * Несколько зон на одном БП. По ваттам блок может хватать, но схема
+   * включения, клеммы и сечения без инженера не подтверждаются — поэтому
+   * статус понижается, а не остаётся зелёным.
+   */
+  if (zones > 1) {
+    return {
+      ...plan,
+      reels,
+      marginPercent: PSU_MARGIN_PERCENT,
+      zones,
+      status: "needs_review",
+      warnings: [
+        `От одного блока питания питаются ${zones} зоны — схему включения и клеммы подтверждает инженер.`,
+        ...plan.warnings,
+      ],
+    };
+  }
+  return { ...plan, reels, marginPercent: PSU_MARGIN_PERCENT, zones };
 }
 
 /**

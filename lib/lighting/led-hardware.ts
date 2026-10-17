@@ -217,10 +217,158 @@ export function isUniversalController(spec: ControllerSpec): boolean {
   return spec.controlKind === UNIVERSAL_CONTROL_KIND;
 }
 
+/**
+ * Пределы контроллера, которые известны не из названия, а с этикетки/фото
+ * изделия. Название даёт только суммарный ток («C01RF 12A»), а инженеру нужен
+ * предел КАЖДОГО канала и ограничение используемого входа — при общем запасе
+ * один канал или круглый разъём легко перегрузить.
+ *
+ * Статус данных — `label_observed`: это прочитанное на корпусе, а не паспорт
+ * партии. Поэтому такие цифры дают право отклонить заведомо негодную пару, но
+ * не заменяют паспортную библиотеку (T8-010/011/012).
+ */
+export type ControllerLimit = {
+  /** Предел одного канала; `null` — неизвестен, проверять нечем. */
+  channelAmps: number | null;
+  /** Суммарный предел выходов; `null` — берём из названия. */
+  totalAmps: number | null;
+  /** Ограничение круглого входа (у C01RF — 5 А при 12 А по выходам). */
+  inputRoundAmps: number | null;
+  evidence: "label_observed" | "name_only";
+  source: string | null;
+};
+
+export const CONTROLLER_LIMITS: Record<string, ControllerLimit> = {
+  // WB5: DC12-24 В, 6 А на канал, 15 А суммарно (фото этикетки EKS).
+  WB5: {
+    channelAmps: 6,
+    totalAmps: 15,
+    inputRoundAmps: null,
+    evidence: "label_observed",
+    source: "https://eksmarket.ru/upload/iblock/9cd/kz1vnfnfhkisikl1fhyw2u0nrtbjb081.png",
+  },
+  // C01RF: 12 А по выходам, но 6 А на канал и 5 А на круглом входе.
+  C01RF: {
+    channelAmps: 6,
+    totalAmps: 12,
+    inputRoundAmps: 5,
+    evidence: "label_observed",
+    source: "https://eksmarket.ru/upload/iblock/086/risssu9u24wvgggs1e6bk1td18yxb36l.png",
+  },
+};
+
+/** Сколько независимых каналов занимает лента данного типа. */
+export function activeChannelsOf(kind: StripKind | ControlKind): number {
+  switch (kind) {
+    case "mono":
+      return 1;
+    case "cct":
+      return 2;
+    case "rgb":
+      return 3;
+    case "rgbw":
+      return 4;
+    case "rgb-cct":
+      return 5;
+  }
+}
+
+/** Пределы модели: известные с этикетки либо выведенные из названия. */
+export function controllerLimitOf(spec: ControllerSpec): ControllerLimit {
+  const known = spec.model ? CONTROLLER_LIMITS[spec.model.toUpperCase()] : undefined;
+  if (known) return known;
+  return {
+    channelAmps: null,
+    totalAmps: spec.amps,
+    inputRoundAmps: null,
+    evidence: "name_only",
+    source: null,
+  };
+}
+
+/**
+ * Почему контроллер не годится для этой нагрузки.
+ *
+ * Проверки идут от жёстких к мягким: несовпадение напряжения, перегруз выхода,
+ * гарантированный перегруз канала. «Мягкое» ограничение круглого входа
+ * возвращается отдельно как предупреждение — у той же модели есть винтовой вход.
+ */
+export type ControllerCheck = {
+  ok: boolean;
+  /** Причина отказа для человека; `null`, если контроллер проходит. */
+  reason: string | null;
+  warnings: string[];
+};
+
+export function checkControllerForLoad(input: {
+  spec: ControllerSpec;
+  voltage: number | null;
+  currentA: number;
+  channels: number;
+}): ControllerCheck {
+  const { spec, voltage, currentA, channels } = input;
+  const limit = controllerLimitOf(spec);
+  const warnings: string[] = [];
+
+  if (voltage !== null && spec.voltageRange) {
+    const [from, to] = spec.voltageRange.split("-").map(Number);
+    if (Number.isFinite(from) && Number.isFinite(to) && (voltage < from || voltage > to)) {
+      return {
+        ok: false,
+        reason: `рассчитан на ${spec.voltageRange} В, а лента ${voltage} В`,
+        warnings,
+      };
+    }
+  }
+
+  const total = limit.totalAmps;
+  if (total !== null && currentA > total) {
+    return {
+      ok: false,
+      reason: `ток ${Math.round(currentA * 100) / 100} А больше суммарного предела ${total} А`,
+      warnings,
+    };
+  }
+
+  /*
+   * Поканальная проверка: при равномерном распределении на канал приходится
+   * `I / N`. Если даже эта величина превышает предел канала, значит хотя бы
+   * один канал перегружен при любом распределении — отказ безусловный.
+   * Неравномерную раскладку без паспорта не додумываем.
+   */
+  const channel = limit.channelAmps;
+  if (channel !== null && channels > 0) {
+    const perChannel = currentA / channels;
+    if (perChannel > channel) {
+      return {
+        ok: false,
+        reason: `на канал приходится ${Math.round(perChannel * 100) / 100} А при пределе ${channel} А`,
+        warnings,
+      };
+    }
+  }
+
+  if (limit.inputRoundAmps !== null && currentA > limit.inputRoundAmps) {
+    warnings.push(
+      `Ток ${Math.round(currentA * 100) / 100} А больше ${limit.inputRoundAmps} А, допустимых для круглого входа: нужен винтовой вход или другая модель.`
+    );
+  }
+  if (limit.evidence === "label_observed") {
+    warnings.push("Пределы каналов взяты с этикетки изделия, а не из паспорта партии.");
+  }
+
+  return { ok: true, reason: null, warnings };
+}
+
 export type PowerPlanOption<T> = { product: FeedCatalogProduct; spec: T };
 
 export type PowerPlan = {
+  /** Геометрия конструкции (без рядов). */
   meters: number;
+  /** Число рядов ленты: 6 м линии в два ряда — это 12 м нагрузки. */
+  rows: number;
+  /** Установленная длина ленты: `meters × rows`. */
+  installedMeters: number;
   loadW: number;
   requiredW: number;
   currentA: number;
@@ -234,6 +382,9 @@ export type PowerPlan = {
   remote: PowerPlanOption<RemoteSpec> | null;
   status: "ok" | "needs_review";
   warnings: string[];
+  /** Кандидаты, отклонённые по инженерным пределам, — с причиной для человека. */
+  rejectedControllers: { name: string; reason: string }[];
+  rejectedPsus: { name: string; reason: string }[];
 };
 
 /** Запас по мощности блока питания. Значение утверждено владельцем 16.10.2026. */
@@ -249,15 +400,26 @@ export const PSU_MARGIN_PERCENT = 30;
  */
 export function planLedPower(input: {
   strip: StripSpec;
+  /** Длина конструкции в метрах (без рядов). */
   meters: number;
+  /** Число рядов ленты; по умолчанию 1. 6 м в два ряда = 12 м нагрузки. */
+  rows?: number;
   products: readonly FeedCatalogProduct[];
 }): PowerPlan {
   const { strip, meters, products } = input;
+  const rows = Number.isFinite(input.rows) && (input.rows ?? 0) > 0 ? Math.floor(input.rows as number) : 1;
   const warnings: string[] = [];
+  const rejectedControllers: { name: string; reason: string }[] = [];
+  const rejectedPsus: { name: string; reason: string }[] = [];
 
   const wPerMeter = strip.wPerMeter;
   const voltage = strip.voltage;
-  const loadW = wPerMeter !== null ? Math.round(wPerMeter * meters * 10) / 10 : 0;
+  /*
+   * Нагрузка считается по УСТАНОВЛЕННОЙ длине: два ряда по 6 м — это 12 м
+   * ленты, а не 6. Закупочные катушки и остатки в нагрузку не входят.
+   */
+  const installedMeters = Number.isFinite(meters) && meters > 0 ? meters * rows : 0;
+  const loadW = wPerMeter !== null ? Math.round(wPerMeter * installedMeters * 10) / 10 : 0;
   const requiredW = wPerMeter !== null ? Math.round(loadW * (1 + PSU_MARGIN_PERCENT / 100) * 10) / 10 : 0;
   const currentA = wPerMeter !== null && voltage ? Math.round((loadW / voltage) * 100) / 100 : 0;
 
@@ -274,9 +436,7 @@ export function planLedPower(input: {
     if (role === "psu") {
       const spec = parsePsuSpec(product.name);
       if (spec?.watts !== null && spec?.watts !== undefined) {
-        if (voltage === null || spec.voltage === null || spec.voltage === voltage) {
-          psuOptions.push({ product, spec });
-        }
+        psuOptions.push({ product, spec });
       }
     } else if (role === "controller") {
       const spec = parseControllerSpec(product.name);
@@ -288,60 +448,91 @@ export function planLedPower(input: {
   }
 
   /*
+   * Блок питания обязан совпасть по напряжению: 24 В лента не питается от 48 В
+   * блока (и наоборот). Раньше несовпадающие просто отбрасывались молча —
+   * теперь причина попадает в список отказов, чтобы её можно было объяснить.
+   */
+  const suitablePsus = psuOptions.filter((option) => {
+    if (voltage === null || option.spec.voltage === null || option.spec.voltage === voltage) return true;
+    rejectedPsus.push({
+      name: option.product.name,
+      reason: `выход ${option.spec.voltage} В не совпадает с лентой ${voltage} В`,
+    });
+    return false;
+  });
+
+  /*
    * Порядок: сначала по мощности, затем по цене. Сначала находим минимальную
    * мощность, которой хватает, и только внутри неё выбираем дешёвую серию —
    * иначе «СТАНДАРТ 200» и «ПРО 200» решались бы порядком в фиде.
    */
-  const enough = psuOptions.filter((option) => (option.spec.watts ?? 0) >= requiredW);
+  const enough = suitablePsus.filter((option) => (option.spec.watts ?? 0) >= requiredW);
   enough.sort(
     (a, b) => (a.spec.watts ?? 0) - (b.spec.watts ?? 0) || a.product.priceRub - b.product.priceRub
   );
   // Без метража нагрузки нет: подставлять «самый дешёвый БП» было бы выдумкой.
-  const psu = wPerMeter === null || wPerMeter <= 0 || !(meters > 0) ? null : enough[0] ?? null;
+  const psu = wPerMeter === null || wPerMeter <= 0 || !(installedMeters > 0) ? null : enough[0] ?? null;
   if (wPerMeter !== null && !psu) {
     warnings.push(
       `Среди доступных блоков питания нет позиции на ${requiredW} Вт и выше — нужен расчёт по нескольким БП или уточнение нагрузки.`
     );
   }
 
-  const wantedControl: ControlKind | null =
+  const wantedControl: ControlKind =
     strip.kind === "mono" ? "mono" : strip.kind === "cct" ? "cct" : strip.kind === "rgb" ? "rgb" : "rgb-cct";
+  const channels = activeChannelsOf(strip.kind);
 
   /*
-   * Порядок выбора: сначала модель под конкретный тип ленты, потом универсальный
-   * 5-в-1. Внутри каждой группы — по току, при равном токе Wi-Fi (ей не нужен
-   * пульт, и владелец подтвердил работу Wi-Fi-контроллеров с Алисой), затем по
-   * цене. Для RGBW и RGB+CCT точного соответствия нет: их тип и есть 5-в-1.
+   * Каждый кандидат проходит инженерную проверку: напряжение, суммарный ток,
+   * гарантированный перегруз канала. Отклонённые не исчезают — их причина
+   * сохраняется для объяснения человеку («C01RF отклонён: 8.33 А на канале»).
    */
-  const bySuitability = (a: PowerPlanOption<ControllerSpec>, b: PowerPlanOption<ControllerSpec>) =>
+  const viable: Array<{ option: PowerPlanOption<ControllerSpec>; warnings: string[] }> = [];
+  for (const option of controllerOptions) {
+    const check = checkControllerForLoad({ spec: option.spec, voltage, currentA, channels });
+    if (check.ok) viable.push({ option, warnings: check.warnings });
+    else rejectedControllers.push({ name: option.product.name, reason: check.reason ?? "не подходит" });
+  }
+
+  const bySuitability = (
+    a: PowerPlanOption<ControllerSpec>,
+    b: PowerPlanOption<ControllerSpec>
+  ) =>
     (b.spec.amps ?? 0) - (a.spec.amps ?? 0) ||
     Number(b.spec.wifi) - Number(a.spec.wifi) ||
     a.product.priceRub - b.product.priceRub;
 
-  const exactMatches = controllerOptions
-    .filter((option) => option.spec.controlKind === wantedControl && !isUniversalController(option.spec))
-    .sort(bySuitability);
-  const universalOptions = controllerOptions.filter((option) => isUniversalController(option.spec)).sort(bySuitability);
-  const controller = exactMatches[0] ?? universalOptions[0] ?? null;
-  const universalController = universalOptions[0] ?? null;
+  const exactMatches = viable
+    .map((entry) => ({ option: entry.option, warnings: entry.warnings }))
+    .filter((entry) => entry.option.spec.controlKind === wantedControl && !isUniversalController(entry.option.spec))
+    .sort((a, b) => bySuitability(a.option, b.option));
+  const universalOptions = viable
+    .map((entry) => ({ option: entry.option, warnings: entry.warnings }))
+    .filter((entry) => isUniversalController(entry.option.spec))
+    .sort((a, b) => bySuitability(a.option, b.option));
+
+  const chosen = exactMatches[0] ?? universalOptions[0] ?? null;
+  const controller = chosen?.option ?? null;
+  const universalController = universalOptions[0]?.option ?? null;
   const controllerScope: "kind" | "universal" | null =
     controller === null ? null : isUniversalController(controller.spec) ? "universal" : "kind";
+
+  if (chosen) {
+    for (const warning of chosen.warnings) if (!warnings.includes(warning)) warnings.push(warning);
+  }
 
   if (!controller) {
     warnings.push(
       strip.kind === "rgbw" || strip.kind === "rgb-cct"
-        ? "Для RGBW/RGB+CCT нужен 5-в-1 контроллер: соответствующей позиции в текущем наборе нет, подбор по паспорту."
-        : "Контроллер под тип ленты в текущем наборе не найден — подбор по паспорту."
-    );
-  } else if (currentA > 0 && controller.spec.amps !== null && currentA > controller.spec.amps) {
-    warnings.push(
-      `Ток нагрузки ${currentA} А превышает заявленный ток контроллера ${controller.spec.amps} А — нужен расчёт по каналам или несколько контроллеров.`
+        ? "Для RGBW/RGB+CCT нужен 5-в-1 контроллер: подходящей по пределам позиции в текущем наборе нет, подбор по паспорту."
+        : "Контроллер, который проходит по току и напряжению, в текущем наборе не найден — подбор по паспорту."
     );
   }
 
-  const remote = controller && !controller.spec.wifi
-    ? remoteOptions.filter((option) => option.spec.controlKind === wantedControl)[0] ?? null
-    : null;
+  const remote =
+    controller && !controller.spec.wifi
+      ? remoteOptions.filter((option) => option.spec.controlKind === wantedControl)[0] ?? null
+      : null;
   if (controller && !controller.spec.wifi && !remote) {
     warnings.push("Для RF-контроллера пульт соответствующего типа в наборе не найден.");
   }
@@ -352,6 +543,8 @@ export function planLedPower(input: {
 
   return {
     meters,
+    rows,
+    installedMeters,
     loadW,
     requiredW,
     currentA,
@@ -363,5 +556,7 @@ export function planLedPower(input: {
     remote,
     status: warnings.length === 0 ? "ok" : "needs_review",
     warnings,
+    rejectedControllers,
+    rejectedPsus,
   };
 }

@@ -186,6 +186,7 @@
 .pk-led-groups-hint { flex-basis:100%; margin-top:10px; font-size:12px; line-height:1.65; color:var(--pk-muted); }
 .pk-led-kit-body { display:grid; grid-template-columns:minmax(0,300px) minmax(0,1fr); gap:26px; margin-top:20px; }
 .pk-led-field { display:block; margin-bottom:14px; }
+.pk-led-pair { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 .pk-led-field > span { display:block; font-size:12px; font-weight:600; margin-bottom:8px; }
 .pk-led-field input, .pk-led-field select { width:100%; min-height:48px; border:1px solid #85968a; border-radius:4px; padding:0 12px; background:#fff; font-size:15px; }
 .pk-led-field select { font-size:13px; padding:10px 12px; }
@@ -214,6 +215,7 @@
   .pk-led-numbers { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
 @media (max-width:640px) {
+  .pk-led-pair { grid-template-columns:1fr; }
   .pk-led-kit { padding:16px; }
   .pk-led-kit-head { flex-direction:column; }
   .pk-led-numbers { grid-template-columns:1fr; }

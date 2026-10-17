@@ -75,6 +75,12 @@ export function LedKitPanel({
 
   const [stripId, setStripId] = useState(() => defaultStripId(stripOptions));
   const [metersText, setMetersText] = useState("");
+  /**
+   * Часть C: ряды ленты и число независимых зон. Без рядов 6 м световой линии
+   * в два ряда считались бы как 6 м ленты — вдвое меньше реальной нагрузки.
+   */
+  const [rowsText, setRowsText] = useState("1");
+  const [zonesText, setZonesText] = useState("1");
   const [metersTouched, setMetersTouched] = useState(false);
   const [metersFromTask, setMetersFromTask] = useState(false);
 
@@ -100,9 +106,11 @@ export function LedKitPanel({
     stripOptions.find((option) => option.product.productId === stripId) ?? stripOptions[0] ?? null;
   const meters = Number(metersText.replace(",", "."));
   const metersValue = Number.isFinite(meters) && meters > 0 ? meters : 0;
+  const rowsValue = Math.min(4, Math.max(1, Math.round(Number(rowsText.replace(",", ".")) || 1)));
+  const zonesValue = Math.min(6, Math.max(1, Math.round(Number(zonesText.replace(",", ".")) || 1)));
   const plan = useMemo(
-    () => ledPlanFor({ products, strip: selected?.spec ?? null, meters: metersValue }),
-    [products, selected, metersValue]
+    () => ledPlanFor({ products, strip: selected?.spec ?? null, meters: metersValue, rows: rowsValue, zones: zonesValue }),
+    [products, selected, metersValue, rowsValue, zonesValue]
   );
 
   const controllerStatus = plan?.controller
@@ -215,6 +223,35 @@ export function LedKitPanel({
               : ledMetersNote(metersValue)}
           </p>
 
+          <div className="pk-led-pair">
+            <label className="pk-led-field">
+              <span>Рядов ленты</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={rowsText}
+                data-testid="led-rows"
+                aria-describedby="led-rows-note"
+                onChange={(event) => setRowsText(event.target.value)}
+              />
+            </label>
+            <label className="pk-led-field">
+              <span>Независимых зон</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={zonesText}
+                data-testid="led-zones"
+                aria-describedby="led-rows-note"
+                onChange={(event) => setZonesText(event.target.value)}
+              />
+            </label>
+          </div>
+          <p id="led-rows-note" className="pk-led-note">
+            Ряды умножают длину: 6 м в два ряда — это 12 м ленты. Каждая зона управляется своим контроллером;
+            блок питания может быть общим, но схему подтверждает инженер.
+          </p>
+
           <label className="pk-led-field">
             <span>Лента</span>
             <select
@@ -265,8 +302,18 @@ export function LedKitPanel({
               <dd data-testid="led-plan-current">{plan && plan.currentA > 0 ? `${METER.format(plan.currentA)} А` : "—"}</dd>
             </div>
             <div>
+              <dt>Установленная длина · {plan?.rows ?? 1} ряд(а)</dt>
+              <dd data-testid="led-plan-installed">
+                {plan && plan.installedMeters > 0 ? `${METER.format(plan.installedMeters)} м` : "—"}
+              </dd>
+            </div>
+            <div>
               <dt>Катушек по {selected?.spec.reelMeters ?? "?"} м</dt>
               <dd data-testid="led-plan-reels">{plan?.reels ?? "—"}</dd>
+            </div>
+            <div>
+              <dt>Контроллеров по зонам</dt>
+              <dd data-testid="led-plan-controllers">{plan ? plan.zones : "—"}</dd>
             </div>
           </dl>
 
@@ -296,9 +343,11 @@ export function LedKitPanel({
             {pick(
               "Управление",
               plan?.controller?.product,
-              controllerStatus ? controllerStatus.detail : "Подберём контроллер, когда будет известен тип ленты.",
+              controllerStatus
+                ? `${controllerStatus.detail}${plan && plan.zones > 1 ? ` Нужно ${plan.zones} шт — по одной на зону.` : ""}`
+                : "Подберём контроллер, когда будет известен тип ленты.",
               "led-controller",
-              1
+              plan?.zones ?? 1
             )}
             {plan?.universalController &&
             plan.universalController.product.productId !== plan.controller?.product.productId
@@ -343,7 +392,8 @@ export function LedKitPanel({
 
           <p className="pk-led-foot">
             Позиции попадают в комплект только по нажатию — автоматически мы ничего не добавляем. Метраж — геометрия
-            вашего потолка, а не количество катушек: ленту, число рядов и схему подключения уточним до заказа.
+            вашего потолка, а не количество катушек; число рядов умножает длину ленты. Схему подключения, сечения и
+            ограничения каналов уточняем по паспорту до заказа.
           </p>
         </div>
       </div>

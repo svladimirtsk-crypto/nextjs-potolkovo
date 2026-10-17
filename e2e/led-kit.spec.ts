@@ -135,3 +135,43 @@ test("LED: поиск и остальные разделы каталога не
   await expect(page.getByTestId("led-kit-panel")).toHaveCount(0);
   await expect(page.locator(".pk-product").first()).toContainText("COLIBRI");
 });
+
+/**
+ * Часть C · Ряды и зоны.
+ *
+ * Главный риск, который закрывает тест: 6 м световой линии в два ряда — это
+ * 12 м ленты. Пока ряды не умножали длину, нагрузка занижалась ровно вдвое, а
+ * вместе с ней и блок питания.
+ */
+test("LED: два ряда удваивают длину ленты и нагрузку", async ({ page }) => {
+  await openCornice(page);
+  const panel = page.getByTestId("led-kit-panel");
+
+  await panel.getByTestId("led-meters").fill("6");
+  await expect(panel.getByTestId("led-plan-installed")).toHaveText("6 м");
+  await expect(panel.getByTestId("led-plan-load")).toHaveText("60 Вт");
+
+  await panel.getByTestId("led-rows").fill("2");
+  await expect(panel.getByTestId("led-plan-installed")).toHaveText("12 м");
+  await expect(panel.getByTestId("led-plan-load")).toHaveText("120 Вт");
+  await expect(panel.getByTestId("led-plan-required")).toHaveText("156 Вт");
+  // Закупка считается от установленной длины: 12 м → 3 катушки по 5 м.
+  await expect(panel.getByTestId("led-plan-reels")).toHaveText("3");
+});
+
+test("LED: несколько зон — свой контроллер на зону и пометка о схеме питания", async ({ page }) => {
+  await openCornice(page);
+  const panel = page.getByTestId("led-kit-panel");
+
+  await panel.getByTestId("led-meters").fill("12");
+  await expect(panel.getByTestId("led-plan-controllers")).toHaveText("1");
+
+  await panel.getByTestId("led-zones").fill("2");
+  await expect(panel.getByTestId("led-plan-controllers")).toHaveText("2");
+  // Общая мощность зон та же: зона — это управление, а не отдельная нагрузка.
+  await expect(panel.getByTestId("led-plan-load")).toHaveText("120 Вт");
+  // Один БП на две зоны требует подтверждённой схемы — статус не зелёный.
+  await expect(panel.getByTestId("led-plan-status")).toContainText("Нужна проверка");
+  await expect(panel.getByTestId("led-warnings")).toContainText("2 зоны");
+  await expect(panel.getByTestId("led-controller")).toContainText("2 шт");
+});
