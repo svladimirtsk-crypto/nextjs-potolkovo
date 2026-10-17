@@ -321,7 +321,12 @@ export function LedKitPanel({
               : null}
           </div>
 
-          {controllerStatus?.alice === "owner-verified" ? (
+          {plan?.universalController ? (
+            <p className="pk-led-alice" data-testid="led-alice-note">
+              С Алисой любая лента работает через Wi-Fi 5-в-1 (WB5) — подтверждено владельцем на его комплекте. Один
+              контроллер закрывает монохром, CCT, RGB, RGBW и RGB+CCT; ток и каналы проверяем по паспорту.
+            </p>
+          ) : controllerStatus?.alice === "owner-verified" ? (
             <p className="pk-led-alice" data-testid="led-alice-note">
               Wi-Fi-контроллер: управление со смартфона и голосом; работа с Алисой и умным домом подтверждена владельцем
               на его комплекте. Это не паспортная совместимость всего ассортимента — проверим на вашей модели.

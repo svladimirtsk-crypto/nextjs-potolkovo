@@ -5,6 +5,7 @@ import { CatalogFilterChipGroup, CatalogFilterChipsRow } from "@/components/ligh
 import type { CatalogFilters } from "@/lib/lighting/use-catalog-filters";
 import type { CatalogSort } from "@/lib/lighting/catalog-presentation";
 import type { SearchMatch } from "@/components/lighting/CatalogGrid";
+import { SMART_SECTION_NOTE } from "@/lib/lighting/alice-routes";
 
 const icons = [
   "M3 5h18M6 5v5h4V5m4 0v5h4V5M8 13l-3 6m11-6 3 6",
@@ -44,7 +45,7 @@ export function CatalogNavigation({ filters, smartOnly, onSmartChange }: {
     <div className="pk-smart-note">
       <p className="pk-catalog-label">Умный свет</p>
       <h3>Свет под ваши сценарии</h3>
-      <p>SMART — маркировка каталога. Протокол управления, питание и совместимость проверим для конкретного комплекта.</p>
+      <p>{SMART_SECTION_NOTE}</p>
       <button type="button" aria-pressed={smartOnly} onClick={onSmartChange}>SMART <span aria-hidden="true">{smartOnly ? "✓" : "+"}</span></button>
     </div>
   </aside>;

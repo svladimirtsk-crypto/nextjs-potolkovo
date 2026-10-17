@@ -60,7 +60,8 @@ test("LED: 12 м при 10 Вт/м считаются с запасом 30 % и 
 
   // Монохром — Wi-Fi-контроллер: подпись про Алису owner-verified, без обещания паспорта.
   await expect(panel.getByTestId("led-controller")).toContainText("WIFI TUYA монохром C01");
-  await expect(panel.getByTestId("led-alice-note")).toContainText("подтверждена владельцем на его комплекте");
+  await expect(panel.getByTestId("led-alice-note")).toContainText("любая лента работает через Wi-Fi 5-в-1");
+  await expect(panel.getByTestId("led-alice-note")).toContainText("подтверждено владельцем на его комплекте");
   await expect(panel.getByTestId("led-remote")).toHaveCount(0);
   // 5-в-1 Wi-Fi показан как вариант на любую ленту (подтверждение владельца).
   await expect(panel.getByTestId("led-controller-alt")).toContainText("WB5");

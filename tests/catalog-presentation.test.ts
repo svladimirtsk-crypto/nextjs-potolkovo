@@ -32,7 +32,21 @@ describe("R7 catalogue presentation", () => {
   it("SMART remains a filter during search", () => expect(catalogViewProducts([item()], { ...filters, smartOnly: true, query: "SKU-A" })).toEqual([]));
   it("SMART designation is not compatibility verification", () => {
     const html = renderToStaticMarkup(createElement(ProductCard, { product: item({ name: "SMART" }), qty: 0, onInc() {}, onDec() {} }));
-    expect(html).toContain("не подтверждение совместимости"); expect(html).toContain("нужно подтвердить");
+    // Маркировка остаётся маркировкой: бейдж SMART не выдаётся за проверку совместимости.
+    expect(html).toContain("не подтверждение совместимости");
+    // Маршрут к Алисе при этом подтверждён владельцем — это не «обещание всей совместимости».
+    expect(html).toContain("Алиса: через панель-конвертер");
+    expect(html).toContain("подтверждено владельцем на его комплекте");
+    expect(html).toContain("Конвертер Wi-Fi");
+  });
+
+  it("SMART without a confirmed route does not promise voice control", () => {
+    // Точечный светильник с «СМАРТ» в названии: панель-конвертер к нему не относится.
+    const html = renderToStaticMarkup(
+      createElement(ProductCard, { product: item({ name: "Светильник GX53 АРТ СМАРТ", kind: "SPOT_FIXTURE" }), qty: 0, onInc() {}, onDec() {} })
+    );
+    expect(html).not.toContain("Алиса:");
+    expect(html).toContain("маршрут к вашему помощнику для этой позиции не подтверждён");
   });
   it("unknown price is not displayed as free and cannot be added", () => {
     const html = renderToStaticMarkup(createElement(ProductCard, { product: item({ priceRub: 0 }), qty: 0, onInc() {}, onDec() {} }));

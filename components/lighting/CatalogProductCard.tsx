@@ -7,6 +7,7 @@ import { getDiscountedPrice } from "@/lib/feed2-products";
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
 import { LIGHTING_ONLY_DISCOUNT_PERCENT } from "@/lib/lighting-formulas";
 import { isSmartProduct, kindBadgeLabel, systemBadgeLabel } from "@/lib/lighting/product-predicates";
+import { aliceRouteOf } from "@/lib/lighting/alice-routes";
 
 const fmt = (value: number) => new Intl.NumberFormat("ru-RU").format(Math.round(value));
 
@@ -21,6 +22,7 @@ export function ProductCard({ product, qty, onDec, onInc }: {
   const id = toText(product.productId);
   const unit = product.unit === "m" ? "м" : "шт";
   const smart = isSmartProduct(product);
+  const aliceRoute = aliceRouteOf(product);
   const system = systemBadgeLabel(product);
   const kind = kindBadgeLabel(product);
   const attrs = (product.keyAttributes?.length ? product.keyAttributes : product.params)
@@ -34,13 +36,18 @@ export function ProductCard({ product, qty, onDec, onInc }: {
         {system && <span>{system}</span>}{kind && <span>{kind}</span>}
         {smart && <span className="pk-smart-badge" title="Маркировка каталога, не подтверждение совместимости">SMART</span>}
         {isPhotoPending(product) && <span data-testid="photo-pending-badge">{PHOTO_PENDING_LABEL}</span>}
+        {aliceRoute ? <span data-testid="alice-route-badge">{aliceRoute.label}</span> : null}
       </div>
       <h3 id={`product-title-${id}`}>{name}</h3>
       <p className="pk-product-sku">Артикул {toText(product.vendorCode) || "уточняется"}</p>
       {attrs.length > 0 && <p className="pk-product-attrs">{attrs.slice(0, 2).map(a => `${a.label}: ${a.value}`).join(" · ")}</p>}
       <details className="pk-product-details"><summary>Характеристики и подбор</summary>
         <dl>{attrs.map((attr, index) => <div key={`${attr.label}-${index}`}><dt>{attr.label}</dt><dd>{attr.value}</dd></div>)}</dl>
-        {smart && <p>Функции SMART и работу с вашей системой управления нужно подтвердить для этой модели.</p>}
+        {aliceRoute ? (
+          <p data-testid="alice-route-detail">{aliceRoute.detail}</p>
+        ) : smart ? (
+          <p>Функции SMART есть в названии, но маршрут к вашему помощнику для этой позиции не подтверждён — уточним перед заказом.</p>
+        ) : null}
         <p>Наличие, срок и совместимость уточним перед счётом. Добавление в корзину не означает, что комплект уже проверен.</p>
       </details>
       <div className="pk-product-purchase">
