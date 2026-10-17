@@ -8,6 +8,7 @@ import type { Step0Screen, ParamId } from "@/lib/step0-fsm";
 import { roomQuestionPlan, scenarioFromRooms } from "@/lib/calculator/room-features";
 import { calcProgress } from "@/lib/calculator/fsm";
 import { selectBackVisible, selectFooterAction } from "@/lib/calculator/selectors";
+import { paramConfirmValue, quizRoomIndex, resolveQuizRoom } from "@/lib/step0-param-value";
 
 import { useRoomWorkspace } from "./use-room-workspace";
 import { RoomContext } from "./room-context";
@@ -207,20 +208,24 @@ export function PriceCalculatorQuizV2({
     if (screen.t === "param") markStep0SessionInteracted();
     if (edit) { workspace.save(); return; }
     // mark confirmed if param screen
-    if (screen.t === "param") {
-      markConfirmed(screen.roomId, screen.param, true);
-      // T-025
+    /**
+     * PT-024 · В событие уходит значение именно того параметра, который
+     * подтвердили. Раньше во всех случаях отправлялась площадь комнаты, а для
+     * виртуального объекта (`roomId = "object"`) — пустая строка.
+     */
+    const confirmed: { param: ParamId; roomId: string } | null =
+      screen.t === "param"
+        ? { param: screen.param, roomId: screen.roomId }
+        : fromParam !== undefined && fromRoomId !== undefined
+          ? { param: fromParam, roomId: fromRoomId }
+          : null;
+    if (confirmed) {
+      const room = resolveQuizRoom(engine.rooms, confirmed.roomId, engine.activeRoomId);
+      markConfirmed(confirmed.roomId, confirmed.param, true);
       trackQuizParamConfirm({
-        param: screen.param,
-        value: String(engine.rooms.find(r => r.id === screen.roomId)?.area ?? ""),
-        roomIndex: Math.max(0, engine.rooms.findIndex(r => r.id === screen.roomId)),
-      });
-    } else if (fromParam && fromRoomId) {
-      markConfirmed(fromRoomId, fromParam, true);
-      trackQuizParamConfirm({
-        param: fromParam,
-        value: "",
-        roomIndex: Math.max(0, engine.rooms.findIndex(r => r.id === fromRoomId)),
+        param: confirmed.param,
+        value: room ? paramConfirmValue(room, confirmed.param) : false,
+        roomIndex: quizRoomIndex(engine.rooms, room),
       });
     }
 
