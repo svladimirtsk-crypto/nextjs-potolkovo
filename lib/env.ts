@@ -26,13 +26,13 @@ const boolFlag = (defaultValue: boolean) =>
     });
 
 /**
- * Целое не меньше `min`; пусто или мусор → значение по умолчанию.
+ * Целое в границах `min`…`max`; пусто или мусор → значение по умолчанию.
  *
  * Мусор не роняет старт намеренно: `DELIVERY_ALERT_THRESHOLD=много` не должно
  * означать «API не поднимется». Неверное значение приводится к безопасному
  * умолчанию, а расхождение видно в логе.
  */
-const intFlag = (defaultValue: number, min = 1) =>
+const intFlag = (defaultValue: number, min = 1, max = Number.MAX_SAFE_INTEGER) =>
   z
     .string()
     .optional()
@@ -41,7 +41,7 @@ const intFlag = (defaultValue: number, min = 1) =>
       if (trimmed === "") return defaultValue;
       const parsed = Number(trimmed);
       if (!Number.isFinite(parsed)) return defaultValue;
-      return Math.max(min, Math.round(parsed));
+      return Math.min(max, Math.max(min, Math.round(parsed)));
     });
 
 /** Пустая строка эквивалентна отсутствию — иначе `""` считался бы валидным ключом. */
@@ -115,6 +115,19 @@ const envSchema = z.object({
    * вкладкой, открытой до деплоя.
    */
   LEAD_CONSENT_VERSION_REQUIRED: boolFlag(false),
+
+  /**
+   * PT-021 · Сколько прокси перед приложением считать своими.
+   *
+   * `x-forwarded-for` дописывается каждым прокси справа, поэтому адрес клиента
+   * берётся с позиции `len - hops`, а не первым элементом (его клиент может
+   * подделать). `0` — доверенных прокси нет: заголовки игнорируются.
+   *
+   * Дефолт `1` — один платформенный ingress. Это кодовое допущение, а не
+   * подтверждённая конфигурация Amvera/Vercel: реальное число прыжков нужно
+   * сверить с провайдером. Пока не сверено — `platform_verified: false`.
+   */
+  LEAD_TRUSTED_PROXY_HOPS: intFlag(1, 0, 10),
 
   TELEGRAM_BOT_TOKEN: optionalSecret,
   TELEGRAM_CHAT_ID: optionalSecret,
@@ -199,6 +212,20 @@ export type Env = z.infer<typeof envSchema> & { warnings: string[] };
 
 function collectWarnings(env: z.infer<typeof envSchema>): string[] {
   const warnings: string[] = [];
+
+  /**
+   * PT-021: «тихо подставили дефолт» — плохо для настройки доверия к IP.
+   * Если переменная задана, но не разбирается, об этом нужно сказать громко.
+   */
+  const rawHops = process.env.LEAD_TRUSTED_PROXY_HOPS?.trim();
+  if (rawHops) {
+    const parsed = Number(rawHops);
+    if (!Number.isInteger(parsed) || parsed < 0 || parsed > 10) {
+      warnings.push(
+        `LEAD_TRUSTED_PROXY_HOPS="${rawHops}" не является целым 0…10 — используется ${env.LEAD_TRUSTED_PROXY_HOPS}. Проверьте число прокси перед приложением.`
+      );
+    }
+  }
 
   if (env.TELEGRAM_LEADS_ENABLED && !(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID)) {
     warnings.push(

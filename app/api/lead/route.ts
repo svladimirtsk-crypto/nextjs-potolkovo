@@ -20,6 +20,8 @@ import {
   RATE_LIMIT_WINDOW_MS,
 } from "@/lib/lead/rate-limit";
 import { hashLeadPayload } from "@/lib/lead/payload-hash";
+import { bodyErrorResponse, readJsonBody } from "@/lib/lead/read-json-body";
+import { resolveClientIp } from "@/lib/lead/client-ip";
 import { LeadPayloadSchema } from "@/lib/lead/schema";
 import { clientGrandTotalOf, recalculateLeadPrice } from "@/lib/lead/server-recalc";
 import { getLeadStore, isLeadStorageReady } from "@/lib/lead/store";
@@ -32,10 +34,17 @@ export const dynamic = "force-dynamic";
 /** Дедуп: та же заявка с того же телефона в пределах окна. */
 const DEDUPE_WINDOW_MS = 10 * 60 * 1000;
 
+/**
+ * PT-021 · IP клиента с границей доверия.
+ *
+ * Раньше здесь стоял первый элемент `x-forwarded-for` — то есть ровно то, что
+ * прислал клиент, и лимит обходился подделкой заголовка. Теперь адрес берётся
+ * с конца цепочки: последние `hops` элементов дописаны нашими прокси
+ * (`LEAD_TRUSTED_PROXY_HOPS`). Неподтверждённая цепочка даёт `unknown`, и это
+ * видно в метрике, а не превращается в чужой IP.
+ */
 function clientIp(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
-  return request.headers.get("x-real-ip") ?? "unknown";
+  return resolveClientIp(request.headers, getEnv().LEAD_TRUSTED_PROXY_HOPS).ip;
 }
 
 function hashIp(ip: string): string {
@@ -64,12 +73,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "disabled" }, { status: 503 });
   }
 
-  let raw: unknown;
-  try {
-    raw = await request.json();
-  } catch {
-    return NextResponse.json({ ok: false, error: "invalid_json" }, { status: 400 });
-  }
+  /**
+   * PT-021 · Тело читаем с лимитом до JSON и Zod.
+   *
+   * `request.json()` сначала читает поток целиком: тело на сотни мегабайт
+   * успевало занять память до первой проверки. Лимит считается по фактически
+   * прочитанным байтам, поэтому заниженный или отсутствующий `Content-Length`
+   * и chunked-переполнение его не обходят.
+   */
+  const body = await readJsonBody(request);
+  if (!body.ok) return bodyErrorResponse(body);
+  const raw: unknown = body.value;
 
   // Honeypot: боты заполняют скрытое поле — отвечаем как успехом, но ничего не пишем.
   if (typeof raw === "object" && raw !== null && String((raw as Record<string, unknown>).botcheck ?? "")) {
