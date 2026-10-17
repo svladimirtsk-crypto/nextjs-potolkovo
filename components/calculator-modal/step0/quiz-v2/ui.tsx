@@ -1,6 +1,8 @@
 "use client";
 import { ReactNode, useState } from "react";
 
+import { Picture } from "@/components/ui/picture";
+
 export function SectionCard({
   title,
   description,
@@ -24,7 +26,42 @@ export function SectionCard({
   );
 }
 
-export function OptionCard({ active, title, meta, onClick }: { active: boolean; title: string; meta: string; onClick: () => void }) {
+/**
+ * PT-038 · Карточка варианта с необязательной миниатюрой.
+ *
+ * Высота миниатюры задана константой, а не пропом: в ТЗ прямо сказано, чтобы
+ * картинки не расползались по экранам квиза. Без `imageSrc` разметка — ровно
+ * прежняя (текст и отступы не меняются), поэтому существующие вызовы остаются
+ * пиксель-в-пиксель.
+ *
+ * `imageAlt` обязателен в типах вместе с `imageSrc`, но допускает пустую
+ * строку: по PT-047 alt, дублирующий видимый заголовок, — это `alt=""`
+ * (картинка декоративна, смысл несёт текст).
+ */
+export function OptionCard({
+  active,
+  title,
+  meta,
+  onClick,
+  imageSrc,
+  imageAlt,
+  imageAspect = "4:3",
+}: {
+  active: boolean;
+  title: string;
+  meta: string;
+  onClick: () => void;
+  imageSrc?: string;
+  imageAlt?: string;
+  imageAspect?: "4:3" | "1:1";
+}) {
+  // Высоту задаёт CSS слота (96/128 px, PT-038), поэтому «соотношение сторон»
+  // здесь управляет только кадрированием: квадрат — центрированный кроп,
+  // 4:3 — обычный. Растянуть слот пропом нельзя: так карточки не разъезжаются.
+  const fitClass = imageAspect === "1:1" ? "object-center" : "object-cover";
+  // SVG в `public/` — это нарисованные схемы сечения, а не фотографии работ:
+  // их нельзя выдавать за реальный объект (PT-049) и нельзя затемнять.
+  const isScheme = imageSrc?.toLowerCase().endsWith(".svg") ?? false;
   return (
     <button
       type="button"
@@ -32,6 +69,21 @@ export function OptionCard({ active, title, meta, onClick }: { active: boolean; 
       aria-pressed={active}
       className={`pk-option min-h-11 rounded-2xl border p-4 text-left transition ${active ? "border-slate-950 bg-slate-950 text-white shadow-lg" : "border-slate-200 bg-white hover:border-slate-400"}`}
     >
+      {imageSrc ? (
+        <span
+          className={`pk-option-media mb-3 block w-full overflow-hidden rounded-xl border ${
+            isScheme ? "pk-option-media--scheme border-slate-200" : active ? "border-white/20 bg-white/5" : "border-slate-200 bg-slate-100"
+          }`}
+        >
+          <Picture
+            src={imageSrc}
+            alt={imageAlt ?? ""}
+            sizes="(max-width: 640px) 45vw, 200px"
+            className="block h-full w-full"
+            imgClassName={`h-full w-full ${fitClass}`}
+          />
+        </span>
+      ) : null}
       <p className="text-sm font-semibold">{title}</p>
       <p className={`mt-1 text-xs ${active ? "text-white/70" : "text-slate-600"}`}>{meta}</p>
     </button>

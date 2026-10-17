@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300" role="img">
+  <title>Схема разреза: накладной трек ниже полотна</title>
+  <rect width="400" height="300" fill="#f6f5ef"/>
+  <defs>
+    <pattern id="hatch" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="9" stroke="#c3cebc" stroke-width="2.4"/>
+    </pattern>
+    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d7ed89" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#d7ed89" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- бетонная плита -->
+  <rect x="16" y="26" width="368" height="84" fill="#e9e6da"/>
+  <rect x="16" y="26" width="368" height="84" fill="url(#hatch)" opacity="0.5"/>
+  <rect x="16" y="26" width="368" height="84" fill="none" stroke="#173c36" stroke-width="3"/>
+
+  <!-- стена -->
+  <rect x="16" y="110" width="46" height="174" fill="#e9e6da"/>
+  <rect x="16" y="110" width="46" height="174" fill="url(#hatch)" opacity="0.35"/>
+  <rect x="16" y="110" width="46" height="174" fill="none" stroke="#173c36" stroke-width="3"/>
+
+  <line x1="62" y1="110" x2="384" y2="110" stroke="#173c36" stroke-width="5"/>
+
+  <!-- накладная шина под полотном -->
+  <rect x="140" y="112" width="120" height="26" rx="3" fill="#173c36"/>
+
+  <!-- светильник на шине -->
+  <line x1="200" y1="138" x2="200" y2="176" stroke="#173c36" stroke-width="4"/>
+  <rect x="180" y="176" width="40" height="22" rx="6" fill="#173c36"/>
+  <path d="M182 198 L218 198 L236 254 L164 254 Z" fill="#d7ed89" opacity="0.55"/>
+
+  <!-- выступ шины 26 px -->
+  <line x1="260" y1="110" x2="330" y2="110" stroke="#53675e" stroke-width="2" stroke-dasharray="5 5"/>
+  <line x1="260" y1="138" x2="330" y2="138" stroke="#53675e" stroke-width="2" stroke-dasharray="5 5"/>
+  <line x1="322" y1="110" x2="322" y2="138" stroke="#53675e" stroke-width="2"/>
+  <circle cx="260" cy="110" r="4" fill="#173c36"/>
+  <circle cx="260" cy="138" r="4" fill="#173c36"/>
+
+</svg>

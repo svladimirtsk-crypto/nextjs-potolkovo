@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300" role="img">
+  <title>Схема разреза: накладной карниз ниже полотна</title>
+  <rect width="400" height="300" fill="#f6f5ef"/>
+  <defs>
+    <pattern id="hatch" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="9" stroke="#c3cebc" stroke-width="2.4"/>
+    </pattern>
+    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d7ed89" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#d7ed89" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- бетонная плита -->
+  <rect x="16" y="26" width="368" height="84" fill="#e9e6da"/>
+  <rect x="16" y="26" width="368" height="84" fill="url(#hatch)" opacity="0.5"/>
+  <rect x="16" y="26" width="368" height="84" fill="none" stroke="#173c36" stroke-width="3"/>
+
+  <!-- стена -->
+  <rect x="16" y="110" width="46" height="174" fill="#e9e6da"/>
+  <rect x="16" y="110" width="46" height="174" fill="url(#hatch)" opacity="0.35"/>
+  <rect x="16" y="110" width="46" height="174" fill="none" stroke="#173c36" stroke-width="3"/>
+
+  <!-- натяжное полотно сплошное, без ниши -->
+  <line x1="62" y1="110" x2="384" y2="110" stroke="#173c36" stroke-width="5"/>
+
+  <!-- накладной профиль выступает ниже полотна -->
+  <path d="M132 110 L132 152 L268 152 L268 110" fill="#efece0" stroke="#53675e" stroke-width="4"/>
+  <rect x="152" y="138" width="96" height="9" rx="4" fill="#173c36"/>
+
+  <!-- свет вниз из щели -->
+  <path d="M150 148 L250 148 L282 232 L118 232 Z" fill="url(#glow)" opacity="0.5"/>
+
+  <!-- выступ 42 px -->
+  <line x1="268" y1="110" x2="330" y2="110" stroke="#53675e" stroke-width="2" stroke-dasharray="5 5"/>
+  <line x1="268" y1="152" x2="330" y2="152" stroke="#53675e" stroke-width="2" stroke-dasharray="5 5"/>
+  <line x1="322" y1="110" x2="322" y2="152" stroke="#53675e" stroke-width="2"/>
+  <circle cx="268" cy="110" r="4" fill="#173c36"/>
+  <circle cx="268" cy="152" r="4" fill="#173c36"/>
+
+</svg>

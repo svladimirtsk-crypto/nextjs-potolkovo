@@ -223,3 +223,20 @@
   .pk-led-pick-actions { align-items:flex-start; width:100%; }
   .pk-led-pick-actions button { width:100%; }
 }
+
+/* PT-038 · миниатюра в карточке квиза: ровно 96 px на мобильном и 128 px на
+   десктопе. Именно фиксированная высота, а не max-height: при обрезке по
+   максимуму у схемы сечения отрезалась нижняя половина — та самая, где видно
+   встроенный профиль или накладной. Картинка не растягивает сетку вариантов и
+   не сдвигает кнопки на коротких экранах. */
+.pk-option-media { height: 96px; }
+@media (min-width: 640px) { .pk-option-media { height: 128px; } }
+.pk-option-media picture { display: block; height: 100%; width: 100%; }
+.pk-option-media img { height: 100%; width: 100%; object-fit: cover; }
+/*
+  Схемы сечений — не фотографии: не затемняем их в активном состоянии, иначе
+  разница «встроенный vs накладной» перестаёт читаться именно в выбранном виде.
+  Белая подложка сохраняет контраст обводок на тёмной карточке.
+*/
+.pk-option-media--scheme { background: #f6f5ef; }
+.pk-option-media--scheme img { object-fit: contain; padding: 4px; }

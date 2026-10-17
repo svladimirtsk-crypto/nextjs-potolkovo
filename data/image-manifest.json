@@ -279,6 +279,22 @@
     ],
     "blurDataURL": "data:image/webp;base64,UklGRnwAAABXRUJQVlA4IHAAAADwAwCdASoQABUAPu1iqU2ppaOiMAgBMB2JZQCdABBnULurTeo9cuAAAPdD4vINX9zYNbo5Lz4NSP/8ltsNhb8qte3SsqglTdRaXkYdPE3TEwnWXK3F/QZuYQi4RMr1lhzb5u0NG+pL2zibE0iQwAAA"
   },
+  "/quiz-cornice-hidden-niche.jpeg": {
+    "width": 480,
+    "height": 441,
+    "widths": [
+      480
+    ],
+    "blurDataURL": "data:image/webp;base64,UklGRloAAABXRUJQVlA4IE4AAADwAQCdASoQAA8AA4BaJYwAAutDyfUtorQA/uhDj2/mVL0hm3nWC5Yy3L47tHR6543lHOiru/erYLKB9Ce6T+kAuCWH+NoQaURD9iUAAAA="
+  },
+  "/quiz-lines.jpeg": {
+    "width": 480,
+    "height": 639,
+    "widths": [
+      480
+    ],
+    "blurDataURL": "data:image/webp;base64,UklGRpYAAABXRUJQVlA4IIoAAADwAwCdASoQABUAPu1iqU2ppaOiMAgBMB2JZQC/OBo93/1arNQPWCCAAP6pXOXfpU3P37QD8QFirZ4Z/csI64rw8m8KM6Jf7tMxMN2QYg+mqsR978D/1Tc99sRcO3mlkv162aYbzl6g64Fv24jXoJOrTWX04yOO/EAwcw310Clicym6jV0rj0DcQAA="
+  },
   "/step-done.jpeg": {
     "width": 1024,
     "height": 1024,

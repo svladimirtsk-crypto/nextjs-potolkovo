@@ -31,12 +31,18 @@ const WIDTHS = [480, 960, 1440];
  * не показываются ни на одном брейкпоинте. Гнать для них 1440 значило бы
  * тянуть лишние ~100 КБ ради невидимой детализации.
  */
-const MAX_WIDTH_BY_PREFIX = [{ prefix: "proj-", maxWidth: 960 }];
+const MAX_WIDTH_BY_PREFIX = [
+  { prefix: "proj-", maxWidth: 960 },
+  // PT-046 · миниатюры квиза не показываются шире ~200 CSS px; 1440 не нужен.
+  { prefix: "quiz-", maxWidth: 480 },
+];
 
 /** Бюджеты из ТЗ: hero ≤ 150 КБ, кейсы ≤ 80 КБ (на самый широкий WebP). */
 const BUDGETS_KB = [
   { test: (name) => name.startsWith("hero"), limitKb: 150, label: "hero" },
   { test: (name) => name.startsWith("proj-"), limitKb: 80, label: "кейс" },
+  // PT-046 · отдельный класс миниатюр: карточка в квизе, а не галерея.
+  { test: (name) => name.startsWith("quiz-"), limitKb: 20, label: "квиз" },
 ];
 
 /**
@@ -149,6 +155,9 @@ async function main() {
   await mkdir(OUT_DIR, { recursive: true });
   await mkdir(path.dirname(MANIFEST_PATH), { recursive: true });
 
+  // PT-046 · `quiz-*.svg` — не фотографии, а векторные схемы сечений: у них
+  // нет растровых вариантов, они отдаются как есть и в манифест не попадают.
+  // Бюджет в КБ к ним неприменим (вектор ≤ 3 КБ), поэтому они явно исключены.
   const files = (await readdir(PUBLIC_DIR))
     .filter((f) => /\.jpe?g$/i.test(f))
     .sort();

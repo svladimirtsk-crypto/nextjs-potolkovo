@@ -16,6 +16,36 @@ function formatCurrency(v:number){ return new Intl.NumberFormat("ru-RU").format(
  * T-041: кнопки «Назад» и «Подтвердить» живут только в футере модалки,
  * поэтому экрану больше не нужен `onBack`.
  */
+/**
+ * PT-039…042 · Миниатюры вариантов.
+ *
+ * Alt намеренно пустой у схем и у кадров, чей смысл уже выражен заголовком и
+ * подписью (PT-047): карточка — одна кнопка, и дублирующий alt заставлял бы
+ * скринридер читать одно и то же дважды. У фото карниза alt описывает, что
+ * именно видно, потому что название варианта не говорит, что ниша скрытая.
+ *
+ * Схемы — `public/quiz-*.svg`: они подписаны как схематичные прямо в UI и не
+ * выдаются за фотографию конкретного объекта (PT-049).
+ */
+const CORNICE_MEDIA: Record<string, { src: string; alt: string } | undefined> = {
+  "hidden-niche": { src: "/quiz-cornice-hidden-niche.jpeg", alt: "Скрытая ниша: карниз утоплен за натяжным полотном" },
+  "built-in": { src: "/quiz-cornice-builtin.svg", alt: "" },
+  surface: { src: "/quiz-cornice-surface.svg", alt: "" },
+};
+
+// Оба варианта — схемы в одном ракурсе: обобщённые фото трека со страницы
+// услуги не показывают монтажный подтип, а смешивать фото и схему в одной
+// группе нельзя (бриф, раздел 4). «Без трека» остаётся текстом.
+const TRACK_MEDIA: Record<string, { src: string; alt: string } | undefined> = {
+  "built-in": { src: "/quiz-track-builtin.svg", alt: "" },
+  surface: { src: "/quiz-track-surface.svg", alt: "" },
+};
+
+const LIGHT_LINES_MEDIA = {
+  src: "/quiz-lines.jpeg",
+  alt: "Световые линии в натяжном потолке",
+} as const;
+
 export function ParamScreen({ roomId, param, engine, onConfirm, editing = false }:{
   roomId: string; param: ParamId; engine: CeilingEngine;
   onConfirm: ()=>void; editing?: boolean;
@@ -192,17 +222,31 @@ export function ParamScreen({ roomId, param, engine, onConfirm, editing = false 
       <SectionCard headingRef={headingRef} title="Карнизы">
         {prefillHint}
         {kitHint}
+        {/*
+          PT-040 · у «Скрытая ниша» есть настоящее фото (proof-04), у встроенного
+          и накладного разделяющих кадров нет — вместо выдачи общего фото за
+          конкретный подтип рисуем схемы сечения в одном ракурсе. «Без карниза» —
+          осознанно текстом: иллюстрировать отсутствие нечем.
+        */}
         <div className="grid gap-3 sm:grid-cols-2">
-          {corniceOpts.map((o)=>(
-            <OptionCard
-              key={o.slug}
-              active={room.corniceType===o.slug}
-              title={o.label}
-              meta={o.ratePerMeter>0 ? `от ${formatCurrency(o.ratePerMeter)} ₽ / м.п.` : "Без доп. расчёта"}
-              onClick={()=>update({ corniceType: o.slug })}
-            />
-          ))}
+          {corniceOpts.map((o)=>{
+            const image = CORNICE_MEDIA[o.slug];
+            return (
+              <OptionCard
+                key={o.slug}
+                active={room.corniceType===o.slug}
+                title={o.label}
+                meta={o.ratePerMeter>0 ? `от ${formatCurrency(o.ratePerMeter)} ₽ / м.п.` : "Без доп. расчёта"}
+                onClick={()=>update({ corniceType: o.slug })}
+                imageSrc={image?.src}
+                imageAlt={image?.alt}
+              />
+            );
+          })}
         </div>
+        {room.corniceType!=="none" && room.corniceType!=="hidden-niche" ? (
+          <p className="pk-caption">Разрез схематичный: показывает, встроен карниз в полотно или наложен на него; конкретную систему подберём после замера.</p>
+        ) : null}
         {room.corniceType!=="none" && (
           <div className="mt-4 space-y-4">
             <RangeField id="cornice-v2" label="Длина карниза" value={room.corniceLength} min={1} max={50} step={1} unit="м.п." onChange={v=>update({corniceLength:v})} />
@@ -271,7 +315,18 @@ export function ParamScreen({ roomId, param, engine, onConfirm, editing = false 
       <SectionCard headingRef={headingRef} title="Световые линии">
         <div className="grid gap-3 sm:grid-cols-2">
           <OptionCard active={!room.lightLinesEnabled} title="Без световых линий" meta="Без доп. расчёта" onClick={()=>update({lightLinesEnabled:false})} />
-          <OptionCard active={room.lightLinesEnabled} title="Добавить световые линии" meta={`от ${formatCurrency(calculator.lightLines.ratePerMeter)} ₽ / м.п.`} onClick={()=>update({lightLinesEnabled:true})} />
+          {/*
+            PT-042 · фото proof-03 показывает световые линии, поэтому стоит
+            только у положительного варианта: у «без линий» иллюстрировать нечего.
+          */}
+          <OptionCard
+            active={room.lightLinesEnabled}
+            title="Добавить световые линии"
+            meta={`от ${formatCurrency(calculator.lightLines.ratePerMeter)} ₽ / м.п.`}
+            onClick={()=>update({lightLinesEnabled:true})}
+            imageSrc={LIGHT_LINES_MEDIA.src}
+            imageAlt={LIGHT_LINES_MEDIA.alt}
+          />
         </div>
         {room.lightLinesEnabled && (
           <div className="mt-4">
@@ -290,10 +345,24 @@ export function ParamScreen({ roomId, param, engine, onConfirm, editing = false 
         {prefillHint}
         {kitHint}
         <div className="grid gap-3 sm:grid-cols-2">
-          {trackOpts.map((o)=>(
-            <OptionCard key={o.slug} active={room.trackType===o.slug} title={o.label} meta={o.ratePerMeter>0?`от ${formatCurrency(o.ratePerMeter)} ₽ / м.п.`:"Без доп. расчёта"} onClick={()=>update({trackType:o.slug})} />
-          ))}
+          {trackOpts.map((o)=>{
+            const image = TRACK_MEDIA[o.slug];
+            return (
+              <OptionCard
+                key={o.slug}
+                active={room.trackType===o.slug}
+                title={o.label}
+                meta={o.ratePerMeter>0?`от ${formatCurrency(o.ratePerMeter)} ₽ / м.п.`:"Без доп. расчёта"}
+                onClick={()=>update({trackType:o.slug})}
+                imageSrc={image?.src}
+                imageAlt={image?.alt}
+              />
+            );
+          })}
         </div>
+        {room.trackType!=="none" ? (
+          <p className="pk-caption">Обобщённые фото трека со страницы услуги здесь не используются: они не доказывают конкретный способ монтажа.</p>
+        ) : null}
         {room.trackType!=="none" && (
           <div className="mt-4">
             <RangeField id="track-v2" label="Длина трека" value={room.trackLength} min={1} max={50} step={1} unit="м.п." onChange={v=>update({trackLength:v})} />
