@@ -30,6 +30,7 @@ import {
   ledStripOptions,
   type LedGroupId,
 } from "@/lib/lighting/led-catalog-view";
+import { resolvePriceBasis, stripPurchaseQty } from "@/lib/lighting/led-price-basis";
 
 const METER = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 });
 const RUB = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 });
@@ -122,10 +123,32 @@ export function LedKitPanel({
    * Лента — метраж, округлённый вверх до катушки поставщика: катушка не режется.
    * Питание и управление — по одной штуке, количество уточняется при заказе.
    */
-  const stripQty =
-    selected && plan && plan.reels && selected.spec.reelMeters
-      ? plan.reels * selected.spec.reelMeters
-      : Math.ceil(metersValue);
+  /**
+   * T8-010 · Сколько уходит в комплект и в каких единицах.
+   *
+   * Если цена позиции — за катушку, покупаются целые катушки (шт), а не
+   * «15 метров» по цене катушки за метр. Если цена за метр — берётся точный
+   * установленный метраж. Базис берётся из названия/витрины с доказательством.
+   */
+  const basis = selected
+    ? resolvePriceBasis({
+        name: selected.product.name,
+        unit: selected.product.unit,
+        priceRub: selected.product.priceRub,
+      })
+    : null;
+  const purchase = stripPurchaseQty({
+    installedMeters: plan?.installedMeters ?? 0,
+    basis: basis ?? {
+      basis: "unknown",
+      evidence: "none",
+      reelMeters: selected?.spec.reelMeters ?? null,
+      pricePerMeterRub: null,
+      soldByReel: false,
+      note: "",
+    },
+  });
+  const stripQty = purchase.qty;
 
   const price = (product: FeedCatalogProduct) =>
     `${RUB.format(getDiscountedPrice(product.priceRub, LIGHTING_ONLY_DISCOUNT_PERCENT))} ₽`;
@@ -262,7 +285,7 @@ export function LedKitPanel({
               {stripOptions.length === 0 ? <option value="">Нет лент с подтверждённой мощностью</option> : null}
               {stripOptions.map((option) => (
                 <option key={option.product.productId} value={option.product.productId}>
-                  {`${STRIP_KIND_LABEL[option.spec.kind] ?? option.spec.kind} · ${option.spec.wPerMeter} Вт/м · ${option.spec.voltage ?? "?"} В · катушка ${option.spec.reelMeters ?? "?"} м · ${price(option.product)}/м`}
+                  {`${STRIP_KIND_LABEL[option.spec.kind] ?? option.spec.kind} · ${option.spec.wPerMeter} Вт/м · ${option.spec.voltage ?? "?"} В · катушка ${option.spec.reelMeters ?? "?"} м · ${price(option.product)}/${unitLabel(option.product)}`}
                 </option>
               ))}
             </select>
@@ -322,9 +345,17 @@ export function LedKitPanel({
               ? pick(
                   "Лента",
                   selected.product,
-                  `${STRIP_KIND_LABEL[selected.spec.kind] ?? selected.spec.kind} · ${selected.spec.wPerMeter} Вт/м · ${selected.spec.voltage} В. Метраж округляем вверх до катушки ${
-                    selected.spec.reelMeters ?? "?"
-                  } м — катушка не режется.`,
+                  `${
+                    STRIP_KIND_LABEL[selected.spec.kind] ?? selected.spec.kind
+                  } · ${selected.spec.wPerMeter} Вт/м · ${selected.spec.voltage} В. ${
+                    purchase.unit === "pcs"
+                      ? `Катушка ${selected.spec.reelMeters ?? basis?.reelMeters ?? "?"} м продаётся целой: ${METER.format(
+                          plan?.installedMeters ?? 0
+                        )} м установлено → ${purchase.qty} шт. Цена за катушку, не за метр.`
+                      : basis?.basis === "per_meter"
+                        ? "Цена за метр: покупается установленный метраж."
+                        : "Единица продажи не подтверждена — метраж округлён вверх до метра."
+                  }`,
                   "led-strip-pick",
                   stripQty
                 )

@@ -17,6 +17,7 @@
  * предварительный и всегда помечается как требующий проверки.
  */
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
+import { resolvePriceBasis, stripSaleUnit } from "@/lib/lighting/led-price-basis";
 
 export type LedRole = "strip" | "psu" | "controller" | "remote" | "controller-remote-kit";
 export type StripKind = "mono" | "cct" | "rgb" | "rgbw" | "rgb-cct";
@@ -60,7 +61,14 @@ export type RemoteSpec = { controlKind: ControlKind; channels: number | null; mo
  */
 export function ledUnitOf(product: LedIdentity): "m" | "pcs" {
   const role = ledRoleOf(product);
-  if (role === "strip") return "m";
+  if (role === "strip") {
+    /*
+     * T8-010 · Катушка — штука, а не метр. В фиде у лент стоит цена катушки
+     * («…катушка 5 м ЧЗ» за 970 ₽), и если пометить её метрами, корзина
+     * умножит цену катушки на метраж — ровно сценарий 02 приёмочной матрицы.
+     */
+    return stripSaleUnit(resolvePriceBasis(product as LedIdentity & { unit?: "m" | "pcs" }));
+  }
   if (role !== null) return "pcs";
   return product.unit === "m" ? "m" : "pcs";
 }

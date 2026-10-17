@@ -84,9 +84,10 @@ test("LED: без метража расчёта нет, а товары попа
   await expect(panel.getByTestId("led-psu-add")).toContainText("уже 1");
   await expect(page.locator("[data-cart-bar]")).toHaveAttribute("data-count", "1");
 
-  // Лента добавляется метражом, округлённым вверх до катушки 5 м: 12 м → 15 м.
+  // Витрина отдаёт цену за метр: в комплект идёт установленный метраж (12 м),
+  // а катушка 5 м остаётся упаковкой поставщика, а не электрическим пределом.
   await panel.getByTestId("led-strip-pick-add").click();
-  await expect(panel.getByTestId("led-strip-pick-add")).toContainText("15 м");
+  await expect(panel.getByTestId("led-strip-pick-add")).toContainText("12 м");
   await expect(page.locator("[data-cart-bar]")).toHaveAttribute("data-count", "2");
 });
 

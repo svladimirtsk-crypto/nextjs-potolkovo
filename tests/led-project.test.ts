@@ -122,13 +122,29 @@ describe("C · установленная длина и нагрузка", () =>
     expect(strip?.status).toBe("needs_review");
   });
 
-  it("закупка округляется вверх до катушки, а нагрузка — по установленным метрам", () => {
+  it("без подтверждённой единицы продажи метраж округляется вверх до метра", () => {
     const plan = planLedProject({ products: catalog, runs: [run({ meters: 6, rows: 2 })] });
     const strip = plan.bom.find((line) => line.role === "strip");
-    // 12 м установлено, катушка 5 м → 3 катушки = 15 м к покупке.
-    expect(strip?.qty).toBe(15);
+    // Позиции «strip-1» нет в каталоге → базис неизвестен: 12 м, а не выдуманные катушки.
+    expect(strip?.qty).toBe(12);
+    expect(strip?.unit).toBe("m");
+    expect(strip?.status).toBe("needs_review");
     expect(strip?.reason).toContain("2 ряда");
-    expect(plan.totals.loadW).toBe(120); // 15 м в нагрузку не попадают
+    expect(plan.totals.loadW).toBe(120);
+  });
+
+  it("катушка за 970 ₽ продаётся штуками: 12 м → 3 шт, цена не умножается на метры", () => {
+    // Та же позиция, но с ценой за катушку — как в живом фиде EKS.
+    const reelProduct = {
+      ...product("Светодиодная лента СТАНДАРТ 140 24V 112 диодов 10W 4200К катушка 5 м ЧЗ", "LED_STRIP", 1230),
+      productId: "strip-1",
+    };
+    const plan = planLedProject({ products: [reelProduct], runs: [run({ meters: 6, rows: 2 })] });
+    const strip = plan.bom.find((line) => line.role === "strip");
+    expect(strip?.qty).toBe(3);
+    expect(strip?.unit).toBe("pcs");
+    expect(strip?.reason).toContain("3 шт");
+    expect(strip?.reason).toContain("12 м");
   });
 });
 

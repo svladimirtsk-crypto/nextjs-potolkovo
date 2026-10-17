@@ -103,12 +103,14 @@ describe("T-027 - zod-shema payload", () => {
   });
 
   it("trebuet consent", () => {
-    const { consent: _consent, ...rest } = basePayload;
+    const rest: Partial<typeof basePayload> = { ...basePayload };
+    delete rest.consent;
     expect(LeadPayloadSchema.safeParse(rest).success).toBe(false);
   });
 
   it("orderIntent po umolchaniyu ceiling_only", () => {
-    const { orderIntent: _oi, ...rest } = basePayload;
+    const rest: Partial<typeof basePayload> = { ...basePayload };
+    delete rest.orderIntent;
     expect(LeadPayloadSchema.parse(rest).orderIntent).toBe("ceiling_only");
   });
 });

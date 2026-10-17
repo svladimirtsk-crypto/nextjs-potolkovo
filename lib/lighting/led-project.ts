@@ -45,6 +45,7 @@ import {
   type RemoteSpec,
   type StripSpec,
 } from "@/lib/lighting/led-hardware";
+import { resolvePriceBasis, stripPurchaseQty } from "@/lib/lighting/led-price-basis";
 
 /** Версия правил: попадает в заявку, чтобы расчёт можно было воспроизвести. */
 export const LED_RULES_VERSION = "led-rules-1";
@@ -458,21 +459,34 @@ export function planLedProject(input: {
         continue;
       }
       const reel = run.strip.reelMeters;
-      const qty = reel && reel > 0 ? Math.ceil(installed / reel) * reel : Math.ceil(installed);
+      /*
+       * T8-010 · Закупка зависит от того, за что цена: катушка продаётся целой,
+       * метраж можно взять точный. Неизвестный базис округляем вверх до метра —
+       * консервативно и без ложной точности.
+       */
+      const product = products.find((item) => item.productId === run.stripProductId);
+      const basis = resolvePriceBasis({
+        name: product?.name ?? run.stripName,
+        unit: product?.unit,
+        priceRub: product?.priceRub,
+      });
+      const purchase = stripPurchaseQty({ installedMeters: installed, basis });
       const rowsNote = run.rows > 1 ? ` × ${run.rows} ряда = ${METER.format(installed)} м` : "";
       const reelNote =
-        reel && reel > 0
-          ? `; катушка ${reel} м → ${Math.ceil(installed / reel)} шт (${METER.format(qty)} м)`
-          : "; длина катушки неизвестна — метраж округлён вверх до метра";
+        purchase.unit === "pcs"
+          ? `; катушка ${reel ?? basis.reelMeters ?? "?"} м → ${purchase.qty} шт (${METER.format(purchase.roundedMeters ?? installed)} м)`
+          : basis.basis === "per_meter"
+            ? "; цена за метр — установленный метраж покупается как есть"
+            : "; единица продажи не подтверждена — метраж округлён вверх до метра";
       bom.push({
         id: `strip:${run.id}`,
         role: "strip",
         productId: run.stripProductId,
         name: run.stripName,
-        qty: round2(qty),
-        unit: "m",
+        qty: purchase.qty,
+        unit: purchase.unit,
         reason: `${METER.format(run.meters ?? 0)} м конструкции${rowsNote}${reelNote}.`,
-        status: run.strip.wPerMeter === null ? "needs_review" : "ok",
+        status: run.strip.wPerMeter === null || basis.basis === "unknown" ? "needs_review" : "ok",
         refId: zone.id,
       });
     }

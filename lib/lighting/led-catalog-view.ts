@@ -26,6 +26,7 @@ import {
   type StripKind,
   type StripSpec,
 } from "@/lib/lighting/led-hardware";
+import { applyPassportToSpec, findPassport, type StripPassport } from "@/lib/lighting/led-passports";
 
 export type LedGroupId = "strips" | "power" | "control";
 
@@ -53,13 +54,21 @@ export function ledProductsOfGroup(
 
 /** Ленты, по которым можно считать: нужен подтверждённый Вт/м и напряжение. */
 export function ledStripOptions(
-  products: readonly FeedCatalogProduct[]
+  products: readonly FeedCatalogProduct[],
+  /**
+   * T8-011 · Паспорта, если они уже есть. Значения берутся только из
+   * `datasheet_verified` полей; название остаётся названием до паспорта.
+   */
+  passports?: readonly StripPassport[] | null
 ): { product: FeedCatalogProduct; spec: StripSpec }[] {
   const options: { product: FeedCatalogProduct; spec: StripSpec }[] = [];
   for (const product of products) {
     if (ledRoleOf(product) !== "strip") continue;
-    const spec = parseStripSpec(product.name);
-    if (spec?.wPerMeter !== null && spec?.wPerMeter !== undefined) options.push({ product, spec });
+    const parsed = parseStripSpec(product.name);
+    if (!parsed) continue;
+    const passport = findPassport(passports, parsed.series) ?? findPassport(passports, product.name);
+    const spec = applyPassportToSpec(parsed, passport).spec;
+    if (spec.wPerMeter !== null && spec.wPerMeter !== undefined) options.push({ product, spec });
   }
   return options.sort((a, b) => (a.spec.wPerMeter ?? 0) - (b.spec.wPerMeter ?? 0));
 }
@@ -85,9 +94,12 @@ export function ledPlanFor(input: {
   rows?: number;
   /** Независимых зон управления; каждая требует своего контроллера. */
   zones?: number;
+  /** Паспорт выбранной ленты: может уточнить мощность/напряжение/катушку. */
+  passport?: StripPassport | null;
 }): LedPlan | null {
-  const { products, strip, meters } = input;
-  if (!strip) return null;
+  const { products, meters } = input;
+  if (!input.strip) return null;
+  const strip = (applyPassportToSpec(input.strip, input.passport ?? null).spec);
   const rows = Number.isFinite(input.rows) && (input.rows ?? 0) > 0 ? Math.floor(input.rows as number) : 1;
   const zones = Number.isFinite(input.zones) && (input.zones ?? 0) > 0 ? Math.floor(input.zones as number) : 1;
   const plan = planLedPower({ strip, meters, rows, products });
