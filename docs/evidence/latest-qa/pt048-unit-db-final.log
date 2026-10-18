@@ -1,0 +1,1277 @@
+
+> nextjs@0.1.0 test
+> vitest run --maxWorkers=2
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 /home/user/repo
+
+ ✓  unit  tests/lead-storage-guard.test.ts (7 tests) 885ms
+     ✓ прод без DATABASE_URL — не готов  439ms
+     ✓ в проде без базы отвечает 503, а не мнимым успехом  380ms
+ ✓  unit  tests/rescue-lead.test.ts (20 tests) 789ms
+     ✓ setevaya oshibka -> ok:false, bez uspeha  705ms
+ ✓  unit  tests/lead-delivery-channels.test.ts (16 tests) 246ms
+ ✓  unit  tests/api-health.test.ts (9 tests) 305ms
+stderr | tests/delivery-alert.test.ts > PT-015 · проверка на хранилище (полный цикл) > серия из двух заявок — алерт отправлен и записан в журнал
+[delivery-alert] отправлен алерт через webhook: 4 неудачных попыток подряд, заявок в серии 2
+
+stderr | tests/delivery-alert.test.ts > PT-015 · проверка на хранилище (полный цикл) > повторная проверка в пределах охлаждения — второго алерта нет
+[delivery-alert] отправлен алерт через webhook: 4 неудачных попыток подряд, заявок в серии 2
+
+stderr | tests/delivery-alert.test.ts > PT-015 · проверка на хранилище (полный цикл) > все приёмники отказали — запись в журнале всё равно есть (иначе шторм)
+[delivery-alert] алерт о сбое доставки НЕ доставлен (webhook: HTTP 502): 4 неудачных попыток подряд в каналы web3forms, telegram
+
+stderr | tests/delivery-alert.test.ts > PT-015 · проверка на хранилище (полный цикл) > алерт не содержит телефон заявителя, даже если он есть в ошибке канала
+[delivery-alert] отправлен алерт через webhook: 4 неудачных попыток подряд, заявок в серии 2
+
+stderr | tests/delivery-alert.test.ts > PT-015 · проверка встроена в оба места отправки > крон: серия неудач в оба канала — алерт отправлен, прежние поля ответа не изменились
+[delivery-alert] отправлен алерт через webhook: 4 неудачных попыток подряд, заявок в серии 2
+
+stdout | tests/delivery-alert.test.ts > PT-015 · проверка встроена в оба места отправки > POST /api/lead: упавшая доставка запускает проверку, не задерживая ответ клиенту
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/delivery-alert.test.ts > PT-015 · проверка встроена в оба места отправки > POST /api/lead: упавшая доставка запускает проверку, не задерживая ответ клиенту
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stderr | tests/delivery-alert.test.ts > PT-015 · проверка встроена в оба места отправки > POST /api/lead: упавшая доставка запускает проверку, не задерживая ответ клиенту
+[delivery-alert] отправлен алерт через webhook: 2 неудачных попыток подряд, заявок в серии 1
+
+stdout | tests/delivery-alert.test.ts > PT-015 · проверка встроена в оба места отправки > POST /api/lead: доставка прошла — проверки алерта не происходит
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/delivery-alert.test.ts > PT-015 · проверка встроена в оба места отправки > POST /api/lead: доставка прошла — проверки алерта не происходит
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+ ✓  unit  tests/delivery-alert.test.ts (40 tests) 531ms
+     ✓ POST /api/lead: упавшая доставка запускает проверку, не задерживая ответ клиенту  434ms
+ ✓  unit  tests/popular-points.test.ts (18 tests) 169ms
+ ✓  unit  tests/check-env-script.test.ts (4 tests) 177ms
+stdout | tests/lead-idempotency.test.ts > PT-009 - идемпотентность: один requestId > двойная отправка одного payload -> одна запись и один комплект доставки
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-idempotency.test.ts > PT-009 - идемпотентность: один requestId > двойная отправка одного payload -> одна запись и один комплект доставки
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stdout | tests/lead-idempotency.test.ts > PT-009 - идемпотентность: один requestId > повтор после таймаута отдаёт тот же код заявки, а не новую строку
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-idempotency.test.ts > PT-009 - идемпотентность: один requestId > повтор после таймаута отдаёт тот же код заявки, а не новую строку
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stdout | tests/lead-idempotency.test.ts > PT-009 - идемпотентность: один requestId > тот же requestId с другим payload -> 409, второй записи нет
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-idempotency.test.ts > PT-009 - идемпотентность: один requestId > тот же requestId с другим payload -> 409, второй записи нет
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stdout | tests/lead-idempotency.test.ts > PT-009 - идемпотентность: один requestId > два параллельных запроса с одним requestId -> одна запись, оба ответа успешны
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-idempotency.test.ts > PT-009 - идемпотентность: один requestId > два параллельных запроса с одним requestId -> одна запись, оба ответа успешны
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stdout | tests/lead-idempotency.test.ts > PT-009 - идемпотентность: один requestId > повтор не тратит бюджет серверного rate-limit
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-idempotency.test.ts > PT-009 - идемпотентность: один requestId > повтор не тратит бюджет серверного rate-limit
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stdout | tests/lead-idempotency.test.ts > PT-009 - идемпотентность: один requestId > разные requestId при одном payload -> дедуп по телефону и отпечатку
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-idempotency.test.ts > PT-009 - идемпотентность: один requestId > разные requestId при одном payload -> дедуп по телефону и отпечатку
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stdout | tests/lead-idempotency.test.ts > PT-009 - тот же телефон, другой состав > rescue -> полная заявка в течение 10 минут создаёт вторую запись
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-idempotency.test.ts > PT-009 - тот же телефон, другой состав > rescue -> полная заявка в течение 10 минут создаёт вторую запись
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stdout | tests/lead-idempotency.test.ts > PT-009 - тот же телефон, другой состав > rescue -> полная заявка в течение 10 минут создаёт вторую запись
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-idempotency.test.ts > PT-009 - тот же телефон, другой состав > rescue -> полная заявка в течение 10 минут создаёт вторую запись
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stdout | tests/lead-idempotency.test.ts > PT-009 - тот же телефон, другой состав > полная заявка сохраняет свой состав, а не подменяется rescue
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-idempotency.test.ts > PT-009 - тот же телефон, другой состав > полная заявка сохраняет свой состав, а не подменяется rescue
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stdout | tests/lead-idempotency.test.ts > PT-009 - тот же телефон, другой состав > полная заявка сохраняет свой состав, а не подменяется rescue
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-idempotency.test.ts > PT-009 - тот же телефон, другой состав > полная заявка сохраняет свой состав, а не подменяется rescue
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stdout | tests/lead-idempotency.test.ts > PT-009 - тот же телефон, другой состав > изменившийся состав заказа с тем же телефоном -> новая запись
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-idempotency.test.ts > PT-009 - тот же телефон, другой состав > изменившийся состав заказа с тем же телефоном -> новая запись
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stdout | tests/lead-idempotency.test.ts > PT-009 - тот же телефон, другой состав > изменившийся состав заказа с тем же телефоном -> новая запись
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-idempotency.test.ts > PT-009 - тот же телефон, другой состав > изменившийся состав заказа с тем же телефоном -> новая запись
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stdout | tests/lead-idempotency.test.ts > PT-009 - совместимость со старым клиентом > без requestId дедуп по телефону и содержимому продолжает работать
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-idempotency.test.ts > PT-009 - совместимость со старым клиентом > без requestId дедуп по телефону и содержимому продолжает работать
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stdout | tests/lead-idempotency.test.ts > PT-009 - совместимость со старым клиентом > без requestId заявка с другим составом всё равно создаётся
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-idempotency.test.ts > PT-009 - совместимость со старым клиентом > без requestId заявка с другим составом всё равно создаётся
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stdout | tests/lead-idempotency.test.ts > PT-009 - совместимость со старым клиентом > без requestId заявка с другим составом всё равно создаётся
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-idempotency.test.ts > PT-009 - совместимость со старым клиентом > без requestId заявка с другим составом всё равно создаётся
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stdout | tests/lead-idempotency.test.ts > PT-009 - флаг LEAD_IDEMPOTENCY_ENABLED=0 > повтор requestId больше не разбирается: срабатывает прежний дедуп по телефону
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-idempotency.test.ts > PT-009 - флаг LEAD_IDEMPOTENCY_ENABLED=0 > повтор requestId больше не разбирается: срабатывает прежний дедуп по телефону
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stdout | tests/lead-idempotency.test.ts > PT-009 - флаг LEAD_IDEMPOTENCY_ENABLED=0 > тот же requestId с другим payload не даёт 409
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-idempotency.test.ts > PT-009 - флаг LEAD_IDEMPOTENCY_ENABLED=0 > тот же requestId с другим payload не даёт 409
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stdout | tests/lead-idempotency.test.ts > PT-009 - флаг LEAD_IDEMPOTENCY_ENABLED=0 > возвращается прежний дефект: полная заявка после rescue получает её код
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-idempotency.test.ts > PT-009 - флаг LEAD_IDEMPOTENCY_ENABLED=0 > возвращается прежний дефект: полная заявка после rescue получает её код
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+ ✓  unit  tests/lead-idempotency.test.ts (15 tests) 162ms
+ ✓  unit  tests/ui-states.test.ts (18 tests) 125ms
+stdout | tests/lead-outbox.test.ts > PT-003 · задание на доставку создаётся вместе с заявкой > задания существуют на каждый канал сразу после ответа
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-outbox.test.ts > PT-003 · задание на доставку создаётся вместе с заявкой > задания существуют на каждый канал сразу после ответа
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stdout | tests/lead-outbox.test.ts > PT-003 · задание на доставку создаётся вместе с заявкой > ответ приходит, не дожидаясь внешних сервисов
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-outbox.test.ts > PT-003 · задание на доставку создаётся вместе с заявкой > ответ приходит, не дожидаясь внешних сервисов
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stdout | tests/lead-outbox.test.ts > PT-003 · задание на доставку создаётся вместе с заявкой > ответ не обещает доставку, которой ещё не было
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-outbox.test.ts > PT-003 · задание на доставку создаётся вместе с заявкой > ответ не обещает доставку, которой ещё не было
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stdout | tests/lead-outbox.test.ts > PT-003 · задание на доставку создаётся вместе с заявкой > падение доставки не мешает ответу и попадает в очередь ретрая
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-outbox.test.ts > PT-003 · задание на доставку создаётся вместе с заявкой > падение доставки не мешает ответу и попадает в очередь ретрая
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stdout | tests/lead-route.test.ts > T-027 - POST /api/lead > 201 + zapis v hranilishche + dostavka v oba kanala
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-route.test.ts > T-027 - POST /api/lead > 201 + zapis v hranilishche + dostavka v oba kanala
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stdout | tests/lead-route.test.ts > T-027 - POST /api/lead > dedup: povtor s tem zhe telefonom vozvrashchaet tot zhe leadId
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-route.test.ts > T-027 - POST /api/lead > dedup: povtor s tem zhe telefonom vozvrashchaet tot zhe leadId
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stdout | tests/lead-route.test.ts > T-027 - POST /api/lead > 6-y zapros za 10 min -> 429 s Retry-After
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-route.test.ts > T-027 - POST /api/lead > 6-y zapros za 10 min -> 429 s Retry-After
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219910', known: false, required: false }
+
+stdout | tests/lead-route.test.ts > T-027 - POST /api/lead > 6-y zapros za 10 min -> 429 s Retry-After
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-route.test.ts > T-027 - POST /api/lead > 6-y zapros za 10 min -> 429 s Retry-After
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219911', known: false, required: false }
+
+stdout | tests/lead-route.test.ts > T-027 - POST /api/lead > 6-y zapros za 10 min -> 429 s Retry-After
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-route.test.ts > T-027 - POST /api/lead > 6-y zapros za 10 min -> 429 s Retry-After
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219912', known: false, required: false }
+
+stdout | tests/lead-route.test.ts > T-027 - POST /api/lead > 6-y zapros za 10 min -> 429 s Retry-After
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-route.test.ts > T-027 - POST /api/lead > 6-y zapros za 10 min -> 429 s Retry-After
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219913', known: false, required: false }
+
+stdout | tests/lead-route.test.ts > T-027 - POST /api/lead > 6-y zapros za 10 min -> 429 s Retry-After
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-route.test.ts > T-027 - POST /api/lead > 6-y zapros za 10 min -> 429 s Retry-After
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219914', known: false, required: false }
+
+stdout | tests/lead-route.test.ts > T-027 - POST /api/lead > upavshaya dostavka ne roniaet otvet i pishetsya kak failed
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-route.test.ts > T-027 - POST /api/lead > upavshaya dostavka ne roniaet otvet i pishetsya kak failed
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stdout | tests/lead-route.test.ts > T-027 - POST /api/lead > rescue-lead sohranyaetsya so statusom rescue
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-route.test.ts > T-027 - POST /api/lead > rescue-lead sohranyaetsya so statusom rescue
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79001234567', known: false, required: false }
+
+ ✓  unit  tests/lead-route.test.ts (8 tests) 97ms
+ ✓  unit  tests/lead-outbox.test.ts (7 tests) 152ms
+stdout | tests/lead-body-limit.test.ts > PT-021 · лимит тела > обычная заявка проходит как раньше
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-body-limit.test.ts > PT-021 · лимит тела > обычная заявка проходит как раньше
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stderr | tests/lead-route-recalc.test.ts > PT-010 · POST /api/lead пересчитывает цену на сервере > заниженная сумма не попадает в хранилище — пишется серверная
+[lead] сумма заявки пересчитана сервером: клиент 1 ₽ → сервер 35300 ₽ {
+  phone: '+79161000001',
+  issues: [
+    {
+      code: 'client-price-deviation',
+      sku: 'eks-00010705',
+      message: 'Цена «Крепление АРТ накладное круглое поворотное, чёрное» в заявке 1 ₽, в каталоге 380 ₽ — в расчёт пошла каталожная'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 1 ₽, сервер насчитал 35300 ₽ (расхождение 3529900.0 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79161000001', known: false, required: false }
+
+stdout | tests/lead-body-limit.test.ts > PT-021 · лимит тела > многобайтная кириллица, разрезанная между чанками, читается без порчи
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-body-limit.test.ts > PT-021 · лимит тела > многобайтная кириллица, разрезанная между чанками, читается без порчи
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stderr | tests/lead-route-recalc.test.ts > PT-010 · POST /api/lead пересчитывает цену на сервере > письмо мастеру содержит серверную сумму и служебную пометку
+[lead] сумма заявки пересчитана сервером: клиент 1 ₽ → сервер 35300 ₽ {
+  phone: '+79161000002',
+  issues: [
+    {
+      code: 'client-price-deviation',
+      sku: 'eks-00010705',
+      message: 'Цена «Крепление АРТ накладное круглое поворотное, чёрное» в заявке 1 ₽, в каталоге 380 ₽ — в расчёт пошла каталожная'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 1 ₽, сервер насчитал 35300 ₽ (расхождение 3529900.0 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79161000002', known: false, required: false }
+
+stdout | tests/lead-body-limit.test.ts > PT-021 · лимит тела > валидная заявка чуть меньше лимита проходит
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-body-limit.test.ts > PT-021 · лимит тела > валидная заявка чуть меньше лимита проходит
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79055219909', known: false, required: false }
+
+stderr | tests/lead-route-recalc.test.ts > PT-010 · POST /api/lead пересчитывает цену на сервере > честная заявка проходит без пометки расхождения
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79161000005', known: false, required: false }
+
+stdout | tests/lead-body-limit.test.ts > PT-021 · ключ лимита не подделывается заголовком > разные подделанные XFF при одном реальном адресе — один лимит
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-body-limit.test.ts > PT-021 · ключ лимита не подделывается заголовком > разные подделанные XFF при одном реальном адресе — один лимит
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79160000000', known: false, required: false }
+
+stdout | tests/lead-body-limit.test.ts > PT-021 · ключ лимита не подделывается заголовком > разные подделанные XFF при одном реальном адресе — один лимит
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-body-limit.test.ts > PT-021 · ключ лимита не подделывается заголовком > разные подделанные XFF при одном реальном адресе — один лимит
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79160000001', known: false, required: false }
+
+stdout | tests/lead-route-recalc.test.ts > PT-010 · POST /api/lead пересчитывает цену на сервере > rescue-заявка без снапшота принимается с суммой клиента
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-route-recalc.test.ts > PT-010 · POST /api/lead пересчитывает цену на сервере > rescue-заявка без снапшота принимается с суммой клиента
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79161000006', known: false, required: false }
+
+stdout | tests/lead-body-limit.test.ts > PT-021 · ключ лимита не подделывается заголовком > разные подделанные XFF при одном реальном адресе — один лимит
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-body-limit.test.ts > PT-021 · ключ лимита не подделывается заголовком > разные подделанные XFF при одном реальном адресе — один лимит
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79160000002', known: false, required: false }
+
+stderr | tests/lead-route-recalc.test.ts > PT-010 · флаг аварийного отката LEAD_SERVER_RECALC_ENABLED=0 > сумма клиента проходит как есть, неизвестный SKU больше не отклоняется
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79161000007', known: false, required: false }
+
+stderr | tests/lead-route-recalc.test.ts > PT-010 · флаг аварийного отката LEAD_SERVER_RECALC_ENABLED=0 > сумма клиента проходит как есть, неизвестный SKU больше не отклоняется
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79161000008', known: false, required: false }
+
+stdout | tests/lead-body-limit.test.ts > PT-021 · ключ лимита не подделывается заголовком > разные подделанные XFF при одном реальном адресе — один лимит
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+ ✓  unit  tests/lead-route-recalc.test.ts (7 tests) 79ms
+stderr | tests/lead-body-limit.test.ts > PT-021 · ключ лимита не подделывается заголовком > разные подделанные XFF при одном реальном адресе — один лимит
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79160000003', known: false, required: false }
+
+stdout | tests/lead-body-limit.test.ts > PT-021 · ключ лимита не подделывается заголовком > разные подделанные XFF при одном реальном адресе — один лимит
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-body-limit.test.ts > PT-021 · ключ лимита не подделывается заголовком > разные подделанные XFF при одном реальном адресе — один лимит
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79160000004', known: false, required: false }
+
+ ✓  unit  tests/lead-body-limit.test.ts (9 tests) 128ms
+ ✓  unit  tests/lead-submit-retry.test.ts (13 tests) 80ms
+ ✓  unit  tests/catalog-owner-corrections.test.ts (20 tests) 88ms
+ ✓  unit  tests/step1-selectors.test.ts (39 tests) 73ms
+ ✓  unit  tests/lead-submit.test.ts (25 tests) 71ms
+ ✓  unit  tests/lead-request-id.test.ts (24 tests) 50ms
+ ✓  unit  tests/lead-server-recalc.test.ts (10 tests) 73ms
+stderr | tests/availability-admin-route.test.ts > PT-016 · доступ к админке календаря > верный токен проходит проверку доступа (и упирается уже в БД)
+[availability-admin] GET: connect ECONNREFUSED 127.0.0.1:1
+
+ ✓  unit  tests/availability-admin-route.test.ts (11 tests) 84ms
+ ✓  unit  tests/brand-polish.test.ts (21 tests) 101ms
+stderr | tests/availability-api.test.ts > PT-016 · GET /api/availability > недоступная БД не роняет роут: 200 и запасная строка
+[availability] календарь из БД не прочитался — показываю запасной: connect ECONNREFUSED 127.0.0.1:1
+
+ ✓  unit  tests/availability-api.test.ts (4 tests) 36ms
+ ✓  unit  tests/lead-server-recalc-rejections.test.ts (10 tests) 45ms
+ ✓  unit  tests/catalog-index.test.ts (12 tests) 46ms
+ ✓  unit  tests/product-predicates.test.ts (8 tests) 33ms
+ ✓  unit  tests/client-materials.test.ts (24 tests) 123ms
+ ✓  unit  tests/availability-slots.test.ts (19 tests) 28ms
+ ✓  unit  tests/attribution-normalize.test.ts (17 tests) 21ms
+ ✓  unit  tests/lead-api.test.ts (13 tests) 37ms
+ ✓  unit  tests/led-project.test.ts (20 tests) 21ms
+ ✓  unit  tests/brand-voice-kit.test.ts (32 tests) 48ms
+ ✓  unit  tests/led-catalog-view.test.ts (18 tests) 28ms
+ ✓  unit  tests/catalog-photo.test.ts (20 tests) 24ms
+ ✓  unit  tests/catalog-presentation.test.ts (16 tests) 44ms
+ ✓  unit  tests/proof-gallery.test.ts (20 tests) 47ms
+ ✓  unit  tests/availability-snapshot.test.ts (9 tests) 25ms
+ ✓  unit  tests/selectors.test.ts (26 tests) 17ms
+ ✓  unit  tests/copy-lint.test.ts (16 tests) 30ms
+ ✓  unit  tests/kit-rules.test.ts (26 tests) 17ms
+ ✓  unit  tests/service-page-actions.test.ts (21 tests) 13ms
+ ✓  unit  tests/project-lighting-tasks.test.ts (11 tests) 16ms
+ ✓  unit  tests/design-tokens.test.ts (10 tests) 15ms
+ ✓  unit  tests/product-image-pending.test.ts (5 tests) 16ms
+ ✓  unit  tests/room-workspace.test.ts (22 tests) 14ms
+ ✓  unit  tests/quiz-icons.test.ts (2 tests) 32ms
+ ✓  unit  tests/catalog-search.test.ts (6 tests) 8ms
+ ✓  unit  tests/env.test.ts (16 tests) 15ms
+ ✓  unit  tests/led-hardware.test.ts (15 tests) 14ms
+ ✓  unit  tests/safe-storage.test.ts (9 tests) 14ms
+ ✓  unit  tests/cart-derived.test.ts (26 tests) 15ms
+ ✓  unit  tests/company-rebrand.test.ts (14 tests) 15ms
+ ✓  unit  tests/lighting.test.ts (10 tests) 15ms
+ ✓  unit  tests/step0-fsm.test.ts (26 tests) 12ms
+ ✓  unit  tests/lead-client-ip.test.ts (11 tests) 12ms
+ ✓  unit  tests/draft.test.ts (17 tests) 12ms
+ ✓  unit  tests/step1-cart-rules.test.ts (33 tests) 12ms
+ ✓  unit  tests/analytics.test.ts (10 tests) 11ms
+ ✓  unit  tests/rooms-snapshot.test.ts (15 tests) 16ms
+ ✓  unit  tests/service-faq.test.ts (4 tests) 12ms
+ ✓  unit  tests/calculator-room-features.test.ts (15 tests) 11ms
+ ✓  unit  tests/step1-progress.test.ts (33 tests) 11ms
+ ✓  unit  tests/quiz-step-images.test.ts (2 tests) 11ms
+ ✓  unit  tests/entry-context.test.ts (19 tests) 11ms
+ ✓  unit  tests/use-step1-tabs.test.ts (17 tests) 9ms
+ ✓  unit  tests/lead-failure-view.test.ts (19 tests) 11ms
+ ✓  unit  tests/catalog-kit-gaps.test.ts (10 tests) 9ms
+ ✓  unit  tests/led-matrix-local.test.ts (5 tests) 9ms
+ ✓  unit  tests/home-price-anchor.test.ts (13 tests) 9ms
+ ✓  unit  tests/presets.test.ts (12 tests) 10ms
+ ✓  unit  tests/reducer.test.ts (14 tests) 10ms
+ ✓  unit  tests/catalog-coverage.test.ts (6 tests) 11ms
+ ✓  unit  tests/calculator-pricing.test.ts (22 tests) 11ms
+ ✓  unit  tests/step1-footer-action.test.ts (15 tests) 12ms
+ ✓  unit  tests/led-passports.test.ts (11 tests) 9ms
+ ✓  unit  tests/snapshot-merge.test.ts (13 tests) 9ms
+ ✓  unit  tests/lead-consent.test.ts (13 tests) 9ms
+ ✓  unit  tests/editorial-pages.test.ts (6 tests) 10ms
+ ✓  unit  tests/catalog-filters.test.ts (10 tests) 9ms
+ ✓  unit  tests/image-manifest.test.ts (3 tests) 10ms
+ ✓  unit  tests/service-price-anchor.test.ts (10 tests) 11ms
+ ✓  unit  tests/service-presentation.test.ts (5 tests) 8ms
+ ✓  unit  tests/seo-meta.test.ts (8 tests) 6ms
+ ✓  unit  tests/telegram-link.test.ts (6 tests) 8ms
+ ✓  unit  tests/strip-state.test.ts (8 tests) 7ms
+ ✓  unit  tests/alice-routes.test.ts (8 tests) 9ms
+ ✓  unit  tests/catalog-images.test.ts (4 tests) 9ms
+ ✓  unit  tests/privacy-policy.test.ts (11 tests) 8ms
+ ✓  unit  tests/led-price-basis.test.ts (12 tests) 8ms
+ ✓  unit  tests/checkout-intent.test.ts (5 tests) 5ms
+ ✓  unit  tests/kit-offer.test.ts (13 tests) 7ms
+ ✓  unit  tests/lead-snapshot.test.ts (7 tests) 9ms
+ ✓  unit  tests/step2-copy.test.ts (7 tests) 7ms
+ ✓  unit  tests/orphan-track.test.ts (12 tests) 7ms
+ ✓  unit  tests/step0-param-value.test.ts (11 tests) 7ms
+ ✓  unit  tests/lighting-first.test.ts (5 tests) 7ms
+ ✓  unit  tests/track-sale-snapshot.test.ts (9 tests) 7ms
+ ✓  unit  tests/seo-hub.test.ts (4 tests) 6ms
+ ✓  unit  tests/pricing.test.ts (7 tests) 6ms
+ ✓  unit  tests/whatsapp-contact.test.ts (7 tests) 6ms
+ ✓  unit  tests/use-catalog-filters.test.ts (8 tests) 6ms
+ ✓  unit  tests/catalog-index-resolve.test.ts (5 tests) 6ms
+ ✓  unit  tests/privacy-requisites.test.ts (5 tests) 6ms
+ ✓  unit  tests/catalog-sections.test.ts (3 tests) 5ms
+ ✓  unit  tests/catalog-checkout.test.ts (6 tests) 5ms
+ ✓  unit  tests/calculator-summary-routing.test.ts (5 tests) 5ms
+ ✓  unit  tests/catalog-stale.test.ts (7 tests) 5ms
+ ✓  unit  tests/system-entry-price.test.ts (4 tests) 5ms
+ ✓  unit  tests/availability-legal.test.ts (3 tests) 9ms
+ ✓  unit  tests/discount-mode.test.ts (6 tests) 5ms
+ ✓  unit  tests/availability-window.test.ts (4 tests) 4ms
+ ✓  unit  tests/led-supplier-request.test.ts (4 tests) 4ms
+stderr | tests/lead-delivery-integration-db.test.ts > PT-020 · доставка: настоящая БД + фейковый HTTP-сервер > идемпотентность (PT-009) насквозь > повтор с тем же requestId не отправляет второе сообщение
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 18000 ₽ {
+  phone: '+79161112233',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 1 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 18000 ₽ (расхождение 71.0 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79161112233', known: false, required: false }
+
+stderr | tests/lead-delivery-integration-db.test.ts > PT-020 · доставка: настоящая БД + фейковый HTTP-сервер > идемпотентность (PT-009) насквозь > два параллельных запроса с одним requestId — одна заявка и одна отправка
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 18000 ₽ {
+  phone: '+79161112234',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 1 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 18000 ₽ (расхождение 71.0 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79161112234', known: false, required: false }
+
+stderr | tests/lead-delivery-integration-db.test.ts > PT-020 · доставка: настоящая БД + фейковый HTTP-сервер > идемпотентность (PT-009) насквозь > два параллельных запроса с одним requestId — одна заявка и одна отправка
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 18000 ₽ {
+  phone: '+79161112234',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 1 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 18000 ₽ (расхождение 71.0 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79161112234', known: false, required: false }
+
+stderr | tests/lead-delivery-integration-db.test.ts > PT-020 · доставка: настоящая БД + фейковый HTTP-сервер > идемпотентность (PT-009) насквозь > тот же requestId с другим содержимым — 409 и никакой отправки
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 18000 ₽ {
+  phone: '+79161112235',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 1 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 18000 ₽ (расхождение 71.0 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79161112235', known: false, required: false }
+
+stderr | tests/lead-delivery-integration-db.test.ts > PT-020 · доставка: настоящая БД + фейковый HTTP-сервер > приём заявки при недоступных каналах > заявка сохраняется, а задания падают в failed с текстом ошибки
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 18000 ₽ {
+  phone: '+79161112236',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 1 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 18000 ₽ (расхождение 71.0 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79161112236', known: false, required: false }
+
+stderr | tests/lead-delivery-integration-db.test.ts > PT-020 · доставка: настоящая БД + фейковый HTTP-сервер > приём заявки при недоступных каналах > обрыв соединения у канала не теряет заявку
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 18000 ₽ {
+  phone: '+79161112237',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 1 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 18000 ₽ (расхождение 71.0 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79161112237', known: false, required: false }
+
+ ✓  db  tests/lead-delivery-integration-db.test.ts (19 tests) 1584ms
+       ✓ повтор с тем же requestId не отправляет второе сообщение  629ms
+stderr | tests/lead-route-db.test.ts > N-001 · POST /api/lead с PostgreSQL > сохраняет заявку в БД со снапшотом из двух комнат
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 30000 ₽ {
+  phone: '+79161112233',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 2 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Спальня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 30000 ₽ (расхождение 51.6 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79161112233', known: false, required: false }
+
+stderr | tests/lead-route-db.test.ts > N-001 · POST /api/lead с PostgreSQL > дедуп по телефону переживает потерю памяти процесса
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 30000 ₽ {
+  phone: '+79162223344',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 2 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Спальня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 30000 ₽ (расхождение 51.6 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79162223344', known: false, required: false }
+
+stderr | tests/lead-route-db.test.ts > N-001 · POST /api/lead с PostgreSQL > 6-й запрос с одного IP → 429 даже после сброса in-memory лимитера
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 30000 ₽ {
+  phone: '+79160001000',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 2 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Спальня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 30000 ₽ (расхождение 51.6 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79160001000', known: false, required: false }
+
+stderr | tests/lead-route-db.test.ts > N-001 · POST /api/lead с PostgreSQL > 6-й запрос с одного IP → 429 даже после сброса in-memory лимитера
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 30000 ₽ {
+  phone: '+79160001001',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 2 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Спальня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 30000 ₽ (расхождение 51.6 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79160001001', known: false, required: false }
+
+stderr | tests/lead-route-db.test.ts > N-001 · POST /api/lead с PostgreSQL > 6-й запрос с одного IP → 429 даже после сброса in-memory лимитера
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 30000 ₽ {
+  phone: '+79160001002',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 2 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Спальня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 30000 ₽ (расхождение 51.6 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79160001002', known: false, required: false }
+
+stderr | tests/lead-route-db.test.ts > N-001 · POST /api/lead с PostgreSQL > 6-й запрос с одного IP → 429 даже после сброса in-memory лимитера
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 30000 ₽ {
+  phone: '+79160001003',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 2 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Спальня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 30000 ₽ (расхождение 51.6 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79160001003', known: false, required: false }
+
+stderr | tests/lead-route-db.test.ts > N-001 · POST /api/lead с PostgreSQL > 6-й запрос с одного IP → 429 даже после сброса in-memory лимитера
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 30000 ₽ {
+  phone: '+79160001004',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 2 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Спальня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 30000 ₽ (расхождение 51.6 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79160001004', known: false, required: false }
+
+stderr | tests/lead-route-db.test.ts > N-001 · POST /api/lead с PostgreSQL > PT-009: повтор requestId возвращает прежний код и не создаёт вторую строку
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 30000 ₽ {
+  phone: '+79167778899',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 2 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Спальня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 30000 ₽ (расхождение 51.6 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79167778899', known: false, required: false }
+
+stderr | tests/lead-route-db.test.ts > N-001 · POST /api/lead с PostgreSQL > PT-009: тот же requestId с другим payload → 409
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 30000 ₽ {
+  phone: '+79167770011',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 2 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Спальня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 30000 ₽ (расхождение 51.6 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79167770011', known: false, required: false }
+
+stderr | tests/lead-route-db.test.ts > N-001 · POST /api/lead с PostgreSQL > PT-009: unique-индекс ловит параллельную вставку с одним requestId
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 30000 ₽ {
+  phone: '+79167772233',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 2 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Спальня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 30000 ₽ (расхождение 51.6 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79167772233', known: false, required: false }
+
+stderr | tests/lead-route-db.test.ts > N-001 · POST /api/lead с PostgreSQL > PT-009: unique-индекс ловит параллельную вставку с одним requestId
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 30000 ₽ {
+  phone: '+79167772233',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 2 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Спальня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 30000 ₽ (расхождение 51.6 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79167772233', known: false, required: false }
+
+stdout | tests/lead-route-db.test.ts > N-001 · POST /api/lead с PostgreSQL > PT-009: rescue → полная заявка с тем же телефоном создаёт вторую запись
+[lead] пересчёт цены: unverified {
+  issues: [
+    'no-snapshot: Заявка без расчётного снапшота — сумма не проверялась сервером'
+  ]
+}
+
+stderr | tests/lead-route-db.test.ts > N-001 · POST /api/lead с PostgreSQL > PT-009: rescue → полная заявка с тем же телефоном создаёт вторую запись
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79167774455', known: false, required: false }
+
+stderr | tests/lead-route-db.test.ts > N-001 · POST /api/lead с PostgreSQL > PT-009: rescue → полная заявка с тем же телефоном создаёт вторую запись
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 30000 ₽ {
+  phone: '+79167774455',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 2 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Спальня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 30000 ₽ (расхождение 51.6 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79167774455', known: false, required: false }
+
+stderr | tests/lead-route-db.test.ts > N-001 · POST /api/lead с PostgreSQL > GET /api/lead/:code находит заявку по коду с CRON_SECRET
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 30000 ₽ {
+  phone: '+79165556677',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 2 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Спальня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 30000 ₽ (расхождение 51.6 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79165556677', known: false, required: false }
+
+stderr | tests/lead-route-db.test.ts > N-001 · POST /api/lead с PostgreSQL > PT-012: длинная рекламная ссылка в атрибуции не даёт 422 и нормализуется в БД
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 30000 ₽ {
+  phone: '+79167778899',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 2 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Спальня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 30000 ₽ (расхождение 51.6 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79167778899', known: false, required: false }
+
+stderr | tests/lead-route-db.test.ts > N-001 · POST /api/lead с PostgreSQL > PT-014: версия и момент согласия сохраняются в отдельных колонках
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 30000 ₽ {
+  phone: '+79161110001',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 2 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Спальня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 30000 ₽ (расхождение 51.6 %)'
+    }
+  ]
+}
+
+stderr | tests/lead-route-db.test.ts > N-001 · POST /api/lead с PostgreSQL > PT-014: без версии клиента — NULL, момент ставит сервер
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 30000 ₽ {
+  phone: '+79161110002',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 2 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Спальня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 30000 ₽ (расхождение 51.6 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79161110002', known: false, required: false }
+
+stderr | tests/lead-route-db.test.ts > N-001 · POST /api/lead с PostgreSQL > PT-014: невозможное время согласия заменяется серверным
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 30000 ₽ {
+  phone: '+79161110003',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 2 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Спальня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 30000 ₽ (расхождение 51.6 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент 2020-01-01 ≠ 2026-09-10 { phone: '+79161110003', known: true, required: false }
+
+stderr | tests/lead-route-db.test.ts > N-001 · POST /api/lead с PostgreSQL > PT-014: мусор в consentVersion не доезжает до БД
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 30000 ₽ {
+  phone: '+79161110004',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 2 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Спальня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 30000 ₽ (расхождение 51.6 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79161110004', known: false, required: false }
+
+stderr | tests/lead-route-db.test.ts > N-001 · POST /api/lead с PostgreSQL > PT-014: LEAD_CONSENT_VERSION_REQUIRED=1 отклоняет устаревшую версию
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 30000 ₽ {
+  phone: '+79161110005',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 2 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Спальня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 30000 ₽ (расхождение 51.6 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент 2020-01-01 ≠ 2026-09-10 { phone: '+79161110005', known: true, required: true }
+
+stderr | tests/lead-route-db.test.ts > N-001 · POST /api/lead с PostgreSQL > PT-014: LEAD_CONSENT_VERSION_REQUIRED=1 отклоняет устаревшую версию
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 30000 ₽ {
+  phone: '+79161110006',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 2 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Спальня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 30000 ₽ (расхождение 51.6 %)'
+    }
+  ]
+}
+
+stderr | tests/lead-route-db.test.ts > N-001 · POST /api/lead с PostgreSQL > PT-014: LEAD_CONSENT_VERSION_REQUIRED=1 отклоняет устаревшую версию
+[lead] сумма заявки пересчитана сервером: клиент 62000 ₽ → сервер 30000 ₽ {
+  phone: '+79161110007',
+  issues: [
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комнат без нормализованных параметров: 2 — состав восстановлен по лейблам'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Кухня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'legacy-room-snapshot',
+      message: 'Комната «Спальня»: ceiling-type-from-label:standard'
+    },
+    {
+      code: 'price-mismatch',
+      message: 'Клиент видел 62000 ₽, сервер насчитал 30000 ₽ (расхождение 51.6 %)'
+    }
+  ]
+}
+[lead] согласие не совпадает с текущей политикой: клиент без версии ≠ 2026-09-10 { phone: '+79161110007', known: false, required: true }
+
+ ✓  db  tests/lead-route-db.test.ts (15 tests) 499ms
+stderr | tests/delivery-alert-db.test.ts > PT-015 · алерт о сбоях доставки на PostgreSQL > оба канала упали N раз подряд — алерт отправлен и записан в журнал
+[delivery-alert] отправлен алерт через webhook: 4 неудачных попыток подряд, заявок в серии 2
+
+stderr | tests/delivery-alert-db.test.ts > PT-015 · алерт о сбоях доставки на PostgreSQL > охлаждение хранится в БД и переживает новый экземпляр хранилища
+[delivery-alert] отправлен алерт через webhook: 4 неудачных попыток подряд, заявок в серии 2
+
+stderr | tests/delivery-alert-db.test.ts > PT-015 · алерт о сбоях доставки на PostgreSQL > приёмник алерта отказал — запись всё равно есть, шторма нет
+[delivery-alert] алерт о сбое доставки НЕ доставлен (webhook: HTTP 502): 4 неудачных попыток подряд в каналы web3forms, telegram
+
+ ✓  db  tests/delivery-alert-db.test.ts (9 tests) 453ms
+ ✓  db  tests/lead-store-pg.test.ts (24 tests) 167ms
+ ✓  db  tests/availability-db.test.ts (12 tests) 128ms
+
+ Test Files  116 passed (116)
+      Tests  1490 passed (1490)
+   Start at  14:05:01
+   Duration  22.06s (transform 3.61s, setup 0ms, import 12.95s, tests 8.67s, environment 12ms)
+

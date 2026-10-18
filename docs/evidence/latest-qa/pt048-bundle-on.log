@@ -1,0 +1,23 @@
+
+> nextjs@0.1.0 check:bundle
+> node scripts/check-bundle-budget.mjs
+
+[bundle] First Load JS (gzip) по страницам:
+    248.7 КБ  /uslugi/prodazha-trekovogo-osveshcheniya
+    228.3 КБ  /
+    217.8 КБ  /uslugi/tenevoy-profil
+    216.9 КБ  /uslugi/individualnye-proekty
+    216.9 КБ  /uslugi/paryashchie-potolki
+    216.9 КБ  /uslugi/prostye-potolki
+    216.9 КБ  /uslugi/skrytye-karnizy
+    216.9 КБ  /uslugi/svetoprozrachnye-potolki
+    216.9 КБ  /uslugi/svetovye-linii
+    216.9 КБ  /uslugi/trekovoe-osveshchenie
+    202.4 КБ  /umnoe-osveshchenie
+    200.5 КБ  /o-kompanii
+    200.5 КБ  /uslugi
+    190.8 КБ  /admin/availability
+    187.5 КБ  /_not-found
+    187.5 КБ  /privacy
+    166.9 КБ  /_global-error
+[bundle] ok — / 228.3 КБ ≤ 300 КБ

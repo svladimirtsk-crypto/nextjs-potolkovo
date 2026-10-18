@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import type { RoomConfig } from "@/lib/calculator/use-calculator-engine";
-const ROOM_TYPES = ["Кухня","Гостиная","Спальня","Детская","Кабинет","Санузел","Коридор","Прихожая","Другое"];
+import { ROOM_TYPES, RoomTypeIcon } from "../room-type-icons";
 export function RoomPickerScreen({ rooms, mode, onAdd, onSelect }:{
   rooms: RoomConfig[]; mode: "first"|"add";
   onAdd: (label:string)=>void; onSelect: (id:string)=>void;
@@ -28,7 +28,10 @@ export function RoomPickerScreen({ rooms, mode, onAdd, onSelect }:{
         <p className="text-xs uppercase tracking-wider text-slate-600 mb-2">Добавить помещение</p>
         <div className="flex flex-wrap gap-2">
           {ROOM_TYPES.map(t=>(
-            <button key={t} type="button" onClick={()=>onAdd(t)} className="min-h-11 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100">+ {t}</button>
+            <button key={t} type="button" onClick={()=>onAdd(t)} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950">
+              <RoomTypeIcon type={t} />
+              <span>+ {t}</span>
+            </button>
           ))}
         </div>
       </div>

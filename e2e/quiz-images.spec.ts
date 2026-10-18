@@ -2,8 +2,12 @@ import { expect, test } from "@playwright/test";
 
 import { MODAL } from "./helpers";
 
+// Test process must use the same build-time value as the Next build. A mismatch
+// fails these checks instead of silently accepting the wrong deployed bundle.
+const IMAGES_ON = process.env.NEXT_PUBLIC_QUIZ_STEP_IMAGES === "on";
+
 /**
- * PT-038…042, PT-046, PT-047, PT-049 · Миниатюры вариантов в квизе.
+ * PT-038…042, PT-046…049 · Off by default; on is a three-screen pilot.
  *
  * Что здесь проверяется (и чего здесь намеренно НЕТ):
  *
@@ -77,29 +81,40 @@ async function openCorniceScreen(page: import("@playwright/test").Page) {
   return modal;
 }
 
-test.describe("PT-040 · Карнизы: фото ниши и схемы встроенного/накладного", () => {
-  test("у трёх вариантов есть изображение, у «без карниза» — только текст", async ({ page }) => {
+test("PT-048 · флаг управляет тремя схемами потолка, но не выбором/ценой", async ({ page }) => {
+  const modal = await enableRoomFeatures(page);
+  const options = modal.locator("[data-ceiling-option]");
+  await expect(options).toHaveCount(3);
+  await expect(modal.locator(".pk-ceiling-diagram svg")).toHaveCount(IMAGES_ON ? 3 : 0);
+  const shadow = modal.getByRole("button", { name: /Теневой потолок/ });
+  await shadow.click();
+  await expect(shadow).toHaveAttribute("aria-pressed", "true");
+  await expect(shadow).toContainText("₽");
+  await expect(shadow).toContainText("Теневой потолок");
+  if (!IMAGES_ON) await expect(modal.getByText(/Изображения — схемы/)).toHaveCount(0);
+});
+
+test.describe("PT-040 · Карнизы: off текстом, on фото ниши и схемы", () => {
+  test("off оставляет все варианты текстовыми; on иллюстрирует три положительных", async ({ page }) => {
     const modal = await openCorniceScreen(page);
-
-    // Реальное фото скрытой ниши: alt описывает, что утоплено за полотном.
     const niche = modal.getByRole("button", { name: /Скрытая ниша/ });
-    await expect(niche.locator("img")).toHaveAttribute(
-      "alt",
-      "Скрытая ниша: карниз утоплен за натяжным полотном"
-    );
-    await expect(niche.locator("img")).toHaveAttribute("src", /quiz-cornice-hidden-niche-480\.webp/);
-
-    // Схемы: SVG как есть, без растра и без alt (смысл несёт заголовок).
     const builtIn = modal.getByRole("button", { name: /Встроенный карниз/ });
     const surface = modal.getByRole("button", { name: /Накладной карниз/ });
-    await expect(builtIn.locator("img")).toHaveAttribute("src", "/quiz-cornice-builtin.svg");
-    await expect(surface.locator("img")).toHaveAttribute("src", "/quiz-cornice-surface.svg");
-    await expect(builtIn.locator("img")).toHaveAttribute("alt", "");
-    await expect(surface.locator("img")).toHaveAttribute("alt", "");
 
-    // «Без карниза» — осознанно без картинки.
-    const none = modal.getByRole("button", { name: /Без карниза/ });
-    await expect(none.locator("img")).toHaveCount(0);
+    if (IMAGES_ON) {
+      await expect(niche.locator("img")).toHaveAttribute("alt", "Скрытая ниша: карниз утоплен за натяжным полотном");
+      await expect(niche.locator("img")).toHaveAttribute("src", /quiz-cornice-hidden-niche-480\.webp/);
+      await expect(builtIn.locator("img")).toHaveAttribute("src", "/quiz-cornice-builtin.svg");
+      await expect(surface.locator("img")).toHaveAttribute("src", "/quiz-cornice-surface.svg");
+      await expect(builtIn.locator("img")).toHaveAttribute("alt", "");
+      await expect(surface.locator("img")).toHaveAttribute("alt", "");
+    } else {
+      for (const option of [niche, builtIn, surface]) {
+        await expect(option.locator("img")).toHaveCount(0);
+        await expect(option).toContainText("₽");
+      }
+    }
+    await expect(modal.getByRole("button", { name: /Без карниза/ }).locator("img")).toHaveCount(0);
   });
 
   test("подпись «схематичный разрез» видна у вариантов со схемой и не висит у фото", async ({ page }) => {
@@ -109,7 +124,8 @@ test.describe("PT-040 · Карнизы: фото ниши и схемы вст�
     await expect(modal.getByText(/Разрез схематичный/)).toHaveCount(0);
 
     await modal.getByRole("button", { name: /Накладной карниз/ }).click();
-    await expect(modal.getByText(/Разрез схематичный/)).toBeVisible();
+    if (IMAGES_ON) await expect(modal.getByText(/Разрез схематичный/)).toBeVisible();
+    else await expect(modal.getByText(/Разрез схематичный/)).toHaveCount(0);
 
     await modal.getByRole("button", { name: /Скрытая ниша/ }).click();
     await expect(modal.getByText(/Разрез схематичный/)).toHaveCount(0);
@@ -143,11 +159,15 @@ test.describe("PT-040 · Карнизы: фото ниши и схемы вст�
     if (await confirmCeiling.count()) await confirmCeiling.click();
     await expect(modal.getByRole("heading", { name: "Карнизы", exact: true })).toBeVisible();
 
-    // Ждём именно миниатюру, а не «сеть затихла»: на мобильной раскладке
-    // фоновые запросы идут дольше, и networkidle там не наступает.
     const nicheThumb = modal.getByRole("button", { name: /Скрытая ниша/ }).locator("img");
-    await expect(nicheThumb).toHaveAttribute("src", /quiz-cornice-hidden-niche-480/);
-    await expect(nicheThumb).toHaveJSProperty("complete", true);
+    if (IMAGES_ON) {
+      // Ждём миниатюру, не networkidle: галерея главной грузится независимо.
+      await expect(nicheThumb).toHaveAttribute("src", /quiz-cornice-hidden-niche-480/);
+      await expect(nicheThumb).toHaveJSProperty("complete", true);
+    } else {
+      await expect(nicheThumb).toHaveCount(0);
+      expect(requested.filter((url) => /quiz-cornice/.test(url))).toHaveLength(0);
+    }
 
     const photos = requested.filter((url) => /\/(proj|hero)-/.test(url));
     expect(photos, `лишние полноразмерные кадры: ${photos.join(", ")}`).toHaveLength(0);
@@ -161,8 +181,8 @@ test.describe("PT-040 · Карнизы: фото ниши и схемы вст�
   });
 });
 
-test.describe("PT-042 · Световые линии: фото только у положительного варианта", () => {
-  test("миниатюра у «Добавить световые линии», у «Без световых линий» — нет", async ({ page }) => {
+test.describe("PT-042/048 · Световые линии вне первой волны", () => {
+  test("даже on-пилот сохраняет текст и цену без фото на этом экране", async ({ page }) => {
     const modal = await enableRoomFeatures(page, { lightLines: true });
 
     let found = false;
@@ -178,42 +198,56 @@ test.describe("PT-042 · Световые линии: фото только у �
     expect(found, "экран «Световые линии» не встретился в цепочке").toBe(true);
 
     const add = modal.getByRole("button", { name: /Добавить световые линии/ });
-    await expect(add.locator("img")).toHaveAttribute("src", /quiz-lines-480\.webp/);
-    await expect(add.locator("img")).toHaveAttribute("alt", "Световые линии в натяжном потолке");
+    await expect(add.locator("img")).toHaveCount(0);
+    await expect(add).toContainText("₽");
+    await add.click();
+    await expect(add).toHaveAttribute("aria-pressed", "true");
 
     const none = modal.getByRole("button", { name: /Без световых линий/ });
     await expect(none.locator("img")).toHaveCount(0);
   });
 });
 
-test.describe("PT-041 · Треки: картинка только там, где она однозначна", () => {
-  test("оба монтажных типа — схемы в одном ракурсе, «без трека» — текстом", async ({ page }) => {
-    const modal = await enableRoomFeatures(page, { track: true });
+async function openTrackScreen(page: import("@playwright/test").Page) {
+  const modal = await enableRoomFeatures(page, { track: true });
+  for (let i = 0; i < 10; i += 1) {
+    if (await modal.getByRole("heading", { name: "Трековое освещение", exact: true }).count()) return modal;
+    const confirm = modal.locator("button:visible").filter({ hasText: /^Подтвердить/ }).first();
+    if (!(await confirm.count())) break;
+    await confirm.click();
+  }
+  await expect(modal.getByRole("heading", { name: "Трековое освещение", exact: true })).toBeVisible();
+  return modal;
+}
 
-    let found = false;
-    for (let i = 0; i < 10; i += 1) {
-      if (await modal.getByRole("heading", { name: "Трековое освещение", exact: true }).count()) {
-        found = true;
-        break;
-      }
-      const confirm = modal.locator("button:visible").filter({ hasText: /^Подтвердить/ }).first();
-      if (!(await confirm.count())) break;
-      await confirm.click();
+test.describe("PT-041 · Треки: пилотные схемы только там, где они однозначны", () => {
+  test("off текстом; on — оба монтажных типа в одном ракурсе", async ({ page }) => {
+    const modal = await openTrackScreen(page);
+    const builtIn = modal.getByRole("button", { name: /Встроенный трек/ });
+    const surface = modal.getByRole("button", { name: /Накладной трек/ });
+    if (IMAGES_ON) {
+      await expect(builtIn.locator("img")).toHaveAttribute("src", "/quiz-track-builtin.svg");
+      await expect(surface.locator("img")).toHaveAttribute("src", "/quiz-track-surface.svg");
+    } else {
+      await expect(builtIn.locator("img")).toHaveCount(0);
+      await expect(surface.locator("img")).toHaveCount(0);
     }
-    expect(found, "экран «Трековое освещение» не встретился в цепочке").toBe(true);
-
-    await expect(
-      modal.getByRole("button", { name: /Встроенный трек/ }).locator("img")
-    ).toHaveAttribute("src", "/quiz-track-builtin.svg");
-
-    // Накладной — тоже схема в том же ракурсе: группа неполной не остаётся.
-    await expect(
-      modal.getByRole("button", { name: /Накладной трек/ }).locator("img")
-    ).toHaveAttribute("src", "/quiz-track-surface.svg");
-
-    // Обобщённое фото трека со страницы услуги здесь не используется.
-    const pageImages = await modal.locator("img[src*='svc-track']").count();
-    expect(pageImages).toBe(0);
+    // Обобщённые фотографии не подменяют монтажный подтип.
+    await expect(modal.locator("img[src*='svc-track']")).toHaveCount(0);
     await expect(modal.getByRole("button", { name: /Без трека/ }).locator("img")).toHaveCount(0);
+  });
+
+  test("недоступный SVG не лишает кнопку текста, цены и активного состояния", async ({ page }) => {
+    await page.route("**/quiz-track-surface.svg", (route) =>
+      route.fulfill({ status: 404, contentType: "text/plain", body: "not found" })
+    );
+    const modal = await openTrackScreen(page);
+    const surface = modal.getByRole("button", { name: /Накладной трек/ });
+    await surface.scrollIntoViewIfNeeded();
+    await expect(surface.locator("img")).toHaveCount(0);
+    await surface.click();
+    await expect(surface).toHaveAttribute("aria-pressed", "true");
+    await expect(surface).toContainText("₽");
+    await expect(surface).toContainText("Накладной трек");
   });
 });

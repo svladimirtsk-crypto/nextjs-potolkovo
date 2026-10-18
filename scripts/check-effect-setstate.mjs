@@ -47,6 +47,8 @@ const ALLOWED_SETTERS = {
   setIsPriceVisible: "IntersectionObserver: видимость секции",
   setNow: "тик таймера обратного отсчёта Retry-After: значение — текущее время (PT-013)",
   setIsActionVisible: "IntersectionObserver: видимость секции",
+  setMetersText: "LED: метраж берётся из window.location.search после гидрации, не из render props",
+  setMetersFromTask: "LED: признак того же внешнего URL-параметра, а не синхронизация React-состояния",
 };
 
 /**

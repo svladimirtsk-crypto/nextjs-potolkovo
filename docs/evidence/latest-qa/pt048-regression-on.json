@@ -1,0 +1,80 @@
+{
+  "buildFlag": "on",
+  "date": "2026-10-18",
+  "stats": {
+    "startTime": "2026-10-18T13:38:04.991Z",
+    "duration": 499521.479,
+    "expected": 360,
+    "skipped": 16,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "skipped": [
+    {
+      "project": "chromium-mobile",
+      "title": "draft-restore.spec.ts › PT-007 · восстановление корзины света › «Продолжить» возвращает комнаты, позиции света и скидку"
+    },
+    {
+      "project": "chromium-desktop",
+      "title": "entry-context.spec.ts › PT-008 · матрица точек входа › мобильный стики открывает расчёт с пресетом этой услуги"
+    },
+    {
+      "project": "chromium-desktop",
+      "title": "entry-context.spec.ts › PT-008 · услуги без честного типового расчёта › мобильный стики ведёт в форму"
+    },
+    {
+      "project": "chromium-mobile",
+      "title": "funnel-modern.spec.ts › Сценарий 2 · современный потолок → подбор света › теневой потолок доводится до заявки, суммы сходятся"
+    },
+    {
+      "project": "chromium-mobile",
+      "title": "funnel-modern.spec.ts › Сценарий 2 · современный потолок → подбор света › трековый светильник добавляется, а не исчезает молча"
+    },
+    {
+      "project": "chromium-mobile",
+      "title": "lighting-first.spec.ts › Сценарий 6 · комплект «Для кухни» → с потолком › комплект доезжает до расчёта, трек не спрашивается заново"
+    },
+    {
+      "project": "chromium-desktop",
+      "title": "modal-layout.spec.ts › Раскладка модалки › сценарий 12: на мобильном первый экран показывает выбор и площадь без скролла"
+    },
+    {
+      "project": "chromium-desktop",
+      "title": "modal-layout.spec.ts › Раскладка модалки › мобильный остаётся полноэкранным, сводка-колонка скрыта"
+    },
+    {
+      "project": "chromium-mobile",
+      "title": "modal-layout.spec.ts › Раскладка модалки › desktop: модалка — окно со сводкой справа, а не полноэкранная полоса"
+    },
+    {
+      "project": "chromium-mobile",
+      "title": "room-features-r2.spec.ts › UX-R2 · решения комнаты вместо уровней › без уровня выбора сразу вопрос о площади, все три потолка доступны"
+    },
+    {
+      "project": "chromium-mobile",
+      "title": "room-features-r2.spec.ts › UX-R2 · решения комнаты вместо уровней › парящий контур ведёт к задаче на Шаге 1 и в заявку, без фальшивого «нет света»"
+    },
+    {
+      "project": "chromium-mobile",
+      "title": "room-features-r2.spec.ts › UX-R2 · решения комнаты вместо уровней › решения первой комнаты не включают вопросы второй"
+    },
+    {
+      "project": "chromium-mobile",
+      "title": "room-features-r2.spec.ts › UX-R2 · решения комнаты вместо уровней › метраж профиля сохраняется при выключении и включении решения"
+    },
+    {
+      "project": "chromium-desktop",
+      "title": "track-sale.spec.ts › Страница света (мобильная) › сценарий 5: добавить товар → бар корзины → оформить"
+    },
+    {
+      "project": "chromium-desktop",
+      "title": "track-sale.spec.ts › Страница света (мобильная) › один бар корзины, а не несколько конкурирующих"
+    },
+    {
+      "project": "chromium-desktop",
+      "title": "track-sale.spec.ts › Страница света · состав заявки › сценарий 5b: заявка несёт позиции корзины и сумму"
+    }
+  ],
+  "log": "pt048-e2e-full-on.log",
+  "flakyGuard": "pt048-flaky-on.log"
+}

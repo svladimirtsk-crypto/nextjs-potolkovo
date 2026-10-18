@@ -1,0 +1,45 @@
+{
+  "date": "2026-10-18",
+  "scope": "synthetic fixture probes; not supplier/engineering approval",
+  "search03": {
+    "лента 24В": 0,
+    "лента 24V": 1,
+    "Wi-Fi": 0,
+    "WIFI": 1
+  },
+  "voltage05": {
+    "circuitStatus": "needs_review",
+    "circuitWarnings": [
+      "Ни один БП каталога не покрывает 171,6 Вт — нужна схема из нескольких цепей.",
+      "Отклонён Блок питания СТАНДАРТ 12V 200W: выход 12 В не совпадает с лентой 24 В."
+    ]
+  },
+  "roundInput07": {
+    "directCheck": {
+      "ok": true,
+      "reason": null,
+      "warnings": [
+        "Ток 5.5 А больше 5 А, допустимых для круглого входа: нужен винтовой вход или другая модель.",
+        "Пределы каналов взяты с этикетки изделия, а не из паспорта партии."
+      ]
+    },
+    "projectZoneStatus": "needs_review",
+    "projectZoneWarnings": [
+      "Для RF-контроллера пульт соответствующего типа в наборе не найден."
+    ]
+  },
+  "pairing13": {
+    "controller": "Контроллер для светодиодной ленты монохром C01RF 12A, 12-24В",
+    "remote": "Пульт для светодиодной ленты монохром 4 канала RC99RF 12-24В",
+    "remoteBomStatus": "ok"
+  },
+  "kit15": {
+    "controller": null,
+    "remote": null,
+    "overallStatus": "incompatible"
+  },
+  "stock19": {
+    "available": true,
+    "hasWarehouseState": false
+  }
+}

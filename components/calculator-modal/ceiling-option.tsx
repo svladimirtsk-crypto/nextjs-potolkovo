@@ -13,12 +13,13 @@ function CeilingDiagram({ kind }: { kind: "standard" | "shadow" | "floating" }) 
   </svg>;
 }
 
-export function CeilingOption({ active, title, description, price, kind, onClick }: {
+export function CeilingOption({ active, title, description, price, kind, onClick, showDiagram }: {
   active: boolean; title: string; description: string; price: string;
   kind: "standard" | "shadow" | "floating"; onClick: () => void;
+  showDiagram: boolean;
 }) {
   return <button type="button" className="pk-ceiling-option" aria-pressed={active} onClick={onClick} data-ceiling-option={kind}>
-    <span className="pk-ceiling-diagram"><CeilingDiagram kind={kind} /></span>
+    {showDiagram ? <span className="pk-ceiling-diagram"><CeilingDiagram kind={kind} /></span> : null}
     <span className="pk-ceiling-copy"><span className="pk-ceiling-title">{title}<span className="pk-option-check" aria-hidden="true">{active ? "✓" : "+"}</span></span>
       <span className="pk-ceiling-description">{description}</span><span className="pk-ceiling-price">{price}</span></span>
   </button>;

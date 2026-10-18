@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import type { ParamId } from "@/lib/step0-fsm";
 import type { CeilingEngine } from "@/lib/calculator/use-calculator-engine";
 import { SectionCard, OptionCard, RangeField } from "../ui";
+import { showQuizStepImages } from "../step-image-feature";
+import { BinaryChoiceIcon } from "../binary-choice-icons";
 import { CeilingRoomOptions } from "@/components/calculator-modal/ceiling-room-options";
 import { homepage } from "@/content/homepage";
 import { PREFILL_HINT, defaultPerimeterMeters } from "@/lib/calculator/presets";
@@ -230,7 +232,7 @@ export function ParamScreen({ roomId, param, engine, onConfirm, editing = false 
         */}
         <div className="grid gap-3 sm:grid-cols-2">
           {corniceOpts.map((o)=>{
-            const image = CORNICE_MEDIA[o.slug];
+            const image = showQuizStepImages("cornice") ? CORNICE_MEDIA[o.slug] : undefined;
             return (
               <OptionCard
                 key={o.slug}
@@ -244,15 +246,15 @@ export function ParamScreen({ roomId, param, engine, onConfirm, editing = false 
             );
           })}
         </div>
-        {room.corniceType!=="none" && room.corniceType!=="hidden-niche" ? (
+        {showQuizStepImages("cornice") && room.corniceType!=="none" && room.corniceType!=="hidden-niche" ? (
           <p className="pk-caption">Разрез схематичный: показывает, встроен карниз в полотно или наложен на него; конкретную систему подберём после замера.</p>
         ) : null}
         {room.corniceType!=="none" && (
           <div className="mt-4 space-y-4">
             <RangeField id="cornice-v2" label="Длина карниза" value={room.corniceLength} min={1} max={50} step={1} unit="м.п." onChange={v=>update({corniceLength:v})} />
             <div className="grid gap-3 sm:grid-cols-2">
-              <OptionCard active={!room.corniceLightingEnabled} title="Без подсветки" meta="Только карниз" onClick={()=>update({corniceLightingEnabled:false})} />
-              <OptionCard active={!!room.corniceLightingEnabled} title="Добавить подсветку" meta={`+${formatCurrency(calculator.corniceLighting.ratePerMeter)} ₽/м.п. + блок ${formatCurrency(calculator.corniceLighting.powerSupplyRate)} ₽`} onClick={()=>update({corniceLightingEnabled:true, corniceLightingLength: room.corniceLength, corniceLightingPowerSupplies:1})} />
+              <OptionCard active={!room.corniceLightingEnabled} title="Без подсветки" meta="Только карниз" icon={<BinaryChoiceIcon kind="cornice-light" enabled={false} />} onClick={()=>update({corniceLightingEnabled:false})} />
+              <OptionCard active={!!room.corniceLightingEnabled} title="Добавить подсветку" meta={`+${formatCurrency(calculator.corniceLighting.ratePerMeter)} ₽/м.п. + блок ${formatCurrency(calculator.corniceLighting.powerSupplyRate)} ₽`} icon={<BinaryChoiceIcon kind="cornice-light" enabled />} onClick={()=>update({corniceLightingEnabled:true, corniceLightingLength: room.corniceLength, corniceLightingPowerSupplies:1})} />
             </div>
             {room.corniceLightingEnabled && <p className="pk-diagram-note">Количество блоков здесь влияет на предварительную стоимость, но не является подбором по мощности. Модель, нагрузку и управление нужно проверить на шаге «Свет».</p>}
             {room.corniceLightingEnabled && (
@@ -324,8 +326,8 @@ export function ParamScreen({ roomId, param, engine, onConfirm, editing = false 
             title="Добавить световые линии"
             meta={`от ${formatCurrency(calculator.lightLines.ratePerMeter)} ₽ / м.п.`}
             onClick={()=>update({lightLinesEnabled:true})}
-            imageSrc={LIGHT_LINES_MEDIA.src}
-            imageAlt={LIGHT_LINES_MEDIA.alt}
+            imageSrc={showQuizStepImages("lightLines") ? LIGHT_LINES_MEDIA.src : undefined}
+            imageAlt={showQuizStepImages("lightLines") ? LIGHT_LINES_MEDIA.alt : undefined}
           />
         </div>
         {room.lightLinesEnabled && (
@@ -346,7 +348,7 @@ export function ParamScreen({ roomId, param, engine, onConfirm, editing = false 
         {kitHint}
         <div className="grid gap-3 sm:grid-cols-2">
           {trackOpts.map((o)=>{
-            const image = TRACK_MEDIA[o.slug];
+            const image = showQuizStepImages("track") ? TRACK_MEDIA[o.slug] : undefined;
             return (
               <OptionCard
                 key={o.slug}
@@ -360,7 +362,7 @@ export function ParamScreen({ roomId, param, engine, onConfirm, editing = false 
             );
           })}
         </div>
-        {room.trackType!=="none" ? (
+        {showQuizStepImages("track") && room.trackType!=="none" ? (
           <p className="pk-caption">Обобщённые фото трека со страницы услуги здесь не используются: они не доказывают конкретный способ монтажа.</p>
         ) : null}
         {room.trackType!=="none" && (
@@ -379,8 +381,8 @@ export function ParamScreen({ roomId, param, engine, onConfirm, editing = false 
         {prefillHint}
         {kitHint}
         <div className="grid gap-3 sm:grid-cols-2">
-          <OptionCard active={!room.chandeliersEnabled} title="Не нужно" meta="Без поштучного расчёта" onClick={()=>update({chandeliersEnabled:false})} />
-          <OptionCard active={room.chandeliersEnabled} title="Добавить установку" meta={`${formatCurrency(pricing.chandelierInstall)} ₽ / шт.`} onClick={()=>update({chandeliersEnabled:true})} />
+          <OptionCard active={!room.chandeliersEnabled} title="Не нужно" meta="Без поштучного расчёта" icon={<BinaryChoiceIcon kind="chandelier" enabled={false} />} onClick={()=>update({chandeliersEnabled:false})} />
+          <OptionCard active={room.chandeliersEnabled} title="Добавить установку" meta={`${formatCurrency(pricing.chandelierInstall)} ₽ / шт.`} icon={<BinaryChoiceIcon kind="chandelier" enabled />} onClick={()=>update({chandeliersEnabled:true})} />
         </div>
         {room.chandeliersEnabled && (
           <div className="mt-4">
@@ -398,8 +400,8 @@ export function ParamScreen({ roomId, param, engine, onConfirm, editing = false 
         {prefillHint}
         {kitHint}
         <div className="grid gap-3 sm:grid-cols-2">
-          <OptionCard active={!room.lightsEnabled} title="Без светильников" meta="Без поштучного расчёта" onClick={()=>update({lightsEnabled:false})} />
-          <OptionCard active={room.lightsEnabled} title="Добавить светильники" meta={`от ${formatCurrency(calculator.lights.ratePerUnit)} ₽ / шт`} onClick={()=>update({lightsEnabled:true})} />
+          <OptionCard active={!room.lightsEnabled} title="Без светильников" meta="Без поштучного расчёта" icon={<BinaryChoiceIcon kind="spotlight" enabled={false} />} onClick={()=>update({lightsEnabled:false})} />
+          <OptionCard active={room.lightsEnabled} title="Добавить светильники" meta={`от ${formatCurrency(calculator.lights.ratePerUnit)} ₽ / шт`} icon={<BinaryChoiceIcon kind="spotlight" enabled />} onClick={()=>update({lightsEnabled:true})} />
         </div>
         {room.lightsEnabled && (
           <div className="mt-4">

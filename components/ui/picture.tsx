@@ -1,4 +1,5 @@
 import imageManifest from "@/data/image-manifest.json";
+import type { ReactEventHandler } from "react";
 
 /**
  * T-061 · `<Picture>` — обёртка над `<picture>` c srcset на предсобранные
@@ -21,6 +22,11 @@ type ManifestEntry = {
 
 const manifest = imageManifest as Record<string, ManifestEntry | undefined>;
 
+/** Quiz cards need a text fallback, not a full-size original, if a thumbnail was not built. */
+export function hasOptimizedPicture(src: string): boolean {
+  return Object.prototype.hasOwnProperty.call(manifest, src);
+}
+
 export type PictureProps = {
   /** Путь к исходнику как он лежит в `public`, например `/hero1.jpeg`. */
   src: string;
@@ -30,6 +36,8 @@ export type PictureProps = {
   className?: string;
   /** Класс для самого `<img>` (обычно object-cover / скругления). */
   imgClassName?: string;
+  /** Hiding failed quiz media preserves the text-only card and its controls. */
+  onError?: ReactEventHandler<HTMLImageElement>;
   /**
    * LCP-картинка: грузим сразу и в высоком приоритете.
    * Для всего остального — ленивая загрузка.
@@ -61,6 +69,7 @@ export function Picture({
   sizes = "100vw",
   className,
   imgClassName,
+  onError,
   priority = false,
   fill = false,
 }: PictureProps) {
@@ -74,6 +83,7 @@ export function Picture({
       <img
         src={src}
         alt={alt}
+        onError={onError}
         loading={priority ? "eager" : "lazy"}
         decoding="async"
         className={imgClassName ?? className}
@@ -89,10 +99,10 @@ export function Picture({
     <picture className={fill ? `absolute inset-0 ${className ?? ""}`.trim() : className}>
       <source type="image/avif" sizes={sizes} srcSet={srcSetFor(base, entry.widths, "avif")} />
       <source type="image/webp" sizes={sizes} srcSet={srcSetFor(base, entry.widths, "webp")} />
-      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={`/optimized/${base}-${fallbackWidth}.webp`}
         alt={alt}
+        onError={onError}
         width={entry.width}
         height={entry.height}
         sizes={sizes}

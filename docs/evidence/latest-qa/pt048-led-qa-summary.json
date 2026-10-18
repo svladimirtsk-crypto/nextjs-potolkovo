@@ -1,0 +1,93 @@
+{
+  "date": "2026-10-18",
+  "branch": "feat/company-rebrand-v7-preview",
+  "baseHead": "16b3749",
+  "scope": "PT-048 feature flag; PT-044/045 inline icons; LED matrix 01..26 (not engineering approval)",
+  "previewOnly": true,
+  "pushed": false,
+  "productionChanged": false,
+  "builds": {
+    "on": {
+      "flag": "NEXT_PUBLIC_QUIZ_STEP_IMAGES=on",
+      "passed": true,
+      "log": "pt048-build-on.log"
+    },
+    "off": {
+      "flag": "unset (default off)",
+      "passed": true,
+      "log": "pt048-build-final-off.log"
+    }
+  },
+  "qa": {
+    "unit": {
+      "passed": 1490,
+      "skipped": 0,
+      "files": 116,
+      "database": "disposable local PostgreSQL 17.11 over TCP (no production DB)",
+      "log": "pt048-unit-db-final.log"
+    },
+    "targetedQuiz": {
+      "onPassed": 20,
+      "offPassed": 20,
+      "perModeProjects": [
+        "chromium-desktop",
+        "chromium-mobile"
+      ],
+      "onLog": "pt048-e2e-on.log",
+      "offLog": "pt048-e2e-off.log"
+    },
+    "fullOn": {
+      "passed": 360,
+      "skipped": 16,
+      "failed": 0,
+      "flaky": 0,
+      "led01NotYetAdded": true,
+      "log": "pt048-e2e-full-on.log"
+    },
+    "fullDefaultOff": {
+      "passed": 368,
+      "skipped": 16,
+      "failed": 0,
+      "flaky": 0,
+      "led01Tests": 8,
+      "log": "pt048-e2e-full-off-final.log"
+    },
+    "lint": {
+      "errors": 0,
+      "existingWarnings": 6,
+      "log": "pt048-static-final.log"
+    },
+    "typecheck": true,
+    "flowPassed": 8,
+    "imagesCheck": true,
+    "catalogValidation": true,
+    "envGuard": true,
+    "bundleHomeGzipKb": 228.3,
+    "bundleBudgetKb": 300,
+    "bundleOnLog": "pt048-bundle-on.log",
+    "bundleOffLog": "pt048-bundle-final-off.log"
+  },
+  "ledAcceptance": {
+    "assessed": 26,
+    "locallyTested": 3,
+    "partial": 11,
+    "implementationGaps": 10,
+    "externalBlockers": 2,
+    "engineeringApproved": 0,
+    "matrix": "../catalog-led/acceptance-2026-10-18.md",
+    "negativeProbes": "../catalog-led/local-probes-2026-10-18.json"
+  },
+  "releaseGates": {
+    "metrikaBaselineWeeks": null,
+    "metrikaAccess": false,
+    "ownerExperimentApproval": false,
+    "supplierDatasheetsVerified": false,
+    "priceUnitPackQtyMoqVerified": false,
+    "stockByWarehouseVerified": false,
+    "engineeringPilotApproved": false,
+    "realDeviceScreenReaderZoomAccepted": false,
+    "mainMergeAllowed": false
+  },
+  "knownInfraFirstAttempt": "Unix socket test DB URL triggered client SSL heuristic; rerun over local TCP passed; not a product regression",
+  "preExistingUnstagedChange": "scripts/check-e2e-flaky.mjs file mode only; exclude from commit"
+}

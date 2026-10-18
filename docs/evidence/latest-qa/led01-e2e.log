@@ -1,0 +1,14 @@
+
+Running 8 tests using 2 workers
+
+  ✓  2 [chromium-desktop] › e2e/led-acceptance.spec.ts:22:7 › LED-01 · WB5: одно нажатие добавляет целую штуку, не 0,5 м (4.1s)
+  ✓  1 [chromium-mobile] › e2e/led-acceptance.spec.ts:22:7 › LED-01 · WB5: одно нажатие добавляет целую штуку, не 0,5 м (6.2s)
+  ✓  3 [chromium-desktop] › e2e/led-acceptance.spec.ts:22:7 › LED-01 · БП 24 В: одно нажатие добавляет целую штуку, не 0,5 м (3.8s)
+  ✓  5 [chromium-desktop] › e2e/led-acceptance.spec.ts:22:7 › LED-01 · RF-пульт: одно нажатие добавляет целую штуку, не 0,5 м (3.8s)
+  ✓  4 [chromium-mobile] › e2e/led-acceptance.spec.ts:22:7 › LED-01 · БП 24 В: одно нажатие добавляет целую штуку, не 0,5 м (5.7s)
+  ✓  6 [chromium-desktop] › e2e/led-acceptance.spec.ts:22:7 › LED-01 · набор пульт + контроллер: одно нажатие добавляет целую штуку, не 0,5 м (3.9s)
+  ✓  7 [chromium-mobile] › e2e/led-acceptance.spec.ts:22:7 › LED-01 · RF-пульт: одно нажатие добавляет целую штуку, не 0,5 м (6.5s)
+  ✓  8 [chromium-mobile] › e2e/led-acceptance.spec.ts:22:7 › LED-01 · набор пульт + контроллер: одно нажатие добавляет целую штуку, не 0,5 м (5.4s)
+::notice title=🎭 Playwright Run Summary::  8 passed (25.5s)
+
+  8 passed (25.5s)

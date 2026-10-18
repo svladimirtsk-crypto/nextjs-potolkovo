@@ -1,0 +1,97 @@
+
+> nextjs@0.1.0 lint
+> eslint
+
+
+/home/user/repo/app/uslugi/_components/ServiceRelatedServices.tsx
+  4:34  warning  'servicePageContent' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/user/repo/components/calculator-modal/lighting-footer-progress.tsx
+  7:15  warning  'FeedCatalogParam' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/user/repo/components/home/action-form.tsx
+  80:10  warning  'buildLeadMessage' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/user/repo/components/home/mobile-sticky-cta.tsx
+  120:9  warning  'hasLightingInSnapshot' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  144:9  warning  'handleActionClick' is assigned a value but never used      @typescript-eslint/no-unused-vars
+
+/home/user/repo/lib/calculator/selectors.ts
+  225:3  warning  'ctx' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 6 problems (0 errors, 6 warnings)
+
+
+> nextjs@0.1.0 test:flow
+> node scripts/test-calculator-flow.mjs
+
+TAP version 13
+# Subtest: Step 0 summary routing decision table
+ok 1 - Step 0 summary routing decision table
+  ---
+  duration_ms: 2.468927
+  ...
+# Subtest: lighting discount mode decision table
+ok 2 - lighting discount mode decision table
+  ---
+  duration_ms: 0.349619
+  ...
+# Subtest: initial modal options for default and lighting-first flows
+ok 3 - initial modal options for default and lighting-first flows
+  ---
+  duration_ms: 0.346457
+  ...
+# Subtest: 90-case combined flow matrix keeps routing and discount invariants
+ok 4 - 90-case combined flow matrix keeps routing and discount invariants
+  ---
+  duration_ms: 3.453106
+  ...
+# Subtest: unknown scenario falls back to standard summary routing
+ok 5 - unknown scenario falls back to standard summary routing
+  ---
+  duration_ms: 0.192341
+  ...
+# Subtest: step 2 copy is defined for every intent and keeps the callback placeholder
+ok 6 - step 2 copy is defined for every intent and keeps the callback placeholder
+  ---
+  duration_ms: 0.249307
+  ...
+# Subtest: step 2 copy: «только свет» спрашивает получение, «напрямую» не дублирует заголовок
+ok 7 - step 2 copy: «только свет» спрашивает получение, «напрямую» не дублирует заголовок
+  ---
+  duration_ms: 0.345626
+  ...
+# Subtest: fillCallbackWindow подставляет окно, а при пустом — честное «в ближайшее время»
+ok 8 - fillCallbackWindow подставляет окно, а при пустом — честное «в ближайшее время»
+  ---
+  duration_ms: 0.256591
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 21.189809
+
+> nextjs@0.1.0 check:images
+> node scripts/check-images.mjs
+
+[images] ok — 35 ссылок, 46 исходников, варианты на месте
+
+> nextjs@0.1.0 validate:catalog
+> node scripts/validate-catalog.mjs
+
+validate-catalog: ok (45 SKU, 7 профилей)
+
+> nextjs@0.1.0 check:env
+> node scripts/check-env.mjs
+
+⚠ TELEGRAM_LEADS_ENABLED=1, но TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID не заданы.
+⚠ Не настроен ни один канал доставки заявок.
+⚠ DELIVERY_ALERT_ENABLED=1, но канал алерта не задан — сбой доставки останется незамеченным.
+⚠ CRON_SECRET не задан — /api/lead/retry вернёт 401.
+⚠ DATABASE_URL не задан — лиды хранятся в памяти.
+[env] ok — 29 переменных документированы

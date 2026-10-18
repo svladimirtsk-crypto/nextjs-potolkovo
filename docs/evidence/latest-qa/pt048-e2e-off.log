@@ -1,0 +1,26 @@
+
+Running 20 tests using 1 worker
+
+  ✓   1 [chromium-desktop] › e2e/quiz-icons.spec.ts:6:5 › девять комнат: line-иконки 20 px, доступное имя кнопки осталось текстовым (2.0s)
+  ✓   2 [chromium-desktop] › e2e/quiz-icons.spec.ts:27:5 › три пары выкл/вкл: единый SVG-язык, текст и aria-pressed сохраняются (1.9s)
+  ✓   3 [chromium-desktop] › e2e/quiz-images.spec.ts:84:5 › PT-048 · флаг управляет тремя схемами потолка, но не выбором/ценой (1.3s)
+  ✓   4 [chromium-desktop] › e2e/quiz-images.spec.ts:98:7 › PT-040 · Карнизы: off текстом, on фото ниши и схемы › off оставляет все варианты текстовыми; on иллюстрирует три положительных (1.2s)
+  ✓   5 [chromium-desktop] › e2e/quiz-images.spec.ts:120:7 › PT-040 · Карнизы: off текстом, on фото ниши и схемы › подпись «схематичный разрез» видна у вариантов со схемой и не висит у фото (1.6s)
+  ✓   6 [chromium-desktop] › e2e/quiz-images.spec.ts:134:7 › PT-040 · Карнизы: off текстом, on фото ниши и схемы › активное состояние читается при картинке: aria-pressed и заголовок на месте (1.3s)
+  ✓   7 [chromium-desktop] › e2e/quiz-images.spec.ts:146:7 › PT-040 · Карнизы: off текстом, on фото ниши и схемы › миниатюра не тянет полноразмерный proj-* (1.4s)
+  ✓   8 [chromium-desktop] › e2e/quiz-images.spec.ts:185:7 › PT-042/048 · Световые линии вне первой волны › даже on-пилот сохраняет текст и цену без фото на этом экране (1.3s)
+  ✓   9 [chromium-desktop] › e2e/quiz-images.spec.ts:224:7 › PT-041 · Треки: пилотные схемы только там, где они однозначны › off текстом; on — оба монтажных типа в одном ракурсе (1.4s)
+  ✓  10 [chromium-desktop] › e2e/quiz-images.spec.ts:240:7 › PT-041 · Треки: пилотные схемы только там, где они однозначны › недоступный SVG не лишает кнопку текста, цены и активного состояния (1.7s)
+  ✓  11 [chromium-mobile] › e2e/quiz-icons.spec.ts:6:5 › девять комнат: line-иконки 20 px, доступное имя кнопки осталось текстовым (1.8s)
+  ✓  12 [chromium-mobile] › e2e/quiz-icons.spec.ts:27:5 › три пары выкл/вкл: единый SVG-язык, текст и aria-pressed сохраняются (2.1s)
+  ✓  13 [chromium-mobile] › e2e/quiz-images.spec.ts:84:5 › PT-048 · флаг управляет тремя схемами потолка, но не выбором/ценой (1.5s)
+  ✓  14 [chromium-mobile] › e2e/quiz-images.spec.ts:98:7 › PT-040 · Карнизы: off текстом, on фото ниши и схемы › off оставляет все варианты текстовыми; on иллюстрирует три положительных (1.5s)
+  ✓  15 [chromium-mobile] › e2e/quiz-images.spec.ts:120:7 › PT-040 · Карнизы: off текстом, on фото ниши и схемы › подпись «схематичный разрез» видна у вариантов со схемой и не висит у фото (1.4s)
+  ✓  16 [chromium-mobile] › e2e/quiz-images.spec.ts:134:7 › PT-040 · Карнизы: off текстом, on фото ниши и схемы › активное состояние читается при картинке: aria-pressed и заголовок на месте (1.5s)
+  ✓  17 [chromium-mobile] › e2e/quiz-images.spec.ts:146:7 › PT-040 · Карнизы: off текстом, on фото ниши и схемы › миниатюра не тянет полноразмерный proj-* (1.4s)
+  ✓  18 [chromium-mobile] › e2e/quiz-images.spec.ts:185:7 › PT-042/048 · Световые линии вне первой волны › даже on-пилот сохраняет текст и цену без фото на этом экране (1.5s)
+  ✓  19 [chromium-mobile] › e2e/quiz-images.spec.ts:224:7 › PT-041 · Треки: пилотные схемы только там, где они однозначны › off текстом; on — оба монтажных типа в одном ракурсе (1.4s)
+  ✓  20 [chromium-mobile] › e2e/quiz-images.spec.ts:240:7 › PT-041 · Треки: пилотные схемы только там, где они однозначны › недоступный SVG не лишает кнопку текста, цены и активного состояния (1.5s)
+::notice title=🎭 Playwright Run Summary::  20 passed (33.0s)
+
+  20 passed (33.0s)

@@ -51,6 +51,7 @@ const SCHEMA_KEYS = [
 const PUBLIC_KEYS = [
   "NEXT_PUBLIC_SITE_URL",
   "NEXT_PUBLIC_CALC_QUIZ_V2",
+  "NEXT_PUBLIC_QUIZ_STEP_IMAGES",
   "NEXT_PUBLIC_LEAD_RESCUE_ENABLED",
   "NEXT_PUBLIC_PREVIEW_MODE",
 ];
@@ -70,6 +71,12 @@ async function main() {
     if (raw === "") return fallback;
     return ["1", "true", "yes", "on"].includes(raw.toLowerCase());
   };
+
+  // PT-048: только явное "on" включает клиентские миниатюры в новой сборке.
+  // Опечатку вроде "true" лучше поймать до релиза, чем молча оставить off.
+  if (value("NEXT_PUBLIC_QUIZ_STEP_IMAGES") && !["off", "on"].includes(value("NEXT_PUBLIC_QUIZ_STEP_IMAGES"))) {
+    errors.push("NEXT_PUBLIC_QUIZ_STEP_IMAGES: допустимы только off/on (пустое значение = off)");
+  }
 
   if (flag("TELEGRAM_LEADS_ENABLED", true) && !(value("TELEGRAM_BOT_TOKEN") && value("TELEGRAM_CHAT_ID"))) {
     warnings.push("TELEGRAM_LEADS_ENABLED=1, но TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID не заданы.");

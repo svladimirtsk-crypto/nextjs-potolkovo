@@ -1,7 +1,7 @@
 "use client";
 import { ReactNode, useState } from "react";
 
-import { Picture } from "@/components/ui/picture";
+import { hasOptimizedPicture, Picture } from "@/components/ui/picture";
 
 export function SectionCard({
   title,
@@ -46,6 +46,7 @@ export function OptionCard({
   imageSrc,
   imageAlt,
   imageAspect = "4:3",
+  icon,
 }: {
   active: boolean;
   title: string;
@@ -54,6 +55,7 @@ export function OptionCard({
   imageSrc?: string;
   imageAlt?: string;
   imageAspect?: "4:3" | "1:1";
+  icon?: ReactNode;
 }) {
   // Высоту задаёт CSS слота (96/128 px, PT-038), поэтому «соотношение сторон»
   // здесь управляет только кадрированием: квадрат — центрированный кроп,
@@ -62,6 +64,10 @@ export function OptionCard({
   // SVG в `public/` — это нарисованные схемы сечения, а не фотографии работ:
   // их нельзя выдавать за реальный объект (PT-049) и нельзя затемнять.
   const isScheme = imageSrc?.toLowerCase().endsWith(".svg") ?? false;
+  // PT-048: отсутствие записи для растра не должно тихо подтягивать исходный
+  // тяжёлый JPEG. Для SVG манифест не нужен; 404 прячет медиа целиком.
+  const [failedImageSrc, setFailedImageSrc] = useState<string | null>(null);
+  const showImage = !!imageSrc && failedImageSrc !== imageSrc && (isScheme || hasOptimizedPicture(imageSrc));
   return (
     <button
       type="button"
@@ -69,7 +75,7 @@ export function OptionCard({
       aria-pressed={active}
       className={`pk-option min-h-11 rounded-2xl border p-4 text-left transition ${active ? "border-slate-950 bg-slate-950 text-white shadow-lg" : "border-slate-200 bg-white hover:border-slate-400"}`}
     >
-      {imageSrc ? (
+      {showImage && imageSrc ? (
         <span
           className={`pk-option-media mb-3 block w-full overflow-hidden rounded-xl border ${
             isScheme ? "pk-option-media--scheme border-slate-200" : active ? "border-white/20 bg-white/5" : "border-slate-200 bg-slate-100"
@@ -81,10 +87,14 @@ export function OptionCard({
             sizes="(max-width: 640px) 45vw, 200px"
             className="block h-full w-full"
             imgClassName={`h-full w-full ${fitClass}`}
+            onError={() => setFailedImageSrc(imageSrc)}
           />
         </span>
       ) : null}
-      <p className="text-sm font-semibold">{title}</p>
+      <p className={`text-sm font-semibold${icon ? " flex items-center gap-2" : ""}`}>
+        {icon ? <span aria-hidden="true" className="inline-flex size-5 shrink-0">{icon}</span> : null}
+        {title}
+      </p>
       <p className={`mt-1 text-xs ${active ? "text-white/70" : "text-slate-600"}`}>{meta}</p>
     </button>
   );

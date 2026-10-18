@@ -3,24 +3,29 @@ import type { RoomConfig } from "@/lib/calculator/use-calculator-engine";
 import { setCeilingFeature, setTrackFeature } from "@/lib/calculator/room-features";
 import { CeilingOption } from "./ceiling-option";
 import { formatFrom, pricing } from "@/content/pricing";
+import { showQuizStepImages } from "./step0/quiz-v2/step-image-feature";
 const rub = (n: number) => new Intl.NumberFormat("ru-RU").format(n);
 
 export function CeilingRoomOptions({ room, onChange }: { room: RoomConfig; onChange: (patch: Partial<RoomConfig>) => void }) {
+  const showDiagram = showQuizStepImages("ceiling");
   return <>
     <div className="pk-ceiling-options">
       <CeilingOption active={!room.shadowEnabled && !room.floatingEnabled} kind="standard" title="Простой потолок"
         description="Ровное полотно. Привычное примыкание к стене." price={formatFrom(pricing.ceiling.standard, "м²")}
+        showDiagram={showDiagram}
         onClick={() => onChange({ ceilingType: "standard", shadowEnabled: false, floatingEnabled: false })} />
       <CeilingOption active={room.shadowEnabled} kind="shadow" title="Теневой потолок"
         description="Чёткая линия по контуру, без потолочного плинтуса."
         price={`${rub(pricing.ceiling.shadowBase)} ₽ / м² + ${rub(pricing.ceiling.shadowProfilePerM)} ₽ / м.п.`}
+        showDiagram={showDiagram}
         onClick={() => onChange(setCeilingFeature(room, "shadow", !room.shadowEnabled))} />
       <CeilingOption active={room.floatingEnabled} kind="floating" title="Парящий потолок"
         description="Подсвеченный контур. Ленту, питание и управление нужно подобрать отдельно."
         price={`${rub(pricing.ceiling.floatingBase)} ₽ / м² + ${rub(pricing.ceiling.floatingProfilePerM)} ₽ / м.п.`}
+        showDiagram={showDiagram}
         onClick={() => onChange(setCeilingFeature(room, "floating", !room.floatingEnabled))} />
     </div>
-    <p className="pk-diagram-note">Теневой и парящий профиль можно сочетать на разных участках. Это выбор для текущего помещения; другие комнаты не изменятся. Изображения — схемы.</p>
+    <p className="pk-diagram-note">Теневой и парящий профиль можно сочетать на разных участках. Это выбор для текущего помещения; другие комнаты не изменятся.{showDiagram ? " Изображения — схемы." : ""}</p>
     <fieldset className="pk-room-features">
       <legend>Дополнительные решения в этой комнате</legend>
       <label>
