@@ -1,0 +1,86 @@
+{
+  "date": "2026-10-18",
+  "branch": "feat/company-rebrand-v7-preview",
+  "baseHead": "bdefb30",
+  "scope": "LED-03/04/07/08/13/26 programmatic follow-up; not engineering or commercial acceptance",
+  "previewOnly": true,
+  "pushed": false,
+  "pullRequestCreated": false,
+  "productionChanged": false,
+  "realSupplierFeedImported": false,
+  "qa": {
+    "unit": {
+      "passed": 1508,
+      "files": 117,
+      "failed": 0,
+      "skipped": 0,
+      "database": "disposable local PostgreSQL 17.11 over TCP; not production",
+      "log": "led-followup-unit-db.log",
+      "logSanitization": "ANSI formatting removed; synthetic test phone numbers masked"
+    },
+    "targetedE2e": {
+      "passed": 4,
+      "failed": 0,
+      "projects": ["chromium-desktop", "chromium-mobile"],
+      "cases": ["LED-03 search", "LED-04 room task to LED catalog"],
+      "log": "led-followup-e2e-targeted.log"
+    },
+    "fullE2eDefaultOff": {
+      "passed": 372,
+      "skipped": 16,
+      "failed": 0,
+      "flaky": 0,
+      "ciRetries": 1,
+      "log": "led-followup-e2e-full-off.log",
+      "flakyLog": "led-followup-flaky.log"
+    },
+    "lint": {
+      "errors": 0,
+      "existingWarnings": 6,
+      "log": "led-followup-static.log"
+    },
+    "typescript": true,
+    "flowPassed": 8,
+    "bundleHomeGzipKb": 228.3,
+    "bundleBudgetKb": 300,
+    "build": {
+      "flag": "NEXT_PUBLIC_QUIZ_STEP_IMAGES=off",
+      "previewMode": true,
+      "liveCatalogAndLeadDeliveryDisabled": true,
+      "passed": true,
+      "log": "led-followup-build-off.log"
+    },
+    "pt048OnBuildThisFollowup": "not rerun; earlier on verification applies to bdefb30 only",
+    "feedGuard": {
+      "tests": 6,
+      "negativeCases": ["truncated feed", "duplicate product", "off-domain cover", "required SKU missing", "index over budget"],
+      "positiveCheckOnly": true,
+      "positivePublication": "isolated temporary project with cached local images, never the working tree",
+      "newRemoteImageDownloadTested": false,
+      "multiFilePublicationAtomic": false
+    }
+  },
+  "ledAcceptance": {
+    "assessed": 26,
+    "locallyTestedSoftwareContracts": 4,
+    "partial": 14,
+    "implementationGaps": 6,
+    "externalBlockers": 2,
+    "engineeringOrCommercialApproved": 0,
+    "matrix": "../catalog-led/acceptance-2026-10-18.md",
+    "originalNegativeProbes": "../catalog-led/local-probes-2026-10-18.json",
+    "followup": "../catalog-led/followup-2026-10-18.md"
+  },
+  "releaseGates": {
+    "metrikaBaselineWeeks": null,
+    "ownerExperimentApproval": false,
+    "supplierDatasheetsVerified": false,
+    "priceUnitPackQtyMoqVerified": false,
+    "stockByWarehouseVerified": false,
+    "rfPairingVerified": false,
+    "engineeringPilotApproved": false,
+    "realDeviceScreenReaderZoomAccepted": false,
+    "mainMergeAllowed": false
+  },
+  "preExistingUnstagedChange": "scripts/check-e2e-flaky.mjs executable-bit change only; exclude from commit"
+}

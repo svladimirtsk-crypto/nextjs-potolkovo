@@ -1,0 +1,103 @@
+
+> nextjs@0.1.0 lint
+> eslint
+
+
+/home/user/repo/app/uslugi/_components/ServiceRelatedServices.tsx
+  4:34  warning  'servicePageContent' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/user/repo/components/calculator-modal/lighting-footer-progress.tsx
+  7:15  warning  'FeedCatalogParam' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/user/repo/components/home/action-form.tsx
+  80:10  warning  'buildLeadMessage' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/user/repo/components/home/mobile-sticky-cta.tsx
+  120:9  warning  'hasLightingInSnapshot' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  144:9  warning  'handleActionClick' is assigned a value but never used      @typescript-eslint/no-unused-vars
+
+/home/user/repo/lib/calculator/selectors.ts
+  225:3  warning  'ctx' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 6 problems (0 errors, 6 warnings)
+
+
+> nextjs@0.1.0 test:flow
+> node scripts/test-calculator-flow.mjs
+
+TAP version 13
+# Subtest: Step 0 summary routing decision table
+ok 1 - Step 0 summary routing decision table
+  ---
+  duration_ms: 1.793918
+  ...
+# Subtest: lighting discount mode decision table
+ok 2 - lighting discount mode decision table
+  ---
+  duration_ms: 0.241354
+  ...
+# Subtest: initial modal options for default and lighting-first flows
+ok 3 - initial modal options for default and lighting-first flows
+  ---
+  duration_ms: 0.198945
+  ...
+# Subtest: 90-case combined flow matrix keeps routing and discount invariants
+ok 4 - 90-case combined flow matrix keeps routing and discount invariants
+  ---
+  duration_ms: 3.741406
+  ...
+# Subtest: unknown scenario falls back to standard summary routing
+ok 5 - unknown scenario falls back to standard summary routing
+  ---
+  duration_ms: 0.204742
+  ...
+# Subtest: step 2 copy is defined for every intent and keeps the callback placeholder
+ok 6 - step 2 copy is defined for every intent and keeps the callback placeholder
+  ---
+  duration_ms: 0.236093
+  ...
+# Subtest: step 2 copy: «только свет» спрашивает получение, «напрямую» не дублирует заголовок
+ok 7 - step 2 copy: «только свет» спрашивает получение, «напрямую» не дублирует заголовок
+  ---
+  duration_ms: 0.383275
+  ...
+# Subtest: fillCallbackWindow подставляет окно, а при пустом — честное «в ближайшее время»
+ok 8 - fillCallbackWindow подставляет окно, а при пустом — честное «в ближайшее время»
+  ---
+  duration_ms: 0.25921
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 20.332393
+
+> nextjs@0.1.0 check:bundle
+> node scripts/check-bundle-budget.mjs
+
+[bundle] First Load JS (gzip) по страницам:
+    250.1 КБ  /uslugi/prodazha-trekovogo-osveshcheniya
+    228.3 КБ  /
+    217.8 КБ  /uslugi/tenevoy-profil
+    216.9 КБ  /uslugi/individualnye-proekty
+    216.9 КБ  /uslugi/paryashchie-potolki
+    216.9 КБ  /uslugi/prostye-potolki
+    216.9 КБ  /uslugi/skrytye-karnizy
+    216.9 КБ  /uslugi/svetoprozrachnye-potolki
+    216.9 КБ  /uslugi/svetovye-linii
+    216.9 КБ  /uslugi/trekovoe-osveshchenie
+    202.4 КБ  /umnoe-osveshchenie
+    200.5 КБ  /o-kompanii
+    200.5 КБ  /uslugi
+    190.8 КБ  /admin/availability
+    187.5 КБ  /_not-found
+    187.5 КБ  /privacy
+    166.9 КБ  /_global-error
+[bundle] ok — / 228.3 КБ ≤ 300 КБ
+[effect-setstate] ok — 21 разрешённых сеттеров, 3 моста к стору
+validate-catalog: ok (45 SKU, 7 профилей)
+STATIC_EXIT=0

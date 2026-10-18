@@ -29,6 +29,21 @@ describe("R7 catalogue presentation", () => {
     expect(catalogViewProducts([profile], { ...filters, query: "profile-42" })).toEqual([profile]);
   });
   it("search is section-scoped, with other sections handled separately", () => expect(catalogViewProducts([item({ kind: "LAMP" })], { ...filters, query: "SKU-A" })).toEqual([]));
+  it("LED-03 · общий UI-поиск использует ту же нормализацию и ставит точный SKU первым", () => {
+    const strip = item({ productId: "strip", vendorCode: "0У-00006564", name: "Светодиодная лента 24V", kind: "LED_STRIP" });
+    const other = item({ productId: "other", vendorCode: "OTHER", name: "WIFI 24V 0У-00006564", kind: "LED_STRIP" });
+    const view = (query: string) => catalogViewProducts([other, strip], { ...filters, section: "cornice-lighting", query });
+    expect(view("лента 24В").map((p) => p.productId)).toEqual(["strip"]);
+    expect(view("Wi-Fi").map((p) => p.productId)).toEqual(["other"]);
+    expect(view("0у-00006564").map((p) => p.productId)).toEqual(["strip", "other"]);
+  });
+  it("LED-03 · совпадение в названии ленты выше совпадения только в категории пульта", () => {
+    const remote = item({ productId: "remote", vendorCode: "RC02", name: "Пульт CCT 12-24В", categoryPath: "Светодиодная лента", kind: "CONTROL" });
+    const strip = item({ productId: "strip", vendorCode: "S24", name: "Светодиодная лента ПРО 24V", kind: "LED_STRIP" });
+    const view = (query: string) => catalogViewProducts([remote, strip], { ...filters, section: "cornice-lighting", query });
+    expect(view("лента 24В").map((p) => p.productId)).toEqual(["strip", "remote"]);
+    expect(view("лента 24V").map((p) => p.productId)).toEqual(["strip", "remote"]);
+  });
   it("SMART remains a filter during search", () => expect(catalogViewProducts([item()], { ...filters, smartOnly: true, query: "SKU-A" })).toEqual([]));
   it("SMART designation is not compatibility verification", () => {
     const html = renderToStaticMarkup(createElement(ProductCard, { product: item({ name: "SMART" }), qty: 0, onInc() {}, onDec() {} }));

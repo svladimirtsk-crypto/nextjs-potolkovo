@@ -1,0 +1,10 @@
+
+Running 4 tests using 2 workers
+
+  ✓  1 [chromium-desktop] › e2e/led-kit.spec.ts:128:5 › LED-03: 24В/24V, Wi-Fi/WIFI и точный SKU ищутся во всех LED-группах (2.1s)
+  ✓  2 [chromium-desktop] › e2e/room-features-r2.spec.ts:194:5 › LED-04: задача парящего контура ведёт в каталог с контекстом комнаты (3.1s)
+  ✓  3 [chromium-mobile] › e2e/led-kit.spec.ts:128:5 › LED-03: 24В/24V, Wi-Fi/WIFI и точный SKU ищутся во всех LED-группах (3.0s)
+  ✓  4 [chromium-mobile] › e2e/room-features-r2.spec.ts:194:5 › LED-04: задача парящего контура ведёт в каталог с контекстом комнаты (2.6s)
+
+  4 passed (8.8s)
+TARGETED_E2E_EXIT=0

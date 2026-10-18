@@ -89,7 +89,7 @@ export function WizardStep1Lighting() {
     lightingDraft, options,
     step1CatalogView, setStep1CatalogView,
     setStep1FooterAction,
-    goToStep, showCeilingInUi,
+    closeCalculator, goToStep, showCeilingInUi,
     lightingDiscountMode, lightingEffectiveTotal, lightingRegularTotal,
   } = useCalculatorModal();
   const hasCeilingContext = Boolean(showCeilingInUi || toNumber(snapshot?.total) > 0 || (snapshot?.roomBreakdown?.length ?? 0) > 0);
@@ -468,7 +468,7 @@ export function WizardStep1Lighting() {
     <div ref={rootRef} className="pk-lighting-stage space-y-4">
       <div className="pk-lighting-intro"><h3>Свет под ваш интерьер</h3><p>Выберите оборудование через подбор или каталог. Состав и совместимость проверим отдельно; настройка управления зависит от конкретного комплекта.</p></div>
 
-      <ProjectLightingTasks tasks={projectTasks} onContinue={goToSummary} />
+      <ProjectLightingTasks tasks={projectTasks} onContinue={goToSummary} onOpenCatalog={closeCalculator} />
 
       {/* ─── Compact image preview — not fullscreen ─── */}
       <ImageQuickPreview image={zoomImage} onClose={() => setZoomImage(null)} />

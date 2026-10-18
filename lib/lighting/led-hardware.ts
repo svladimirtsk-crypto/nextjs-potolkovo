@@ -180,6 +180,17 @@ export function parseRemoteSpec(name: string): RemoteSpec | null {
 }
 
 /**
+ * LED-13 · Только предварительный кандидат по НАЗВАНИЮ семейства, не pairing.
+ * Совпадение C01RF ↔ RC01RF (и 02/03) не доказывает частоту/протокол/ревизию.
+ * В BOM и UI такую пару помечаем `needs_review` до паспорта или стенда.
+ */
+export function rfRemoteTitleCandidate(controller: ControllerSpec, remote: RemoteSpec): boolean {
+  const family = controller.model?.toUpperCase().match(/^C(0[123])RF$/);
+  return !controller.wifi && Boolean(family) && remote.model?.toUpperCase() === `RC${family?.[1]}RF` &&
+    controller.controlKind === remote.controlKind;
+}
+
+/**
  * Роль позиции внутри LED-группы.
  *
  * Порядок важен: набор «пульт с контроллером» — это управление целиком, а не
@@ -398,6 +409,12 @@ export type PowerPlan = {
 /** Запас по мощности блока питания. Значение утверждено владельцем 16.10.2026. */
 export const PSU_MARGIN_PERCENT = 30;
 
+/** Нагрузку, требуемую мощность и ток округляем ВВЕРХ до сотых при подборе. */
+export function roundUpHundredth(value: number): number {
+  if (value === 0) return 0; // не отдавать -0 для неизвестной нагрузки
+  return Math.ceil(value * 100 - 1e-9) / 100;
+}
+
 /**
  * Расчёт питания по метражу: мощность нагрузки → требуемая мощность БП с запасом
  * → минимальный подходящий БП → контроллер по типу ленты → пульт для RF.
@@ -427,9 +444,12 @@ export function planLedPower(input: {
    * ленты, а не 6. Закупочные катушки и остатки в нагрузку не входят.
    */
   const installedMeters = Number.isFinite(meters) && meters > 0 ? meters * rows : 0;
-  const loadW = wPerMeter !== null ? Math.round(wPerMeter * installedMeters * 10) / 10 : 0;
-  const requiredW = wPerMeter !== null ? Math.round(loadW * (1 + PSU_MARGIN_PERCENT / 100) * 10) / 10 : 0;
-  const currentA = wPerMeter !== null && voltage ? Math.round((loadW / voltage) * 100) / 100 : 0;
+  const rawLoadW = wPerMeter !== null ? wPerMeter * installedMeters : 0;
+  const loadW = roundUpHundredth(rawLoadW);
+  // LED-08: сравнение с номиналом не должно выбрать БП на 100 Вт при
+  // истинной границе 100,02 Вт из-за округления до 0,1 Вт вниз.
+  const requiredW = roundUpHundredth(rawLoadW * (1 + PSU_MARGIN_PERCENT / 100));
+  const currentA = wPerMeter !== null && voltage ? roundUpHundredth(rawLoadW / voltage) : 0;
 
   if (wPerMeter === null || voltage === null) {
     warnings.push("Мощность или напряжение ленты не подтверждены — расчёт невозможен без паспорта.");
@@ -539,10 +559,12 @@ export function planLedPower(input: {
 
   const remote =
     controller && !controller.spec.wifi
-      ? remoteOptions.filter((option) => option.spec.controlKind === wantedControl)[0] ?? null
+      ? remoteOptions.find((option) => rfRemoteTitleCandidate(controller.spec, option.spec)) ?? null
       : null;
-  if (controller && !controller.spec.wifi && !remote) {
-    warnings.push("Для RF-контроллера пульт соответствующего типа в наборе не найден.");
+  if (controller && !controller.spec.wifi) {
+    warnings.push(remote
+      ? `Пульт ${remote.spec.model ?? "?"} — кандидат по номеру семейства ${controller.spec.model ?? "?"}; совместимость и сопряжение не подтверждены паспортом/стендом.`
+      : `Для RF-контроллера ${controller.spec.model ?? "?"} нет пульта с совпадающим семейством; подбирать по одному типу ленты нельзя.`);
   }
 
   if (strip.kind === "rgbw" || strip.kind === "rgb-cct") {

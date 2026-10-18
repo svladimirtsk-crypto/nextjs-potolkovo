@@ -125,6 +125,24 @@ test("LED: для RGBW основным становится 5-в-1 Wi-Fi, бе�
   await expect(panel.getByTestId("led-warnings")).toContainText("Каналы W");
 });
 
+test("LED-03: 24В/24V, Wi-Fi/WIFI и точный SKU ищутся во всех LED-группах", async ({ page }) => {
+  await openCornice(page);
+  const search = page.getByLabel("Поиск по каталогу");
+  await search.fill("лента 24В");
+  await expect(page.getByTestId("catalog-led-search-scope")).toBeVisible();
+  await expect(page.locator(".pk-product").first()).toContainText("24V");
+  const russianCount = await page.locator(".pk-product").count();
+  expect(russianCount).toBeGreaterThan(0);
+
+  await search.fill("лента 24V");
+  await expect(page.locator(".pk-product")).toHaveCount(russianCount);
+  await search.fill("Wi-Fi");
+  await expect(page.locator(".pk-product").first()).toContainText(/WI[- ]?FI/i);
+  await search.fill("0У-00006564");
+  await expect(page.locator(".pk-product")).toHaveCount(1);
+  await expect(page.locator(".pk-product")).toContainText("WB5");
+});
+
 test("LED: поиск и остальные разделы каталога не ломаются панелью", async ({ page }) => {
   await openCornice(page);
   await page.getByLabel("Поиск по каталогу").fill(strip10.vendorCode);

@@ -72,6 +72,15 @@ export function CatalogSectionClient({ data }: Props) {
     onResultsReset: () => setVisibleCount(CATALOG_PAGE_SIZE),
   });
   const { section, trackSystem, trackGroup, pointSubtype, lampSocket, query } = catalogFilters;
+  /** LED-04: ссылка из комнаты должна открыть подсветку, а не вкладку треков.
+   * URL — внешний источник после гидратации; дальше выбор вкладки остаётся за человеком.
+   */
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("led") === "1") {
+      catalogFilters.selectSection("cornice-lighting");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- однократный вход по URL; не перехватываем последующие клики по вкладкам
+  }, []);
   const [smartOnly, setSmartOnly] = useState(false);
   const [sort, setSort] = useState<CatalogSort>("photo");
   /** Группа комплектующих в разделе «Подсветка карниза»: одна сетка на всё не читается. */
@@ -226,8 +235,10 @@ export function CatalogSectionClient({ data }: Props) {
   );
 
   const sectionProducts = useMemo(
-    () => (section === "cornice-lighting" ? ledProductsOfGroup(products, ledGroup) : products),
-    [products, section, ledGroup],
+    // LED-03: поиск по всей секции; иначе Wi-Fi-контроллер не находится,
+    // пока открыта группа «Ленты», хотя вкладка раздела уже активна.
+    () => (section === "cornice-lighting" && !query.trim() ? ledProductsOfGroup(products, ledGroup) : products),
+    [products, section, ledGroup, query],
   );
 
   const filteredProducts = useMemo(
@@ -313,6 +324,11 @@ export function CatalogSectionClient({ data }: Props) {
               onSort={(value) => { setSort(value); setVisibleCount(CATALOG_PAGE_SIZE); }}
               onReset={resetFilters} matches={searchMatches ?? []} count={filteredProducts.length} visibleCount={visibleCount} />
             {kitReview}
+            {section === "cornice-lighting" && query.trim() ? (
+              <p className="pk-caption" data-testid="catalog-led-search-scope">
+                Поиск по всем группам подсветки: ленты, питание, управление. Очистите запрос, чтобы снова видеть выбранную группу.
+              </p>
+            ) : null}
         <CatalogGrid
           products={filteredProducts}
           visibleCount={visibleCount}

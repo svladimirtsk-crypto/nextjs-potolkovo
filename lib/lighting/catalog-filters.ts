@@ -36,9 +36,56 @@ export type CatalogFilters = {
   query: string;
 };
 
+/**
+ * LED-03 · Одни и те же электрические обозначения в русском запросе и фиде.
+ * Не превращаем неизвестные слова в «синонимы»: только написания 24 В/24V,
+ * Wi-Fi/WIFI и ё/е. Артикул с дефисом оставляем целым токеном.
+ */
+export function normalizeCatalogSearch(value: string): string {
+  return toText(value)
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/ё/g, "е")
+    .replace(/\bwi[\s-]*fi\b/g, "wifi")
+    .replace(/(\d+)\s*[вv](?=$|[^0-9a-zа-я])/gu, "$1v")
+    .replace(/[.,;:()]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /** Строка, по которой ищем: название, артикул и путь категории. */
 export function searchHaystack(product: FeedCatalogProduct): string {
-  return `${toText(product.name)} ${toText(product.vendorCode)} ${toText(product.categoryPath)}`.toLowerCase();
+  return normalizeCatalogSearch(`${toText(product.name)} ${toText(product.vendorCode)} ${toText(product.categoryPath)}`);
+}
+
+/** Порядок слов в названии меняется; в запросе все слова остаются обязательными. */
+export function matchesCatalogQuery(product: FeedCatalogProduct, normalizedQuery: string): boolean {
+  const haystack = searchHaystack(product);
+  return normalizedQuery.split(" ").every((token) => token.length > 0 && haystack.includes(token));
+}
+
+/** Совпадения в названии важнее совпадений только в пути категории.
+ * Например, запрос «лента 24В» сначала показывает ленту, а не пульт 12–24В
+ * из общей категории «Светодиодная лента». При равенстве сохраняется порядок
+ * по фото; это только порядок выдачи, не подтверждение электрических свойств.
+ */
+export function prioritizeNameMatches(products: FeedCatalogProduct[], normalizedQuery: string): FeedCatalogProduct[] {
+  if (!normalizedQuery) return products;
+  const tokens = normalizedQuery.split(" ");
+  const score = (product: FeedCatalogProduct) => {
+    const name = normalizeCatalogSearch(product.name);
+    return tokens.reduce((sum, token) => sum + Number(name.includes(token)), 0);
+  };
+  return [...products].sort((a, b) => score(b) - score(a));
+}
+
+/** Точный SKU важнее наличия фото и совпадений в названии. */
+export function prioritizeExactSku(products: FeedCatalogProduct[], normalizedQuery: string): FeedCatalogProduct[] {
+  if (!normalizedQuery || normalizedQuery.includes(" ")) return products;
+  const exact = products.filter((item) => normalizeCatalogSearch(item.vendorCode) === normalizedQuery);
+  return exact.length > 0
+    ? [...exact, ...products.filter((item) => normalizeCatalogSearch(item.vendorCode) !== normalizedQuery)]
+    : products;
 }
 
 /**
@@ -129,10 +176,10 @@ export function filterCatalogProducts(
 
   if (filters.smartOnly) scoped = scoped.filter(isSmartProduct);
 
-  const q = toText(filters.query).toLowerCase();
-  if (q) scoped = scoped.filter((product) => searchHaystack(product).includes(q));
+  const q = normalizeCatalogSearch(filters.query);
+  if (q) scoped = scoped.filter((product) => matchesCatalogQuery(product, q));
 
-  return sortByPhoto(scoped, rank);
+  return prioritizeExactSku(prioritizeNameMatches(sortByPhoto(scoped, rank), q), q);
 }
 
 /**
@@ -148,12 +195,12 @@ export function searchMatchesBySection(
   query: string,
   activeSection: CatalogSectionId,
 ): Array<{ id: CatalogSectionId; label: string; count: number }> | null {
-  const q = toText(query).trim().toLowerCase();
+  const q = normalizeCatalogSearch(query);
   if (q.length < 2) return null;
 
   const counts = new Map<CatalogSectionId, number>();
   for (const product of products) {
-    if (!searchHaystack(product).includes(q)) continue;
+    if (!matchesCatalogQuery(product, q)) continue;
     const productSection = sectionOfProduct(product);
     if (!productSection) continue;
     counts.set(productSection, (counts.get(productSection) ?? 0) + 1);

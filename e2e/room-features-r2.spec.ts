@@ -189,3 +189,26 @@ test.describe("UX-R2 · мобильная раскладка", () => {
     expect(fits.right).toBeLessThanOrEqual(1);
   });
 });
+
+/** LED-04: путь идёт от одной задачи комнаты, без автодобавления SKU/цены. */
+test("LED-04: задача парящего контура ведёт в каталог с контекстом комнаты", async ({ page }) => {
+  const modal = await startRoom(page, "Кухня");
+  await modal.locator('[data-ceiling-option="floating"]').click();
+  await modal.getByRole("button", { name: /Подтвердить тип/ }).click();
+  await confirmToSummary(modal);
+  await modal.locator(MODAL_FOOTER).getByRole("button", { name: /Подобрать свет|Проверить свет/ }).first().click();
+
+  const tasks = modal.getByTestId("project-lighting-tasks");
+  const link = tasks.getByTestId("led-task-catalog-link");
+  await expect(link).toHaveAttribute("href", /led=1.*room=.*feature=floating.*meters=/);
+  await link.click();
+  await expect(page).toHaveURL(/prodazha-trekovogo-osveshcheniya\?led=1.*feature=floating/);
+  await expect(modal).not.toBeVisible();
+  await expect(page.getByRole("tab", { name: "Подсветка карниза", exact: true }))
+    .toHaveAttribute("aria-selected", "true");
+  const panel = page.getByTestId("led-kit-panel");
+  await expect(panel.getByTestId("led-task-context")).toContainText("Кухня · Парящий контур");
+  await expect(panel.getByTestId("led-task-context")).toContainText("не готовая схема питания");
+  await expect(panel.getByTestId("led-meters")).toHaveValue(/^[1-9]\d*(\.\d+)?$/);
+  await expect(page.locator("[data-cart-bar]")).toHaveCount(0);
+});

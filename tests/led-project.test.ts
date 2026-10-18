@@ -155,16 +155,26 @@ describe("C · блок питания", () => {
     expect(plan.circuits[0]?.psu?.watts).toBe(200);
   });
 
-  it("17 м × 14,4 Вт/м: 244,8 Вт → 318,2 Вт с запасом 30 %, 250 и 300 Вт не проходят", () => {
+  it("17 м × 14,4 Вт/м: 244,8 Вт → 318,24 Вт с запасом 30 %, 250 и 300 Вт не проходят", () => {
     const plan = planLedProject({
       products: catalog,
       runs: [run({ meters: 17, strip: STRIP_144, rows: 1 })],
     });
     expect(plan.totals.loadW).toBe(244.8);
-    expect(plan.circuits[0]?.requiredW).toBe(318.2);
+    expect(plan.circuits[0]?.requiredW).toBe(318.24);
     expect(plan.circuits[0]?.psu).toBeNull();
     expect(plan.circuits[0]?.warnings.join(" ")).toContain("не покрывает");
     expect(plan.status).toBe("needs_review");
+  });
+
+  it("LED-08 · дробная длина на границе мощности не даёт БП ниже истинной нагрузки", () => {
+    const plan = planLedProject({
+      products: catalog,
+      runs: [run({ meters: 7.124, strip: { ...STRIP_10W, wPerMeter: 10.8 } })],
+    });
+    expect(plan.totals.installedMeters).toBe(7.13); // геометрию округляем вверх, не вниз.
+    expect(plan.circuits[0]?.requiredW).toBeGreaterThan(100);
+    expect(plan.circuits[0]?.psu?.watts).toBe(150);
   });
 
   it("блок 48 В не ставится к ленте 24 В — с причиной отказа", () => {
@@ -236,6 +246,16 @@ describe("C · контроллер: ток, канал, вход", () => {
     expect(zonePlan?.controller?.model).not.toBe("C01RF");
     expect(zonePlan?.rejectedControllers.some((item) => item.name.includes("C01RF"))).toBe(true);
   });
+
+  it("LED-07 · 5,5 А у C01RF доходит до зоны и вопроса о винтовом входе", () => {
+    const rfOnly = catalog.filter((item) => /Блок питания.*24V 200W|C01RF|RC01RF/.test(item.name));
+    const plan = planLedProject({ products: rfOnly, runs: [run({ meters: 13.2 })] });
+    expect(plan.zones[0]?.currentA).toBe(5.5);
+    expect(plan.zones[0]?.controller?.model).toBe("C01RF");
+    expect(plan.zones[0]?.warnings.join(" ")).toContain("круглого входа");
+    expect(plan.questions.join(" ")).toContain("способ подключения C01RF");
+    expect(plan.zones[0]?.status).toBe("needs_review");
+  });
 });
 
 describe("C · зоны и цепи", () => {
@@ -298,13 +318,35 @@ describe("C · BOM и версия правил", () => {
     expect(controller?.reason).toContain("А");
   });
 
-  it("RF-контроллер тянет за собой пульт, Wi-Fi — нет", () => {
+  it("RF-контроллер тянет предварительного кандидата, а Wi-Fi не требует пульта", () => {
     const rfOnly = catalog.filter((item) => !/WIFI/i.test(item.name));
     const rf = planLedProject({ products: rfOnly, runs: [run({ meters: 6 })] });
-    expect(rf.bom.some((line) => line.role === "remote")).toBe(true);
+    const remote = rf.bom.find((line) => line.role === "remote");
+    expect(remote?.status).toBe("needs_review");
+    expect(remote?.reason).toContain("не подтверждены");
+    expect(rf.zones[0]?.warnings.join(" ")).toContain("кандидат");
 
     const wifi = planLedProject({ products: catalog, runs: [run({ meters: 6 })] });
     expect(wifi.bom.some((line) => line.role === "remote")).toBe(false);
+  });
+
+  it("LED-13 · RC99RF не попадает в BOM C01RF; RC01RF лишь кандидат со статусом needs_review", () => {
+    const psu = catalog.find((item) => item.name.includes("24V 200W"))!;
+    const controller = catalog.find((item) => item.name.includes("C01RF"))!;
+    const foreign = product("Пульт для светодиодной ленты монохром 4 канала RC99RF 12-24В");
+    const invalid = planLedProject({ products: [psu, controller, foreign], runs: [run()] });
+    expect(invalid.zones[0]?.controller?.model).toBe("C01RF");
+    expect(invalid.zones[0]?.remote).toBeNull();
+    expect(invalid.bom.some((line) => line.role === "remote")).toBe(false);
+    expect(invalid.zones[0]?.warnings.join(" ")).toContain("совпадающим семейством");
+    expect(invalid.questions.join(" ")).toContain("RF-пару");
+    const titled = planLedProject({
+      products: [psu, controller, catalog.find((item) => item.name.includes("RC01RF"))!],
+      runs: [run()],
+    });
+    expect(titled.zones[0]?.remote?.name).toContain("RC01RF");
+    expect(titled.bom.find((line) => line.role === "remote")?.status).toBe("needs_review");
+    expect(titled.status).toBe("needs_review");
   });
 
   it("worstStatus не прячет несовместимость за «нужна проверка»", () => {

@@ -10,6 +10,7 @@ import {
   parseRemoteSpec,
   parseStripSpec,
   planLedPower,
+  rfRemoteTitleCandidate,
 } from "@/lib/lighting/led-hardware";
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 
@@ -109,6 +110,17 @@ describe("LED · питание и управление", () => {
     });
     expect(parseRemoteSpec("Пульт с контролером для светодиодной ленты RGB 1 канал DC12-24В")).toBeNull();
   });
+
+  it("LED-13 · RF-семейство совпадает лишь по номеру модели и никогда не считается паспортной парой", () => {
+    const c01 = parseControllerSpec("Контроллер для светодиодной ленты монохром C01RF 12A, 12-24В")!;
+    const candidate = parseRemoteSpec("Пульт для светодиодной ленты монохром RC01RF 12-24В")!;
+    const foreign = parseRemoteSpec("Пульт для светодиодной ленты монохром RC99RF 12-24В")!;
+    const wrongMode = parseRemoteSpec("Пульт для светодиодной ленты RGB RC01RF 12-24В")!;
+    expect(rfRemoteTitleCandidate(c01, candidate)).toBe(true);
+    expect(rfRemoteTitleCandidate(c01, foreign)).toBe(false);
+    expect(rfRemoteTitleCandidate(c01, wrongMode)).toBe(false);
+    expect(rfRemoteTitleCandidate(parseControllerSpec("Контроллер для светодиодной ленты WIFI монохром C01 15A, 12-24В")!, candidate)).toBe(false);
+  });
 });
 
 describe("LED · расчёт питания по метражу", () => {
@@ -132,10 +144,20 @@ describe("LED · расчёт питания по метражу", () => {
     expect(plan.status).toBe("needs_review");
   });
 
+  it("LED-08 · номинал 100 Вт не выбирается при истинной потребности 100,02096 Вт", () => {
+    const plan = planLedPower({
+      strip: { ...parseStripSpec(STRIP_CCT)!, wPerMeter: 10.8 },
+      meters: 7.124,
+      products: [product("Блок питания МИНИ 24V 100W"), product("Блок питания МИНИ 24V 120W")],
+    });
+    expect(plan.requiredW).toBe(100.03); // округление вверх до сотых, не 100,0 вниз.
+    expect(plan.psu?.spec.watts).toBe(120);
+  });
+
   it("выбирает минимальный подходящий БП и Wi-Fi-контроллер для CCT", () => {
     const plan = planLedPower({ strip: parseStripSpec(STRIP_CCT)!, meters: 6, products: catalog });
     expect(plan.loadW).toBe(64.8);
-    expect(plan.requiredW).toBe(84.2);
+    expect(plan.requiredW).toBe(84.24);
     expect(plan.psu?.spec.watts).toBe(100);
     expect(plan.controller?.spec.model).toBe("C02");
     expect(plan.controller && isAliceCapable(plan.controller.spec)).toBe(true);
@@ -186,6 +208,23 @@ describe("LED · расчёт питания по метражу", () => {
     expect(plan.controller?.spec.model).toBe("C02RF");
     expect(isAliceCapable(plan.controller!.spec)).toBe(false);
     expect(plan.remote?.spec.model).toBe("RC02RF");
+    expect(plan.status).toBe("needs_review");
+    expect(plan.warnings.join(" ")).toContain("сопряжение не подтверждены");
+  });
+
+  it("LED-13 · чужой RF-пульт не выбирается даже для того же типа ленты", () => {
+    const plan = planLedPower({
+      strip: parseStripSpec(STRIP_CCT)!, meters: 6,
+      products: [
+        product("Блок питания ПРО 24V 150W"),
+        product("Контроллер для светодиодной ленты CCT C02RF 12A, 12-24В"),
+        product("Пульт для светодиодной ленты CCT RC99RF 12-24В"),
+      ],
+    });
+    expect(plan.controller?.spec.model).toBe("C02RF");
+    expect(plan.remote).toBeNull();
+    expect(plan.status).toBe("needs_review");
+    expect(plan.warnings.join(" ")).toContain("совпадающим семейством");
   });
 
   it("без подтверждённых Вт/м не выдумывает числа: needs_review и без позиций", () => {

@@ -56,7 +56,7 @@ describe("CATALOG-LED-TZ §10 · воспроизводимые локальны
     }
   });
 
-  it("08 · учебный K=1,25 даёт 306 Вт; текущая политика владельца K=1,30 даёт 318,2 Вт", () => {
+  it("08 · учебный K=1,25 даёт 306 Вт; текущая политика владельца K=1,30 требует не менее 318,24 Вт", () => {
     const strip = parseStripSpec("Светодиодная лента RGB 24V 60 диодов 14,4W катушка 5 м")!;
     const plan = planLedPower({
       strip, meters: 17,
@@ -64,7 +64,7 @@ describe("CATALOG-LED-TZ §10 · воспроизводимые локальны
     });
     expect(17 * 14.4 * 1.25).toBeCloseTo(306);
     expect(plan.loadW).toBe(244.8);
-    expect(plan.requiredW).toBe(318.2);
+    expect(plan.requiredW).toBe(318.24);
     expect(plan.psu?.spec.watts).toBe(360); // 250 и 300 меньше обеих границ.
     expect(plan.status).toBe("needs_review"); // нет подходящего контроллера/паспортов.
   });

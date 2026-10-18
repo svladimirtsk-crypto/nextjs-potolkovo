@@ -27,6 +27,22 @@ export function projectLightingTasks(rooms: readonly TaskRoom[]): ProjectLightin
   });
 }
 
+/**
+ * LED-04 · Путь к каталогу из КОНКРЕТНОЙ задачи комнаты, не ко всему проекту.
+ * Имя комнаты не пишем в URL (оно может содержать личные данные); roomId нужен
+ * лишь для сопоставления с открытым расчётом в этой вкладке. При reload без
+ * снапшота каталог не будет утверждать, что восстановил комнату/комплект.
+ */
+export function ledCatalogHrefForTask(task: ProjectLightingTask): string {
+  const params = new URLSearchParams({ led: "1", room: task.roomId, feature: task.feature });
+  const metersValue = task.geometryMeters;
+  if (metersValue !== null && Number.isFinite(metersValue) && metersValue > 0 && metersValue <= 300) {
+    const roundedUp = Math.ceil(metersValue * 100 - 1e-9) / 100;
+    if (roundedUp <= 300) params.set("meters", String(roundedUp));
+  }
+  return `/uslugi/prodazha-trekovogo-osveshcheniya?${params.toString()}#price`;
+}
+
 export function snapshotLightingTasks(snapshot: CalculatorLeadSnapshot | null | undefined): ProjectLightingTask[] {
   if (!snapshot) return [];
   if (snapshot.roomBreakdown?.length) return projectLightingTasks(snapshot.roomBreakdown);

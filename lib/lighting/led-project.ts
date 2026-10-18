@@ -39,6 +39,8 @@ import {
   parseControllerSpec,
   parsePsuSpec,
   parseRemoteSpec,
+  rfRemoteTitleCandidate,
+  roundUpHundredth,
   type ControlKind,
   type ControllerSpec,
   type PsuSpec,
@@ -145,7 +147,6 @@ export type LedProjectPlan = {
 };
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
-const round1 = (value: number) => Math.round(value * 10) / 10;
 const METER = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 });
 
 /** Статус-максимум: несовместимость важнее «нужна проверка», та важнее «ок». */
@@ -159,7 +160,7 @@ export function worstStatus(statuses: readonly BomStatus[]): BomStatus {
 export function installedMetersOf(run: Pick<LedRun, "meters" | "rows">): number {
   const meters = typeof run.meters === "number" && Number.isFinite(run.meters) && run.meters > 0 ? run.meters : 0;
   const rows = Number.isFinite(run.rows) && run.rows >= 1 ? Math.floor(run.rows) : 1;
-  return round2(meters * rows);
+  return roundUpHundredth(meters * rows);
 }
 
 function normalizeRows(rows: number): number {
@@ -230,7 +231,7 @@ function pickPsu(
   for (const option of suitable) {
     rejected.push({
       name: option.product.name,
-      reason: `${option.spec.watts} Вт меньше требуемых ${round1(requiredW)} Вт с запасом ${PSU_MARGIN_PERCENT} %`,
+      reason: `${option.spec.watts} Вт меньше требуемых ${METER.format(requiredW)} Вт с запасом ${PSU_MARGIN_PERCENT} %`,
     });
   }
   return { psu: null, rejected };
@@ -246,16 +247,16 @@ function pickController(input: {
   voltage: number | null;
   currentA: number;
   kind: StripSpec["kind"];
-}): { controller: CatalogController | null; rejected: { name: string; reason: string }[] } {
+}): { controller: CatalogController | null; warnings: string[]; rejected: { name: string; reason: string }[] } {
   const { controllers, voltage, currentA, kind } = input;
   const wanted = controlKindOfStripKind(kind);
   const channels = activeChannelsOf(kind);
   const rejected: { name: string; reason: string }[] = [];
-  const viable: CatalogController[] = [];
+  const viable: { option: CatalogController; warnings: string[] }[] = [];
 
   for (const option of controllers) {
     const check = checkControllerForLoad({ spec: option.spec, voltage, currentA, channels });
-    if (check.ok) viable.push(option);
+    if (check.ok) viable.push({ option, warnings: check.warnings });
     else rejected.push({ name: option.product.name, reason: check.reason ?? "не подходит" });
   }
 
@@ -265,11 +266,14 @@ function pickController(input: {
     a.product.priceRub - b.product.priceRub;
 
   const exact = viable
-    .filter((option) => option.spec.controlKind === wanted && !isUniversalController(option.spec))
-    .sort(bySuitability);
-  const universal = viable.filter((option) => isUniversalController(option.spec)).sort(bySuitability);
+    .filter((entry) => entry.option.spec.controlKind === wanted && !isUniversalController(entry.option.spec))
+    .sort((a, b) => bySuitability(a.option, b.option));
+  const universal = viable
+    .filter((entry) => isUniversalController(entry.option.spec))
+    .sort((a, b) => bySuitability(a.option, b.option));
+  const chosen = exact[0] ?? universal[0];
 
-  return { controller: exact[0] ?? universal[0] ?? null, rejected };
+  return { controller: chosen?.option ?? null, warnings: chosen?.warnings ?? [], rejected };
 }
 
 /**
@@ -352,8 +356,8 @@ export function planLedProject(input: {
     }
 
     installedMeters = round2(installedMeters);
-    loadW = round1(loadW);
-    const currentA = voltage !== null && voltage > 0 ? round2(loadW / voltage) : 0;
+    loadW = roundUpHundredth(loadW);
+    const currentA = voltage !== null && voltage > 0 ? roundUpHundredth(loadW / voltage) : 0;
 
     if (unknownStrip) {
       zoneWarnings.push("У одной из лент не подтверждены Вт/м или напряжение — расчёт по зоне неполный.");
@@ -373,6 +377,7 @@ export function planLedProject(input: {
     }
 
     let controller: LedZonePlan["controller"] = null;
+    let controllerSpec: ControllerSpec | null = null;
     let rejected: { name: string; reason: string }[] = [];
     let status: BomStatus = zoneWarnings.length > 0 || unknownStrip ? "needs_review" : "ok";
 
@@ -385,17 +390,27 @@ export function planLedProject(input: {
       });
       rejected = picked.rejected;
       if (picked.controller) {
+        controllerSpec = picked.controller.spec;
         controller = {
           productId: picked.controller.product.productId,
           name: picked.controller.product.name,
-          model: picked.controller.spec.model,
-          wifi: picked.controller.spec.wifi,
+          model: controllerSpec.model,
+          wifi: controllerSpec.wifi,
         };
         /*
-         * Этикеточные пределы — не паспорт: даже прошедший по току контроллер
-         * остаётся предварительным, и об этом говорится прямо.
+         * LED-07 · Не теряем предупреждение о 5 А на круглом входе C01RF:
+         * вход в модели не выбран, поэтому согласование винтового подключения
+         * должно дойти до зоны/вопроса инженеру, а не исчезнуть при сортировке.
          */
-        const limit = controllerLimitOf(picked.controller.spec);
+        for (const warning of picked.warnings) {
+          zoneWarnings.push(warning);
+          status = worstStatus([status, "needs_review"]);
+          if (warning.includes("круглого входа")) {
+            questions.push(`Зона ${zone.id}: уточнить способ подключения ${controllerSpec.model ?? "контроллера"} — круглый вход ограничен по току.`);
+          }
+        }
+        /* Этикеточные пределы — не паспорт: даже прошедшая модель предварительная. */
+        const limit = controllerLimitOf(controllerSpec);
         if (limit.evidence === "label_observed") status = "needs_review";
       } else {
         /*
@@ -414,16 +429,19 @@ export function planLedProject(input: {
       status = "incompatible";
     }
 
-    /* --- Пульт: только для RF, по одному на зону --- */
+    /* --- Пульт: название семейства — кандидат, НЕ подтверждённая RF-пара --- */
     let remote: LedZonePlan["remote"] = null;
-    if (controller && !controller.wifi && kind) {
-      const wanted = controlKindOfStripKind(kind);
-      const match = catalog.remotes.find((option) => option.spec.controlKind === wanted);
+    if (controllerSpec && !controllerSpec.wifi) {
+      const rfController = controllerSpec;
+      const match = catalog.remotes.find((option) => rfRemoteTitleCandidate(rfController, option.spec));
+      status = worstStatus([status, "needs_review"]);
       if (match) {
         remote = { productId: match.product.productId, name: match.product.name };
+        zoneWarnings.push(`Пульт ${match.spec.model ?? "?"} — только кандидат по названию семейства ${controllerSpec.model ?? "?"}; совместимость и сопряжение не подтверждены.`);
+        questions.push(`Зона ${zone.id}: подтвердить по паспорту/стенду RF-пару ${controllerSpec.model ?? "?"} и ${match.spec.model ?? "?"}.`);
       } else {
-        status = worstStatus([status, "needs_review"]);
-        zoneWarnings.push("Для RF-контроллера пульт соответствующего типа в наборе не найден.");
+        zoneWarnings.push(`Для RF-контроллера ${controllerSpec.model ?? "?"} нет пульта с совпадающим семейством; выбирать только по типу ленты нельзя.`);
+        questions.push(`Зона ${zone.id}: подобрать и подтвердить RF-пару для ${controllerSpec.model ?? "?"}.`);
       }
     }
 
@@ -513,8 +531,8 @@ export function planLedProject(input: {
         name: remote.name,
         qty: 1,
         unit: "pcs",
-        reason: "RF-контроллер работает только с пультом — один пульт на зону.",
-        status: "ok",
+        reason: `RF-контроллеру нужен пульт: ${controller?.model ?? "?"} и кандидат ${remote.name} совпадают по названию семейства, но сопряжение и совместимость не подтверждены.`,
+        status: "needs_review",
         refId: zone.id,
       });
     }
@@ -533,9 +551,9 @@ export function planLedProject(input: {
   }
 
   for (const [key, bucket] of byCircuit) {
-    const loadW = round1(bucket.zones.reduce((sum, zone) => sum + zone.loadW, 0));
-    const requiredW = round1(loadW * (1 + PSU_MARGIN_PERCENT / 100));
-    const currentA = bucket.voltage && bucket.voltage > 0 ? round2(loadW / bucket.voltage) : 0;
+    const loadW = roundUpHundredth(bucket.zones.reduce((sum, zone) => sum + zone.loadW, 0));
+    const requiredW = roundUpHundredth(loadW * (1 + PSU_MARGIN_PERCENT / 100));
+    const currentA = bucket.voltage && bucket.voltage > 0 ? roundUpHundredth(loadW / bucket.voltage) : 0;
     const installedMeters = round2(bucket.zones.reduce((sum, zone) => sum + zone.installedMeters, 0));
     const circuitWarnings: string[] = [];
 
@@ -596,7 +614,7 @@ export function planLedProject(input: {
         name: psu.product.name,
         qty: 1,
         unit: "pcs",
-        reason: `Нагрузка ${METER.format(loadW)} Вт × ${PSU_MARGIN_PERCENT} % = ${METER.format(requiredW)} Вт; выбран минимальный подходящий ${psu.spec.watts} Вт${zonesNote}.`,
+        reason: `Нагрузка ${METER.format(loadW)} Вт × (1 + ${PSU_MARGIN_PERCENT} %) = ${METER.format(requiredW)} Вт; выбран минимальный подходящий ${psu.spec.watts} Вт${zonesNote}.`,
         status,
         refId: key,
       });
@@ -605,8 +623,8 @@ export function planLedProject(input: {
 
   const totals = {
     installedMeters: round2(zonePlans.reduce((sum, zone) => sum + zone.installedMeters, 0)),
-    loadW: round1(zonePlans.reduce((sum, zone) => sum + zone.loadW, 0)),
-    requiredW: round1(circuits.reduce((sum, circuit) => sum + circuit.requiredW, 0)),
+    loadW: roundUpHundredth(zonePlans.reduce((sum, zone) => sum + zone.loadW, 0)),
+    requiredW: roundUpHundredth(circuits.reduce((sum, circuit) => sum + circuit.requiredW, 0)),
     controllers: zonePlans.filter((zone) => zone.controller !== null).length,
     psus: circuits.filter((circuit) => circuit.psu !== null).length,
   };

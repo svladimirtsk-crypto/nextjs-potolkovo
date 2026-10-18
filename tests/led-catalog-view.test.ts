@@ -10,6 +10,7 @@ import {
   ledMetersFromTasks,
   ledMetersNote,
   ledPlanFor,
+  ledTaskRefFromQuery,
   ledProductsOfGroup,
   ledStripOptions,
   psuWattsOf,
@@ -150,6 +151,15 @@ describe("LED-раздел · подбор питания по метражу", 
     expect(ledMetersFromQuery("?led=1&meters=-4")).toBeNull();
     expect(ledMetersFromQuery("?led=1&meters=9999")).toBeNull();
     expect(ledMetersFromQuery("")).toBeNull();
+  });
+
+  it("LED-04 · URL-задача распознаётся только для LED-входа и допустимых feature/room", () => {
+    expect(ledTaskRefFromQuery("?led=1&room=r1&feature=floating&meters=9")).toEqual({ roomId: "r1", feature: "floating" });
+    expect(ledTaskRefFromQuery("?led=1&room=r2&feature=light-lines")).toEqual({ roomId: "r2", feature: "light-lines" });
+    expect(ledTaskRefFromQuery("?room=r1&feature=floating")).toBeNull();
+    expect(ledTaskRefFromQuery("?led=1&feature=floating")).toBeNull();
+    expect(ledTaskRefFromQuery("?led=1&room=r1&feature=track")).toBeNull();
+    expect(ledTaskRefFromQuery(`?led=1&room=${"x".repeat(130)}&feature=cornice`)).toBeNull();
   });
 
   it("тип управления следует за типом ленты", () => {

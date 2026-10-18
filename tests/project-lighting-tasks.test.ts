@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { formatLeadBody } from "@/lib/lead/format-lead";
 import { LeadPayloadSchema } from "@/lib/lead/schema";
-import { lightingTaskLines, projectLightingTasks, snapshotLightingTasks } from "@/lib/lighting/project-lighting-tasks";
+import { ledCatalogHrefForTask, lightingTaskLines, projectLightingTasks, snapshotLightingTasks } from "@/lib/lighting/project-lighting-tasks";
 import { buildRoomBreakdown, type V2RoomConfig } from "@/lib/calculator/room-snapshot";
 import type { CalculatorLeadSnapshot } from "@/lib/calculator/snapshot-types";
 
@@ -61,6 +61,22 @@ describe("UX-R2 · задачи по свету выводятся из поме
       buildRoomBreakdown(room("r1", { trackType: "built-in", trackLength: 8, lightsEnabled: true, lightsCount: 6 })),
     ]);
     expect(tasks).toEqual([]);
+  });
+
+  it("LED-04 · ссылка сохраняет комнату/задачу и геометрию, но не раскрывает имя в URL", () => {
+    const task = projectLightingTasks([
+      buildRoomBreakdown(room("r1", { label: "Детская Веры", lightLinesEnabled: true, lightLinesLength: 6.123 })),
+    ])[0];
+    const href = ledCatalogHrefForTask(task);
+    const url = new URL(href, "https://example.test");
+    expect(url.pathname).toBe("/uslugi/prodazha-trekovogo-osveshcheniya");
+    expect(url.searchParams.get("room")).toBe("r1");
+    expect(url.searchParams.get("feature")).toBe("light-lines");
+    expect(url.searchParams.get("meters")).toBe("6.13"); // не округляем нагрузку вниз
+    expect(url.hash).toBe("#price");
+    expect(href).not.toContain("Детская");
+    expect(new URL(ledCatalogHrefForTask({ ...task, geometryMeters: null }), "https://example.test").searchParams.has("meters")).toBe(false);
+    expect(new URL(ledCatalogHrefForTask({ ...task, geometryMeters: 301 }), "https://example.test").searchParams.has("meters")).toBe(false);
   });
 
   it("старый снапшот без разбивки по комнатам не теряет контур", () => {

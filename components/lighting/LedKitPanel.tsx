@@ -18,13 +18,16 @@
 import { useEffect, useMemo, useState } from "react";
 
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
+import { useCalculatorStore } from "@/lib/calculator/store";
 import { getDiscountedPrice } from "@/lib/feed2-products";
+import { snapshotLightingTasks } from "@/lib/lighting/project-lighting-tasks";
 import { LIGHTING_ONLY_DISCOUNT_PERCENT } from "@/lib/lighting-formulas";
 import {
   LED_GROUPS,
   controlStatusOf,
   ledGroupOfProduct,
   ledMetersFromQuery,
+  ledTaskRefFromQuery,
   ledMetersNote,
   ledPlanFor,
   ledStripOptions,
@@ -64,6 +67,7 @@ export function LedKitPanel({
   activeGroup: LedGroupId;
   onSelectGroup: (group: LedGroupId) => void;
 }) {
+  const { snapshot } = useCalculatorStore();
   const stripOptions = useMemo(() => ledStripOptions(products), [products]);
   const counts = useMemo(() => {
     const map: Record<LedGroupId, number> = { strips: 0, power: 0, control: 0 };
@@ -84,6 +88,7 @@ export function LedKitPanel({
   const [zonesText, setZonesText] = useState("1");
   const [metersTouched, setMetersTouched] = useState(false);
   const [metersFromTask, setMetersFromTask] = useState(false);
+  const [taskRef, setTaskRef] = useState<ReturnType<typeof ledTaskRefFromQuery>>(null);
 
   /*
    * Вход по задаче: метраж уже известен из расчёта — не спрашиваем его снова.
@@ -97,8 +102,12 @@ export function LedKitPanel({
    */
   useEffect(() => {
     const fromQuery = ledMetersFromQuery(window.location.search);
+    const fromRoom = ledTaskRefFromQuery(window.location.search);
+    if (fromRoom) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- контекст URL читается после гидратации вместе с метражом
+      setTaskRef(fromRoom);
+    }
     if (fromQuery === null || metersTouched) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- значение из URL подставляется один раз после гидратации
     setMetersText(String(fromQuery));
     setMetersFromTask(true);
   }, [metersTouched]);
@@ -107,6 +116,11 @@ export function LedKitPanel({
     stripOptions.find((option) => option.product.productId === stripId) ?? stripOptions[0] ?? null;
   const meters = Number(metersText.replace(",", "."));
   const metersValue = Number.isFinite(meters) && meters > 0 ? meters : 0;
+  const linkedTask = taskRef
+    ? snapshotLightingTasks(snapshot).find((task) => task.roomId === taskRef.roomId && task.feature === taskRef.feature)
+    : null;
+  const linkedMetersMismatch = Boolean(linkedTask?.geometryMeters && metersFromTask &&
+    Math.abs((linkedTask?.geometryMeters ?? 0) - metersValue) > 0.02);
   const rowsValue = Math.min(4, Math.max(1, Math.round(Number(rowsText.replace(",", ".")) || 1)));
   const zonesValue = Math.min(6, Math.max(1, Math.round(Number(zonesText.replace(",", ".")) || 1)));
   const plan = useMemo(
@@ -240,6 +254,15 @@ export function LedKitPanel({
               ? `Метраж подставлен из задачи света: ${METER.format(metersValue)} м. Можно изменить.`
               : ledMetersNote(metersValue)}
           </p>
+          {taskRef ? (
+            <p className="pk-led-note" data-testid="led-task-context">
+              {linkedTask
+                ? `${linkedTask.roomLabel} · ${linkedTask.title}. `
+                : "Задача из прежнего расчёта: данные конкретного помещения здесь не восстановлены. "}
+              Геометрия задачи — не число катушек и не готовая схема питания.
+              {linkedMetersMismatch ? " Метраж в ссылке не совпадает с комнатой — проверьте длину вручную." : ""}
+            </p>
+          ) : null}
 
           <div className="pk-led-pair">
             <label className="pk-led-field">
@@ -389,7 +412,7 @@ export function LedKitPanel({
               ? pick(
                   "Пульт",
                   plan.remote.product,
-                  "RF-контроллер работает только с пультом — положили его в подбор.",
+                  "Кандидат по названию семейства RF-контроллера, а не подтверждённая пара: совместимость и сопряжение проверим по паспорту/стенду до заказа.",
                   "led-remote",
                   1
                 )

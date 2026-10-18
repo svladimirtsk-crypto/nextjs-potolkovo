@@ -170,4 +170,6 @@
 .pk-led-tasks li small { display:block; font-size:11px; color:#53675e; overflow-wrap:anywhere; }
 .pk-led-tasks li b { font-size:14px; font-weight:550; }
 .pk-led-tasks li strong { font-size:13px; font-weight:550; overflow-wrap:anywhere; }
+.pk-led-tasks li .pk-led-task-link { display:inline-flex; align-items:center; gap:6px; min-height:44px; max-width:100%; font-size:12px; font-weight:650; color:#173c36; text-decoration:underline; text-underline-offset:3px; overflow-wrap:anywhere; }
+.pk-led-tasks li .pk-led-task-link:focus-visible { outline:2px solid #173c36; outline-offset:2px; }
 @media(max-width:430px) { .pk-led-tasks { padding:18px; } .pk-led-tasks-heading { display:block; } .pk-led-tasks li { display:block; } .pk-led-tasks li strong { display:block; margin-top:6px; } .pk-led-tasks-heading h3 { font-size:21px; } .pk-led-tasks .pk-button { width:100%; } }

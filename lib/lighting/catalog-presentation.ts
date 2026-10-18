@@ -1,7 +1,15 @@
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import { sortByPhoto } from "@/lib/catalog-photo";
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
-import { filterCatalogProducts, searchHaystack, sectionOfProduct, type CatalogFilters } from "./catalog-filters";
+import {
+  filterCatalogProducts,
+  matchesCatalogQuery,
+  normalizeCatalogSearch,
+  prioritizeNameMatches,
+  prioritizeExactSku,
+  sectionOfProduct,
+  type CatalogFilters,
+} from "./catalog-filters";
 import { isSmartProduct } from "./product-predicates";
 
 export type CatalogSort = "photo" | "price-asc" | "price-desc" | "name";
@@ -11,12 +19,12 @@ export type CatalogSort = "photo" | "price-asc" | "price-desc" | "name";
  * Other sections are offered by searchMatchesBySection. No pricing/BOM changes.
  */
 export function catalogViewProducts(products: readonly FeedCatalogProduct[], filters: CatalogFilters) {
-  const query = toText(filters.query).toLowerCase();
+  const query = normalizeCatalogSearch(filters.query);
   if (!query) return filterCatalogProducts(products, filters);
-  return sortByPhoto(products.filter((product) =>
+  return prioritizeExactSku(prioritizeNameMatches(sortByPhoto(products.filter((product) =>
     sectionOfProduct(product) === filters.section &&
-    (!filters.smartOnly || isSmartProduct(product)) && searchHaystack(product).includes(query)
-  ));
+    (!filters.smartOnly || isSmartProduct(product)) && matchesCatalogQuery(product, query)
+  )), query), query);
 }
 
 /** Presentation only: never mutates the feed or the shopping cart. */

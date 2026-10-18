@@ -49,6 +49,7 @@ const ALLOWED_SETTERS = {
   setIsActionVisible: "IntersectionObserver: видимость секции",
   setMetersText: "LED: метраж берётся из window.location.search после гидрации, не из render props",
   setMetersFromTask: "LED: признак того же внешнего URL-параметра, а не синхронизация React-состояния",
+  setTaskRef: "LED-04: разовое чтение room/feature из window.location.search после гидрации, не из React props",
 };
 
 /**

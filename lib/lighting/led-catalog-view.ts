@@ -161,6 +161,19 @@ export function ledMetersFromQuery(search: string): number | null {
   return Math.round(value * 100) / 100;
 }
 
+export type LedTaskRef = { roomId: string; feature: "floating" | "light-lines" | "cornice" };
+
+/** Только ссылка на задачу, не доверенный roomLabel/подтверждённая электрика. */
+export function ledTaskRefFromQuery(search: string): LedTaskRef | null {
+  const params = new URLSearchParams(search.replace(/^\?/, ""));
+  if (params.get("led") !== "1") return null;
+  const roomId = params.get("room")?.trim() ?? "";
+  const feature = params.get("feature");
+  if (!roomId || roomId.length > 128 || /[\x00-\x1f]/.test(roomId)) return null;
+  if (feature !== "floating" && feature !== "light-lines" && feature !== "cornice") return null;
+  return { roomId, feature };
+}
+
 /** Метраж задачи света из помещений — то, что человек уже ввёл, не спрашиваем снова. */
 export function ledMetersFromTasks(tasks: readonly { geometryMeters: number | null }[]): number | null {
   const values = tasks

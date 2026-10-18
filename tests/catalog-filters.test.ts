@@ -102,4 +102,28 @@ describe("Поиск и фильтры", () => {
     const got = filterCatalogProducts(all, { ...base, section: "cornice-lighting" }, rank);
     expect(got.map((p) => p.productId)).toEqual(["st1", "ps1"]);
   });
+
+  it("LED-03 · лента 24В/24V и Wi-Fi/WIFI находятся одинаково в подсказке и разделе", () => {
+    const items = [
+      product({ productId: "led24", name: "Светодиодная лента ПРО 160 24V 22W", kind: "LED_STRIP" }),
+      product({ productId: "wb5", name: "Контроллер WIFI TUYA 5в1 WB5 15A", kind: "LED_STRIP" }),
+    ];
+    for (const query of ["лента 24В", "лента 24 V", "лента 24V"]) {
+      expect(filterCatalogProducts(items, { ...base, section: "cornice-lighting", query }).map((p) => p.productId)).toEqual(["led24"]);
+      expect(searchMatchesBySection(items, query, "chandeliers")).toEqual([
+        { id: "cornice-lighting", label: "Подсветка карниза", count: 1 },
+      ]);
+    }
+    for (const query of ["Wi-Fi", "Wi Fi", "WIFI"]) {
+      expect(filterCatalogProducts(items, { ...base, section: "cornice-lighting", query }).map((p) => p.productId)).toEqual(["wb5"]);
+    }
+    expect(filterCatalogProducts(items, { ...base, section: "cornice-lighting", query: "лента 12В" })).toEqual([]);
+  });
+
+  it("LED-03 · точный SKU выигрывает у фото и подстроки, регистр артикула не важен", () => {
+    const target = product({ productId: "target", vendorCode: "0У-00006564", name: "Контроллер 5в1", kind: "LED_STRIP" });
+    const mention = product({ productId: "mention", vendorCode: "OTHER", name: "Совместимые 0У-00006564", kind: "LED_STRIP" });
+    const photoFirst = (p: FeedCatalogProduct) => p.productId === "mention" ? 0 : 2;
+    expect(filterCatalogProducts([mention, target], { ...base, section: "cornice-lighting", query: "0у-00006564" }, photoFirst).map((p) => p.productId)).toEqual(["target", "mention"]);
+  });
 });
