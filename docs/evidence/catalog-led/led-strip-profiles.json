@@ -4,9 +4,10 @@
   "method": "Поля собраны из названий товаров фида (на карточках сайта характеристики, кроме штрихкода/термостойкости, отсутствуют). Единицы «W» в названиях лент трактуются как Вт на метр: Вт на диод согласованы между сериями (≈0,089–0,094 Вт/диод), RGB 60 диодов/м × 14,4 Вт/м — стандарт для 24 В 5050.",
   "confidence": "medium (название/сайт, не паспорт). Вывод «Вт/м» — расчётная трактовка, требует подтверждения паспортом или замером.",
   "limits": [
-    "катушка 5 м — из названия; цена за катушку",
+    "катушка 5 м — из названия; цена за катушку — гипотеза, priceUnit требуется от EKS",
     "IP, ширина платы, световой поток, гарантия в фиде отсутствуют",
-    "«СТАНДАРТ 140»/«ПРО 160» — индекс серии, расшифровка (лм/м?) не подтверждена"
+    "«СТАНДАРТ 140»/«ПРО 160» — индекс серии, расшифровка (лм/м?) не подтверждена",
+    "С 19.10.2026: у 33 лент без прямого указания mono/CCT/RGB режим unknown; прежний вывод mono по одной температуре K отозван до паспорта."
   ],
   "strips": [
     {
@@ -17,13 +18,14 @@
       "series": "СТАНДАРТ 140",
       "voltage": 24,
       "ambientCct": "2700",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 64,
       "wPerMeter": 6.0,
       "reelMeters": 5.0,
       "wattsPerReel": 30.0,
       "ampsPerReel": 1.25,
-      "pricePerMeter": 194
+      "pricePerMeter": 194,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007640",
@@ -33,13 +35,14 @@
       "series": "СТАНДАРТ 140",
       "voltage": 24,
       "ambientCct": "4200",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 64,
       "wPerMeter": 6.0,
       "reelMeters": 5.0,
       "wattsPerReel": 30.0,
       "ampsPerReel": 1.25,
-      "pricePerMeter": 194
+      "pricePerMeter": 194,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007643",
@@ -49,13 +52,14 @@
       "series": "СТАНДАРТ 140",
       "voltage": 24,
       "ambientCct": "6500",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 64,
       "wPerMeter": 6.0,
       "reelMeters": 5.0,
       "wattsPerReel": 30.0,
       "ampsPerReel": 1.25,
-      "pricePerMeter": 194
+      "pricePerMeter": 194,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007645",
@@ -65,13 +69,14 @@
       "series": "СТАНДАРТ 140",
       "voltage": 24,
       "ambientCct": "2700",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 112,
       "wPerMeter": 10.0,
       "reelMeters": 5.0,
       "wattsPerReel": 50.0,
       "ampsPerReel": 2.08,
-      "pricePerMeter": 246
+      "pricePerMeter": 246,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007646",
@@ -81,13 +86,14 @@
       "series": "СТАНДАРТ 140",
       "voltage": 24,
       "ambientCct": "4200",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 112,
       "wPerMeter": 10.0,
       "reelMeters": 5.0,
       "wattsPerReel": 50.0,
       "ampsPerReel": 2.08,
-      "pricePerMeter": 246
+      "pricePerMeter": 246,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007648",
@@ -97,13 +103,14 @@
       "series": "СТАНДАРТ 140",
       "voltage": 24,
       "ambientCct": "6500",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 112,
       "wPerMeter": 10.0,
       "reelMeters": 5.0,
       "wattsPerReel": 50.0,
       "ampsPerReel": 2.08,
-      "pricePerMeter": 246
+      "pricePerMeter": 246,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007650",
@@ -113,13 +120,14 @@
       "series": "СТАНДАРТ 140",
       "voltage": 24,
       "ambientCct": "2700",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 128,
       "wPerMeter": 12.0,
       "reelMeters": 5.0,
       "wattsPerReel": 60.0,
       "ampsPerReel": 2.5,
-      "pricePerMeter": 280
+      "pricePerMeter": 280,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007652",
@@ -129,13 +137,14 @@
       "series": "СТАНДАРТ 140",
       "voltage": 24,
       "ambientCct": "4200",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 128,
       "wPerMeter": 12.0,
       "reelMeters": 5.0,
       "wattsPerReel": 60.0,
       "ampsPerReel": 2.5,
-      "pricePerMeter": 280
+      "pricePerMeter": 280,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007655",
@@ -145,13 +154,14 @@
       "series": "СТАНДАРТ 140",
       "voltage": 24,
       "ambientCct": "6500",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 128,
       "wPerMeter": 12.0,
       "reelMeters": 5.0,
       "wattsPerReel": 60.0,
       "ampsPerReel": 2.5,
-      "pricePerMeter": 280
+      "pricePerMeter": 280,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007656",
@@ -161,13 +171,14 @@
       "series": "СТАНДАРТ 140",
       "voltage": 24,
       "ambientCct": "2700",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 176,
       "wPerMeter": 16.0,
       "reelMeters": 5.0,
       "wattsPerReel": 80.0,
       "ampsPerReel": 3.33,
-      "pricePerMeter": 376
+      "pricePerMeter": 376,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007658",
@@ -177,13 +188,14 @@
       "series": "СТАНДАРТ 140",
       "voltage": 24,
       "ambientCct": "4200",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 176,
       "wPerMeter": 16.0,
       "reelMeters": 5.0,
       "wattsPerReel": 80.0,
       "ampsPerReel": 3.33,
-      "pricePerMeter": 376
+      "pricePerMeter": 376,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007660",
@@ -193,13 +205,14 @@
       "series": "СТАНДАРТ 140",
       "voltage": 24,
       "ambientCct": "6500",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 176,
       "wPerMeter": 16.0,
       "reelMeters": 5.0,
       "wattsPerReel": 80.0,
       "ampsPerReel": 3.33,
-      "pricePerMeter": 376
+      "pricePerMeter": 376,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007662",
@@ -209,13 +222,14 @@
       "series": "СТАНДАРТ 140",
       "voltage": 24,
       "ambientCct": "2700",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 192,
       "wPerMeter": 18.0,
       "reelMeters": 5.0,
       "wattsPerReel": 90.0,
       "ampsPerReel": 3.75,
-      "pricePerMeter": 408
+      "pricePerMeter": 408,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007663",
@@ -225,13 +239,14 @@
       "series": "СТАНДАРТ 140",
       "voltage": 24,
       "ambientCct": "4200",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 192,
       "wPerMeter": 18.0,
       "reelMeters": 5.0,
       "wattsPerReel": 90.0,
       "ampsPerReel": 3.75,
-      "pricePerMeter": 408
+      "pricePerMeter": 408,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007664",
@@ -241,13 +256,14 @@
       "series": "СТАНДАРТ 140",
       "voltage": 24,
       "ambientCct": "6500",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 192,
       "wPerMeter": 18.0,
       "reelMeters": 5.0,
       "wattsPerReel": 90.0,
       "ampsPerReel": 3.75,
-      "pricePerMeter": 408
+      "pricePerMeter": 408,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007665",
@@ -257,13 +273,14 @@
       "series": "СТАНДАРТ 140",
       "voltage": 24,
       "ambientCct": "2700",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 240,
       "wPerMeter": 22.0,
       "reelMeters": 5.0,
       "wattsPerReel": 110.0,
       "ampsPerReel": 4.58,
-      "pricePerMeter": 472
+      "pricePerMeter": 472,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007666",
@@ -273,13 +290,14 @@
       "series": "СТАНДАРТ 140",
       "voltage": 24,
       "ambientCct": "4200",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 240,
       "wPerMeter": 22.0,
       "reelMeters": 5.0,
       "wattsPerReel": 110.0,
       "ampsPerReel": 4.58,
-      "pricePerMeter": 472
+      "pricePerMeter": 472,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007667",
@@ -289,13 +307,14 @@
       "series": "СТАНДАРТ 140",
       "voltage": 24,
       "ambientCct": "6500",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 240,
       "wPerMeter": 22.0,
       "reelMeters": 5.0,
       "wattsPerReel": 110.0,
       "ampsPerReel": 4.58,
-      "pricePerMeter": 472
+      "pricePerMeter": 472,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007624",
@@ -305,13 +324,14 @@
       "series": "ПРО 160",
       "voltage": 24,
       "ambientCct": "2700",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 112,
       "wPerMeter": 10.0,
       "reelMeters": 5.0,
       "wattsPerReel": 50.0,
       "ampsPerReel": 2.08,
-      "pricePerMeter": 280
+      "pricePerMeter": 280,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007625",
@@ -321,13 +341,14 @@
       "series": "ПРО 160",
       "voltage": 24,
       "ambientCct": "4200",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 112,
       "wPerMeter": 10.0,
       "reelMeters": 5.0,
       "wattsPerReel": 50.0,
       "ampsPerReel": 2.08,
-      "pricePerMeter": 280
+      "pricePerMeter": 280,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007626",
@@ -337,13 +358,14 @@
       "series": "ПРО 160",
       "voltage": 24,
       "ambientCct": "6500",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 112,
       "wPerMeter": 10.0,
       "reelMeters": 5.0,
       "wattsPerReel": 50.0,
       "ampsPerReel": 2.08,
-      "pricePerMeter": 280
+      "pricePerMeter": 280,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007627",
@@ -353,13 +375,14 @@
       "series": "ПРО 160",
       "voltage": 24,
       "ambientCct": "2700",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 128,
       "wPerMeter": 12.0,
       "reelMeters": 5.0,
       "wattsPerReel": 60.0,
       "ampsPerReel": 2.5,
-      "pricePerMeter": 320
+      "pricePerMeter": 320,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007628",
@@ -369,13 +392,14 @@
       "series": "ПРО 160",
       "voltage": 24,
       "ambientCct": "4200",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 128,
       "wPerMeter": 12.0,
       "reelMeters": 5.0,
       "wattsPerReel": 60.0,
       "ampsPerReel": 2.5,
-      "pricePerMeter": 320
+      "pricePerMeter": 320,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007629",
@@ -385,13 +409,14 @@
       "series": "ПРО 160",
       "voltage": 24,
       "ambientCct": "6500",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 128,
       "wPerMeter": 12.0,
       "reelMeters": 5.0,
       "wattsPerReel": 60.0,
       "ampsPerReel": 2.5,
-      "pricePerMeter": 320
+      "pricePerMeter": 320,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007632",
@@ -401,13 +426,14 @@
       "series": "ПРО 160",
       "voltage": 24,
       "ambientCct": "6500",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 176,
       "wPerMeter": 16.0,
       "reelMeters": 5.0,
       "wattsPerReel": 80.0,
       "ampsPerReel": 3.33,
-      "pricePerMeter": 428
+      "pricePerMeter": 428,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007630",
@@ -417,13 +443,14 @@
       "series": "ПРО 160",
       "voltage": 24,
       "ambientCct": "2700",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 176,
       "wPerMeter": 16.0,
       "reelMeters": 5.0,
       "wattsPerReel": 80.0,
       "ampsPerReel": 3.33,
-      "pricePerMeter": 428
+      "pricePerMeter": 428,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007631",
@@ -433,13 +460,14 @@
       "series": "ПРО 160",
       "voltage": 24,
       "ambientCct": "4200",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 176,
       "wPerMeter": 16.0,
       "reelMeters": 5.0,
       "wattsPerReel": 80.0,
       "ampsPerReel": 3.33,
-      "pricePerMeter": 428
+      "pricePerMeter": 428,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007633",
@@ -449,13 +477,14 @@
       "series": "ПРО 160",
       "voltage": 24,
       "ambientCct": "2700",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 192,
       "wPerMeter": 18.0,
       "reelMeters": 5.0,
       "wattsPerReel": 90.0,
       "ampsPerReel": 3.75,
-      "pricePerMeter": 494
+      "pricePerMeter": 494,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007669",
@@ -513,13 +542,14 @@
       "series": "ПРО 160",
       "voltage": 24,
       "ambientCct": "4200",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 192,
       "wPerMeter": 18.0,
       "reelMeters": 5.0,
       "wattsPerReel": 90.0,
       "ampsPerReel": 3.75,
-      "pricePerMeter": 494
+      "pricePerMeter": 494,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007635",
@@ -529,13 +559,14 @@
       "series": "ПРО 160",
       "voltage": 24,
       "ambientCct": "6500",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 192,
       "wPerMeter": 18.0,
       "reelMeters": 5.0,
       "wattsPerReel": 90.0,
       "ampsPerReel": 3.75,
-      "pricePerMeter": 494
+      "pricePerMeter": 494,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007636",
@@ -545,13 +576,14 @@
       "series": "ПРО 160",
       "voltage": 24,
       "ambientCct": "2700",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 240,
       "wPerMeter": 22.0,
       "reelMeters": 5.0,
       "wattsPerReel": 110.0,
       "ampsPerReel": 4.58,
-      "pricePerMeter": 578
+      "pricePerMeter": 578,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007637",
@@ -561,13 +593,14 @@
       "series": "ПРО 160",
       "voltage": 24,
       "ambientCct": "4200",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 240,
       "wPerMeter": 22.0,
       "reelMeters": 5.0,
       "wattsPerReel": 110.0,
       "ampsPerReel": 4.58,
-      "pricePerMeter": 578
+      "pricePerMeter": 578,
+      "modeEvidence": "unknown"
     },
     {
       "sku": "УУ-00007638",
@@ -577,13 +610,14 @@
       "series": "ПРО 160",
       "voltage": 24,
       "ambientCct": "6500",
-      "kind": "mono",
+      "kind": null,
       "ledsPerMeter": 240,
       "wPerMeter": 22.0,
       "reelMeters": 5.0,
       "wattsPerReel": 110.0,
       "ampsPerReel": 4.58,
-      "pricePerMeter": 578
+      "pricePerMeter": 578,
+      "modeEvidence": "unknown"
     }
   ],
   "powerSupplies": [
@@ -950,5 +984,11 @@
       "model": "DC12",
       "isKit": true
     }
-  ]
+  ],
+  "modeReview": {
+    "reviewedAt": "2026-10-19",
+    "unknownStripModeFromTitle": 33,
+    "explicitColorModesTitleOnly": 3,
+    "note": "Одна температура K в имени не подтверждает монохром/число силовых каналов. Исходные названия сохранены; паспорт EKS ещё не получен."
+  }
 }

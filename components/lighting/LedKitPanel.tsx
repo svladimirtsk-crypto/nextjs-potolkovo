@@ -44,13 +44,15 @@ const STRIP_KIND_LABEL: Record<string, string> = {
   rgb: "RGB",
   rgbw: "RGBW",
   "rgb-cct": "RGB + CCT",
+  unknown: "Режим не указан (нужен паспорт)",
 };
 
 const unitLabel = (product: FeedCatalogProduct) => (product.unit === "m" ? "м" : "шт");
 
-/** Лента по умолчанию: монохром 10 Вт/м — самый частый случай подсветки. */
+/** Привычная стартовая мощность 10 Вт/м СТАНДАРТ: выбор в UI НЕ устанавливает неизвестный режим ленты. */
 function defaultStripId(options: ReturnType<typeof ledStripOptions>): string {
-  const ten = options.find((option) => option.spec.kind === "mono" && option.spec.wPerMeter === 10);
+  const ten = options.find((option) => option.spec.wPerMeter === 10 && option.spec.voltage === 24 &&
+    /СТАНДАРТ 140/i.test(option.product.name));
   return (ten ?? options[0])?.product.productId ?? "";
 }
 
@@ -208,7 +210,7 @@ export function LedKitPanel({
           </p>
         </div>
         <span className="pk-led-status" data-status={plan?.status ?? "needs_review"} data-testid="led-plan-status">
-          {plan?.status === "ok" ? "Расчёт сошёлся" : "Нужна проверка"}
+          {plan?.status === "incompatible" ? "Несовместимо" : plan?.status === "ok" ? "Предварительный расчёт" : "Нужна проверка"}
         </span>
       </header>
 
@@ -289,7 +291,7 @@ export function LedKitPanel({
             </label>
           </div>
           <p id="led-rows-note" className="pk-led-note">
-            Ряды умножают длину: 6 м в два ряда — это 12 м ленты. Каждая зона управляется своим контроллером;
+            Ряды умножают длину: 6 м в два ряда — это 12 м ленты. Для каждой независимой зоны нужно своё управление;
             блок питания может быть общим, но схему подтверждает инженер.
           </p>
 
@@ -300,7 +302,7 @@ export function LedKitPanel({
               data-testid="led-strip"
               onChange={(event) => setStripId(event.target.value)}
             >
-              {stripOptions.length === 0 ? <option value="">Нет лент с подтверждённой мощностью</option> : null}
+              {stripOptions.length === 0 ? <option value="">Нет лент с указанной мощностью</option> : null}
               {stripOptions.map((option) => (
                 <option key={option.product.productId} value={option.product.productId}>
                   {`${STRIP_KIND_LABEL[option.spec.kind] ?? option.spec.kind} · ${option.spec.wPerMeter} Вт/м · ${option.spec.voltage ?? "?"} В · катушка ${option.spec.reelMeters ?? "?"} м · ${price(option.product)}/${unitLabel(option.product)}`}
@@ -353,7 +355,7 @@ export function LedKitPanel({
               <dd data-testid="led-plan-reels">{plan?.reels ?? "—"}</dd>
             </div>
             <div>
-              <dt>Контроллеров по зонам</dt>
+              <dt>Зон для управления (комплект не подтверждён)</dt>
               <dd data-testid="led-plan-controllers">{plan ? plan.zones : "—"}</dd>
             </div>
           </dl>
@@ -383,9 +385,11 @@ export function LedKitPanel({
               plan?.psu?.product,
               plan?.psu
                 ? `${plan.psu.spec.watts} Вт · ${plan.psu.spec.voltage ?? "?"} В — минимальный подходящий по мощности с запасом 30 %.`
-                : plan && plan.requiredW > 0
-                  ? `Нужен БП на ${METER.format(plan.requiredW)} Вт: такой позиции в каталоге нет — соберём схему из нескольких блоков или подберём под заказ.`
-                  : "Сначала нужны метраж и лента с подтверждённой мощностью.",
+                : plan?.status === "incompatible"
+                  ? "БП другого напряжения не подходят для этой ленты. Нужен источник с совпадающим напряжением, схемой и паспортом."
+                  : plan && plan.requiredW > 0
+                    ? `Нужен БП на ${METER.format(plan.requiredW)} Вт: подходящей позиции с совпадающим напряжением нет — схему и модель подтвердит инженер.`
+                    : "Сначала нужны метраж и паспортная мощность ленты для итогового подбора.",
               "led-psu",
               1
             )}
@@ -394,10 +398,21 @@ export function LedKitPanel({
               plan?.controller?.product,
               controllerStatus
                 ? `${controllerStatus.detail}${plan && plan.zones > 1 ? ` Нужно ${plan.zones} шт — по одной на зону.` : ""}`
-                : "Подберём контроллер, когда будет известен тип ленты.",
+                : plan?.controlKit
+                  ? "Отдельный контроллер не выбран: ниже — один набор-кандидат, его состав и токи не подтверждены."
+                  : "Подберём управление, когда будут известны режим и ток ленты.",
               "led-controller",
               plan?.zones ?? 1
             )}
+            {plan?.controlKit
+              ? pick(
+                  "Набор «пульт + контроллер» · кандидат",
+                  plan.controlKit.product,
+                  `Один продаваемый SKU на зону${plan.zones > 1 ? ` · ${plan.zones} шт` : ""}. Состав, токи и сопряжение не подтверждены: отдельный пульт не добавлен, перед заказом нужен паспорт/стенд.`,
+                  "led-control-kit",
+                  plan.zones
+                )
+              : null}
             {plan?.universalController &&
             plan.universalController.product.productId !== plan.controller?.product.productId
               ? pick(
@@ -423,6 +438,12 @@ export function LedKitPanel({
             <p className="pk-led-alice" data-testid="led-alice-note">
               С Алисой любая лента работает через Wi-Fi 5-в-1 (WB5) — подтверждено владельцем на его комплекте. Один
               контроллер закрывает монохром, CCT, RGB, RGBW и RGB+CCT; ток и каналы проверяем по паспорту.
+            </p>
+          ) : selected?.spec.kind === "unknown" ? (
+            <p className="pk-led-alice" data-testid="led-alice-note">
+              С Алисой любая лента работает через Wi-Fi 5-в-1 — это подтверждение владельца на его комплекте о
+              маршруте управления, не паспорт электрической совместимости. У выбранной ленты режим неизвестен,
+              поэтому контроллер пока не назначен: ток и каналы проверяем по паспорту до подбора WB5.
             </p>
           ) : controllerStatus?.alice === "owner-verified" ? (
             <p className="pk-led-alice" data-testid="led-alice-note">

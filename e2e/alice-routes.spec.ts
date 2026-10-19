@@ -90,4 +90,7 @@ test("Алиса: панель подсветки говорит про 5-в-1 �
   const panel = page.getByTestId("led-kit-panel");
   await expect(panel.getByTestId("led-alice-note")).toContainText("С Алисой любая лента работает через Wi-Fi 5-в-1");
   await expect(panel.getByTestId("led-alice-note")).toContainText("ток и каналы проверяем по паспорту");
+  // Owner-verified маршрут ≠ выбранный контроллер: в live-заголовке нет режима ленты.
+  await expect(panel.getByTestId("led-alice-note")).toContainText("контроллер пока не назначен");
+  await expect(panel.getByTestId("led-controller-add")).toHaveCount(0);
 });

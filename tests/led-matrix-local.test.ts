@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import snapshot from "@/data/eks-feed2-snapshot.json";
 import { normalizeFeedCatalogProduct } from "@/lib/feed2-snapshot-normalize";
 import { ledRoleOf, parseStripSpec, planLedPower } from "@/lib/lighting/led-hardware";
+import { planLedProject, type LedRun } from "@/lib/lighting/led-project";
 import { normalizeQty } from "@/lib/lighting/product-predicates";
 import { resolvePriceBasis, stripPurchaseQty } from "@/lib/lighting/led-price-basis";
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
@@ -41,6 +42,46 @@ describe("CATALOG-LED-TZ §10 · воспроизводимые локальны
     expect(basis.evidence).toBe("title_reel");
     expect(bought).toEqual({ qty: 2, unit: "pcs", roundedMeters: 10 });
     expect(bought.qty * 970).toBe(1940);
+  });
+
+  it("05 · 24 В лента и только 12 В блок → incompatible и без PSU в BOM", () => {
+    const strip = parseStripSpec("Светодиодная лента монохром 24V 120 диодов 10W 4200К катушка 5 м")!;
+    const run: LedRun = {
+      id: "r", roomId: "room", roomLabel: "Гостиная", feature: "floating", meters: 5, rows: 1,
+      strip, stripProductId: "led-1", stripName: "Лента 24 В", source: "task", confirmed: true,
+    };
+    const wrong = product("Блок питания 12V 200W");
+    const plan = planLedProject({ products: [wrong], runs: [run] });
+    expect(plan.circuits[0]?.status).toBe("incompatible");
+    expect(plan.circuits[0]?.psu).toBeNull();
+    expect(plan.bom.some((item) => item.role === "psu")).toBe(false);
+  });
+
+  it("10 · 24V/4200К/10W без заявленного режима → unknown и нет управления в плане", () => {
+    const strip = parseStripSpec("Светодиодная лента СТАНДАРТ 140 24V 112 диодов 10W 4200К катушка 5 м")!;
+    const plan = planLedPower({
+      strip, meters: 5,
+      products: [product("Контроллер для светодиодной ленты WIFI TUYA 5в1 WB5 15A,12-24В")],
+    });
+    expect(strip.kind).toBe("unknown");
+    expect(plan.controller).toBeNull();
+    expect(plan.universalController).toBeNull();
+    expect(plan.status).toBe("needs_review");
+  });
+
+  it("15 · kit — ровно одна строка кандидат, без двух отдельных компонентов", () => {
+    const strip = parseStripSpec("Светодиодная лента монохром 24V 120 диодов 10W 4200К катушка 5 м")!;
+    const run: LedRun = {
+      id: "r", roomId: "room", roomLabel: "Гостиная", feature: "floating", meters: 5, rows: 1,
+      strip, stripProductId: "led-1", stripName: "Лента 24 В", source: "task", confirmed: true,
+    };
+    const plan = planLedProject({
+      products: [product("Блок питания 24V 100W"), product("Пульт с контролером для светодиодной ленты монохром 1 канал DC12-24В EKS6A*2")],
+      runs: [run],
+    });
+    expect(plan.bom.filter((item) => ["controller", "remote", "controller-remote-kit"].includes(item.role)).map((item) => item.role))
+      .toEqual(["controller-remote-kit"]);
+    expect(plan.bom.find((item) => item.role === "controller-remote-kit")?.status).toBe("needs_review");
   });
 
   it("06 · RGB-only C03RF не становится контроллером для RGBW и RGB+CCT", () => {

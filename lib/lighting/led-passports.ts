@@ -18,6 +18,8 @@
  * «неизвестно», и именно оно попадает в список вопросов поставщику.
  */
 
+import type { StripSpec } from "@/lib/lighting/led-hardware";
+
 export type PassportStatus =
   | "unknown"
   | "title_only"
@@ -232,6 +234,35 @@ export function applyPassportToSpec<T extends { voltage: number | null; wPerMete
   return {
     spec: next,
     application: { applied, blocked: [...new Set(blocked)], verified: passportIsVerified(passport) },
+  };
+}
+
+/** Режим ленты заменяет unknown только при проверенном поле паспорта, не по этикетке/заголовку. */
+export function applyStripPassportToSpec(
+  spec: StripSpec,
+  passport: StripPassport | null | undefined
+): { spec: StripSpec; application: PassportApplication } {
+  const base = applyPassportToSpec(spec, passport);
+  if (!passport) return base;
+  const verifiedMode = isVerifiedField(passport.stripMode);
+  const { wPerMeter, reelMeters, voltage } = base.spec;
+  const wattsPerReel = wPerMeter !== null && reelMeters !== null ? Math.round(wPerMeter * reelMeters * 10) / 10 : null;
+  const ampsPerReel = wattsPerReel !== null && voltage ? Math.round((wattsPerReel / voltage) * 100) / 100 : null;
+  return {
+    spec: {
+      ...base.spec,
+      kind: verifiedMode ? passport.stripMode.value! : spec.kind,
+      modeEvidence: verifiedMode ? "datasheet_verified" : spec.modeEvidence,
+      wattsPerReel,
+      ampsPerReel,
+    },
+    application: {
+      ...base.application,
+      applied: verifiedMode ? [...base.application.applied, "stripMode"] : base.application.applied,
+      blocked: !verifiedMode && passport.stripMode.value !== null
+        ? [...base.application.blocked, "stripMode"]
+        : base.application.blocked,
+    },
   };
 }
 

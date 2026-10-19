@@ -1,0 +1,22 @@
+
+> nextjs@0.1.0 lint
+> eslint
+
+
+/home/user/repo/app/uslugi/_components/ServiceRelatedServices.tsx
+  4:34  warning  'servicePageContent' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/user/repo/components/calculator-modal/lighting-footer-progress.tsx
+  7:15  warning  'FeedCatalogParam' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/user/repo/components/home/action-form.tsx
+  80:10  warning  'buildLeadMessage' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/user/repo/components/home/mobile-sticky-cta.tsx
+  120:9  warning  'hasLightingInSnapshot' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  144:9  warning  'handleActionClick' is assigned a value but never used      @typescript-eslint/no-unused-vars
+
+/home/user/repo/lib/calculator/selectors.ts
+  225:3  warning  'ctx' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 6 problems (0 errors, 6 warnings)

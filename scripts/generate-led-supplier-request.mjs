@@ -23,9 +23,11 @@ const outPath = join(root, "docs/evidence/catalog-led/supplier-request.md");
 
 const profile = JSON.parse(readFileSync(profilePath, "utf8"));
 const snapshot = JSON.parse(readFileSync(snapshotPath, "utf8"));
+const unknownStripModes = (profile.strips ?? []).filter((strip) => !strip.kind).length;
 
 /** Поля, которых нет ни в названии, ни в витрине, — их и просим. */
 const STRIP_MISSING = [
+  `режим ленты и число электрических каналов по каждому SKU (у ${unknownStripModes} лент одна температура К не доказывает mono)`,
   "кратность реза (мм)",
   "ширина платы (мм)",
   "IP",
@@ -126,6 +128,8 @@ lines.push("");
 lines.push(
   "Статусы по ТЗ §4: `title_only` (название) и `label_observed` (фото маркировки) **не дают verified BOM**. `datasheet_verified` — только по паспорту/инструкции от поставщика."
 );
+lines.push("");
+lines.push(`**Ревизия данных 19.10.2026:** у ${unknownStripModes} лент в названии нет явного режима: одна температура К не подтверждает монохром/число каналов. Поэтому \`kind=null\` (unknown), паспорт режима требуется для каждой серии/позиции. Это не изменение исходного EKS-feed.`);
 lines.push("");
 
 lines.push("## 2. Расхождение цены катушки и витринной цены за метр");

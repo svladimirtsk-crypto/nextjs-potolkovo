@@ -16,6 +16,7 @@ import {
   psuWattsOf,
 } from "@/lib/lighting/led-catalog-view";
 import { parseControllerSpec, parseRemoteSpec, parseStripSpec } from "@/lib/lighting/led-hardware";
+import { field, passportFromStripProfile } from "@/lib/lighting/led-passports";
 
 function product(name: string): FeedCatalogProduct {
   return {
@@ -41,6 +42,7 @@ function product(name: string): FeedCatalogProduct {
 }
 
 const STRIP = "Светодиодная лента СТАНДАРТ 140 24V 112 диодов 10W 4200К катушка 5 м ЧЗ";
+const MONO = STRIP.replace("лента СТАНДАРТ", "лента монохром СТАНДАРТ");
 const PSU_100 = "Блок питания СТАНДАРТ 24V 100W 120шт ЧЗ";
 const PSU_150 = "Блок питания ПРО 24V 150W 36шт ЧЗ";
 const WIFI_CCT = "Контроллер для светодиодной ленты WIFI TUYA CCT C02 15A,12-24В";
@@ -76,6 +78,18 @@ describe("LED-раздел · группы комплектующих", () => {
     expect(options[0].spec.wPerMeter).toBe(10);
   });
 
+  it("LED-10 · только datasheet_verified stripMode меняет unknown в подборе, фото наклейки — нет", () => {
+    const base = passportFromStripProfile({ series: "СТАНДАРТ 140", title: STRIP, kind: null });
+    const label = { ...base, stripMode: field("mono" as const, "label_observed", "фото наклейки") };
+    expect(ledStripOptions(catalog, [label])[0]?.spec.kind).toBe("unknown");
+    const verified = { ...base, stripMode: field("mono" as const, "datasheet_verified", "тестовый паспорт") };
+    const option = ledStripOptions(catalog, [verified])[0];
+    expect(option?.spec.kind).toBe("mono");
+    expect(option?.spec.modeEvidence).toBe("datasheet_verified");
+    const plan = ledPlanFor({ products: catalog, strip: parseStripSpec(STRIP)!, meters: 6, passport: verified });
+    expect(plan?.controller?.spec.model).toBe("C01");
+  });
+
   it("подписи групп объясняют, что внутри", () => {
     expect(LED_GROUPS.map((g) => g.label)).toEqual(["Ленты", "Питание", "Управление"]);
     expect(LED_GROUPS.every((g) => g.hint.length > 20)).toBe(true);
@@ -96,7 +110,7 @@ describe("LED-раздел · подбор питания по метражу", 
   it("универсальный 5-в-1 виден в плане как альтернатива для монохромной ленты", () => {
     const plan = ledPlanFor({
       products: [...catalog, product(WIFI_5IN1)],
-      strip: parseStripSpec(STRIP)!,
+      strip: parseStripSpec(MONO)!,
       meters: 6,
     })!;
     expect(plan.controller?.spec.model).toBe("C01");
@@ -104,19 +118,50 @@ describe("LED-раздел · подбор питания по метражу", 
     expect(plan.universalController?.spec.model).toBe("WB5");
   });
 
-  it("на 6 м хватает БП 100 Вт, а рейки считаются по 5 м", () => {
-    const plan = ledPlanFor({ products: catalog, strip: parseStripSpec(STRIP)!, meters: 6 })!;
+  it("на 6 м хватает БП 100 Вт, а катушки считаются по 5 м", () => {
+    const plan = ledPlanFor({ products: catalog, strip: parseStripSpec(MONO)!, meters: 6 })!;
     expect(plan.requiredW).toBe(78);
     expect(psuWattsOf(plan)).toBe(100);
     expect(plan.reels).toBe(2);
-    // Лента 4200К — монохром, значит и контроллер должен быть монохромным, а не CCT.
+    // Для явно помеченной «монохром» ленты выбираем C01, а не CCT.
     expect(plan.controller?.spec.model).toBe("C01");
     expect(plan.remote).toBeNull();
   });
 
+  it("LED-10 · 4200К в фиде не раскрывает число каналов: power-кандидат есть, управление не выдумывается", () => {
+    const plan = ledPlanFor({ products: [...catalog, product(WIFI_5IN1)], strip: parseStripSpec(STRIP)!, meters: 6 })!;
+    expect(plan.psu?.spec.watts).toBe(100);
+    expect(plan.controller).toBeNull();
+    expect(plan.universalController).toBeNull();
+    expect(plan.controlKit).toBeNull();
+    expect(plan.status).toBe("needs_review");
+    expect(plan.warnings.join(" ")).toContain("Режим/число каналов");
+    expect(controlKindOfStrip("unknown")).toBeNull();
+  });
+
+  it("LED-05 · guided-путь сохраняет incompatible при неподходящем напряжении даже с несколькими зонами", () => {
+    const plan = ledPlanFor({
+      products: [product("Блок питания СТАНДАРТ 12V 200W")], strip: parseStripSpec(MONO)!, meters: 10, zones: 2,
+    })!;
+    expect(plan.psu).toBeNull();
+    expect(plan.status).toBe("incompatible");
+    expect(plan.rejectedPsus[0]?.reason).toContain("12 В не совпадает");
+  });
+
+  it("LED-15 · kit-путь отдельно от controller/remote и без автоматического удвоения", () => {
+    const kit = product(KIT);
+    const plan = ledPlanFor({
+      products: [product(PSU_100), kit, product(REMOTE)], strip: parseStripSpec(MONO)!, meters: 5,
+    })!;
+    expect(plan.controlKit?.product.name).toBe(kit.name);
+    expect(plan.controller).toBeNull();
+    expect(plan.remote).toBeNull();
+    expect(plan.warnings.join(" ")).toContain("не доказанный состав");
+  });
+
   it("для монохромной ленты не подставляется CCT-контроллер", () => {
     const monoOnly = [product(STRIP), product(PSU_100), product(WIFI_CCT), product(RF_CCT)];
-    const plan = ledPlanFor({ products: monoOnly, strip: parseStripSpec(STRIP)!, meters: 6 })!;
+    const plan = ledPlanFor({ products: monoOnly, strip: parseStripSpec(MONO)!, meters: 6 })!;
     expect(plan.controller).toBeNull();
     expect(plan.warnings.join(" ")).toContain("подбор по паспорту");
   });
@@ -214,6 +259,7 @@ describe("LED-раздел · статусы управления", () => {
   it("набор «пульт + контроллер» не обещает совместимость, которой не проверяли", () => {
     const kit = controlStatusOf({ role: "controller-remote-kit" });
     expect(kit.alice).toBe("unknown");
-    expect(kit.detail).toContain("проверяется по паспорту");
+    expect(kit.detail).toContain("проверяются по паспорту/стенду");
+    expect(kit.detail).toContain("Отдельный пульт не добавляется");
   });
 });

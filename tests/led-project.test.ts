@@ -177,6 +177,28 @@ describe("C · блок питания", () => {
     expect(plan.circuits[0]?.psu?.watts).toBe(150);
   });
 
+  it("LED-05 · только 12 В БП для 24 В цепи → incompatible, без PSU BOM; 24 В проходит", () => {
+    const wrong = product("Блок питания СТАНДАРТ 12V 200W");
+    const right = product("Блок питания СТАНДАРТ 24V 200W");
+    const controller = catalog.find((item) => item.name.includes("монохром C01 15A"))!;
+    const invalid = planLedProject({ products: [wrong, controller], runs: [run({ meters: 10 })] });
+    expect(invalid.circuits[0]?.requiredW).toBe(130);
+    expect(invalid.circuits[0]?.psu).toBeNull();
+    expect(invalid.circuits[0]?.status).toBe("incompatible");
+    expect(invalid.status).toBe("incompatible");
+    expect(invalid.bom.some((item) => item.role === "psu")).toBe(false);
+    expect(invalid.circuits[0]?.warnings.join(" ")).toContain("12 В не совпадает с лентой 24 В");
+    expect(invalid.questions.join(" ")).toContain("строго под 24 В");
+    const valid = planLedProject({ products: [wrong, right, controller], runs: [run({ meters: 10 })] });
+    expect(valid.circuits[0]?.psu?.name).toBe(right.name);
+    expect(valid.circuits[0]?.status).not.toBe("incompatible");
+    const uncertain = planLedProject({ products: [wrong, product("Блок питания 200W"), controller], runs: [run({ meters: 10 })] });
+    expect(uncertain.circuits[0]?.psu).toBeNull();
+    expect(uncertain.circuits[0]?.status).toBe("needs_review");
+    const unknownWatts = planLedProject({ products: [wrong, product("Блок питания СТАНДАРТ 24V"), controller], runs: [run({ meters: 10 })] });
+    expect(unknownWatts.circuits[0]?.status).toBe("needs_review");
+  });
+
   it("блок 48 В не ставится к ленте 24 В — с причиной отказа", () => {
     const plan = planLedProject({ products: catalog, runs: [run({ meters: 12 })] });
     // 12 м × 10 = 120 Вт → 156 Вт; 48-вольтовый на 300 Вт отброшен по напряжению.
@@ -283,6 +305,30 @@ describe("C · зоны и цепи", () => {
     expect(plan.warnings.join(" ")).toContain("не входил ни в одну зону");
   });
 
+  it("LED-10 · известная и неизвестная ленты в зоне — не RGB+CCT и не моно; управление не назначается", () => {
+    const unknown = { ...STRIP_10W, kind: "unknown" as const, modeEvidence: "unknown" as const };
+    const plan = planLedProject({
+      products: catalog,
+      runs: [run({ id: "a", meters: 3 }), run({ id: "b", meters: 3, strip: unknown })],
+      zones: [zone("z1", ["a", "b"])],
+    });
+    expect(plan.zones[0]?.loadW).toBe(60); // мощность допустимо считать, режим — нет.
+    expect(plan.zones[0]?.status).toBe("needs_review");
+    expect(plan.zones[0]?.controller).toBeNull();
+    expect(plan.zones[0]?.controlKit).toBeNull();
+    expect(plan.zones[0]?.remote).toBeNull();
+    expect(plan.questions.join(" ")).toContain("паспорт режима");
+    expect(plan.bom.find((item) => item.id === "strip:b")?.status).toBe("needs_review");
+    const partial = planLedProject({
+      products: catalog,
+      runs: [run({ id: "a", meters: 3 }), run({ id: "b", meters: 3, strip: { ...unknown, wPerMeter: null } })],
+      zones: [zone("z1", ["a", "b"])],
+    });
+    expect(partial.circuits[0]?.psu).toBeNull();
+    expect(partial.bom.some((item) => item.role === "psu")).toBe(false);
+    expect(partial.circuits[0]?.warnings.join(" ")).toContain("частичной нагрузке");
+  });
+
   it("одна зона с моно и CCT лентами не управляется одним контроллером", () => {
     const plan = planLedProject({
       products: catalog,
@@ -347,6 +393,43 @@ describe("C · BOM и версия правил", () => {
     expect(titled.zones[0]?.remote?.name).toContain("RC01RF");
     expect(titled.bom.find((line) => line.role === "remote")?.status).toBe("needs_review");
     expect(titled.status).toBe("needs_review");
+  });
+
+  it("LED-15 · kit 0У-00006565 — ровно один SKU на зону, не отдельные controller/remote", () => {
+    const kit = { ...product("Пульт с контролером для светодиодной ленты монохром 1 канал DC12-24В EKS6A*2"), productId: "eks-0-00006565", vendorCode: "0У-00006565" };
+    const psu = catalog.find((item) => item.name.includes("24V 100W"))!;
+    const standaloneRemote = catalog.find((item) => item.name.includes("RC01RF"))!;
+    const plan = planLedProject({ products: [psu, kit, standaloneRemote], runs: [run({ meters: 5 })] });
+    expect(plan.zones[0]?.controlKit?.productId).toBe("eks-0-00006565");
+    expect(plan.zones[0]?.controller).toBeNull();
+    expect(plan.zones[0]?.remote).toBeNull();
+    expect(plan.totals.controlKits).toBe(1);
+    expect(plan.totals.controllers).toBe(0); // внутренняя комплектация из названия не выдумывается.
+    expect(plan.bom.filter((item) => ["controller", "remote", "controller-remote-kit"].includes(item.role)))
+      .toMatchObject([{ role: "controller-remote-kit", qty: 1, unit: "pcs", productId: "eks-0-00006565", status: "needs_review" }]);
+    expect(plan.bom.find((item) => item.role === "controller-remote-kit")?.reason).toContain("состав");
+    expect(plan.questions.join(" ")).toContain("паспорт состава набора");
+    expect(plan.status).toBe("needs_review");
+
+    const wifi = catalog.find((item) => item.name.includes("монохром C01 15A"))!;
+    const withStandalone = planLedProject({ products: [psu, kit, standaloneRemote, wifi], runs: [run({ meters: 5 })] });
+    expect(withStandalone.bom.some((item) => item.role === "controller-remote-kit")).toBe(false);
+    expect(withStandalone.bom.some((item) => item.role === "remote")).toBe(false);
+    expect(withStandalone.totals.controllers).toBe(1);
+  });
+
+  it("LED-15 · набор CCT/перегруженный набор не подставляется к моно-ленте", () => {
+    const psu = product("Блок питания ПРО 24V 300W");
+    const cctKit = product("Пульт с контролером для светодиодной ленты CCT 1 канал DC12-24В EKS6A*2");
+    const monoKit = product("Пульт с контролером для светодиодной ленты монохром 1 канал DC12-24В EKS6A*2");
+    const wrongMode = planLedProject({ products: [psu, cctKit], runs: [run({ meters: 5 })] });
+    expect(wrongMode.zones[0]?.controlKit).toBeNull();
+    expect(wrongMode.bom.some((item) => item.role === "controller-remote-kit")).toBe(false);
+    expect(wrongMode.zones[0]?.rejectedKits[0]?.reason).toContain("режим");
+    const over = planLedProject({ products: [psu, monoKit], runs: [run({ meters: 15 })] });
+    expect(over.zones[0]?.controlKit).toBeNull();
+    expect(over.zones[0]?.rejectedKits[0]?.reason).toContain("6 А");
+    expect(over.bom.some((item) => item.role === "controller-remote-kit")).toBe(false);
   });
 
   it("worstStatus не прячет несовместимость за «нужна проверка»", () => {

@@ -14,6 +14,7 @@
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import {
   PSU_MARGIN_PERCENT,
+  controlKindForStrip,
   isAliceCapable,
   isUniversalController,
   ledRoleOf,
@@ -26,7 +27,7 @@ import {
   type StripKind,
   type StripSpec,
 } from "@/lib/lighting/led-hardware";
-import { applyPassportToSpec, findPassport, type StripPassport } from "@/lib/lighting/led-passports";
+import { applyStripPassportToSpec, findPassport, type StripPassport } from "@/lib/lighting/led-passports";
 
 export type LedGroupId = "strips" | "power" | "control";
 
@@ -52,7 +53,7 @@ export function ledProductsOfGroup(
   return products.filter((product) => ledGroupOfProduct(product) === group);
 }
 
-/** Ленты, по которым можно считать: нужен подтверждённый Вт/м и напряжение. */
+/** Ленты с Вт/м в заголовке: это предварительный расчёт, НЕ паспортная мощность. */
 export function ledStripOptions(
   products: readonly FeedCatalogProduct[],
   /**
@@ -67,7 +68,7 @@ export function ledStripOptions(
     const parsed = parseStripSpec(product.name);
     if (!parsed) continue;
     const passport = findPassport(passports, parsed.series) ?? findPassport(passports, product.name);
-    const spec = applyPassportToSpec(parsed, passport).spec;
+    const spec = applyStripPassportToSpec(parsed, passport).spec;
     if (spec.wPerMeter !== null && spec.wPerMeter !== undefined) options.push({ product, spec });
   }
   return options.sort((a, b) => (a.spec.wPerMeter ?? 0) - (b.spec.wPerMeter ?? 0));
@@ -99,7 +100,7 @@ export function ledPlanFor(input: {
 }): LedPlan | null {
   const { products, meters } = input;
   if (!input.strip) return null;
-  const strip = (applyPassportToSpec(input.strip, input.passport ?? null).spec);
+  const strip = applyStripPassportToSpec(input.strip, input.passport ?? null).spec;
   const rows = Number.isFinite(input.rows) && (input.rows ?? 0) > 0 ? Math.floor(input.rows as number) : 1;
   const zones = Number.isFinite(input.zones) && (input.zones ?? 0) > 0 ? Math.floor(input.zones as number) : 1;
   const plan = planLedPower({ strip, meters, rows, products });
@@ -119,7 +120,7 @@ export function ledPlanFor(input: {
       reels,
       marginPercent: PSU_MARGIN_PERCENT,
       zones,
-      status: "needs_review",
+      status: plan.status === "incompatible" ? "incompatible" : "needs_review",
       warnings: ["Укажите метраж подсветки — без него не считается ни нагрузка, ни мощность блока питания.", ...plan.warnings],
     };
   }
@@ -135,7 +136,7 @@ export function ledPlanFor(input: {
       reels,
       marginPercent: PSU_MARGIN_PERCENT,
       zones,
-      status: "needs_review",
+      status: plan.status === "incompatible" ? "incompatible" : "needs_review",
       warnings: [
         `От одного блока питания питаются ${zones} зоны — схему включения и клеммы подтверждает инженер.`,
         ...plan.warnings,
@@ -185,11 +186,8 @@ export function ledMetersFromTasks(tasks: readonly { geometryMeters: number | nu
 }
 
 /** Тип управления по выбранной ленте — для подписи «что подойдёт». */
-export function controlKindOfStrip(kind: StripKind): "mono" | "cct" | "rgb" | "rgb-cct" {
-  if (kind === "mono") return "mono";
-  if (kind === "cct") return "cct";
-  if (kind === "rgb") return "rgb";
-  return "rgb-cct";
+export function controlKindOfStrip(kind: StripKind): "mono" | "cct" | "rgb" | "rgb-cct" | null {
+  return controlKindForStrip(kind);
 }
 
 /**
@@ -216,7 +214,7 @@ export function controlStatusOf(input: {
   if (role === "controller-remote-kit") {
     return {
       title: "Набор «пульт + контроллер»",
-      detail: "Готовое управление на 6 А: подходит для коротких участков, мощность проверяется по паспорту.",
+      detail: "Один продаваемый набор по названию; состав, ток каждого канала и совместимость проверяются по паспорту/стенду. Отдельный пульт не добавляется автоматически.",
       alice: "unknown",
     };
   }

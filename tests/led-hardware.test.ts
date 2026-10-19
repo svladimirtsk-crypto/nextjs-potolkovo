@@ -5,6 +5,8 @@ import {
   isAliceCapable,
   isUniversalController,
   ledRoleOf,
+  parseControllerRemoteKit,
+  checkControlKitForLoad,
   parseControllerSpec,
   parsePsuSpec,
   parseRemoteSpec,
@@ -40,6 +42,7 @@ function product(name: string, kind: FeedCatalogProduct["kind"] = "LED_STRIP", p
 
 const STRIP_6W = "Светодиодная лента СТАНДАРТ 140 24V  64 диода 6W 2700К катушка 5 м ЧЗ";
 const STRIP_10W = "Светодиодная лента СТАНДАРТ 140 24V 112 диодов 10W 4200К катушка 5 м ЧЗ";
+const STRIP_MONO = STRIP_10W.replace("лента СТАНДАРТ", "лента монохром СТАНДАРТ");
 const STRIP_22W = "Светодиодная лента ПРО 160 24V 240 диодов 22W 6500К катушка 5 м ЧЗ";
 const STRIP_RGB = "Светодиодная лента RGB 24V 60 диода 14,4W катушка 5 м ЧЗ";
 const STRIP_CCT = "Светодиодная лента CCT 24V 120 диодов 10.8W 2700-6500K катушка 5 м ЧЗ";
@@ -70,7 +73,7 @@ describe("LED · характеристики лент", () => {
       voltage: 24,
       wPerMeter: 6,
       ledsPerMeter: 64,
-      kind: "mono",
+      kind: "unknown", // 2700К в заголовке — температура, НЕ заявка на один силовой канал.
       reelMeters: 5,
       wattsPerReel: 30,
       ampsPerReel: 1.25,
@@ -87,8 +90,16 @@ describe("LED · характеристики лент", () => {
     expect(parseStripSpec("Светодиодная лента безымянная")).toMatchObject({
       voltage: null,
       wPerMeter: null,
+      kind: "unknown",
       wattsPerReel: null,
     });
+  });
+
+  it("LED-10 · одна цветовая температура и 24V/10W не превращают неизвестный режим в моно", () => {
+    expect(parseStripSpec(STRIP_10W)).toMatchObject({ kind: "unknown", modeEvidence: "unknown" });
+    expect(parseStripSpec(STRIP_MONO)).toMatchObject({ kind: "mono", modeEvidence: "title_only" });
+    expect(parseControllerSpec("Контроллер для светодиодной ленты 12-24В 15A")?.controlKind).toBeNull();
+    expect(parseRemoteSpec("Пульт для светодиодной ленты RC01RF 12-24В")?.controlKind).toBeNull();
   });
 });
 
@@ -109,6 +120,20 @@ describe("LED · питание и управление", () => {
       model: "RC03RF",
     });
     expect(parseRemoteSpec("Пульт с контролером для светодиодной ленты RGB 1 канал DC12-24В")).toBeNull();
+  });
+
+  it("LED-15 · у набора 6A*2 не превращаются в 12 A, а «1 канал» не число выходов ленты", () => {
+    const name = "Пульт с контролером для светодиодной ленты CCT 1 канал DC12-24В EKS6A*2";
+    const spec = parseControllerRemoteKit(name)!;
+    expect(spec).toMatchObject({ controlKind: "cct", voltageRange: "12-24", amps: 6, channels: 1 });
+    expect(checkControlKitForLoad({ spec, kind: "cct", voltage: 24, currentA: 5 }).ok).toBe(true);
+    expect(checkControlKitForLoad({ spec, kind: "cct", voltage: 24, currentA: 7 }).reason).toContain("6 А");
+    expect(checkControlKitForLoad({ spec, kind: "rgb", voltage: 24, currentA: 2 }).ok).toBe(false);
+    expect(checkControlKitForLoad({ spec, kind: "cct", voltage: 48, currentA: 2 }).ok).toBe(false);
+    expect(checkControlKitForLoad({ spec, kind: "unknown", voltage: 24, currentA: 2 }).ok).toBe(false);
+    const rgbCctKit = parseControllerRemoteKit("Пульт с контролером для светодиодной ленты RGB+CCT DC12-24В EKS6A*5")!;
+    expect(checkControlKitForLoad({ spec: rgbCctKit, kind: "rgbw", voltage: 24, currentA: 2 }).ok).toBe(false);
+    expect(parseControllerRemoteKit("Пульт для светодиодной ленты CCT")).toBeNull();
   });
 
   it("LED-13 · RF-семейство совпадает лишь по номеру модели и никогда не считается паспортной парой", () => {
@@ -173,9 +198,16 @@ describe("LED · расчёт питания по метражу", () => {
     ];
     expect(isUniversalController(parseControllerSpec("Контроллер для светодиодной ленты WIFI TUYA 5в1 WB5 15A,12-24В")!)).toBe(true);
     expect(isUniversalController(parseControllerSpec("Контроллер для светодиодной ленты WIFI TUYA CCT C02 15A,12-24В")!)).toBe(false);
+    const rgbCctOnly = product("Контроллер для светодиодной ленты RGB+CCT X01 15A,12-24В");
+    expect(isUniversalController(parseControllerSpec(rgbCctOnly.name)!)).toBe(false); // режим ≠ 5-в-1.
+    const rgbwUnsafe = planLedPower({
+      strip: parseStripSpec("Светодиодная лента RGBW 24V 60 диодов 14,4W катушка 5 м")!,
+      meters: 5, products: [rgbCctOnly],
+    });
+    expect(rgbwUnsafe.controller).toBeNull();
 
     // Монохром: основной подбор — модель под тип ленты, но 5-в-1 виден как альтернатива.
-    const mono = planLedPower({ strip: parseStripSpec(STRIP_10W)!, meters: 12, products: withUniversal });
+    const mono = planLedPower({ strip: parseStripSpec(STRIP_MONO)!, meters: 12, products: withUniversal });
     expect(mono.controller?.spec.model).toBe("C01");
     expect(mono.controllerScope).toBe("kind");
     expect(mono.universalController?.spec.model).toBe("WB5");
@@ -244,6 +276,64 @@ describe("LED · расчёт питания по метражу", () => {
     expect(plan.controller).toBeNull();
     expect(plan.warnings.join(" ")).toContain("5-в-1");
     expect(plan.status).toBe("needs_review");
+  });
+
+  it("LED-05 · 12 В БП не становится допустимым для 24 В ленты; неизвестное U тоже не кандидат", () => {
+    const strip = parseStripSpec(STRIP_MONO)!;
+    const wrong = product("Блок питания СТАНДАРТ 12V 200W");
+    const unknown = product("Блок питания СТАНДАРТ 200W");
+    const good = product("Блок питания СТАНДАРТ 24V 200W");
+    const onlyWrong = planLedPower({ strip, meters: 10, products: [wrong] });
+    expect(onlyWrong.psu).toBeNull();
+    expect(onlyWrong.status).toBe("incompatible");
+    expect(onlyWrong.rejectedPsus[0]?.reason).toContain("12 В не совпадает с лентой 24 В");
+    expect(onlyWrong.warnings.join(" ")).toContain("нельзя собирать");
+    const hasUnknown = planLedPower({ strip, meters: 10, products: [wrong, unknown] });
+    expect(hasUnknown.psu).toBeNull();
+    expect(hasUnknown.status).toBe("needs_review"); // неизвестное U — не равенство, но и не доказанное противоречие.
+    expect(hasUnknown.rejectedPsus.map((item) => item.name)).toContain(unknown.name);
+    const unknownWatts = planLedPower({ strip, meters: 10, products: [wrong, product("Блок питания СТАНДАРТ 24V")] });
+    expect(unknownWatts.psu).toBeNull();
+    expect(unknownWatts.status).toBe("needs_review");
+    const withGood = planLedPower({ strip, meters: 10, products: [wrong, good] });
+    expect(withGood.psu?.product.name).toBe(good.name);
+    expect(withGood.status).not.toBe("incompatible");
+  });
+
+  it("LED-10 · неизвестный режим блокирует даже 5-в-1/kit при известном токе и БП", () => {
+    const products = [
+      product("Блок питания МИНИ 24V 200W"),
+      product("Контроллер для светодиодной ленты WIFI TUYA монохром C01 15A,12-24В"),
+      product("Контроллер для светодиодной ленты WIFI TUYA 5в1 WB5 15A,12-24В"),
+      product("Пульт с контролером для светодиодной ленты монохром 1 канал DC12-24В EKS6A*2"),
+    ];
+    const plan = planLedPower({ strip: parseStripSpec(STRIP_10W)!, meters: 5, products });
+    expect(plan.requiredW).toBe(65);
+    expect(plan.psu?.spec.voltage).toBe(24);
+    expect(plan.controller).toBeNull();
+    expect(plan.universalController).toBeNull();
+    expect(plan.controlKit).toBeNull();
+    expect(plan.remote).toBeNull();
+    expect(plan.status).toBe("needs_review");
+    expect(plan.warnings.join(" ")).toContain("Режим/число каналов");
+  });
+
+  it("LED-15 · набор предлагается одной позицией только без standalone; перегруз 6 А блокирует его", () => {
+    const psu = product("Блок питания МИНИ 24V 200W");
+    const kit = product("Пульт с контролером для светодиодной ленты монохром 1 канал DC12-24В EKS6A*2");
+    const wifi = product("Контроллер для светодиодной ленты WIFI TUYA монохром C01 15A,12-24В");
+    const strip = parseStripSpec(STRIP_MONO)!;
+    const chosen = planLedPower({ strip, meters: 5, products: [psu, kit] });
+    expect(chosen.controller).toBeNull();
+    expect(chosen.remote).toBeNull();
+    expect(chosen.controlKit?.product.name).toBe(kit.name);
+    expect(chosen.status).toBe("needs_review");
+    const standalone = planLedPower({ strip, meters: 5, products: [psu, kit, wifi] });
+    expect(standalone.controller?.product.name).toBe(wifi.name);
+    expect(standalone.controlKit).toBeNull();
+    const over = planLedPower({ strip, meters: 15, products: [product("Блок питания МИНИ 24V 300W"), kit] });
+    expect(over.controlKit).toBeNull();
+    expect(over.rejectedKits[0]?.reason).toContain("6 А");
   });
 
   it("слишком большая нагрузка не маскируется: предупреждение о нескольких БП", () => {

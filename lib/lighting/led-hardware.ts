@@ -20,14 +20,24 @@ import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import { resolvePriceBasis, stripSaleUnit } from "@/lib/lighting/led-price-basis";
 
 export type LedRole = "strip" | "psu" | "controller" | "remote" | "controller-remote-kit";
-export type StripKind = "mono" | "cct" | "rgb" | "rgbw" | "rgb-cct";
+/** Неизвестный режим не равен монохромному: одна температура К в названии не доказывает схему каналов. */
+export type StripKind = "mono" | "cct" | "rgb" | "rgbw" | "rgb-cct" | "unknown";
 export type ControlKind = "mono" | "cct" | "rgb" | "rgb-cct";
+
+/** Совместимость режимов требует известного типа ленты; даже 5-в-1 не доказывает ток/каналы. */
+export function controlKindForStrip(kind: StripKind): ControlKind | null {
+  if (kind === "unknown") return null;
+  if (kind === "rgbw" || kind === "rgb-cct") return "rgb-cct";
+  return kind;
+}
 
 export type StripSpec = {
   voltage: number | null;
   wPerMeter: number | null;
   ledsPerMeter: number | null;
   kind: StripKind;
+  /** Режим прочитан из заголовка или из настоящего паспорта; отсутствие поля у ручного spec не является доказательством. */
+  modeEvidence?: "title_only" | "datasheet_verified" | "unknown";
   reelMeters: number | null;
   wattsPerReel: number | null;
   ampsPerReel: number | null;
@@ -39,16 +49,28 @@ export type StripSpec = {
 export type PsuSpec = { voltage: number | null; watts: number | null; series: string | null };
 
 export type ControllerSpec = {
-  controlKind: ControlKind;
+  controlKind: ControlKind | null;
   /** Ток по названию (канал или суммарный — это зависит от модели и требует паспорта). */
   amps: number | null;
   /** Wi-Fi в названии (TUYA). RF-модели без него управляются только пультом. */
   wifi: boolean;
+  /** Только явно заявленный 5-в-1/WB5/LM051; RGB+CCT как режим ещё не универсальность. */
+  universal: boolean;
   voltageRange: string | null;
   model: string | null;
 };
 
-export type RemoteSpec = { controlKind: ControlKind; channels: number | null; model: string | null };
+export type RemoteSpec = { controlKind: ControlKind | null; channels: number | null; model: string | null };
+
+/** Отдельный продаваемый SKU: комплектность, pairing и лимиты доступны только после паспорта/стенда. */
+export type ControlKitSpec = {
+  controlKind: ControlKind | null;
+  voltageRange: string | null;
+  /** Число A из заголовка — порог консервативного отказа, НЕ подтверждённый общий/поканальный предел. */
+  amps: number | null;
+  /** «1 канал» в названии набора может означать RF-зону, НЕ число выходов ленты. */
+  channels: number | null;
+};
 
 /**
  * Единица измерения позиции LED-группы.
@@ -89,11 +111,12 @@ function voltageOf(name: string): number | null {
 
 function controlKindOf(name: string): ControlKind | null {
   const upper = name.toUpperCase();
-  if (upper.includes("5В1") || upper.includes("5 В 1")) return "rgb-cct";
+  if (/5\s*[ВV]\s*1/.test(upper)) return "rgb-cct";
+  if (upper.includes("RGB+CCT") || upper.includes("RGB + CCT")) return "rgb-cct";
   if (upper.includes("RGBW")) return "rgb-cct";
   if (upper.includes("RGB")) return "rgb";
   if (upper.includes("CCT")) return "cct";
-  if (/МОНОХРОМ|МОНО\b/.test(upper)) return "mono";
+  if (/МОНОХРОМ|МОНО(?![А-ЯA-Z])/.test(upper)) return "mono";
   return null;
 }
 
@@ -103,7 +126,9 @@ function stripKindOf(name: string): StripKind {
   if (upper.includes("RGB+CCT") || upper.includes("RGB + CCT")) return "rgb-cct";
   if (upper.includes("RGB")) return "rgb";
   if (upper.includes("CCT")) return "cct";
-  return "mono";
+  if (/МОНОХРОМ|МОНО(?![А-ЯA-Z])/.test(upper)) return "mono";
+  // «2700К» — одна температура в названии, а не паспорт режима или распиновки.
+  return "unknown";
 }
 
 export function parseStripSpec(name: string): StripSpec | null {
@@ -123,6 +148,7 @@ export function parseStripSpec(name: string): StripSpec | null {
     name.match(/(\d{4})\s*[КK](?![А-Яа-яA-Za-z])/)?.[1] ??
     null;
   const series = name.match(/(СТАНДАРТ|ПРО|ПРОФИ)\s*\d+/i)?.[0] ?? null;
+  const kind = stripKindOf(name);
   const wattsPerReel = w !== null && reel !== null ? Math.round(w * reel * 10) / 10 : null;
   const ampsPerReel =
     wattsPerReel !== null && voltage ? Math.round((wattsPerReel / voltage) * 100) / 100 : null;
@@ -130,7 +156,8 @@ export function parseStripSpec(name: string): StripSpec | null {
     voltage,
     wPerMeter: w,
     ledsPerMeter: leds ? Number(leds) : null,
-    kind: stripKindOf(name),
+    kind,
+    modeEvidence: kind === "unknown" ? "unknown" : "title_only",
     reelMeters: reel,
     wattsPerReel,
     ampsPerReel,
@@ -151,29 +178,59 @@ export function parsePsuSpec(name: string): PsuSpec | null {
 export function parseControllerSpec(name: string): ControllerSpec | null {
   if (!CONTROLLER_NAME.test(name)) return null;
   const voltage = name.match(/(\d{2})\s*-\s*(\d{2})\s*[ВV]/i);
+  const model = name.match(/\b(C\d{2}(?:RF)?|LM\d{3}|WB\d+)\b/i)?.[1] ?? null;
   return {
-    controlKind: controlKindOf(name) ?? "mono",
+    controlKind: controlKindOf(name) ?? (/^(WB5|LM051)$/i.test(model ?? "") ? "rgb-cct" : null),
     amps: num(name.match(/(\d+(?:[.,]\d+)?)\s*A\b/i)?.[1]),
     wifi: /WIFI|WI-FI|ВАЙ-ФАЙ/i.test(name),
+    universal: /5\s*[вv]\s*1/i.test(name) || /^(WB5|LM051)$/i.test(model ?? ""),
     voltageRange: voltage ? `${voltage[1]}-${voltage[2]}` : null,
     // «RF» — необязательный суффикс (C01, C02, C03 — Wi-Fi; C01RF, C02RF, C03RF — RF).
-    model: name.match(/\b(C\d{2}(?:RF)?|LM\d{3}|WB\d+)\b/i)?.[1] ?? null,
+    model,
   };
 }
 
-/** Набор «пульт + контроллер»: ток из названия (6 А), каналы уточняются по паспорту. */
-export function parseControllerRemoteKit(name: string): { amps: number | null; channels: number | null } | null {
+/** Набор «пульт + контроллер»: всё ниже прочитано из названия, включая предполагаемый режим. */
+export function parseControllerRemoteKit(name: string): ControlKitSpec | null {
   if (!KIT_NAME.test(name) && !(CONTROLLER_NAME.test(name) && /пульт/i.test(name))) return null;
+  const voltage = name.match(/(\d{2})\s*-\s*(\d{2})\s*[ВV]/i);
   return {
+    controlKind: controlKindOf(name),
+    voltageRange: voltage ? `${voltage[1]}-${voltage[2]}` : null,
     amps: num(name.match(/(\d+(?:[.,]\d+)?)\s*A\b/i)?.[1]),
     channels: num(name.match(/(\d+)\s*канал/i)?.[1]),
   };
 }
 
+/**
+ * Комплект выбирается только как ОДИН предварительный SKU, если по заголовку
+ * нет явного противоречия. Не извлекаем из «6A*2» сумму 12 А или состав набора.
+ */
+export function checkControlKitForLoad(input: {
+  spec: ControlKitSpec;
+  kind: StripKind;
+  voltage: number | null;
+  currentA: number;
+}): { ok: boolean; reason: string | null } {
+  const { spec, kind, voltage, currentA } = input;
+  const wanted = controlKindForStrip(kind);
+  if (!wanted) return { ok: false, reason: "неизвестен режим/число каналов ленты" };
+  if (wanted === "rgb-cct") return { ok: false, reason: "набор RGBW/RGB+CCT без доказанного 5-в-1 и распиновки не назначается" };
+  if (!spec.controlKind || spec.controlKind !== wanted) return { ok: false, reason: "режим набора не совпадает с лентой или неизвестен" };
+  if (voltage === null || !spec.voltageRange) return { ok: false, reason: "напряжение ленты или набора неизвестно" };
+  const [from, to] = spec.voltageRange.split("-").map(Number);
+  if (!Number.isFinite(from) || !Number.isFinite(to) || voltage < from || voltage > to) {
+    return { ok: false, reason: `набор рассчитан на ${spec.voltageRange} В, лента ${voltage} В` };
+  }
+  if (!(spec.amps && spec.amps > 0 && currentA > 0)) return { ok: false, reason: "неизвестен ток ленты или набора" };
+  if (currentA > spec.amps) return { ok: false, reason: `${currentA} А превышает консервативный порог ${spec.amps} А из названия набора` };
+  return { ok: true, reason: null }; // не паспортная совместимость, а лишь отсутствие явного противоречия.
+}
+
 export function parseRemoteSpec(name: string): RemoteSpec | null {
   if (!/пульт/i.test(name) || KIT_NAME.test(name)) return null;
   return {
-    controlKind: controlKindOf(name) ?? "mono",
+    controlKind: controlKindOf(name),
     channels: num(name.match(/(\d+)\s*канал/i)?.[1]),
     model: name.match(/\b(RC\d{2}RF)\b/i)?.[1] ?? null,
   };
@@ -186,8 +243,8 @@ export function parseRemoteSpec(name: string): RemoteSpec | null {
  */
 export function rfRemoteTitleCandidate(controller: ControllerSpec, remote: RemoteSpec): boolean {
   const family = controller.model?.toUpperCase().match(/^C(0[123])RF$/);
-  return !controller.wifi && Boolean(family) && remote.model?.toUpperCase() === `RC${family?.[1]}RF` &&
-    controller.controlKind === remote.controlKind;
+  return !controller.wifi && Boolean(family) && controller.controlKind !== null &&
+    remote.model?.toUpperCase() === `RC${family?.[1]}RF` && controller.controlKind === remote.controlKind;
 }
 
 /**
@@ -233,7 +290,7 @@ export function isAliceCapable(spec: ControllerSpec): boolean {
 export const UNIVERSAL_CONTROL_KIND: ControlKind = "rgb-cct";
 
 export function isUniversalController(spec: ControllerSpec): boolean {
-  return spec.controlKind === UNIVERSAL_CONTROL_KIND;
+  return spec.universal && spec.controlKind === UNIVERSAL_CONTROL_KIND;
 }
 
 /**
@@ -289,6 +346,8 @@ export function activeChannelsOf(kind: StripKind | ControlKind): number {
       return 4;
     case "rgb-cct":
       return 5;
+    case "unknown":
+      return 0; // неизвестность не является нулём каналов: checkControllerForLoad отклонит такой вызов.
   }
 }
 
@@ -328,6 +387,7 @@ export function checkControllerForLoad(input: {
   const { spec, voltage, currentA, channels } = input;
   const limit = controllerLimitOf(spec);
   const warnings: string[] = [];
+  if (!(channels > 0)) return { ok: false, reason: "неизвестен режим/число каналов ленты", warnings };
 
   if (voltage !== null && spec.voltageRange) {
     const [from, to] = spec.voltageRange.split("-").map(Number);
@@ -394,15 +454,18 @@ export type PowerPlan = {
   marginPercent: number;
   psu: PowerPlanOption<PsuSpec> | null;
   controller: PowerPlanOption<ControllerSpec> | null;
-  /** Универсальная модель (5-в-1), если она есть в каталоге: подходит любой ленте. */
+  /** Один kit SKU вместо отдельного контроллера и пульта: состав по названию НЕ проверен. */
+  controlKit: PowerPlanOption<ControlKitSpec> | null;
+  /** Универсальная модель (5-в-1), если режим известен; по току и каналам нужен паспорт. */
   universalController: PowerPlanOption<ControllerSpec> | null;
   /** Подобранный контроллер под конкретный тип ленты или универсальный. */
   controllerScope: "kind" | "universal" | null;
   remote: PowerPlanOption<RemoteSpec> | null;
-  status: "ok" | "needs_review";
+  status: "ok" | "needs_review" | "incompatible";
   warnings: string[];
   /** Кандидаты, отклонённые по инженерным пределам, — с причиной для человека. */
   rejectedControllers: { name: string; reason: string }[];
+  rejectedKits: { name: string; reason: string }[];
   rejectedPsus: { name: string; reason: string }[];
 };
 
@@ -435,6 +498,7 @@ export function planLedPower(input: {
   const rows = Number.isFinite(input.rows) && (input.rows ?? 0) > 0 ? Math.floor(input.rows as number) : 1;
   const warnings: string[] = [];
   const rejectedControllers: { name: string; reason: string }[] = [];
+  const rejectedKits: { name: string; reason: string }[] = [];
   const rejectedPsus: { name: string; reason: string }[] = [];
 
   const wPerMeter = strip.wPerMeter;
@@ -458,20 +522,22 @@ export function planLedPower(input: {
   const psuOptions: Array<PowerPlanOption<PsuSpec>> = [];
   const controllerOptions: Array<PowerPlanOption<ControllerSpec>> = [];
   const remoteOptions: Array<PowerPlanOption<RemoteSpec>> = [];
+  const kitOptions: Array<PowerPlanOption<ControlKitSpec>> = [];
 
   for (const product of products) {
     const role = ledRoleOf(product);
     if (role === "psu") {
       const spec = parsePsuSpec(product.name);
-      if (spec?.watts !== null && spec?.watts !== undefined) {
-        psuOptions.push({ product, spec });
-      }
+      if (spec) psuOptions.push({ product, spec }); // без W модель нельзя выбрать, но её U учитывается в причине отказа.
     } else if (role === "controller") {
       const spec = parseControllerSpec(product.name);
       if (spec) controllerOptions.push({ product, spec });
     } else if (role === "remote") {
       const spec = parseRemoteSpec(product.name);
       if (spec) remoteOptions.push({ product, spec });
+    } else if (role === "controller-remote-kit") {
+      const spec = parseControllerRemoteKit(product.name);
+      if (spec) kitOptions.push({ product, spec });
     }
   }
 
@@ -481,13 +547,17 @@ export function planLedPower(input: {
    * теперь причина попадает в список отказов, чтобы её можно было объяснить.
    */
   const suitablePsus = psuOptions.filter((option) => {
-    if (voltage === null || option.spec.voltage === null || option.spec.voltage === voltage) return true;
+    if (voltage !== null && option.spec.voltage === voltage) return true;
     rejectedPsus.push({
       name: option.product.name,
-      reason: `выход ${option.spec.voltage} В не совпадает с лентой ${voltage} В`,
+      reason: voltage === null || option.spec.voltage === null
+        ? "напряжение ленты или БП не указано — совпадение не доказано"
+        : `выход ${option.spec.voltage} В не совпадает с лентой ${voltage} В`,
     });
     return false;
   });
+  const wrongVoltageOnly = voltage !== null && psuOptions.length > 0 &&
+    psuOptions.every((option) => option.spec.voltage !== null && option.spec.voltage !== voltage);
 
   /*
    * Порядок: сначала по мощности, затем по цене. Сначала находим минимальную
@@ -500,14 +570,14 @@ export function planLedPower(input: {
   );
   // Без метража нагрузки нет: подставлять «самый дешёвый БП» было бы выдумкой.
   const psu = wPerMeter === null || wPerMeter <= 0 || !(installedMeters > 0) ? null : enough[0] ?? null;
-  if (wPerMeter !== null && !psu) {
-    warnings.push(
-      `Среди доступных блоков питания нет позиции на ${requiredW} Вт и выше — нужен расчёт по нескольким БП или уточнение нагрузки.`
-    );
+  if (wPerMeter !== null && installedMeters > 0 && !psu) {
+    warnings.push(wrongVoltageOnly
+      ? `Все БП каталога имеют напряжение, несовместимое с лентой ${voltage} В: эту цепь нельзя собирать из данных позиций.`
+      : `Среди БП нет позиции на ${requiredW} Вт с подтверждённым совпадением напряжения — требуется подбор по паспорту/другая схема.`);
+    for (const item of rejectedPsus) warnings.push(`Отклонён ${item.name}: ${item.reason}.`);
   }
 
-  const wantedControl: ControlKind =
-    strip.kind === "mono" ? "mono" : strip.kind === "cct" ? "cct" : strip.kind === "rgb" ? "rgb" : "rgb-cct";
+  const wantedControl = controlKindForStrip(strip.kind);
   const channels = activeChannelsOf(strip.kind);
 
   /*
@@ -516,10 +586,12 @@ export function planLedPower(input: {
    * сохраняется для объяснения человеку («C01RF отклонён: 8.33 А на канале»).
    */
   const viable: Array<{ option: PowerPlanOption<ControllerSpec>; warnings: string[] }> = [];
-  for (const option of controllerOptions) {
-    const check = checkControllerForLoad({ spec: option.spec, voltage, currentA, channels });
-    if (check.ok) viable.push({ option, warnings: check.warnings });
-    else rejectedControllers.push({ name: option.product.name, reason: check.reason ?? "не подходит" });
+  if (wantedControl && currentA > 0 && voltage !== null) {
+    for (const option of controllerOptions) {
+      const check = checkControllerForLoad({ spec: option.spec, voltage, currentA, channels });
+      if (check.ok) viable.push({ option, warnings: check.warnings });
+      else rejectedControllers.push({ name: option.product.name, reason: check.reason ?? "не подходит" });
+    }
   }
 
   const bySuitability = (
@@ -532,7 +604,7 @@ export function planLedPower(input: {
 
   const exactMatches = viable
     .map((entry) => ({ option: entry.option, warnings: entry.warnings }))
-    .filter((entry) => entry.option.spec.controlKind === wantedControl && !isUniversalController(entry.option.spec))
+    .filter((entry) => wantedControl !== "rgb-cct" && entry.option.spec.controlKind === wantedControl && !isUniversalController(entry.option.spec))
     .sort((a, b) => bySuitability(a.option, b.option));
   const universalOptions = viable
     .map((entry) => ({ option: entry.option, warnings: entry.warnings }))
@@ -549,12 +621,27 @@ export function planLedPower(input: {
     for (const warning of chosen.warnings) if (!warnings.includes(warning)) warnings.push(warning);
   }
 
-  if (!controller) {
+  let controlKit: PowerPlanOption<ControlKitSpec> | null = null;
+  if (!controller && wantedControl && currentA > 0 && voltage !== null) {
+    for (const option of kitOptions) {
+      const check = checkControlKitForLoad({ spec: option.spec, kind: strip.kind, voltage, currentA });
+      if (check.ok && !controlKit) controlKit = option;
+      else if (!check.ok) rejectedKits.push({ name: option.product.name, reason: check.reason ?? "не подходит" });
+    }
+  }
+
+  if (strip.kind === "unknown") {
+    warnings.push("Режим/число каналов ленты не указаны: ни монохром, ни 5-в-1, ни набор автоматически не назначаются. Нужен паспорт ленты.");
+  } else if (!controller && !controlKit) {
     warnings.push(
       strip.kind === "rgbw" || strip.kind === "rgb-cct"
         ? "Для RGBW/RGB+CCT нужен 5-в-1 контроллер: подходящей по пределам позиции в текущем наборе нет, подбор по паспорту."
-        : "Контроллер, который проходит по току и напряжению, в текущем наборе не найден — подбор по паспорту."
+        : "Контроллер или набор, который проходит предварительные ограничения по току и напряжению, не найден — подбор по паспорту."
     );
+    for (const item of rejectedKits) warnings.push(`Набор ${item.name} отклонён: ${item.reason}.`);
+  }
+  if (controlKit) {
+    warnings.push(`Набор ${controlKit.product.name} — один кандидат по заголовку, не доказанный состав: паспорт/стенд нужны для содержимого, токов каналов и сопряжения; отдельный пульт не добавлен.`);
   }
 
   const remote =
@@ -570,6 +657,9 @@ export function planLedPower(input: {
   if (strip.kind === "rgbw" || strip.kind === "rgb-cct") {
     warnings.push("Каналы W белого и полная нагрузка проверяются по паспорту: 5-в-1 по названию этого не доказывает.");
   }
+  if (psu || controller) {
+    warnings.push(`${psu && controller ? "БП и управление выбраны" : psu ? "БП выбран" : "Управление выбрано"} предварительно по названиям: паспорт, схема и реальные токи требуются перед заказом.`);
+  }
 
   return {
     meters,
@@ -581,12 +671,14 @@ export function planLedPower(input: {
     marginPercent: PSU_MARGIN_PERCENT,
     psu,
     controller,
+    controlKit,
     universalController,
     controllerScope,
     remote,
-    status: warnings.length === 0 ? "ok" : "needs_review",
+    status: wrongVoltageOnly && !psu && requiredW > 0 ? "incompatible" : warnings.length === 0 ? "ok" : "needs_review",
     warnings,
     rejectedControllers,
+    rejectedKits,
     rejectedPsus,
   };
 }

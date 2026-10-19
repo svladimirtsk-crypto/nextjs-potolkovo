@@ -32,16 +32,19 @@ import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import {
   PSU_MARGIN_PERCENT,
   activeChannelsOf,
+  checkControlKitForLoad,
   checkControllerForLoad,
+  controlKindForStrip,
   controllerLimitOf,
   isUniversalController,
   ledRoleOf,
+  parseControllerRemoteKit,
   parseControllerSpec,
   parsePsuSpec,
   parseRemoteSpec,
   rfRemoteTitleCandidate,
   roundUpHundredth,
-  type ControlKind,
+  type ControlKitSpec,
   type ControllerSpec,
   type PsuSpec,
   type RemoteSpec,
@@ -50,7 +53,7 @@ import {
 import { resolvePriceBasis, stripPurchaseQty } from "@/lib/lighting/led-price-basis";
 
 /** Версия правил: попадает в заявку, чтобы расчёт можно было воспроизвести. */
-export const LED_RULES_VERSION = "led-rules-1";
+export const LED_RULES_VERSION = "led-rules-2"; // поведение unknown, voltage-mismatch и kit BOM изменено
 
 export type LedFeature = "floating" | "light-lines" | "cornice" | "custom";
 export type LedRunSource = "task" | "manual" | "unknown";
@@ -81,7 +84,7 @@ export type LedZone = {
   runIds: string[];
 };
 
-export type BomRole = "strip" | "psu" | "controller" | "remote";
+export type BomRole = "strip" | "psu" | "controller" | "remote" | "controller-remote-kit";
 export type BomStatus = "ok" | "needs_review" | "incompatible";
 
 export type BomLine = {
@@ -121,11 +124,14 @@ export type LedZonePlan = {
   loadW: number;
   currentA: number;
   controller: { productId: string; name: string; model: string | null; wifi: boolean } | null;
+  /** Одна строка SKU вместо двух предполагаемых компонентов; состав не подтверждён. */
+  controlKit: { productId: string; name: string } | null;
   remote: { productId: string; name: string } | null;
   status: BomStatus;
   warnings: string[];
   /** Отклонённые кандидаты — чтобы объяснить выбор, а не просто показать итог. */
   rejectedControllers: { name: string; reason: string }[];
+  rejectedKits: { name: string; reason: string }[];
 };
 
 export type LedProjectPlan = {
@@ -141,7 +147,10 @@ export type LedProjectPlan = {
     installedMeters: number;
     loadW: number;
     requiredW: number;
+    /** Самостоятельные SKU контроллеров; внутренности kit сюда не включаем. */
     controllers: number;
+    /** Кандидаты kit отдельно от standalone-контроллеров, без выдуманного внутреннего состава. */
+    controlKits: number;
     psus: number;
   };
 };
@@ -167,36 +176,33 @@ function normalizeRows(rows: number): number {
   return Number.isFinite(rows) && rows >= 1 ? Math.floor(rows) : 1;
 }
 
-/** Тип управления, который требует зона: у всех участков он должен совпадать. */
-function controlKindOfStripKind(kind: StripSpec["kind"]): ControlKind {
-  if (kind === "mono") return "mono";
-  if (kind === "cct") return "cct";
-  if (kind === "rgb") return "rgb";
-  return "rgb-cct";
-}
-
 type CatalogPsu = { product: FeedCatalogProduct; spec: PsuSpec };
 type CatalogController = { product: FeedCatalogProduct; spec: ControllerSpec };
 type CatalogRemote = { product: FeedCatalogProduct; spec: RemoteSpec };
+type CatalogKit = { product: FeedCatalogProduct; spec: ControlKitSpec };
 
 function catalogOf(products: readonly FeedCatalogProduct[]) {
   const psus: CatalogPsu[] = [];
   const controllers: CatalogController[] = [];
   const remotes: CatalogRemote[] = [];
+  const kits: CatalogKit[] = [];
   for (const product of products) {
     const role = ledRoleOf(product);
     if (role === "psu") {
       const spec = parsePsuSpec(product.name);
-      if (spec?.watts !== null && spec?.watts !== undefined) psus.push({ product, spec });
+      if (spec) psus.push({ product, spec }); // W может быть unknown: нельзя считать, что в каталоге только БП чужого напряжения.
     } else if (role === "controller") {
       const spec = parseControllerSpec(product.name);
       if (spec) controllers.push({ product, spec });
     } else if (role === "remote") {
       const spec = parseRemoteSpec(product.name);
       if (spec) remotes.push({ product, spec });
+    } else if (role === "controller-remote-kit") {
+      const spec = parseControllerRemoteKit(product.name);
+      if (spec) kits.push({ product, spec });
     }
   }
-  return { psus, controllers, remotes };
+  return { psus, controllers, remotes, kits };
 }
 
 /**
@@ -207,34 +213,38 @@ function pickPsu(
   psus: readonly CatalogPsu[],
   voltage: number | null,
   requiredW: number
-): { psu: CatalogPsu | null; rejected: { name: string; reason: string }[] } {
+): { psu: CatalogPsu | null; rejected: { name: string; reason: string }[]; wrongVoltageOnly: boolean } {
   const rejected: { name: string; reason: string }[] = [];
-  if (!(requiredW > 0)) return { psu: null, rejected };
+  if (!(requiredW > 0)) return { psu: null, rejected, wrongVoltageOnly: false };
 
+  const wrongVoltageOnly = voltage !== null && psus.length > 0 &&
+    psus.every((option) => option.spec.voltage !== null && option.spec.voltage !== voltage);
   const suitable = psus.filter((option) => {
-    if (voltage !== null && option.spec.voltage !== null && option.spec.voltage !== voltage) {
-      rejected.push({
-        name: option.product.name,
-        reason: `выход ${option.spec.voltage} В не совпадает с лентой ${voltage} В`,
-      });
-      return false;
-    }
-    return true;
+    if (voltage !== null && option.spec.voltage === voltage) return true;
+    rejected.push({
+      name: option.product.name,
+      reason: voltage === null || option.spec.voltage === null
+        ? "напряжение ленты или БП не указано — совпадение не доказано"
+        : `выход ${option.spec.voltage} В не совпадает с лентой ${voltage} В`,
+    });
+    return false;
   });
 
   const enough = suitable
     .filter((option) => (option.spec.watts ?? 0) >= requiredW)
     .sort((a, b) => (a.spec.watts ?? 0) - (b.spec.watts ?? 0) || a.product.priceRub - b.product.priceRub);
 
-  if (enough.length > 0) return { psu: enough[0], rejected };
+  if (enough.length > 0) return { psu: enough[0], rejected, wrongVoltageOnly };
 
   for (const option of suitable) {
     rejected.push({
       name: option.product.name,
-      reason: `${option.spec.watts} Вт меньше требуемых ${METER.format(requiredW)} Вт с запасом ${PSU_MARGIN_PERCENT} %`,
+      reason: option.spec.watts === null
+        ? "номинальная мощность не указана — кандидат требует паспорта"
+        : `${option.spec.watts} Вт меньше требуемых ${METER.format(requiredW)} Вт с запасом ${PSU_MARGIN_PERCENT} %`,
     });
   }
-  return { psu: null, rejected };
+  return { psu: null, rejected, wrongVoltageOnly };
 }
 
 /**
@@ -249,10 +259,11 @@ function pickController(input: {
   kind: StripSpec["kind"];
 }): { controller: CatalogController | null; warnings: string[]; rejected: { name: string; reason: string }[] } {
   const { controllers, voltage, currentA, kind } = input;
-  const wanted = controlKindOfStripKind(kind);
+  const wanted = controlKindForStrip(kind);
   const channels = activeChannelsOf(kind);
   const rejected: { name: string; reason: string }[] = [];
   const viable: { option: CatalogController; warnings: string[] }[] = [];
+  if (!wanted || voltage === null || !(currentA > 0)) return { controller: null, warnings: [], rejected };
 
   for (const option of controllers) {
     const check = checkControllerForLoad({ spec: option.spec, voltage, currentA, channels });
@@ -266,7 +277,7 @@ function pickController(input: {
     a.product.priceRub - b.product.priceRub;
 
   const exact = viable
-    .filter((entry) => entry.option.spec.controlKind === wanted && !isUniversalController(entry.option.spec))
+    .filter((entry) => wanted !== "rgb-cct" && entry.option.spec.controlKind === wanted && !isUniversalController(entry.option.spec))
     .sort((a, b) => bySuitability(a.option, b.option));
   const universal = viable
     .filter((entry) => isUniversalController(entry.option.spec))
@@ -274,6 +285,23 @@ function pickController(input: {
   const chosen = exact[0] ?? universal[0];
 
   return { controller: chosen?.option ?? null, warnings: chosen?.warnings ?? [], rejected };
+}
+
+/** Kit остаётся одним продаваемым кандидатом, не двумя вымышленными дочерними SKU. */
+function pickControlKit(input: {
+  kits: readonly CatalogKit[];
+  kind: StripSpec["kind"];
+  voltage: number | null;
+  currentA: number;
+}): { kit: CatalogKit | null; rejected: { name: string; reason: string }[] } {
+  let kit: CatalogKit | null = null;
+  const rejected: { name: string; reason: string }[] = [];
+  for (const option of input.kits) {
+    const check = checkControlKitForLoad({ spec: option.spec, kind: input.kind, voltage: input.voltage, currentA: input.currentA });
+    if (check.ok && !kit) kit = option;
+    else if (!check.ok) rejected.push({ name: option.product.name, reason: check.reason ?? "не подходит" });
+  }
+  return { kit, rejected };
 }
 
 /**
@@ -335,10 +363,12 @@ export function planLedProject(input: {
     let kind: StripSpec["kind"] | null = null;
     let kindConflict: string | null = null;
     let unknownStrip = false;
+    let unknownMode = false;
 
     for (const run of zoneRuns) {
       const installed = installedMetersOf(run);
       installedMeters += installed;
+      if (run.strip.kind === "unknown") unknownMode = true;
       if (run.strip.wPerMeter === null || run.strip.voltage === null) {
         unknownStrip = true;
         continue;
@@ -349,9 +379,11 @@ export function planLedProject(input: {
       else if (voltage !== run.strip.voltage) {
         kindConflict = `в одной зоне ленты ${voltage} В и ${run.strip.voltage} В`;
       }
-      if (kind === null) kind = run.strip.kind;
-      else if (kind !== run.strip.kind) {
-        kindConflict = "в одной зоне разные типы лент (моно/CCT/RGB/RGBW)";
+      if (run.strip.kind !== "unknown") {
+        if (kind === null) kind = run.strip.kind;
+        else if (kind !== run.strip.kind) {
+          kindConflict = "в одной зоне разные типы лент (моно/CCT/RGB/RGBW)";
+        }
       }
     }
 
@@ -362,6 +394,10 @@ export function planLedProject(input: {
     if (unknownStrip) {
       zoneWarnings.push("У одной из лент не подтверждены Вт/м или напряжение — расчёт по зоне неполный.");
       questions.push(`Зона ${zone.id}: нужен паспорт ленты (Вт/м, напряжение) для точного расчёта.`);
+    }
+    if (unknownMode) {
+      zoneWarnings.push("Режим/каналы одной из лент неизвестны — нельзя назначить ни монохромный, ни универсальный контроллер/набор.");
+      questions.push(`Зона ${zone.id}: запросить паспорт режима и распиновки ленты, прежде чем подбирать управление.`);
     }
     if (!(installedMeters > 0)) {
       /*
@@ -377,11 +413,13 @@ export function planLedProject(input: {
     }
 
     let controller: LedZonePlan["controller"] = null;
+    let controlKit: LedZonePlan["controlKit"] = null;
     let controllerSpec: ControllerSpec | null = null;
     let rejected: { name: string; reason: string }[] = [];
+    let rejectedKits: { name: string; reason: string }[] = [];
     let status: BomStatus = zoneWarnings.length > 0 || unknownStrip ? "needs_review" : "ok";
 
-    if (kind && !kindConflict && loadW > 0) {
+    if (kind && !kindConflict && !unknownMode && !unknownStrip && loadW > 0) {
       const picked = pickController({
         controllers: catalog.controllers,
         voltage,
@@ -413,17 +451,20 @@ export function planLedProject(input: {
         const limit = controllerLimitOf(controllerSpec);
         if (limit.evidence === "label_observed") status = "needs_review";
       } else {
-        /*
-         * Кандидаты были, но все отклонены по жёстким пределам — это нехватка
-         * данных каталога, а не приговор схеме: нужен усилитель/несколько зон.
-         */
-        status = "incompatible";
-        zoneWarnings.push(
-          "Ни один контроллер каталога не проходит по току для этой зоны — нужен усилитель или разделение зоны."
-        );
-        questions.push(
-          `Зона ${zone.id}: ${currentA} А при ${loadW} Вт — подобрать контроллер по паспорту, усилитель или разделить зону.`
-        );
+        const pickedKit = pickControlKit({ kits: catalog.kits, kind, voltage, currentA });
+        rejectedKits = pickedKit.rejected;
+        if (pickedKit.kit) {
+          controlKit = { productId: pickedKit.kit.product.productId, name: pickedKit.kit.product.name };
+          status = "needs_review";
+          zoneWarnings.push("Набор «пульт + контроллер» — один SKU-кандидат по заголовку; внутренний состав, ток каналов и сопряжение не подтверждены. Отдельный пульт не добавлен.");
+          questions.push(`Зона ${zone.id}: запросить паспорт состава набора ${controlKit.name}, режим/токи и проверить на стенде; не добавлять отдельный пульт без схемы.`);
+        } else {
+          /* Все готовые модели/наборы отклонены — нужна другая схема или каталог. */
+          status = "incompatible";
+          zoneWarnings.push("Ни один контроллер или набор каталога не проходит по току/режиму для этой зоны — нужен усилитель или разделение зоны.");
+          for (const item of rejectedKits) zoneWarnings.push(`Набор ${item.name} отклонён: ${item.reason}.`);
+          questions.push(`Зона ${zone.id}: ${currentA} А при ${loadW} Вт — подобрать управление по паспорту, усилитель или разделить зону.`);
+        }
       }
     } else if (loadW > 0 && kindConflict) {
       status = "incompatible";
@@ -453,10 +494,12 @@ export function planLedProject(input: {
       loadW,
       currentA,
       controller,
+      controlKit,
       remote,
       status,
       warnings: zoneWarnings,
       rejectedControllers: rejected,
+      rejectedKits,
     });
 
     /* --- BOM зоны --- */
@@ -503,8 +546,8 @@ export function planLedProject(input: {
         name: run.stripName,
         qty: purchase.qty,
         unit: purchase.unit,
-        reason: `${METER.format(run.meters ?? 0)} м конструкции${rowsNote}${reelNote}.`,
-        status: run.strip.wPerMeter === null || basis.basis === "unknown" ? "needs_review" : "ok",
+        reason: `${METER.format(run.meters ?? 0)} м конструкции${rowsNote}${reelNote}. Вт/м, режим, длина питания и продажная единица требуют проверки по паспорту/поставщику.`,
+        status: "needs_review", // даже известная из заголовка мощность не является паспортной.
         refId: zone.id,
       });
     }
@@ -519,6 +562,19 @@ export function planLedProject(input: {
         unit: "pcs",
         reason: `Зона ${zone.id}: ${METER.format(loadW)} Вт ÷ ${voltage ?? "?"} В = ${METER.format(currentA)} А; одна зона — один контроллер.`,
         // Пределы модели известны с этикетки, а не из паспорта партии: позиция предварительная.
+        status: "needs_review",
+        refId: zone.id,
+      });
+    }
+    if (controlKit) {
+      bom.push({
+        id: `kit:${zone.id}`,
+        role: "controller-remote-kit",
+        productId: controlKit.productId,
+        name: controlKit.name,
+        qty: 1,
+        unit: "pcs",
+        reason: `Зона ${zone.id}: ${METER.format(currentA)} А по ленте. Один продаваемый набор-кандидат по названию; состав, лимиты каналов и наличие пульта внутри требуют паспорта/стенда. Контроллер и пульт отдельно не добавлены.`,
         status: "needs_review",
         refId: zone.id,
       });
@@ -556,18 +612,29 @@ export function planLedProject(input: {
     const currentA = bucket.voltage && bucket.voltage > 0 ? roundUpHundredth(loadW / bucket.voltage) : 0;
     const installedMeters = round2(bucket.zones.reduce((sum, zone) => sum + zone.installedMeters, 0));
     const circuitWarnings: string[] = [];
-
-    const { psu, rejected } = pickPsu(catalog.psus, bucket.voltage, requiredW);
+    const incompleteLoad = bucket.zones.some((zone) => zone.runIds.some((id) => {
+      const run = runById.get(id);
+      return !run || run.strip.wPerMeter === null || run.strip.voltage === null || installedMetersOf(run) <= 0;
+    }));
+    // Сумма известной части недостаточна для выбора БП, если хоть один участок не рассчитан.
+    const { psu, rejected, wrongVoltageOnly } = incompleteLoad
+      ? { psu: null, rejected: [], wrongVoltageOnly: false }
+      : pickPsu(catalog.psus, bucket.voltage, requiredW);
     let status: BomStatus = "ok";
-
-    if (!psu && requiredW > 0) {
+    if (incompleteLoad) {
       status = "needs_review";
-      circuitWarnings.push(
-        `Ни один БП каталога не покрывает ${METER.format(requiredW)} Вт — нужна схема из нескольких цепей.`
-      );
-      questions.push(
-        `Цепь ${key}: нагрузка ${METER.format(loadW)} Вт требует ${METER.format(requiredW)} Вт с запасом — разделить на цепи по паспорту.`
-      );
+      circuitWarnings.push("Мощность одного из участков неизвестна — номинал БП по частичной нагрузке выбирать нельзя.");
+      questions.push(`Цепь ${key}: запросить полную мощность и длину всех участков перед выбором БП.`);
+    }
+
+    if (!psu && requiredW > 0 && !incompleteLoad) {
+      status = wrongVoltageOnly ? "incompatible" : "needs_review";
+      circuitWarnings.push(wrongVoltageOnly
+        ? `Все БП каталога имеют несовместимое с лентой ${bucket.voltage} В напряжение: эту цепь из них собирать нельзя.`
+        : `Ни один БП с подтверждённым совпадением напряжения не покрывает ${METER.format(requiredW)} Вт — нужна другая схема/паспорт.`);
+      questions.push(wrongVoltageOnly
+        ? `Цепь ${key}: подобрать БП строго под ${bucket.voltage} В; имеющиеся БП другого напряжения запрещены.`
+        : `Цепь ${key}: нагрузка ${METER.format(loadW)} Вт требует ${METER.format(requiredW)} Вт с запасом — подобрать БП/разделить цепи по паспорту.`);
     }
 
     /*
@@ -586,6 +653,11 @@ export function planLedProject(input: {
     }
     if (rejected.length > 0 && !psu) {
       for (const item of rejected) circuitWarnings.push(`Отклонён ${item.name}: ${item.reason}.`);
+    }
+    if (psu) {
+      status = worstStatus([status, "needs_review"]);
+      circuitWarnings.push("Выбранный БП — кандидат по номиналу/напряжению из названия, а не проверка CV, derating и условий монтажа по паспорту.");
+      questions.push(`Цепь ${key}: подтвердить паспорт БП, режим CV, нагрузку, derating и схему.`);
     }
 
     circuits.push({
@@ -626,6 +698,7 @@ export function planLedProject(input: {
     loadW: roundUpHundredth(zonePlans.reduce((sum, zone) => sum + zone.loadW, 0)),
     requiredW: roundUpHundredth(circuits.reduce((sum, circuit) => sum + circuit.requiredW, 0)),
     controllers: zonePlans.filter((zone) => zone.controller !== null).length,
+    controlKits: zonePlans.filter((zone) => zone.controlKit !== null).length,
     psus: circuits.filter((circuit) => circuit.psu !== null).length,
   };
 

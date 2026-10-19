@@ -1,0 +1,6 @@
+⚠ TELEGRAM_LEADS_ENABLED=1, но TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID не заданы.
+⚠ Не настроен ни один канал доставки заявок.
+⚠ DELIVERY_ALERT_ENABLED=1, но канал алерта не задан — сбой доставки останется незамеченным.
+⚠ CRON_SECRET не задан — /api/lead/retry вернёт 401.
+⚠ DATABASE_URL не задан — лиды хранятся в памяти.
+[env] ok — 29 переменных документированы

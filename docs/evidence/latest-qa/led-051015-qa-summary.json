@@ -1,0 +1,93 @@
+{
+  "dateLocal": "2026-10-19",
+  "timezone": "Europe/Moscow",
+  "branch": "feat/company-rebrand-v7-preview",
+  "baseHead": "334eda7a5d160e9b38c65a3ce58c17276bc5f8ad",
+  "scope": "LED-05 voltage mismatch, LED-10 unknown strip mode, LED-15 single kit SKU; preliminary programmatic safeguards, not engineering/commercial acceptance",
+  "previewOnly": true,
+  "pushed": false,
+  "pullRequestCreated": false,
+  "productionChanged": false,
+  "realSupplierFeedImported": false,
+  "rulesVersion": "led-rules-2",
+  "matrix": {
+    "scenariosAssessed": 26,
+    "locallyVerified": 4,
+    "partiallyVerified": 15,
+    "gaps": 5,
+    "externallyBlocked": 2,
+    "engineeringOrCommercialAccepted": 0,
+    "source": "docs/evidence/catalog-led/acceptance-2026-10-18.md"
+  },
+  "qa": {
+    "unitWithLocalPostgres": {
+      "passed": 1526,
+      "files": 117,
+      "failed": 0,
+      "skipped": 0,
+      "database": "disposable PostgreSQL 17.11 over 127.0.0.1:55432, no production connection",
+      "log": "led-051015-unit-db.log",
+      "logSanitization": "ANSI removed; synthetic test phone numbers masked",
+      "targetedLedFilesPassed": 5,
+      "targetedLedTestsPassed": 93,
+      "supplierRequestContractTestsPassed": 5
+    },
+    "targetedE2e": {
+      "passed": 28,
+      "failed": 0,
+      "projects": ["chromium-desktop", "chromium-mobile"],
+      "files": ["e2e/led-kit.spec.ts", "e2e/led-acceptance.spec.ts"],
+      "log": "led-051015-e2e-targeted-off.log"
+    },
+    "fullE2eDefaultOff": {
+      "passed": 374,
+      "skipped": 16,
+      "failed": 0,
+      "flaky": 0,
+      "ciRetriesConfigured": 1,
+      "retriesNeeded": 0,
+      "log": "led-051015-e2e-full-off.log",
+      "flakyLog": "led-051015-flaky-off.log"
+    },
+    "lint": {
+      "errors": 0,
+      "existingWarnings": 6,
+      "log": "led-051015-lint.log"
+    },
+    "typescript": {
+      "passed": true,
+      "command": "npx tsc --noEmit --incremental false"
+    },
+    "flow": {
+      "passed": 8,
+      "failed": 0,
+      "log": "led-051015-flow.log"
+    },
+    "build": {
+      "mode": "NEXT_PUBLIC_QUIZ_STEP_IMAGES=off",
+      "passed": true,
+      "includesPrebuildGuards": true,
+      "log": "led-051015-build-off.log"
+    },
+    "bundle": {
+      "homepageGzipKb": 228.7,
+      "homepageBudgetKb": 300,
+      "passed": true,
+      "log": "led-051015-bundle-off.log"
+    },
+    "environmentDocumentation": {
+      "passed": true,
+      "documentedVariables": 29,
+      "note": "Sandbox lacks production DB/delivery credentials by design; check-env warnings are not production health proof",
+      "log": "led-051015-env.log"
+    }
+  },
+  "limits": [
+    "EKS datasheets, warehouse stock, priceUnit/packQty/MOQ and kit component list not supplied",
+    "No real-feed import, production deployment or engineering bench pilot",
+    "No PT-048 on build in this follow-up; Yandex Metrica baseline and owner approval pending",
+    "Browser E2E uses desktop/mobile emulation; physical devices, 200% zoom and screen-reader manual sign-off pending",
+    "Gitleaks not installed; no claim of completed secret scan"
+  ],
+  "next": "LED-19/20 warehouse and versioned draft diff, LED-21/24 quote/lead, atomic versioned publication LED-26; supplier/owner/engineer gates remain"
+}

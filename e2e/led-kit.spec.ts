@@ -45,7 +45,7 @@ test("LED: 12 м при 10 Вт/м считаются с запасом 30 % и 
   await openCornice(page);
   const panel = page.getByTestId("led-kit-panel");
 
-  // Лента по умолчанию — монохром 10 Вт/м: метраж 12 м даёт 120 Вт нагрузки.
+  // В фиде у 10 Вт/м указаны 4200К, но нет режима/числа каналов: нагрузку считаем, управление не угадываем.
   await expect(panel.getByTestId("led-strip")).toHaveValue(/./);
   await panel.getByTestId("led-meters").fill("12");
 
@@ -58,16 +58,32 @@ test("LED: 12 м при 10 Вт/м считаются с запасом 30 % и 
   await expect(panel.getByTestId("led-psu")).toContainText("Блок питания");
   await expect(panel.getByTestId("led-psu")).toContainText("200 Вт");
 
-  // Монохром — Wi-Fi-контроллер: подпись про Алису owner-verified, без обещания паспорта.
-  await expect(panel.getByTestId("led-controller")).toContainText("WIFI TUYA монохром C01");
-  await expect(panel.getByTestId("led-alice-note")).toContainText("любая лента работает через Wi-Fi 5-в-1");
-  await expect(panel.getByTestId("led-alice-note")).toContainText("подтверждено владельцем на его комплекте");
+  // LED-10: неизвестный режим не становится моно; даже WB5 нельзя назначить без режима/токов.
+  await expect(panel.getByTestId("led-strip-facts")).toContainText("Режим не указан");
+  await expect(panel.getByTestId("led-controller")).toContainText("Нет подходящей позиции");
+  await expect(panel.getByTestId("led-controller-add")).toHaveCount(0);
+  await expect(panel.getByTestId("led-controller-alt")).toHaveCount(0);
+  await expect(panel.getByTestId("led-control-kit")).toHaveCount(0);
+  await expect(panel.getByTestId("led-alice-note")).toContainText("контроллер пока не назначен");
   await expect(panel.getByTestId("led-remote")).toHaveCount(0);
-  // 5-в-1 Wi-Fi показан как вариант на любую ленту (подтверждение владельца).
-  await expect(panel.getByTestId("led-controller-alt")).toContainText("WB5");
-  await expect(panel.getByTestId("led-controller-alt")).toContainText("Подходит любой ленте");
-  await expect(panel.getByTestId("led-warnings")).toHaveCount(0);
-  await expect(panel.getByTestId("led-plan-status")).toContainText("Расчёт сошёлся");
+  await expect(panel.getByTestId("led-warnings")).toContainText("Режим/число каналов");
+  await expect(panel.getByTestId("led-plan-status")).toContainText("Нужна проверка");
+});
+
+test("LED-15: набор 0У-00006565 добавляется отдельным SKU, пульт не дублируется", async ({ page }) => {
+  await openCornice(page);
+  const panel = page.getByTestId("led-kit-panel");
+  await panel.getByTestId("led-group-control").click();
+  await page.getByLabel("Поиск по каталогу").fill("0У-00006565");
+  const kit = products.find((item) => item.vendorCode === "0У-00006565")!;
+  const card = page.locator(`.pk-product[data-product-id="${kit.productId}"]`);
+  await expect(card).toHaveCount(1);
+  await expect(card).toContainText("Пульт с контролером");
+  await card.getByRole("button", { name: "Увеличить" }).click();
+  await expect(card.locator("output")).toHaveText("1 шт");
+  await expect(page.locator("[data-cart-bar]")).toHaveAttribute("data-count", "1");
+  await expect(panel.getByTestId("led-control-kit")).toHaveCount(0); // в живом фиде ленты без известного режима, автоматического набора нет.
+  await expect(panel.getByTestId("led-remote")).toHaveCount(0);
 });
 
 test("LED: без метража расчёта нет, а товары попадают в комплект только по нажатию", async ({ page }) => {
@@ -192,5 +208,12 @@ test("LED: несколько зон — свой контроллер на зо
   // Один БП на две зоны требует подтверждённой схемы — статус не зелёный.
   await expect(panel.getByTestId("led-plan-status")).toContainText("Нужна проверка");
   await expect(panel.getByTestId("led-warnings")).toContainText("2 зоны");
+  await expect(panel.getByTestId("led-controller-add")).toHaveCount(0);
+
+  // Явно помеченная CCT-лента позволяет предложить *предварительно* по одному контроллеру на зону.
+  const cct = products.find((p) => p.name.includes("лента CCT"))!;
+  await panel.getByTestId("led-strip").selectOption(cct.productId);
+  await expect(panel.getByTestId("led-plan-load")).toHaveText("129,6 Вт");
   await expect(panel.getByTestId("led-controller")).toContainText("2 шт");
+  await expect(panel.getByTestId("led-warnings")).toContainText("паспорт");
 });

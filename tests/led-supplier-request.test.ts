@@ -27,6 +27,18 @@ describe("T8-012 · документ запроса поставщику", () =>
     }
   });
 
+  it("LED-10 · белые ленты без явного режима не становятся mono в данных/запросе", () => {
+    const profile = JSON.parse(readFileSync(join(process.cwd(), "docs/evidence/catalog-led/led-strip-profiles.json"), "utf8")) as {
+      strips: { kind: string | null; title: string }[];
+      modeReview: { unknownStripModeFromTitle: number };
+    };
+    const unknown = profile.strips.filter((strip) => strip.kind === null);
+    expect(unknown).toHaveLength(33);
+    expect(profile.modeReview.unknownStripModeFromTitle).toBe(33);
+    expect(doc).toContain("у 33 лент в названии нет явного режима");
+    expect(doc).toContain("режим ленты и число электрических каналов");
+  });
+
   it("держит минимальный пакет из §12 ТЗ", () => {
     expect(doc).toContain("Минимальный пакет (ТЗ §12)");
     expect(doc).toContain("derating");

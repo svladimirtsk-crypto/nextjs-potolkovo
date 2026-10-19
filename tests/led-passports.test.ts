@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import {
   STRIP_PASSPORT_FIELDS,
   applyPassportToSpec,
+  applyStripPassportToSpec,
   field,
   findPassport,
   isVerifiedField,
@@ -21,13 +22,14 @@ import {
   worstPassportStatus,
   type StripPassport,
 } from "@/lib/lighting/led-passports";
+import { parseStripSpec } from "@/lib/lighting/led-hardware";
 
 const profile = {
   series: "СТАНДАРТ 140",
   title: "Светодиодная лента СТАНДАРТ 140 24V 112 диодов 10W 4200К катушка 5 м ЧЗ",
   voltage: 24,
   wPerMeter: 10,
-  kind: "mono" as const,
+  kind: null, // 4200К не доказывает моно и один канал.
   reelMeters: 5,
 };
 
@@ -38,7 +40,8 @@ describe("T8-011 · паспорт-кандидат из профиля", () => 
     expect(passport.voltageDc).toMatchObject({ value: 24, status: "title_only" });
     expect(passport.maxPowerWm).toMatchObject({ value: 10, status: "title_only" });
     expect(passport.reelLengthM).toMatchObject({ value: 5, status: "title_only" });
-    expect(passport.channelCount).toMatchObject({ value: 1, status: "title_only" });
+    expect(passport.stripMode).toMatchObject({ value: null, status: "unknown" });
+    expect(passport.channelCount).toMatchObject({ value: null, status: "unknown" });
   });
 
   it("чего нет в названии — unknown, а не 0 и не false", () => {
@@ -52,6 +55,8 @@ describe("T8-011 · паспорт-кандидат из профиля", () => 
   it("список пробелов — это и есть запрос поставщику", () => {
     const gaps = stripPassportGaps(passportFromStripProfile(profile));
     expect(gaps).toEqual([
+      "stripMode",
+      "channelCount",
       "cutStepMm",
       "widthMm",
       "maxFeedLengthM",
@@ -100,6 +105,24 @@ describe("T8-012 · что паспорт имеет право менять", (
     expect(application.applied).toEqual(["voltageDc", "maxPowerWm", "reelLengthM"]);
     expect(application.verified).toBe(true);
     expect(passportIsVerified(verified)).toBe(true);
+  });
+
+  it("LED-10 · режим по этикетке не меняет unknown, паспорт меняет и обновляет ток/ватты катушки", () => {
+    const raw = parseStripSpec(profile.title)!;
+    const base = passportFromStripProfile(profile);
+    const label = { ...base, stripMode: field("mono" as const, "label_observed", "фото") };
+    expect(applyStripPassportToSpec(raw, label).spec.kind).toBe("unknown");
+    expect(applyStripPassportToSpec(raw, label).application.blocked).toContain("stripMode");
+    const datasheet = {
+      ...base,
+      stripMode: field("mono" as const, "datasheet_verified", "тестовый паспорт"),
+      maxPowerWm: field(12, "datasheet_verified", "тестовый паспорт"),
+      reelLengthM: field(10, "datasheet_verified", "тестовый паспорт"),
+    };
+    const { spec: next, application } = applyStripPassportToSpec(raw, datasheet);
+    expect(next).toMatchObject({ kind: "mono", modeEvidence: "datasheet_verified", wPerMeter: 12, wattsPerReel: 120, ampsPerReel: 5 });
+    expect(application.applied).toContain("stripMode");
+    expect(application.verified).toBe(false); // напряжение по-прежнему лишь из заголовка.
   });
 
   it("label_observed (фото этикетки) всё ещё не паспорт", () => {
