@@ -1,5 +1,10 @@
 import snapshotData from "@/data/eks-feed2-snapshot.json";
+import catalogIndexData from "@/data/catalog-index.json";
 import { getEnv } from "@/lib/env";
+import {
+  hasMoscowObservation, moscowQuantityOf, moscowStockStateOf, supplierAvailableOf,
+  type MoscowStock, type MoscowStockState,
+} from "@/lib/lighting/moscow-stock";
 
 export type FeedCatalogParam = {
   label: string;
@@ -42,7 +47,16 @@ export type FeedCatalogProduct = {
   images: string[];
   coverImage: string;
   priceRub: number;
+  /** Listing flag only. `true` does NOT mean stock in Moscow. */
   available: boolean;
+  /** Supplier observation, never a reservation. Missing/null = unknown, not zero. */
+  stockByWarehouse?: MoscowStock;
+  stockObservedAt?: string | null;
+  availabilityState?: MoscowStockState;
+  /** Supplier-confirmed sale package only; NEVER infer from a box count in a title. */
+  packQty?: number | null;
+  /** Content version, not an electrical/stock/price approval. */
+  catalogVersion?: string;
   params: FeedCatalogParam[];
   keyAttributes: FeedCatalogParam[];
   system: FeedCatalogSystem;
@@ -82,6 +96,8 @@ export type FeedCatalogDebug = {
 export type FeedCatalogResult = {
   ok: boolean;
   updatedAt: string;
+  /** Derived content hash; missing for sources not yet published as a catalog revision. */
+  catalogVersion?: string;
   source: string;
   discountPercentForCeilingOrder: number;
   categories: FeedCatalogCategory[];
@@ -229,7 +245,7 @@ function extractCategories(xml: string): RawCategory[] {
   return out;
 }
 
-function extractParams(offerBlock: string): FeedCatalogParam[] {
+function extractParams(offerBlock: string, includeBanned = false): FeedCatalogParam[] {
   const re = /<param\b([^>]*)>([\s\S]*?)<\/param>/gi;
   const out: FeedCatalogParam[] = [];
   let m: RegExpExecArray | null = re.exec(offerBlock);
@@ -243,7 +259,7 @@ function extractParams(offerBlock: string): FeedCatalogParam[] {
       m = re.exec(offerBlock);
       continue;
     }
-    if (BANNED_PARAMS.has(label.toLowerCase())) {
+    if (!includeBanned && BANNED_PARAMS.has(label.toLowerCase())) {
       m = re.exec(offerBlock);
       continue;
     }
@@ -403,8 +419,7 @@ function parsePrice(raw: string | null): number | null {
 }
 
 function toBoolAvailable(raw: string | null): boolean {
-  const v = s(raw).toLowerCase();
-  return v === "true" || v === "1" || v === "yes" || v === "да";
+  return supplierAvailableOf(raw) === true;
 }
 
 function normalizeSnapshot(input: unknown): FeedCatalogResult {
@@ -415,33 +430,45 @@ function normalizeSnapshot(input: unknown): FeedCatalogResult {
   const normalizedProducts: FeedCatalogProduct[] = products
     .filter((p) => Number.isFinite(p.priceRub) && p.priceRub > 0)
     .filter((p) => WHITELIST_BY_ID.has(String(p.categoryId)))
-    .map((p): FeedCatalogProduct => ({
-      ...p,
-      productId: s(p.productId),
-      vendorCode: s(p.vendorCode),
-      offerId: s(p.offerId),
-      name: s(p.name),
-      url: s(p.url),
-      categoryId: s(p.categoryId),
-      categoryPath: s(p.categoryPath),
-      images: Array.isArray(p.images) ? p.images.map((x) => s(x)).filter(Boolean) : [],
-      coverImage: s(p.coverImage),
-      params: Array.isArray(p.params)
-        ? p.params.filter((x) => !BANNED_PARAMS.has(s(x.label).toLowerCase()))
-        : [],
-      keyAttributes: Array.isArray(p.keyAttributes) ? p.keyAttributes : [],
-      priceRub: Math.round(p.priceRub),
-      available: Boolean(p.available),
-      system: (p.system as FeedCatalogSystem) ?? "UNKNOWN",
-      kind: (p.kind as FeedCatalogKind) ?? "OTHER",
-      unit: toUnit(p.unit),
-      lengthMeters: p.lengthMeters ?? null,
-      pieceLengthMeters: p.pieceLengthMeters ?? null,
-    }));
+    .map((p): FeedCatalogProduct => {
+      const stockByWarehouse = hasMoscowObservation(p)
+        ? { moscow: moscowQuantityOf(p) } : undefined;
+      const available = supplierAvailableOf(p.available) === true;
+      return {
+        ...p,
+        productId: s(p.productId),
+        vendorCode: s(p.vendorCode),
+        offerId: s(p.offerId),
+        name: s(p.name),
+        url: s(p.url),
+        categoryId: s(p.categoryId),
+        categoryPath: s(p.categoryPath),
+        images: Array.isArray(p.images) ? p.images.map((x) => s(x)).filter(Boolean) : [],
+        coverImage: s(p.coverImage),
+        params: Array.isArray(p.params)
+          ? p.params.filter((x) => !BANNED_PARAMS.has(s(x.label).toLowerCase()))
+          : [],
+        keyAttributes: Array.isArray(p.keyAttributes)
+          ? p.keyAttributes.filter((x) => !BANNED_PARAMS.has(s(x.label).toLowerCase())) : [],
+        priceRub: Math.round(p.priceRub),
+        available,
+        stockByWarehouse,
+        availabilityState: moscowStockStateOf({ available, stockByWarehouse }),
+        stockObservedAt: stockByWarehouse ? s(p.stockObservedAt) || s(src.updatedAt) || null : null,
+        packQty: p.packQty != null && Number.isFinite(Number(p.packQty)) && Number(p.packQty) > 0
+          ? Number(p.packQty) : null,
+        system: (p.system as FeedCatalogSystem) ?? "UNKNOWN",
+        kind: (p.kind as FeedCatalogKind) ?? "OTHER",
+        unit: toUnit(p.unit),
+        lengthMeters: p.lengthMeters ?? null,
+        pieceLengthMeters: p.pieceLengthMeters ?? null,
+      };
+    });
 
   return {
     ok: normalizedProducts.length > 0,
-    updatedAt: s(src.updatedAt) || new Date().toISOString(),
+    updatedAt: s(src.updatedAt),
+    catalogVersion: s(catalogIndexData.catalogVersion),
     source: "snapshot:file",
     discountPercentForCeilingOrder: Number.isFinite(src.discountPercentForCeilingOrder)
       ? Number(src.discountPercentForCeilingOrder)
@@ -504,6 +531,10 @@ async function fetchLive(): Promise<{
 }
 
 function parseLiveFeed(xml: string): { result: FeedCatalogResult; counters: ParseCounters } {
+  // Supplier timestamps without a timezone are NOT the time we fetched XML.
+  const sourceDate = xml.match(/<yml_catalog\b[^>]*\bdate="([^"]+)"/i)?.[1] ?? "";
+  const sourceTime = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(sourceDate) && !Number.isNaN(Date.parse(sourceDate))
+    ? new Date(sourceDate).toISOString() : "";
   const categories = extractCategories(xml);
   const byId = new Map(categories.map((c) => [c.id, c]));
   const offers = xml.match(/<offer\b[\s\S]*?<\/offer>/gi) ?? [];
@@ -561,7 +592,11 @@ function parseLiveFeed(xml: string): { result: FeedCatalogResult; counters: Pars
     const name = s(extractTag(block, "name") ?? `Товар ${vendorCode}`);
     const url = s(extractTag(block, "url") ?? "https://eksmarket.ru/");
     const images = extractTagList(block, "picture");
-    const params = extractParams(block);
+    const rawParams = extractParams(block, true);
+    const stockByWarehouse = hasMoscowObservation({ params: rawParams })
+      ? { moscow: moscowQuantityOf({ params: rawParams }) } : undefined;
+    const params = rawParams.filter((param) => !BANNED_PARAMS.has(param.label.toLowerCase()));
+    const available = toBoolAvailable(block.match(/<offer\b[^>]*\bavailable="([^"]+)"/i)?.[1] ?? null);
     const categoryPath = buildCategoryPath(categoryId, byId);
 
     let productId = `eks-${slugSafe(vendorCode) || slugSafe(offerId)}`;
@@ -579,7 +614,11 @@ function parseLiveFeed(xml: string): { result: FeedCatalogResult; counters: Pars
       images,
       coverImage: images[0] ?? "",
       priceRub,
-      available: toBoolAvailable(block.match(/<offer\b[^>]*\bavailable="([^"]+)"/i)?.[1] ?? null),
+      available,
+      stockByWarehouse,
+      availabilityState: moscowStockStateOf({ available, stockByWarehouse }),
+      stockObservedAt: stockByWarehouse ? sourceTime || null : null, // fetchedAt is NOT observation time
+      packQty: null,
       params,
       keyAttributes: pickKeyAttributes(params),
       system: deriveSystem(categoryId, categoryPath, name, url),
@@ -611,7 +650,7 @@ function parseLiveFeed(xml: string): { result: FeedCatalogResult; counters: Pars
       counters,
       result: {
         ok: false,
-        updatedAt: new Date().toISOString(),
+        updatedAt: sourceTime,
         source: "live-feed2",
         discountPercentForCeilingOrder: DISCOUNT_PERCENT,
         categories: normalizedCategories,
@@ -625,7 +664,7 @@ function parseLiveFeed(xml: string): { result: FeedCatalogResult; counters: Pars
     counters,
     result: {
       ok: true,
-      updatedAt: new Date().toISOString(),
+      updatedAt: sourceTime,
       source: "live-feed2",
       discountPercentForCeilingOrder: DISCOUNT_PERCENT,
       categories: normalizedCategories,

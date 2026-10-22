@@ -74,7 +74,7 @@ export function createLightingOnlySnapshot(): CalculatorLeadSnapshot {
  * «только свет» (−LIGHTING_ONLY_DISCOUNT_PERCENT), `withCeilingDiscountedTotalRub` —
  * «свет с потолком». Какую из них показать, решает экран, а не каталог.
  */
-export function buildLightingSnapshotFromItems(items: LightingItem[]): LightingSnapshot | null {
+export function buildLightingSnapshotFromItems(items: LightingItem[], catalogVersion?: string): LightingSnapshot | null {
   if (items.length === 0) return null;
 
   const totalRub = items.reduce((sum, item) => sum + item.qty * item.priceRub, 0);
@@ -83,6 +83,7 @@ export function buildLightingSnapshotFromItems(items: LightingItem[]): LightingS
 
   return {
     mode: "catalog",
+    catalogVersion: catalogVersion || undefined,
     items,
     totalRub,
     discountedTotalRub,

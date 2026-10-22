@@ -141,6 +141,32 @@ describe("T-022 - LeadSnapshotV2", () => {
     expect(lead.entry).toBe("ceiling-first");
   });
 
+  it("LED-20: версия, согласие, упаковка и московское наблюдение проходят в лид без подмены", () => {
+    const lead = buildLeadSnapshotV2({
+      snapshot: {
+        ...base,
+        lighting: {
+          mode: "catalog", userCustomizedLighting: true,
+          catalogVersion: `cat-sha256-${"a".repeat(64)}`,
+          catalogReview: { fromVersion: null, toVersion: `cat-sha256-${"a".repeat(64)}`,
+            acceptedAt: "2026-10-22T12:00:00Z", fields: ["priceRub", "moscowStock"] },
+          items: [{ sku: "sku-1", vendorCode: "УУ-1", name: "Лента", qty: 2, priceRub: 300,
+            unit: "pcs", packQty: 5, moscowStock: 7, stockObservedAt: "2026-10-22T10:00:00Z" }],
+          totalRub: 600, discountedTotalRub: 540,
+        },
+      },
+      ceilingEffectiveTotal: 42500,
+      lightingRegularTotal: 600,
+      lightingEffectiveTotal: 540,
+      source: "track-sale:kit",
+    });
+    expect(lead.lighting).toMatchObject({
+      catalogVersion: `cat-sha256-${"a".repeat(64)}`,
+      catalogReview: { fields: ["priceRub", "moscowStock"] },
+      items: [{ packQty: 5, moscowStock: 7, stockObservedAt: "2026-10-22T10:00:00Z" }],
+    });
+  });
+
   it("bez sveta lighting = null, grand = potolok", () => {
     const lead = buildLeadSnapshotV2({
       snapshot: base,

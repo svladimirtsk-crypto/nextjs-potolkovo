@@ -84,7 +84,8 @@ function normalizeQty(qty: number, unit: string): number {
 }
 
 export function useLightingCart(
-  resolveProduct: (productId: string) => FeedCatalogProduct | undefined
+  resolveProduct: (productId: string) => FeedCatalogProduct | undefined,
+  catalogVersion?: string
 ): LightingCartApi {
   const { lightingDraft, setLightingDraft } = useCalculatorModal();
 
@@ -113,9 +114,10 @@ export function useLightingCart(
 
   /** Корзина → черновик. Единственное место, где собирается `LightingSnapshot`. */
   const draftFromCart = useCallback(
-    (nextCart: Cart): LightingSnapshot => {
+    (nextCart: Cart, previous: LightingSnapshot | null): LightingSnapshot => {
       const items: LightingItem[] = [];
       let sum = 0;
+      let version = catalogVersion || "";
 
       for (const [productId, qty] of Object.entries(nextCart)) {
         const product = resolveProduct(productId);
@@ -123,6 +125,7 @@ export function useLightingCart(
         if (!product || quantity <= 0) continue;
 
         const priceRub = toNumber(product.priceRub);
+        if (!version) version = product.catalogVersion ?? "";
         sum += priceRub * quantity;
         items.push({
           sku: productId,
@@ -130,6 +133,10 @@ export function useLightingCart(
           qty: quantity,
           priceRub,
           vendorCode: toText(product.vendorCode),
+          offerId: toText(product.offerId) || undefined,
+          packQty: product.packQty ?? null,
+          moscowStock: product.stockByWarehouse?.moscow ?? null,
+          stockObservedAt: product.stockObservedAt ?? null,
           system: toText(product.system),
           kind: toText(product.kind),
           unit: toText(product.unit),
@@ -140,6 +147,8 @@ export function useLightingCart(
 
       return {
         mode: "catalog",
+        catalogVersion: version || undefined,
+        ...(previous?.catalogReview?.toVersion === version ? { catalogReview: previous.catalogReview } : {}),
         items,
         totalRub: sum,
         discountedTotalRub: applyLightingOnlyDiscount(sum),
@@ -148,7 +157,7 @@ export function useLightingCart(
         userCustomizedLighting: true,
       };
     },
-    [resolveProduct]
+    [resolveProduct, catalogVersion]
   );
 
   /**
@@ -160,7 +169,7 @@ export function useLightingCart(
     (updater: Cart | ((prev: Cart) => Cart)) => {
       setLightingDraft((prev) => {
         const next = typeof updater === "function" ? updater(cartFromDraft(prev)) : updater;
-        return draftFromCart(next);
+        return draftFromCart(next, prev);
       });
     },
     [draftFromCart, setLightingDraft]

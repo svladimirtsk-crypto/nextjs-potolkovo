@@ -89,7 +89,7 @@ export function CatalogSectionClient({ data }: Props) {
    * T-031: корзина общая с модалкой (`lightingDraft`), локального состояния нет —
    * счётчики страницы и калькулятора всегда совпадают, комплект не теряется.
    */
-  const lightingCart = useLightingCart(resolveProduct);
+  const lightingCart = useLightingCart(resolveProduct, data.catalogVersion);
   const [visibleCount, setVisibleCount] = useState(24);
   const [cartOpen, setCartOpen] = useState(false);
   const closeCart = useCallback(() => setCartOpen(false), []);
@@ -115,11 +115,11 @@ export function CatalogSectionClient({ data }: Props) {
    * здесь остаётся только сам эффект-мост к стору (п. 0.7 ТЗ v2).
    */
   useEffect(() => {
-    const lighting = buildLightingSnapshotFromItems(selectedLightingItems);
+    const lighting = buildLightingSnapshotFromItems(selectedLightingItems, data.catalogVersion);
     setSnapshot((prev) =>
       nextCatalogSnapshot(prev, { lighting, selectedTotal, lightingOnlySelectedTotal })
     );
-  }, [lightingOnlySelectedTotal, selectedLightingItems, selectedTotal, setSnapshot]);
+  }, [lightingOnlySelectedTotal, selectedLightingItems, selectedTotal, setSnapshot, data.catalogVersion]);
 
   const openInCalculator = () => {
     const items = cartToLightingItems(selectedEntries);
@@ -135,7 +135,7 @@ export function CatalogSectionClient({ data }: Props) {
       return;
     }
 
-    const initialLighting = buildCatalogLightingSnapshot(items);
+    const initialLighting = buildCatalogLightingSnapshot(items, data.catalogVersion);
 
     trackLightingCartCheckout({
       mode: "open-calculator",
@@ -175,7 +175,7 @@ export function CatalogSectionClient({ data }: Props) {
     const items = cartToLightingItems(selectedEntries);
     if (items.length === 0) return;
 
-    const initialLighting = buildCatalogLightingSnapshot(items);
+    const initialLighting = buildCatalogLightingSnapshot(items, data.catalogVersion);
 
     trackLightingCartCheckout({
       mode: "lighting-only",
@@ -203,7 +203,7 @@ export function CatalogSectionClient({ data }: Props) {
       return;
     }
 
-    const initialLighting = buildCatalogLightingSnapshot(items);
+    const initialLighting = buildCatalogLightingSnapshot(items, data.catalogVersion);
 
     trackLightingCartCheckout({
       mode: "with-ceiling",

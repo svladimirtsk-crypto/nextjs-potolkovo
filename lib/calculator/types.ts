@@ -19,9 +19,18 @@ export type LeadRoomSnapshot = CalculatorRoomBreakdown;
 /** Блок освещения в лиде — позиции корзины и режим скидки. */
 export type LightingLeadBlock = {
   mode: string;
+  /** Version and acceptance reported by the client, NOT supplier approval. */
+  catalogVersion?: string;
+  catalogReview?: LightingSnapshot["catalogReview"];
   items: Array<{
     sku: string;
     vendorCode?: string;
+    offerId?: string;
+    packQty?: number | null;
+    moscowStock?: number | null;
+    stockObservedAt?: string | null;
+    /** State is overwritten by server recalculation before storage. */
+    availabilityState?: "unknown" | "reported_zero" | "reported_positive" | "supplier_unavailable";
     system?: string;
     kind?: string;
     unit?: string;
@@ -86,6 +95,10 @@ export function buildLightingLeadBlock(
       priceRub,
       totalRub: qty * priceRub,
       ...(item.vendorCode ? { vendorCode: item.vendorCode } : {}),
+      ...(item.offerId ? { offerId: item.offerId } : {}),
+      ...(item.packQty != null ? { packQty: item.packQty } : {}),
+      ...(item.moscowStock != null ? { moscowStock: item.moscowStock } : {}),
+      ...(item.stockObservedAt ? { stockObservedAt: item.stockObservedAt } : {}),
       ...(item.system ? { system: item.system } : {}),
       ...(item.kind ? { kind: item.kind } : {}),
       ...(item.unit ? { unit: item.unit } : {}),
@@ -96,6 +109,8 @@ export function buildLightingLeadBlock(
 
   return {
     mode: String(lighting.mode ?? "none"),
+    ...(lighting.catalogVersion ? { catalogVersion: lighting.catalogVersion } : {}),
+    ...(lighting.catalogReview ? { catalogReview: lighting.catalogReview } : {}),
     items,
     regularTotalRub: num(lighting.totalRub),
     effectiveTotalRub: num(lighting.discountedTotalRub) || num(lighting.totalRub),

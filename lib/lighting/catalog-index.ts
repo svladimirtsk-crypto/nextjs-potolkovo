@@ -12,6 +12,7 @@ import type {
   FeedCatalogUnit,
 } from "@/lib/eks-feed2-catalog";
 import type { LampSocket } from "@/lib/catalog-ui-config";
+import { moscowStockStateOf, type MoscowStock, type MoscowStockState } from "./moscow-stock";
 
 /** Товар в облегчённом виде: только то, что нужно UI каталога. */
 export type CatalogIndexProduct = {
@@ -20,6 +21,10 @@ export type CatalogIndexProduct = {
   name: string;
   priceRub: number;
   available: boolean;
+  stockByWarehouse?: MoscowStock;
+  stockObservedAt?: string | null;
+  availabilityState?: MoscowStockState;
+  packQty?: number | null;
   system: FeedCatalogSystem;
   kind: FeedCatalogKind;
   unit: FeedCatalogUnit;
@@ -30,6 +35,7 @@ export type CatalogIndexProduct = {
 
 export type CatalogIndex = {
   updatedAt: string;
+  catalogVersion: string;
   discountPercentForCeilingOrder: number | null;
   products: CatalogIndexProduct[];
 };
@@ -56,10 +62,14 @@ type RawRow = [
   pieceLengthMeters: number | null,
   socketId: number,
   coverImage: string,
+  moscowStock?: number | null,
+  packQty?: number | null,
+  stockDateId?: number,
 ];
 
 type RawIndexFile = {
   updatedAt: string;
+  catalogVersion?: string;
   discountPercentForCeilingOrder: number | null;
   imagePrefix: string;
   dictionaries: {
@@ -67,6 +77,7 @@ type RawIndexFile = {
     kind: string[];
     unit: string[];
     socket: string[];
+    stockDate?: string[];
   };
   rows: RawRow[];
 };
@@ -85,17 +96,26 @@ function decodeIndex(raw: RawIndexFile): CatalogIndex {
 
   return {
     updatedAt: raw.updatedAt,
+    catalogVersion: raw.catalogVersion ?? "",
     discountPercentForCeilingOrder: raw.discountPercentForCeilingOrder,
     products: raw.rows.map((row) => {
       const cover = row[10];
       const socket = lookup(dict.socket, row[9]);
+      const moscow = typeof row[11] === "number" && Number.isFinite(row[11]) && row[11] >= 0
+        ? row[11] : null;
+      const stockByWarehouse = moscow === null ? undefined : { moscow };
+      const available = row[4] === 1;
 
       return {
         productId: row[0],
         vendorCode: row[1],
         name: row[2],
         priceRub: row[3],
-        available: row[4] === 1,
+        available,
+        stockByWarehouse,
+        stockObservedAt: moscow === null ? null : lookup(dict.stockDate ?? [], row[13] ?? -1) || null,
+        availabilityState: moscowStockStateOf({ available, stockByWarehouse }),
+        packQty: typeof row[12] === "number" && Number.isFinite(row[12]) && row[12] > 0 ? row[12] : null,
         system: lookup(dict.system, row[5]) as FeedCatalogSystem,
         kind: lookup(dict.kind, row[6]) as FeedCatalogKind,
         unit: lookup(dict.unit, row[7]) as FeedCatalogUnit,

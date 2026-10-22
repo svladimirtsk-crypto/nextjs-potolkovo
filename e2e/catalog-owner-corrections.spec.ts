@@ -51,7 +51,7 @@ test("Owner corrections: track controls remain equipment, do not create fixture 
 });
 
 
-test("Owner withdrawal: restored old quote shows unavailable item and removes it only on explicit action", async ({ page }) => {
+test("Owner withdrawal: removed 0У-00001341 blocks stale-quote restore without erasing the draft", async ({ page }) => {
   await openCalculatorFromHero(page); await completeAreaScreen(page);
   await page.evaluate(key => {
     const draft = JSON.parse(sessionStorage.getItem(key)!);
@@ -62,14 +62,13 @@ test("Owner withdrawal: restored old quote shows unavailable item and removes it
   await page.getByRole("button", { name: /Рассчитать стоимость/ }).first().click();
   const m = page.locator(MODAL);
   await m.getByRole("button", { name: "Продолжить расчёт", exact: true }).click();
-  await m.getByRole("button", { name: /К итогу/ }).first().click();
-  await expect(m.locator('[data-testid="retired-catalog-notice"]:visible')).toContainText("В расчёте есть снятые позиции");
-  await expect(m.locator('[data-testid="retired-catalog-notice"]:visible')).toContainText("0У-00001341");
-  await m.getByRole("button", { name: "Проверить снятые позиции", exact: true }).click();
-  await m.getByRole("button", { name: "Убрать из расчёта", exact: true }).click();
-  await expect(m.locator('[data-testid="retired-catalog-notice"]:visible')).toHaveCount(0);
-  await expect(m.getByRole("button", { name: "Выбранное (0)", exact: true })).toBeVisible();
-  await m.locator(".calculator-modal-footer").getByRole("button", { name: /К итогу/ }).click();
-  await expect(m.locator('[data-testid="retired-catalog-notice"]:visible')).toHaveCount(0);
-  await expect(m.getByTestId("estimate-card")).not.toContainText("Свет");
+  const review = m.getByTestId("catalog-draft-review");
+  await expect(review.getByTestId("catalog-draft-diff")).toContainText("Снятый шинопровод");
+  await expect(review).toContainText("Автоматически перенести расчёт нельзя");
+  await expect(review.getByTestId("catalog-draft-accept")).toHaveCount(0);
+  await expect(m.getByRole("button", { name: /К итогу/ })).toHaveCount(0);
+  expect(await page.evaluate(key => sessionStorage.getItem(key), CALC_DRAFT_KEY)).toContain("0У-00001341");
+  await review.getByTestId("catalog-draft-back").click();
+  await expect(m.locator('[data-draft-choice="offer"]')).toBeVisible();
+  expect(await page.evaluate(key => sessionStorage.getItem(key), CALC_DRAFT_KEY)).toContain("0У-00001341");
 });

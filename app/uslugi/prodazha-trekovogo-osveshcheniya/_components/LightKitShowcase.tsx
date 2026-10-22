@@ -1,6 +1,7 @@
 import { Picture } from "@/components/ui/picture";
 
 import snapshotData from "@/data/eks-feed2-snapshot.json";
+import catalogIndexData from "@/data/catalog-index.json";
 
 import { Container } from "@/components/ui/container";
 import { Heading } from "@/components/ui/heading";
@@ -15,6 +16,7 @@ import { normalizeFeedCatalogProducts } from "@/lib/feed2-snapshot-normalize";
 import { applyVendorOverrides } from "@/lib/vendor-code-overrides";
 import { detectSocket } from "@/lib/feed2-products";
 import { isRetiredCatalogProduct } from "@/lib/catalog-retirement";
+import { moscowCandidateAllowed } from "@/lib/lighting/moscow-stock";
 
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import type { LightingItem } from "@/lib/calculator-modal-types";
@@ -41,7 +43,7 @@ function getProducts(): FeedCatalogProduct[] {
   const catalog = snapshotData as unknown as { products?: unknown[] };
   return normalizeFeedCatalogProducts(catalog.products ?? [])
     .map((p) => applyVendorOverrides(p))
-    .filter((p) => toNumber(p.priceRub) > 0 && p.available !== false && !isRetiredCatalogProduct(p));
+    .filter((p) => toNumber(p.priceRub) > 0 && moscowCandidateAllowed(p) && !isRetiredCatalogProduct(p));
 }
 
 /** T-014: ввод питания COLIBRI обязателен в каждом комплекте. */
@@ -71,6 +73,11 @@ function itemFromProduct(product: FeedCatalogProduct, qty: number): LightingItem
     vendorCode: toText(product.vendorCode),
     system: toText(product.system),
     kind: toText(product.kind),
+    unit: toText(product.unit),
+    offerId: toText(product.offerId) || undefined,
+    packQty: product.packQty ?? null,
+    moscowStock: product.stockByWarehouse?.moscow ?? null,
+    stockObservedAt: product.stockObservedAt ?? null,
   };
 }
 
@@ -385,6 +392,7 @@ export function LightKitShowcase() {
                     <LightKitCtaButton
                       title={kit.title}
                       items={kit.items}
+                      catalogVersion={catalogIndexData.catalogVersion}
                       source="track-sale-ready-kits"
                     />
                   </div>

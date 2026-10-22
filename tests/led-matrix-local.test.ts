@@ -57,6 +57,47 @@ describe("CATALOG-LED-TZ §10 · воспроизводимые локальны
     expect(plan.bom.some((item) => item.role === "psu")).toBe(false);
   });
 
+  it("19 · московский ноль исключает БП/контроллер из предварительного BOM, другой склад не спасает", () => {
+    const strip = parseStripSpec("Светодиодная лента монохром 24V 120 диодов 10W 4200К катушка 5 м")!;
+    const zero = { ...product("Блок питания МИНИ 24V 100W"),
+      stockByWarehouse: { moscow: 0 }, params: [{ label: "Остатки Брн", value: "99" }] };
+    const unknown = product("Блок питания СТАНДАРТ 24V 150W");
+    const controller = { ...product("Контроллер для светодиодной ленты WIFI TUYA монохром C01 15A,12-24В"),
+      stockByWarehouse: { moscow: 0 } };
+    const plan = planLedPower({ strip, meters: 5, products: [zero, unknown, controller] });
+    expect(plan.psu?.product.name).toBe(unknown.name);
+    expect(plan.controller).toBeNull();
+    expect(plan.rejectedPsus.some(p => p.name === zero.name)).toBe(true);
+    expect(plan.warnings.join(" ")).toContain("Москве");
+    const onlyZero = planLedPower({ strip, meters: 5, products: [zero, product("Блок питания 12V 200W")] });
+    expect(onlyZero.psu).toBeNull();
+    expect(onlyZero.status).toBe("needs_review"); // stock is not an electrical incompatibility
+
+    const run: LedRun = {
+      id: "r", roomId: "room", roomLabel: "Гостиная", feature: "floating", meters: 5, rows: 1,
+      strip, stripProductId: "led-1", stripName: "Лента", source: "task", confirmed: true,
+    };
+    const project = planLedProject({ products: [zero], runs: [run] });
+    expect(project.circuits[0]?.psu).toBeNull();
+    expect(project.bom.some(line => line.role === "psu")).toBe(false);
+    expect(project.questions.join(" ")).toContain("остаток Москвы");
+  });
+
+  it("19 · заданная лента с московским нулём требует согласования даже при подходящем БП", () => {
+    const strip = parseStripSpec("Светодиодная лента монохром 24V 120 диодов 10W катушка 5 м")!;
+    const selected = { ...product("Светодиодная лента монохром 24V 120 диодов 10W катушка 5 м"),
+      productId: "led-zero", stockByWarehouse: { moscow: 0 },
+      params: [{ label: "Остатки Брн", value: "80" }] };
+    const run: LedRun = { id: "r", roomId: "room", roomLabel: "Гостиная", feature: "floating",
+      meters: 5, rows: 1, strip, stripProductId: "led-zero", stripName: selected.name,
+      source: "task", confirmed: true };
+    const plan = planLedProject({ products: [selected, product("Блок питания 24V 100W"),
+      product("Контроллер для светодиодной ленты WIFI TUYA монохром C01 15A,12-24В")], runs: [run] });
+    expect(plan.zones[0]?.status).toBe("needs_review");
+    expect(plan.zones[0]?.warnings.join(" ")).toContain("остаток в Москве — 0");
+    expect(plan.questions.join(" ")).toContain("московский остаток ленты");
+  });
+
   it("10 · 24V/4200К/10W без заявленного режима → unknown и нет управления в плане", () => {
     const strip = parseStripSpec("Светодиодная лента СТАНДАРТ 140 24V 112 диодов 10W 4200К катушка 5 м")!;
     const plan = planLedPower({

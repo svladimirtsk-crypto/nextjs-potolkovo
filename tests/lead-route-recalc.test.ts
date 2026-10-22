@@ -192,6 +192,7 @@ describe("PT-010 · POST /api/lead пересчитывает цену на се
     expect(subject).toContain(expected);
     expect(body).toContain(`Общий ориентир: ~${expected} ₽`);
     expect(body).toContain("Сумма пересчитана сервером: клиент видел ~1 ₽");
+    expect(body).toContain("Наличие и резерв в Москве не подтверждены");
     expect(body).toContain("СЛУЖЕБНОЕ");
   });
 
@@ -300,8 +301,8 @@ describe("PT-010 · POST /api/lead пересчитывает цену на се
     const stored = await getLeadStore().getLead(1);
     expect(stored?.grandTotal).toBe(grand);
     const snapshot = stored?.payload.snapshot as StoredLeadSnapshot | undefined;
-    expect(snapshot?.priceCheck?.status).toBe("verified");
-    expect(snapshot?.priceCheck?.issues).toEqual([]);
+    expect(snapshot?.priceCheck?.status).toBe("verified"); // только арифметика
+    expect(snapshot?.priceCheck?.issues.map(issue => issue.code)).toEqual(["moscow-stock-unconfirmed"]);
   });
 
   it("rescue-заявка без снапшота принимается с суммой клиента", async () => {

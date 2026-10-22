@@ -24,6 +24,7 @@ import {
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { basename, dirname, join, resolve } from "node:path";
+import { catalogVersionOf, diffCatalog, formatCatalogReview } from "./feed-review.mjs";
 
 const ROOT = resolve(import.meta.dirname, "..");
 const SNAPSHOT = resolve(ROOT, "data/eks-feed2-snapshot.json");
@@ -45,6 +46,51 @@ function text(value) {
 function num(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
+}
+
+/** The JSON refresh path accepts explicit Moscow observations, never the
+ * Barnaul count or `available=true` as a substitute. Missing is unknown. */
+function normalizeProductStock(product, index, observedAt) {
+  const record = { ...product };
+  const params = Array.isArray(record.params) ? record.params : [];
+  const stockParams = params.filter(param => text(param?.label ?? param?.name).trim().toLowerCase().replace(/\s+/g, " ") === "остатки мск");
+  const fromObject = record.stockByWarehouse && typeof record.stockByWarehouse === "object" &&
+    Object.hasOwn(record.stockByWarehouse, "moscow");
+  const observations = [...stockParams.map(p => p.value), ...(fromObject ? [record.stockByWarehouse.moscow] : [])];
+  if (observations.length > 0) {
+    const parsed = observations.map(value => {
+      const raw = text(value).trim();
+      if (!/^\d+(?:[.,]\d+)?$/.test(raw)) return null;
+      const quantity = Number(raw.replace(",", "."));
+      return Number.isFinite(quantity) && quantity >= 0 && quantity <= 1e9 ? quantity : null;
+    });
+    if (parsed.some(q => q === null) || new Set(parsed).size !== 1) {
+      fail(`неоднозначный остаток Москвы у позиции №${index + 1} — нужен review поставщика`);
+    }
+    record.stockByWarehouse = { moscow: parsed[0] };
+    // A day without offset is not a verifiable observation instant. Never
+    // replace it with the time the build ran or infer a supplier timezone.
+    const sourceDate = [record.stockObservedAt, observedAt]
+      .map(value => text(value).trim())
+      .find(value => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/i.test(value)
+        && Number.isFinite(Date.parse(value)));
+    record.stockObservedAt = sourceDate || null;
+  } else {
+    delete record.stockByWarehouse;
+    delete record.stockObservedAt;
+  }
+  // Warehouse fields are not product attributes to surface as characteristics.
+  record.params = params.filter(param => !["остатки мск", "остатки брн"].includes(
+    text(param?.label ?? param?.name).trim().toLowerCase().replace(/\s+/g, " ")));
+  if (Array.isArray(record.keyAttributes)) record.keyAttributes = record.keyAttributes.filter(param =>
+    !["остатки мск", "остатки брн"].includes(text(param?.label ?? param?.name).trim().toLowerCase().replace(/\s+/g, " ")));
+  if (record.packQty !== undefined && record.packQty !== null) {
+    if (!Number.isFinite(Number(record.packQty)) || Number(record.packQty) <= 0) {
+      fail(`неверная подтверждённая упаковка у позиции №${index + 1}`);
+    }
+    record.packQty = Number(record.packQty);
+  }
+  return record;
 }
 
 async function downloadFeed(url) {
@@ -92,8 +138,10 @@ function normalizeFeed(raw, before) {
     ids.add(id);
   }
 
-  return {
-    updatedAt: text(raw.updatedAt || raw.date || new Date().toISOString()),
+  const updatedAt = text(raw.updatedAt || raw.date).trim();
+  const candidate = {
+    // No build-time date as a substitute for the supplier's timestamp.
+    updatedAt,
     source: text(raw.source || "eks-feed2"),
     // Скидка при заказе потолка — правило нашего сайта, не параметр поставщика.
     // Не теряем его (и справочник категорий) при обновлении только offers.
@@ -102,8 +150,9 @@ function normalizeFeed(raw, before) {
       : {}),
     categories: Array.isArray(raw.categories) && raw.categories.length > 0
       ? raw.categories : (Array.isArray(before.categories) ? before.categories : []),
-    products,
+    products: products.map((product, index) => normalizeProductStock(product, index, updatedAt)),
   };
+  return { ...candidate, catalogVersion: catalogVersionOf(candidate) };
 }
 
 /** Топ подорожаний и удешевлений — то, ради чего PR вообще смотрят. */
@@ -171,6 +220,7 @@ function formatReport({ changes, added, removed }) {
 
 const VALIDATION_INPUTS = [
   "scripts/validate-catalog.mjs",
+  "scripts/feed-review.mjs",
   "scripts/build-catalog-index.mjs",
   "scripts/build-catalog-images.mjs",
   "data/catalog-retired.json",
@@ -226,7 +276,7 @@ function atomicWrite(dest, content) {
   }
 }
 
-function publishStage(stage, report) {
+function publishStage(stage, report, review) {
   const stagedImages = resolve(stage, "public/catalog");
   const imageOutputs = readdirSync(stagedImages, { withFileTypes: true })
     .filter((entry) => entry.isFile() && entry.name.endsWith(".webp"))
@@ -245,6 +295,7 @@ function publishStage(stage, report) {
   const outputs = [
     ...imageOutputs.map((rel) => ({ rel, content: readFileSync(resolve(stage, rel)) })),
     ...dataOutputs.map((rel) => ({ rel, content: readFileSync(resolve(stage, rel)) })),
+    { rel: "data/catalog-review.json", content: Buffer.from(`${JSON.stringify(review, null, 2)}\n`) },
     { rel: "feed-diff.md", content: Buffer.from(`${report}\n`) },
   ];
   const backups = new Map(outputs.map(({ rel }) => [rel, existsSync(resolve(ROOT, rel)) ? readFileSync(resolve(ROOT, rel)) : null]));
@@ -289,7 +340,8 @@ async function main() {
     );
   }
 
-  const report = formatReport(diffPrices(before, after));
+  const review = diffCatalog(before, after);
+  const report = `${formatReport(diffPrices(before, after))}\n\n${formatCatalogReview(review)}`;
   console.log(`\n${report}\n`);
 
   if (DRY_RUN) {
@@ -307,8 +359,8 @@ async function main() {
       console.log("[refresh-feed] check-only: staging прошёл, рабочие файлы не менялись");
       return;
     }
-    publishStage(stage, report);
-    console.log("[refresh-feed] готово к PR и ручному ревью, не опубликовано в production");
+    publishStage(stage, report, review);
+    console.log("[refresh-feed] готово к PR и ручному ревью: кандидат и полный diff; merge/deploy запрещён без проверки, production не менялся");
   } finally {
     rmSync(stage, { recursive: true, force: true });
   }

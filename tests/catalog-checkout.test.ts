@@ -57,6 +57,9 @@ describe("Снапшот корзины каталога", () => {
 
   it("позиция несёт артикул, имя, количество и цену", () => {
     const item = productToLightingItem(product({ productId: "x1", name: "Трек", priceRub: 990 }), 3);
-    expect(item).toEqual({ sku: "x1", name: "Трек", qty: 3, priceRub: 990 });
+    expect(item).toMatchObject({
+      sku: "x1", name: "Трек", qty: 3, priceRub: 990,
+      vendorCode: "", unit: "pcs", packQty: null, moscowStock: null,
+    });
   });
 });

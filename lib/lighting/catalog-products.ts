@@ -39,6 +39,10 @@ export function catalogIndexToFeedProduct(product: CatalogIndexProduct): FeedCat
     coverImage: product.coverImage,
     priceRub: product.priceRub,
     available: product.available,
+    stockByWarehouse: product.stockByWarehouse,
+    stockObservedAt: product.stockObservedAt,
+    availabilityState: product.availabilityState,
+    packQty: product.packQty,
     params: product.socket ? [{ label: "Цоколь", value: product.socket }] : [],
     keyAttributes: product.socket ? [{ label: "Цоколь", value: product.socket }] : [],
     system: product.system,
@@ -51,7 +55,9 @@ export function catalogIndexToFeedProduct(product: CatalogIndexProduct): FeedCat
 
 /** Индекс → список товаров в том виде, в котором их видит клиент. */
 export function buildCatalogProducts(index: CatalogIndex): FeedCatalogProduct[] {
-  return index.products.map(catalogIndexToFeedProduct).map(applyVendorOverrides).filter(
+  return index.products.map((product) => ({
+    ...catalogIndexToFeedProduct(product), catalogVersion: index.catalogVersion,
+  })).map(applyVendorOverrides).filter(
     (product) => !isRetiredCatalogProduct(product)
   );
 }
@@ -64,7 +70,9 @@ export function buildCatalogProducts(index: CatalogIndex): FeedCatalogProduct[] 
  * опознать и принять с пометкой, а не отклонять заявку как «неизвестный SKU».
  */
 export function buildCatalogLookupProducts(index: CatalogIndex): FeedCatalogProduct[] {
-  return [...index.products.map(catalogIndexToFeedProduct), ...normalizeFeedCatalogProducts(retiredArchive.products)]
+  return [...index.products.map((product) => ({
+    ...catalogIndexToFeedProduct(product), catalogVersion: index.catalogVersion,
+  })), ...normalizeFeedCatalogProducts(retiredArchive.products)]
     .map((product) => applyVendorOverrides(product));
 }
 

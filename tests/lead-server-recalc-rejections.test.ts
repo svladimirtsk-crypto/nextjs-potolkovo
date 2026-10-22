@@ -29,6 +29,31 @@ import {
   pick,
 } from "./helpers/lead-payload-factory";
 
+describe("LED-19/20 · заявки со склада Москвы и идентичность", () => {
+  it("available=true с московским нулём принимается лишь для консультации, не как подтверждённый остаток", async () => {
+    const products = await catalogPromise;
+    const mount = pick(products, MOUNT_ID);
+    const zero = { ...mount, available: true, stockByWarehouse: { moscow: 0 } };
+    const payload = buildClientPayload({ rooms: [], cart: [{ product: zero, qty: 1 }], discountMode: "lighting-only" });
+    const result = recalculateLeadPriceWithCatalog(payload, [zero]);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.priceCheck.issues.some(issue => issue.code === "moscow-zero-reported")).toBe(true);
+    expect(result.priceCheck.issues.some(issue => issue.message.includes("Барнаул"))).toBe(false);
+  });
+
+  it("новый товар с тем же vendorCode, но иным productId не заменяет старый SKU в лиде", async () => {
+    const products = await catalogPromise;
+    const mount = pick(products, MOUNT_ID);
+    const payload = buildClientPayload({ rooms: [], cart: [{ product: mount, qty: 1 }], discountMode: "lighting-only" });
+    const candidate = { ...mount, productId: "new-product-id" };
+    const result = recalculateLeadPriceWithCatalog(payload, [candidate]);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.rejection.code).toBe("catalog_identity_changed");
+  });
+});
+
 describe("PT-010 · отклонение составов, которые нельзя пересчитать", () => {
   it("неизвестный SKU отклоняется", async () => {
     const products = await catalogPromise;

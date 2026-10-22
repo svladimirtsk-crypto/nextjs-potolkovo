@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ServiceCalculatorPreset } from "@/content/services";
-import type { SolutionScenario, CalculatorFooterAction } from "@/lib/calculator-modal-types";
+import type { SolutionScenario, CalculatorFooterAction, LightingSnapshot } from "@/lib/calculator-modal-types";
 import { useCeilingCalculatorEngine } from "@/lib/calculator/use-calculator-engine";
 import type { Step0Screen, ParamId } from "@/lib/step0-fsm";
 import { roomQuestionPlan, scenarioFromRooms } from "@/lib/calculator/room-features";
@@ -32,6 +32,7 @@ import {
 } from "@/lib/calculator/draft";
 import { hasLightingItems } from "@/lib/calculator/snapshot-merge";
 import { DraftRestoreChoice } from "./DraftRestoreChoice";
+import { DraftCatalogReview } from "./DraftCatalogReview";
 import { useCalculatorModal } from "../../calculator-modal-context";
 import { EMPTY_STEP0_STATE, useCalculatorStore } from "@/lib/calculator/store";
 
@@ -122,6 +123,7 @@ export function PriceCalculatorQuizV2({
    * ни сохранение нового черновика.
    */
   const [pendingDraft, setPendingDraft] = useState<PendingDraft | null>(null);
+  const [reviewingDraft, setReviewingDraft] = useState(false);
   const [draftSettled, setDraftSettled] = useState(false);
   const draftCheckedRef = useRef(false);
   useEffect(() => {
@@ -415,56 +417,52 @@ export function PriceCalculatorQuizV2({
    */
   useEffect(() => () => setStep0(EMPTY_STEP0_STATE), [setStep0]);
 
+  const restoreDraft = (draft: CalcDraft, cart: LightingSnapshot | null) => {
+    engine.restoreFromDraft({
+      scenario: draft.scenario,
+      scope: draft.scope,
+      rooms: draft.rooms as unknown as Parameters<typeof engine.restoreFromDraft>[0]["rooms"],
+    });
+    workspace.restore(draft.rooms, draft.confirmed);
+    setLightingDraft(cart);
+    if (hasLightingItems(cart)) setHasInteracted(true);
+    setHistory([{ t: "summary" }]);
+    // PT-007: a restored draft wins over the page preset only after explicit choice.
+    presetAppliedRef.current = true;
+    setPendingDraft(null);
+    setDraftSettled(true);
+  };
+  const startNewDraft = () => {
+    // An unreadable/changed draft is erased only after this explicit choice.
+    clearCalcDraft();
+    setPendingDraft(null);
+    setDraftSettled(true);
+  };
+
   if (pendingDraft && !draftSettled) {
     const offer = pendingDraft.kind === "offer" ? pendingDraft : null;
     return (
       <div data-quiz-v2 data-active-screen="draft" className="step0-quiz-v2 max-w-3xl mx-auto">
-        <DraftRestoreChoice
-          variant={pendingDraft.kind}
-          origin={presetOrigin ?? "default"}
-          summary={offer ? describeCalcDraft(offer.draft) : undefined}
-          lightingItemsCount={offer ? (offer.draft.cart?.items?.length ?? 0) : 0}
-          onContinue={
-            offer
-              ? () => {
-                  const draft = offer.draft;
-                  engine.restoreFromDraft({
-                    scenario: draft.scenario,
-                    scope: draft.scope,
-                    rooms: draft.rooms as unknown as Parameters<
-                      typeof engine.restoreFromDraft
-                    >[0]["rooms"],
-                  });
-                  /**
-                   * PT-007: восстанавливаем корзину света целиком — SKU,
-                   * количества и режим скидки (`discountMode` лежит в том же
-                   * снапшоте), а не только параметры комнат.
-                   */
-                  workspace.restore(draft.rooms, draft.confirmed);
-                  setLightingDraft(draft.cart);
-                  /**
-                   * N-050: без этого флага ActionForm не прикладывает снапшот к
-                   * заявке — мастер получил бы имя с телефоном без состава
-                   * корзины и без суммы. Тот же флаг контекст ставит при входе
-                   * с готовым набором света.
-                   */
-                  if (hasLightingItems(draft.cart)) setHasInteracted(true);
-                  setHistory([{ t: "summary" }]);
-                  // Пользователь выбрал черновик — пресет страницы применять нельзя.
-                  presetAppliedRef.current = true;
-                  setPendingDraft(null);
-                  setDraftSettled(true);
-                }
-              : undefined
-          }
-          onStartNew={() => {
-            // PT-007 (раздел 3.2): неудаляемый до этого момента черновик
-            // снимается только явным выбором, включая нечитаемую запись.
-            clearCalcDraft();
-            setPendingDraft(null);
-            setDraftSettled(true);
-          }}
-        />
+        {offer && reviewingDraft && hasLightingItems(offer.draft.cart) ? (
+          <DraftCatalogReview
+            cart={offer.draft.cart!}
+            onAccepted={(reviewed) => restoreDraft(offer.draft, reviewed)}
+            onBack={() => setReviewingDraft(false)}
+            onStartNew={startNewDraft}
+          />
+        ) : (
+          <DraftRestoreChoice
+            variant={pendingDraft.kind}
+            origin={presetOrigin ?? "default"}
+            summary={offer ? describeCalcDraft(offer.draft) : undefined}
+            lightingItemsCount={offer ? (offer.draft.cart?.items?.length ?? 0) : 0}
+            onContinue={offer ? () => {
+              if (hasLightingItems(offer.draft.cart)) setReviewingDraft(true);
+              else restoreDraft(offer.draft, offer.draft.cart);
+            } : undefined}
+            onStartNew={startNewDraft}
+          />
+        )}
       </div>
     );
   }

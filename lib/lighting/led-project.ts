@@ -51,6 +51,7 @@ import {
   type StripSpec,
 } from "@/lib/lighting/led-hardware";
 import { resolvePriceBasis, stripPurchaseQty } from "@/lib/lighting/led-price-basis";
+import { moscowCandidateAllowed, moscowStockMessage } from "@/lib/lighting/moscow-stock";
 
 /** Версия правил: попадает в заявку, чтобы расчёт можно было воспроизвести. */
 export const LED_RULES_VERSION = "led-rules-2"; // поведение unknown, voltage-mismatch и kit BOM изменено
@@ -188,6 +189,7 @@ function catalogOf(products: readonly FeedCatalogProduct[]) {
   const kits: CatalogKit[] = [];
   for (const product of products) {
     const role = ledRoleOf(product);
+    if (!moscowCandidateAllowed(product)) continue;
     if (role === "psu") {
       const spec = parsePsuSpec(product.name);
       if (spec) psus.push({ product, spec }); // W может быть unknown: нельзя считать, что в каталоге только БП чужого напряжения.
@@ -322,6 +324,9 @@ export function planLedProject(input: {
   const warnings: string[] = [];
   const questions: string[] = [];
   const bom: BomLine[] = [];
+  // A zero in Moscow cannot be rescued by another warehouse. Keep the item
+  // visible to the specialist, but never auto-select it for a project BOM.
+  const withheld = products.filter((product) => ledRoleOf(product) !== null && !moscowCandidateAllowed(product));
 
   const normalizedRuns = runs.map((run) => ({ ...run, rows: normalizeRows(run.rows) }));
   const runById = new Map(normalizedRuns.map((run) => [run.id, run]));
@@ -366,6 +371,11 @@ export function planLedProject(input: {
     let unknownMode = false;
 
     for (const run of zoneRuns) {
+      const stripProduct = products.find((product) => product.productId === run.stripProductId);
+      if (stripProduct && !moscowCandidateAllowed(stripProduct)) {
+        zoneWarnings.push(`${run.stripName}: ${moscowStockMessage(stripProduct)} Лента не считается доступной для комплекта.`);
+        questions.push(`Зона ${zone.id}: уточнить московский остаток ленты ${stripProduct.vendorCode} или подобрать другую.`);
+      }
       const installed = installedMetersOf(run);
       installedMeters += installed;
       if (run.strip.kind === "unknown") unknownMode = true;
@@ -628,11 +638,21 @@ export function planLedProject(input: {
     }
 
     if (!psu && requiredW > 0 && !incompleteLoad) {
-      status = wrongVoltageOnly ? "incompatible" : "needs_review";
-      circuitWarnings.push(wrongVoltageOnly
+      let excludedMatchingPsu = false;
+      for (const product of withheld.filter((item) => ledRoleOf(item) === "psu")) {
+        const spec = parsePsuSpec(product.name);
+        if (spec?.voltage === bucket.voltage && (spec.watts ?? 0) >= requiredW) {
+          excludedMatchingPsu = true;
+          circuitWarnings.push(`${product.name}: ${moscowStockMessage(product)} В подбор автоматически не включён.`);
+          questions.push(`Цепь ${key}: уточнить остаток Москвы для ${product.vendorCode} или подобрать другой БП.`);
+        }
+      }
+      const voltageIncompatible = wrongVoltageOnly && !excludedMatchingPsu;
+      status = voltageIncompatible ? "incompatible" : "needs_review";
+      circuitWarnings.push(voltageIncompatible
         ? `Все БП каталога имеют несовместимое с лентой ${bucket.voltage} В напряжение: эту цепь из них собирать нельзя.`
-        : `Ни один БП с подтверждённым совпадением напряжения не покрывает ${METER.format(requiredW)} Вт — нужна другая схема/паспорт.`);
-      questions.push(wrongVoltageOnly
+        : `Ни один БП с подтверждённым совпадением напряжения не покрывает ${METER.format(requiredW)} Вт — нужна другая схема/паспорт или актуальный остаток Москвы.`);
+      questions.push(voltageIncompatible
         ? `Цепь ${key}: подобрать БП строго под ${bucket.voltage} В; имеющиеся БП другого напряжения запрещены.`
         : `Цепь ${key}: нагрузка ${METER.format(loadW)} Вт требует ${METER.format(requiredW)} Вт с запасом — подобрать БП/разделить цепи по паспорту.`);
     }

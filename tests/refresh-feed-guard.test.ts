@@ -18,7 +18,7 @@ const current = JSON.parse(readFileSync(resolve(ROOT, "data/eks-feed2-snapshot.j
 const protectedPaths = [
   "data/eks-feed2-snapshot.json", "data/catalog-index.json", "data/catalog-prefill.json",
   "data/catalog-retired.json", "data/proof-pricing-inputs.json", "data/catalog-images.json",
-  "data/catalog-images-missing.json", "feed-diff.md",
+  "data/catalog-images-missing.json", "data/catalog-review.json", "feed-diff.md",
 ];
 
 function fingerprint(): string {
@@ -40,10 +40,11 @@ function fingerprint(): string {
 /** Локальный HTTP fixture: никаких запросов к EKS и никаких реальных PR. */
 async function refreshWithFixture(
   products: Record<string, unknown>[], args: string[] = [], fixtureRoot = ROOT,
+  sourceDate = current.updatedAt,
 ): Promise<{ code: number | null; output: string }> {
   const server = createServer((_, response) => {
     response.writeHead(200, { "content-type": "application/json" });
-    response.end(JSON.stringify({ updatedAt: current.updatedAt, source: "test-fixture", products }));
+    response.end(JSON.stringify({ updatedAt: sourceDate, source: "test-fixture", products }));
   });
   await new Promise<void>((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
   try {
@@ -69,7 +70,7 @@ async function refreshWithFixture(
 function isolatedFeedRoot(): string {
   const root = mkdtempSync(join(tmpdir(), "potolkovo-refresh-test-"));
   const inputs = [
-    "scripts/refresh-feed.mjs", "scripts/validate-catalog.mjs",
+    "scripts/refresh-feed.mjs", "scripts/validate-catalog.mjs", "scripts/feed-review.mjs",
     "scripts/build-catalog-index.mjs", "scripts/build-catalog-images.mjs",
     "data/eks-feed2-snapshot.json", "data/catalog-retired.json",
     "data/catalog-index.json", "data/catalog-prefill.json", "data/proof-pricing-inputs.json",
@@ -126,6 +127,78 @@ describe("LED-26 · feed refresh сохраняет last-known-good до усп�
       rmSync(fixture, { recursive: true, force: true });
     }
   }, 40_000);
+
+  it("LED-19/20 · готовит полный версионированный diff и сохраняет только московский склад", async () => {
+    const liveBefore = fingerprint();
+    const fixture = isolatedFeedRoot();
+    try {
+      const candidate = current.products.map((product, i) => i === 0 ? {
+        ...product,
+        vendorCode: "SKU-MOSCOW-TEST",
+        priceRub: Number(product.priceRub) + 100,
+        packQty: 5,
+        stockByWarehouse: { moscow: 0, barnaul: 20 },
+        params: [...(Array.isArray(product.params) ? product.params : []),
+          { label: "Остатки Брн", value: "20" }, { label: "Остатки Мск", value: "0" }],
+      } : product);
+      const result = await refreshWithFixture(candidate, [], fixture);
+      expect(result.code, result.output).toBe(0);
+      const saved = JSON.parse(readFileSync(resolve(fixture, "data/eks-feed2-snapshot.json"), "utf8"));
+      expect(saved.catalogVersion).toMatch(/^cat-sha256-[a-f0-9]{64}$/);
+      expect(saved.products[0].stockByWarehouse).toEqual({ moscow: 0 });
+      // Supplier's explicit ISO timestamp may date the Moscow observation;
+      // build time is never substituted.
+      expect(saved.products[0].stockObservedAt).toBe(current.updatedAt);
+      expect(JSON.stringify(saved.products[0])).not.toContain("Остатки Брн");
+      expect(saved.products[0].packQty).toBe(5);
+      const index = JSON.parse(readFileSync(resolve(fixture, "data/catalog-index.json"), "utf8"));
+      expect(index.catalogVersion).toBe(saved.catalogVersion);
+      const row = index.rows.find((r: unknown[]) => r[0] === current.products[0]?.productId);
+      expect(row[index.columns.indexOf("moscowStock")]).toBe(0);
+      const review = JSON.parse(readFileSync(resolve(fixture, "data/catalog-review.json"), "utf8"));
+      expect(review.toVersion).toBe(saved.catalogVersion);
+      expect(review.changes.filter((c: { productId: string }) => c.productId === current.products[0]?.productId)
+        .map((c: { field: string }) => c.field)).toEqual(["priceRub", "vendorCode", "packQty", "moscowStock"]);
+      expect(review.requiresReview).toBe(true);
+      expect(readFileSync(resolve(fixture, "feed-diff.md"), "utf8")).toContain("Москва: 1");
+      expect(fingerprint()).toBe(liveBefore);
+    } finally {
+      rmSync(fixture, { recursive: true, force: true });
+    }
+  }, 40_000);
+
+  it("LED-19 · дата фида без часового пояса не выдаётся за время наблюдения", async () => {
+    const before = fingerprint();
+    const fixture = isolatedFeedRoot();
+    try {
+      const candidate = current.products.map((product, i) => i === 0
+        ? { ...product, stockByWarehouse: { moscow: 7 } } : product);
+      const result = await refreshWithFixture(candidate, [], fixture, "2026-10-22 18:00");
+      expect(result.code, result.output).toBe(0);
+      const saved = JSON.parse(readFileSync(resolve(fixture, "data/eks-feed2-snapshot.json"), "utf8"));
+      expect(saved.products[0].stockByWarehouse).toEqual({ moscow: 7 });
+      expect(saved.products[0].stockObservedAt).toBeNull();
+      const index = JSON.parse(readFileSync(resolve(fixture, "data/catalog-index.json"), "utf8"));
+      const row = index.rows.find((r: unknown[]) => r[0] === current.products[0]?.productId);
+      expect(row[index.columns.indexOf("stockObservedAt")]).toBe(-1);
+      expect(fingerprint()).toBe(before);
+    } finally {
+      rmSync(fixture, { recursive: true, force: true });
+    }
+  }, 40_000);
+
+  it("LED-19 · противоречивый московский остаток отклоняет до публикации", async () => {
+    const before = fingerprint();
+    const candidate = current.products.map((product, i) => i === 0 ? {
+      ...product,
+      stockByWarehouse: { moscow: 0 },
+      params: [{ label: "Остатки Мск", value: "8" }],
+    } : product);
+    const result = await refreshWithFixture(candidate);
+    expect(result.code).not.toBe(0);
+    expect(result.output).toContain("неоднозначный остаток Москвы");
+    expect(fingerprint()).toBe(before);
+  }, 20_000);
 
   it("обрывает неполный и дублирующийся фид до любых записей", async () => {
     const before = fingerprint();

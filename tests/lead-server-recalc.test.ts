@@ -54,8 +54,50 @@ describe("PT-010 · паритет серверного пересчёта с к
     expect(result.priceCheck.status).toBe("verified");
     expect(result.priceCheck.deltaPct).toBe(0);
     expect(result.priceCheck.serverGrand).toBe(clientGrand);
-    // Никаких допущений: снапшот содержит нормализованные параметры.
-    expect(result.priceCheck.issues).toEqual([]);
+    // Арифметика совпала; цена «verified» не подтверждает остаток Москвы.
+    expect(result.priceCheck.issues.map(issue => issue.code)).toEqual([
+      "moscow-stock-unconfirmed", "moscow-stock-unconfirmed",
+    ]);
+  });
+
+  it("LED-19/20: сервер сохраняет обе версии и заменяет клиентскую складскую запись наблюдением Москвы", async () => {
+    const products = await catalogPromise;
+    const catalogProduct = pick(products, MOUNT_ID);
+    const current = { ...catalogProduct, catalogVersion: `cat-sha256-${"b".repeat(64)}`,
+      stockByWarehouse: { moscow: 0 }, stockObservedAt: "2026-10-22T09:00:00Z", packQty: 12 };
+    const initial = buildClientPayload({ rooms: [BASE_ROOM],
+      cart: [{ product: catalogProduct, qty: 2 }], discountMode: "with-ceiling" });
+    const submitted = {
+      ...initial,
+      snapshot: {
+        ...initial.snapshot!,
+        lighting: {
+          ...initial.snapshot!.lighting!, catalogVersion: `cat-sha256-${"a".repeat(64)}`,
+          catalogReview: { fromVersion: null, toVersion: `cat-sha256-${"a".repeat(64)}`,
+            acceptedAt: "2026-10-22T08:00:00Z", fields: ["priceRub", "moscowStock"] },
+          items: [{ ...initial.snapshot!.lighting!.items[0], packQty: 99, moscowStock: 999,
+            stockObservedAt: "2026-10-22T08:00:00Z" }],
+        },
+      },
+    };
+    const parsed = LeadPayloadSchema.parse(submitted);
+    expect(parsed.snapshot?.lighting?.catalogVersion).toBe(`cat-sha256-${"a".repeat(64)}`);
+    expect(parsed.snapshot?.lighting?.catalogReview?.fields).toEqual(["priceRub", "moscowStock"]);
+    const result = recalculateLeadPriceWithCatalog(parsed, products.map(p =>
+      p.productId === MOUNT_ID ? current : { ...p, catalogVersion: current.catalogVersion }));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.priceCheck.status).toBe("verified"); // arithmetic only
+    expect(result.priceCheck.clientCatalogVersion).toBe(`cat-sha256-${"a".repeat(64)}`);
+    expect(result.priceCheck.serverCatalogVersion).toBe(`cat-sha256-${"b".repeat(64)}`);
+    expect(result.priceCheck.issues.map(issue => issue.code)).toContain("catalog-version-drift");
+    expect(result.priceCheck.issues.map(issue => issue.code)).toContain("moscow-zero-reported");
+    expect(result.snapshot?.lighting?.items[0]).toMatchObject({
+      sku: MOUNT_ID, packQty: 12, moscowStock: 0,
+      stockObservedAt: "2026-10-22T09:00:00Z", availabilityState: "reported_zero",
+    });
+    expect(result.snapshot?.lighting?.catalogVersion).toBe(`cat-sha256-${"a".repeat(64)}`);
+    expect(result.snapshot?.lighting?.catalogReview?.acceptedAt).toBe("2026-10-22T08:00:00Z");
   });
 
   it("заявка без света и заявка «только свет» тоже совпадают", async () => {

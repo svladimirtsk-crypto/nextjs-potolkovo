@@ -22,6 +22,12 @@ export function productToLightingItem(product: FeedCatalogProduct, qty: number):
     name: toText(product.name),
     qty,
     priceRub: toNumber(product.priceRub),
+    vendorCode: toText(product.vendorCode),
+    offerId: toText(product.offerId) || undefined,
+    unit: toText(product.unit),
+    packQty: product.packQty ?? null,
+    moscowStock: product.stockByWarehouse?.moscow ?? null,
+    stockObservedAt: product.stockObservedAt ?? null,
   };
 }
 
@@ -47,12 +53,13 @@ export type CatalogLightingSnapshot = LightingSnapshot & {
   withCeilingDiscountedTotalRub: number;
 };
 
-export function buildCatalogLightingSnapshot(items: LightingItem[]): CatalogLightingSnapshot {
+export function buildCatalogLightingSnapshot(items: LightingItem[], catalogVersion?: string): CatalogLightingSnapshot {
   const totalRub = items.reduce((sum, item) => sum + item.qty * item.priceRub, 0);
   const discountedTotalRub = applyLightingOnlyDiscount(totalRub);
 
   return {
     mode: "catalog",
+    catalogVersion: catalogVersion || undefined,
     items,
     totalRub,
     discountedTotalRub,

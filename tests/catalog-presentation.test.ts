@@ -77,6 +77,6 @@ describe("R7 catalogue presentation", () => {
   });
   it("stale timestamp stays visible and does not assert live availability", () => {
     const html = renderToStaticMarkup(createElement(CatalogFreshness, { updatedAt: "2020-01-01" }));
-    expect(html).toContain("2020"); expect(html).toContain("Цены могли измениться"); expect(html).toContain("подтверждения поставщика");
+    expect(html).toContain("2020"); expect(html).toContain("Цены могли измениться"); expect(html).toContain("Остаток на складе в Москве и сроки не подтверждены");
   });
 });

@@ -48,6 +48,7 @@ import {
 } from "@/lib/lighting/cart-derived";
 import { isRetiredCatalogProduct } from "@/lib/catalog-retirement";
 import { getCatalogLookupProducts, getCatalogProducts } from "@/lib/lighting/catalog-products";
+import { moscowStockStateOf } from "@/lib/lighting/moscow-stock";
 
 import {
   METER_UNIT,
@@ -69,6 +70,11 @@ export type PriceIssueCode =
   | "legacy-room-snapshot"
   /** Позиция снята с продажи или недоступна — цена есть, но товара нет. */
   | "unavailable-product"
+  /** Supplier feed never confirms a Moscow reservation, even when count > 0. */
+  | "moscow-stock-unconfirmed"
+  | "moscow-zero-reported"
+  /** Browser used a different catalog build; server version remains authoritative. */
+  | "catalog-version-drift"
   /** Цена позиции в заявке не совпала с каталогом (в расчёт пошла каталожная). */
   | "client-price-deviation"
   /** Клиент заявил скидку «с потолком», но потолка в заявке нет. */
@@ -100,13 +106,16 @@ export type PriceCheck = {
   /** Отклонение в процентах от клиентской суммы. */
   deltaPct: number | null;
   thresholdPct: number;
+  /** Version observed by the browser, and the server's actual pricing index. */
+  clientCatalogVersion?: string | null;
+  serverCatalogVersion?: string | null;
   issues: PriceIssue[];
 };
 
 /** Снапшот, который уходит в БД: клиентский состав + результат сверки. */
 export type StoredLeadSnapshot = LeadSnapshotV2 & { priceCheck?: PriceCheck };
 
-export type LeadRejectionCode = "unknown_sku" | "fractional_qty";
+export type LeadRejectionCode = "unknown_sku" | "fractional_qty" | "catalog_identity_changed";
 
 export type LeadRejection = {
   code: LeadRejectionCode;
@@ -191,6 +200,15 @@ function mergeLightingItems(
         message: "Позиция не найдена в каталоге",
       };
     }
+    // Vendor-code fallback is for a legacy sku containing the SAME vendor code,
+    // not a licence to replace a disappeared productId with another identity.
+    if (sku && sku !== product.productId && sku !== product.vendorCode) {
+      return {
+        code: "catalog_identity_changed",
+        sku,
+        message: "Товар изменил идентификатор: нельзя молча заменить позицию из черновика",
+      };
+    }
 
     const productId = toText(product.productId);
     const unit = toText(product.unit) || toText(item.unit);
@@ -217,6 +235,14 @@ function mergeLightingItems(
         message: `«${toText(product.name)}» недоступен к заказу — позиция принята по каталожной цене`,
       });
     }
+    const stock = moscowStockStateOf(product);
+    issues.push({
+      code: stock === "reported_zero" ? "moscow-zero-reported" : "moscow-stock-unconfirmed",
+      sku: productId || undefined,
+      message: stock === "reported_zero"
+        ? `«${toText(product.name)}»: в сохранённой выгрузке Москва 0; уточнить текущий остаток перед счётом`
+        : `«${toText(product.name)}»: наличие и резерв в Москве не подтверждены; флаг available не является остатком`,
+    });
 
     const priceRub = toNumber(product.priceRub);
     const clientPrice = toNumber(item.priceRub);
@@ -261,6 +287,10 @@ function lightingBlockFrom(
       system: toText(product.system) || item.system,
       kind: toText(product.kind) || item.kind,
       unit: toText(product.unit) || item.unit,
+      packQty: product.packQty ?? null,
+      moscowStock: product.stockByWarehouse?.moscow ?? null,
+      stockObservedAt: product.stockObservedAt ?? null,
+      availabilityState: moscowStockStateOf(product),
     };
   });
 
@@ -316,6 +346,14 @@ export function recalculateLeadPriceWithCatalog(
   }
 
   const issues: PriceIssue[] = [];
+  const clientCatalogVersion = snapshot.lighting?.catalogVersion ?? null;
+  const serverCatalogVersion = products.find(product => product.catalogVersion)?.catalogVersion ?? null;
+  if (clientCatalogVersion && serverCatalogVersion && clientCatalogVersion !== serverCatalogVersion) {
+    issues.push({
+      code: "catalog-version-drift",
+      message: "Версия каталога при расчёте клиента отличается от серверной; сверить позиции и цену с клиентом до счёта",
+    });
+  }
 
   /* ---------------- Потолок: комнаты ---------------- */
 
@@ -452,6 +490,8 @@ export function recalculateLeadPriceWithCatalog(
     serverGrand,
     deltaPct: Math.round(deltaPct * 100) / 100,
     thresholdPct: PRICE_MISMATCH_THRESHOLD_PCT,
+    clientCatalogVersion,
+    serverCatalogVersion,
     issues,
   };
 

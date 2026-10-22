@@ -82,6 +82,13 @@ export const LightingLeadItemSchema = z
   .object({
     sku: z.string().max(64),
     vendorCode: z.string().max(64).optional(),
+    offerId: z.string().max(64).optional(),
+    // These are client-reported observations; the server overwrites them from
+    // its catalog before storing a recalculated lead. No reservation implied.
+    packQty: z.number().positive().max(MAX_COUNT).nullable().optional(),
+    moscowStock: z.number().nonnegative().max(1e9).nullable().optional(),
+    stockObservedAt: z.string().max(40).nullable().optional(),
+    availabilityState: z.enum(["unknown", "reported_zero", "reported_positive", "supplier_unavailable"]).optional(),
     name: z.string().max(200),
     qty: z.number().nonnegative().max(MAX_COUNT),
     priceRub: z.number().nonnegative().max(MAX_MONEY_RUB),
@@ -114,6 +121,15 @@ export const LightingLeadItemSchema = z
 
 export const LightingLeadBlockSchema = z.object({
   mode: z.string().max(32),
+  // Provenance sent by the browser is NOT proof that a supplier approved price
+  // or stock. Server priceCheck records the actually used index separately.
+  catalogVersion: z.string().max(100).optional(),
+  catalogReview: z.object({
+    fromVersion: z.string().max(100).nullable(),
+    toVersion: z.string().max(100),
+    acceptedAt: z.string().max(40),
+    fields: z.array(z.enum(["missing", "identity", "priceRub", "vendorCode", "unit", "packQty", "moscowStock"])).max(8),
+  }).optional(),
   items: z.array(LightingLeadItemSchema).max(200),
   regularTotalRub: z.number().nonnegative(),
   effectiveTotalRub: z.number().nonnegative(),

@@ -34,6 +34,7 @@ import {
   type LedGroupId,
 } from "@/lib/lighting/led-catalog-view";
 import { resolvePriceBasis, stripPurchaseQty } from "@/lib/lighting/led-price-basis";
+import { moscowCandidateAllowed, moscowStockMessage } from "@/lib/lighting/moscow-stock";
 
 const METER = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 });
 const RUB = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 });
@@ -51,9 +52,10 @@ const unitLabel = (product: FeedCatalogProduct) => (product.unit === "m" ? "м" 
 
 /** Привычная стартовая мощность 10 Вт/м СТАНДАРТ: выбор в UI НЕ устанавливает неизвестный режим ленты. */
 function defaultStripId(options: ReturnType<typeof ledStripOptions>): string {
-  const ten = options.find((option) => option.spec.wPerMeter === 10 && option.spec.voltage === 24 &&
+  const selectable = options.filter((option) => moscowCandidateAllowed(option.product));
+  const ten = selectable.find((option) => option.spec.wPerMeter === 10 && option.spec.voltage === 24 &&
     /СТАНДАРТ 140/i.test(option.product.name));
-  return (ten ?? options[0])?.product.productId ?? "";
+  return (ten ?? selectable[0])?.product.productId ?? "";
 }
 
 export function LedKitPanel({
@@ -115,7 +117,8 @@ export function LedKitPanel({
   }, [metersTouched]);
 
   const selected =
-    stripOptions.find((option) => option.product.productId === stripId) ?? stripOptions[0] ?? null;
+    stripOptions.find((option) => option.product.productId === stripId && moscowCandidateAllowed(option.product)) ??
+    stripOptions.find((option) => moscowCandidateAllowed(option.product)) ?? null;
   const meters = Number(metersText.replace(",", "."));
   const metersValue = Number.isFinite(meters) && meters > 0 ? meters : 0;
   const linkedTask = taskRef
@@ -177,15 +180,20 @@ export function LedKitPanel({
           <small>{title}</small>
           <b>{product.name}</b>
           <p>{detail}</p>
+          <p data-testid={`${testId}-moscow-stock`}>{moscowStockMessage(product)}</p>
         </div>
         <div className="pk-led-pick-actions">
           <strong>
             {price(product)} <small>/ {unitLabel(product)}</small>
           </strong>
-          <button type="button" onClick={() => onAdd(product, qty)} data-testid={`${testId}-add`}>
-            В комплект · {product.unit === "m" ? `${METER.format(qty)} м` : `${qty} шт`}
-            {(cartItems[product.productId] ?? 0) > 0 ? ` · уже ${METER.format(cartItems[product.productId] ?? 0)}` : ""}
-          </button>
+          {moscowCandidateAllowed(product) ? (
+            <button type="button" onClick={() => onAdd(product, qty)} data-testid={`${testId}-add`}>
+              В комплект · {product.unit === "m" ? `${METER.format(qty)} м` : `${qty} шт`}
+              {(cartItems[product.productId] ?? 0) > 0 ? ` · уже ${METER.format(cartItems[product.productId] ?? 0)}` : ""}
+            </button>
+          ) : (
+            <p className="pk-led-note">Не добавляем автоматически: наличие Москвы нужно уточнить.</p>
+          )}
         </div>
       </div>
     ) : (
@@ -302,10 +310,11 @@ export function LedKitPanel({
               data-testid="led-strip"
               onChange={(event) => setStripId(event.target.value)}
             >
-              {stripOptions.length === 0 ? <option value="">Нет лент с указанной мощностью</option> : null}
+              {!selected ? <option value="">Нет ленты для предварительного подбора: уточните остаток Москвы</option> : null}
               {stripOptions.map((option) => (
-                <option key={option.product.productId} value={option.product.productId}>
-                  {`${STRIP_KIND_LABEL[option.spec.kind] ?? option.spec.kind} · ${option.spec.wPerMeter} Вт/м · ${option.spec.voltage ?? "?"} В · катушка ${option.spec.reelMeters ?? "?"} м · ${price(option.product)}/${unitLabel(option.product)}`}
+                <option key={option.product.productId} value={option.product.productId}
+                  disabled={!moscowCandidateAllowed(option.product)}>
+                  {`${STRIP_KIND_LABEL[option.spec.kind] ?? option.spec.kind} · ${option.spec.wPerMeter} Вт/м · ${option.spec.voltage ?? "?"} В · катушка ${option.spec.reelMeters ?? "?"} м · ${price(option.product)}/${unitLabel(option.product)}${moscowCandidateAllowed(option.product) ? "" : " · Москва 0/недоступно"}`}
                 </option>
               ))}
             </select>

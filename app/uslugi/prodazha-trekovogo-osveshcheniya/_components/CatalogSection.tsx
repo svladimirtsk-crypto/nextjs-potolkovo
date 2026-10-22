@@ -7,6 +7,7 @@ import { isRetiredCatalogProduct } from "@/lib/catalog-retirement";
  * уезжает только то, что реально рисуется в карточках.
  */
 import snapshotData from "@/data/eks-feed2-snapshot.json";
+import catalogIndex from "@/data/catalog-index.json";
 import type { FeedCatalogProduct, FeedCatalogResult } from "@/lib/eks-feed2-catalog";
 import { normalizeFeedCatalogProducts } from "@/lib/feed2-snapshot-normalize";
 import { pricing } from "@/content/pricing";
@@ -25,15 +26,15 @@ function toClientProduct(product: FeedCatalogProduct): FeedCatalogProduct {
 }
 
 export function CatalogSection() {
+  const updatedAt = String((snapshotData as { updatedAt?: unknown }).updatedAt ?? "");
   const products = normalizeFeedCatalogProducts(
-    (snapshotData as { products?: unknown[] }).products ?? []
+    (snapshotData as { products?: unknown[] }).products ?? [], updatedAt
   ).filter(p => !isRetiredCatalogProduct(p)).map(toClientProduct);
 
   const data: FeedCatalogResult = {
     ok: true,
-    updatedAt: String(
-      (snapshotData as { updatedAt?: unknown }).updatedAt ?? ""
-    ),
+    updatedAt,
+    catalogVersion: (catalogIndex as { catalogVersion?: string }).catalogVersion,
     source: "snapshot",
     discountPercentForCeilingOrder: pricing.lightingDiscount.withCeilingPct,
     categories: [],

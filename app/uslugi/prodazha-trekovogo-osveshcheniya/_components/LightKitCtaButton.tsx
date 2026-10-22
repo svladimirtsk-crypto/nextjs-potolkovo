@@ -19,6 +19,7 @@ import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 type LightKitCtaButtonProps = {
   title: string;
   items: LightingItem[];
+  catalogVersion?: string;
   source?: string;
 };
 
@@ -39,7 +40,7 @@ function shouldDropRemovedItem(item: LightingItem): boolean {
   return false;
 }
 
-export function LightKitCtaButton({ title, items, source }: LightKitCtaButtonProps) {
+export function LightKitCtaButton({ title, items, catalogVersion, source }: LightKitCtaButtonProps) {
   const { openCalculator } = useCalculatorModal();
 
   /**
@@ -78,6 +79,7 @@ export function LightKitCtaButton({ title, items, source }: LightKitCtaButtonPro
 
     return {
       mode: "catalog",
+      catalogVersion,
       kitBaseName: title,
       items: filteredItems.map((i) => ({ ...i })),
       totalRub,

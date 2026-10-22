@@ -16,6 +16,14 @@ export type LightingItem = {
   priceRub: number;
   /** T-027: поля для письма/заявки — артикул поставщика и происхождение позиции. */
   vendorCode?: string;
+  /** Original offer identity, if known. Never automatically migrate a missing productId. */
+  offerId?: string;
+  /** Explicit supplier package only; null/absent means unknown. */
+  packQty?: number | null;
+  /** Supplier Moscow observation, not confirmed stock or a reservation. */
+  moscowStock?: number | null;
+  /** Supplier observation instant with timezone, never the build timestamp. */
+  stockObservedAt?: string | null;
   system?: string;
   kind?: string;
   unit?: string;
@@ -37,6 +45,13 @@ export type DerivedInputs = {
 
 export type LightingSnapshot = {
   mode: LightingMode;
+  /** Content version of the selected catalog, not approval of price/stock. */
+  catalogVersion?: string;
+  /** User acknowledgement of a changed draft, not a supplier confirmation. */
+  catalogReview?: {
+    fromVersion: string | null; toVersion: string; acceptedAt: string;
+    fields: Array<"missing" | "identity" | "priceRub" | "vendorCode" | "unit" | "packQty" | "moscowStock">;
+  };
 
   kitBaseName?: string;
   scaledSpotsQty?: number;

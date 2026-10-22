@@ -7,6 +7,7 @@ import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import { computeBenefit, getDiscountedPrice } from "@/lib/feed2-products";
 import { isSmartProduct, kindBadgeLabel, systemBadgeLabel } from "@/lib/lighting/product-predicates";
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
+import { moscowStockMessage } from "@/lib/lighting/moscow-stock";
 
 /**
  * N-051 · Презентационные части каталога освещения.
@@ -108,6 +109,8 @@ export function ProductCard({
             <span className="ml-1.5 text-slate-500 line-through">{fmt(regular)} ₽</span>
           ) : null}
         </div>
+
+        <p className="mt-1 text-[11px] leading-4 text-slate-600" data-testid="moscow-stock-status">{moscowStockMessage(product)}</p>
 
         {pickAttrs(product).length > 0 || toText(product.vendorCode) ? (
           <button type="button" onClick={() => setShowDetails(!showDetails)}

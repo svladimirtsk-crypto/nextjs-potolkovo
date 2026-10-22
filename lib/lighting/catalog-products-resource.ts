@@ -4,6 +4,8 @@ import { buildCatalogProducts } from "./catalog-products";
 
 export type CatalogProductsState = {
   products: FeedCatalogProduct[];
+  index: CatalogIndex | null;
+  catalogVersion: string;
   isLoading: boolean;
   error: Error | null;
 };
@@ -13,7 +15,7 @@ export type CatalogProductsState = {
  * Failure is retried only on explicit action, not on render or remount.
  */
 export function createCatalogProductsResource(load: () => Promise<CatalogIndex>) {
-  const initial: CatalogProductsState = { products: [], isLoading: true, error: null };
+  const initial: CatalogProductsState = { products: [], index: null, catalogVersion: "", isLoading: true, error: null };
   let state = initial;
   let pending: Promise<void> | null = null;
   const listeners = new Set<() => void>();
@@ -26,9 +28,9 @@ export function createCatalogProductsResource(load: () => Promise<CatalogIndex>)
     if (!state.isLoading && (!state.error || !retry)) return Promise.resolve();
     if (state !== initial) publish(initial);
     pending = Promise.resolve().then(load).then(index => {
-      publish({ products: buildCatalogProducts(index), isLoading: false, error: null });
+      publish({ products: buildCatalogProducts(index), index, catalogVersion: index.catalogVersion, isLoading: false, error: null });
     }).catch((cause: unknown) => {
-      publish({ products: [], isLoading: false, error: cause instanceof Error ? cause : new Error(String(cause)) });
+      publish({ products: [], index: null, catalogVersion: "", isLoading: false, error: cause instanceof Error ? cause : new Error(String(cause)) });
     }).finally(() => { pending = null; });
     return pending;
   };

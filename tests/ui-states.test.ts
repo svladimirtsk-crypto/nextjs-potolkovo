@@ -18,7 +18,7 @@ beforeAll(async () => { index = await getCatalogIndex(); });
 describe("B8-005: shared catalog loading and explicit recovery", () => {
   it("starts with loading, not a ready empty catalog, including SSR", () => {
     const r = createCatalogProductsResource(async () => index);
-    expect(r.getSnapshot()).toEqual({ products: [], isLoading: true, error: null });
+    expect(r.getSnapshot()).toEqual({ products: [], index: null, catalogVersion: "", isLoading: true, error: null });
     expect(r.getServerSnapshot()).toBe(r.getSnapshot());
     expect(r.getSnapshot()).toBe(r.getSnapshot());
   });
@@ -31,6 +31,8 @@ describe("B8-005: shared catalog loading and explicit recovery", () => {
     await Promise.resolve(); release(index); await first;
     expect(load).toHaveBeenCalledTimes(1);
     expect(r.getSnapshot().products).toEqual(buildCatalogProducts(index));
+    expect(r.getSnapshot().catalogVersion).toBe(index.catalogVersion);
+    expect(r.getSnapshot().index).toBe(index);
     expect(r.getSnapshot().isLoading).toBe(false);
     expect(r.getSnapshot().error).toBeNull();
   });
@@ -65,7 +67,7 @@ describe("B8-005: shared catalog loading and explicit recovery", () => {
   });
   it("accepts a successfully loaded empty dataset as ready, not a loading failure", async () => {
     const r = createCatalogProductsResource(async () => ({ ...index, products: [] }));
-    await r.ensureLoaded(); expect(r.getSnapshot()).toEqual({ products: [], isLoading: false, error: null });
+    await r.ensureLoaded(); expect(r.getSnapshot()).toEqual({ products: [], index: { ...index, products: [] }, catalogVersion: index.catalogVersion, isLoading: false, error: null });
   });
   it("handles a synchronous loader failure as well as rejected promises", async () => {
     const r = createCatalogProductsResource(() => { throw new Error("local failure"); });

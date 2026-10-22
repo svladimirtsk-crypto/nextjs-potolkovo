@@ -172,10 +172,14 @@ export function formatLeadBody(payload: LeadPayload, leadCode?: string): string 
       `Сумма пересчитана сервером: клиент видел ~${fmt(priceCheck.clientGrand)} ₽ (расхождение ${priceCheck.deltaPct?.toFixed(1) ?? "—"} %)`
     );
   }
-  const unavailable = (priceCheck?.issues ?? []).filter((issue) => issue.code === "unavailable-product");
-  if (unavailable.length > 0) {
+  const issues = priceCheck?.issues ?? [];
+  const needsAttention = issues.filter((issue) =>
+    ["unavailable-product", "moscow-zero-reported", "catalog-version-drift", "client-price-deviation"].includes(issue.code));
+  const unknownStockCount = issues.filter((issue) => issue.code === "moscow-stock-unconfirmed").length;
+  if (needsAttention.length || unknownStockCount) {
     if (!priceCheck || priceCheck.status !== "mismatch") lines.push("", "СЛУЖЕБНОЕ");
-    for (const issue of unavailable) lines.push(`! ${issue.message}`);
+    for (const issue of needsAttention) lines.push(`! ${issue.message}`);
+    if (unknownStockCount) lines.push(`! Наличие и резерв в Москве не подтверждены: ${unknownStockCount} поз. Уточнить перед счётом.`);
   }
 
   return lines.join("\n");

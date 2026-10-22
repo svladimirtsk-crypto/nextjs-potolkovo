@@ -222,6 +222,52 @@ test.describe("PT-007 · явный выбор вместо автоматиче
 test.describe("PT-007 · восстановление корзины света", () => {
   test.skip(({ viewport }) => (viewport?.width ?? 0) < 640, "нужна desktop-раскладка каталога");
 
+  test("LED-20 · новый прайс, артикул и московский остаток не применяются без подтверждения", async ({ page }) => {
+    await buildKitCalculation(page);
+    await page.evaluate((key) => {
+      const draft = JSON.parse(window.sessionStorage.getItem(key)!);
+      draft.cart.catalogVersion = "cat-old-revision";
+      draft.cart.items[0].priceRub -= 100;
+      draft.cart.items[0].vendorCode = "OLD-SKU";
+      draft.cart.items[0].moscowStock = 5;
+      window.sessionStorage.setItem(key, JSON.stringify(draft));
+    }, DRAFT_KEY);
+    await page.goto("/");
+    await openCalculatorFromHero(page);
+    const modal = page.locator(MODAL);
+    await modal.locator('[data-draft-action="continue"]').click();
+    const review = modal.getByTestId("catalog-draft-review");
+    await expect(review.getByTestId("catalog-draft-diff").filter({ hasText: "Цена за единицу" })).toHaveCount(1);
+    await expect(review.getByTestId("catalog-draft-diff").filter({ hasText: "Артикул" })).toHaveCount(1);
+    await expect(review.getByTestId("catalog-draft-diff").filter({ hasText: "Остаток Москвы" })).toHaveCount(1);
+    await expect(modal.getByRole("heading", { name: "Проверка" })).toBeHidden();
+    expect(await readDraft(page)).toContain("cat-old-revision");
+    await review.getByTestId("catalog-draft-accept").click();
+    await expect(modal.getByRole("heading", { name: "Проверка" })).toBeVisible();
+    await expect.poll(async () => JSON.parse((await readDraft(page))!).cart?.catalogReview?.toVersion).toMatch(/^cat-sha256-/);
+    expect(await readDraft(page)).not.toContain("OLD-SKU");
+  });
+
+  test("LED-20 · смена упаковки блокирует автоматический перенос, черновик остаётся", async ({ page }) => {
+    await buildKitCalculation(page);
+    await page.evaluate((key) => {
+      const draft = JSON.parse(window.sessionStorage.getItem(key)!);
+      draft.cart.items[0].packQty = 24;
+      window.sessionStorage.setItem(key, JSON.stringify(draft));
+    }, DRAFT_KEY);
+    await page.goto("/");
+    await openCalculatorFromHero(page);
+    const modal = page.locator(MODAL);
+    await modal.locator('[data-draft-action="continue"]').click();
+    const review = modal.getByTestId("catalog-draft-review");
+    await expect(review.getByTestId("catalog-draft-diff")).toContainText("Упаковка поставщика");
+    await expect(review.getByTestId("catalog-draft-accept")).toHaveCount(0);
+    expect(await readDraft(page)).toContain('"packQty":24');
+    await review.getByTestId("catalog-draft-back").click();
+    await expect(modal.locator('[data-draft-choice="offer"]')).toBeVisible();
+    expect(await readDraft(page)).toContain('"packQty":24');
+  });
+
   test("«Продолжить» возвращает комнаты, позиции света и скидку", async ({ page }) => {
     await buildKitCalculation(page);
     const modal = page.locator(MODAL);
@@ -257,6 +303,10 @@ test.describe("PT-007 · восстановление корзины света"
     const choice = modal.locator('[data-draft-choice="offer"]');
     await expect(choice).toBeVisible();
     await choice.locator('[data-draft-action="continue"]').click();
+    const review = modal.getByTestId("catalog-draft-review");
+    await expect(review).toBeVisible();
+    await expect(review.getByTestId("catalog-draft-diff")).toHaveCount(0);
+    await review.getByTestId("catalog-draft-accept").click();
 
     // Комнаты и потолок идентичны сохранённым.
     await expect(modal.getByRole("heading", { name: "Проверка" })).toBeVisible();

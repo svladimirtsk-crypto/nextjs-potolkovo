@@ -18,6 +18,7 @@
  */
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import { resolvePriceBasis, stripSaleUnit } from "@/lib/lighting/led-price-basis";
+import { moscowCandidateAllowed, moscowStockMessage } from "@/lib/lighting/moscow-stock";
 
 export type LedRole = "strip" | "psu" | "controller" | "remote" | "controller-remote-kit";
 /** Неизвестный режим не равен монохромному: одна температура К в названии не доказывает схему каналов. */
@@ -500,6 +501,7 @@ export function planLedPower(input: {
   const rejectedControllers: { name: string; reason: string }[] = [];
   const rejectedKits: { name: string; reason: string }[] = [];
   const rejectedPsus: { name: string; reason: string }[] = [];
+  const withheldPsus: FeedCatalogProduct[] = [];
 
   const wPerMeter = strip.wPerMeter;
   const voltage = strip.voltage;
@@ -526,6 +528,17 @@ export function planLedPower(input: {
 
   for (const product of products) {
     const role = ledRoleOf(product);
+    if (role && !moscowCandidateAllowed(product)) {
+      const reason = moscowStockMessage(product);
+      warnings.push(`${product.name}: не выбираем автоматически. ${reason}`);
+      if (role === "psu") {
+        rejectedPsus.push({ name: product.name, reason });
+        withheldPsus.push(product);
+      }
+      else if (role === "controller") rejectedControllers.push({ name: product.name, reason });
+      else if (role === "controller-remote-kit") rejectedKits.push({ name: product.name, reason });
+      continue;
+    }
     if (role === "psu") {
       const spec = parsePsuSpec(product.name);
       if (spec) psuOptions.push({ product, spec }); // без W модель нельзя выбрать, но её U учитывается в причине отказа.
@@ -556,7 +569,11 @@ export function planLedPower(input: {
     });
     return false;
   });
-  const wrongVoltageOnly = voltage !== null && psuOptions.length > 0 &&
+  const excludedMatchingPsu = withheldPsus.some((product) => {
+    const spec = parsePsuSpec(product.name);
+    return spec?.voltage === voltage && (spec.watts ?? 0) >= requiredW;
+  });
+  const wrongVoltageOnly = !excludedMatchingPsu && voltage !== null && psuOptions.length > 0 &&
     psuOptions.every((option) => option.spec.voltage !== null && option.spec.voltage !== voltage);
 
   /*

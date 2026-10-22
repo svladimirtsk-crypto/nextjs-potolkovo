@@ -14,13 +14,13 @@ export function CatalogFreshness({ updatedAt }: { updatedAt: string }) {
   if (isStale(updatedAt)) return (
     <p data-testid="catalog-stale" className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900 ring-1 ring-amber-200">
       {label ? `Сохранённые данные от ${label}. ` : "Дата данных не подтверждена. "}
-      Цены могли измениться — уточним перед счётом. Наличие и сроки требуют подтверждения поставщика.
+      Цены могли измениться — уточним перед счётом. Остаток на складе в Москве и сроки не подтверждены.
     </p>
   );
 
   return (
     <p className="mt-3 text-xs leading-5 text-slate-600">
-      Сохранённые данные EKS Market от {label}. Цены, наличие и сроки уточним перед счётом.
+      Сохранённые данные EKS Market от {label}. Цены, московский остаток и сроки уточним перед счётом.
     </p>
   );
 }

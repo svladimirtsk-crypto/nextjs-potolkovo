@@ -1,5 +1,8 @@
 import type { FeedCatalogParam, FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import { ledUnitOf } from "@/lib/lighting/led-hardware";
+import {
+  hasMoscowObservation, moscowQuantityOf, moscowStockStateOf, supplierAvailableOf,
+} from "@/lib/lighting/moscow-stock";
 
 export function toText(value: unknown): string {
   return String(value ?? "").trim();
@@ -33,7 +36,7 @@ function toParams(input: unknown): FeedCatalogParam[] {
     .filter((item) => item.label.length > 0 && item.value.length > 0);
 }
 
-export function normalizeFeedCatalogProduct(raw: unknown): FeedCatalogProduct | null {
+export function normalizeFeedCatalogProduct(raw: unknown, sourceUpdatedAt?: string): FeedCatalogProduct | null {
   if (!raw || typeof raw !== "object") return null;
 
   const product = raw as Record<string, unknown>;
@@ -50,6 +53,13 @@ export function normalizeFeedCatalogProduct(raw: unknown): FeedCatalogProduct | 
   const images = Array.isArray(product.images)
     ? product.images.map((item) => toText(item)).filter(Boolean)
     : [];
+  const warehouseParam = (param: FeedCatalogParam) =>
+    ["остатки мск", "остатки брн"].includes(param.label.toLowerCase().replace(/\s+/g, " "));
+  const stockByWarehouse = hasMoscowObservation(product)
+    ? { moscow: moscowQuantityOf(product) } : undefined;
+  const available = supplierAvailableOf(product.available) === true;
+  const packQty = product.packQty === undefined || product.packQty === null || product.packQty === ""
+    ? null : Number(product.packQty);
 
   const normalized: FeedCatalogProduct = {
     productId: toText(productId),
@@ -62,9 +72,14 @@ export function normalizeFeedCatalogProduct(raw: unknown): FeedCatalogProduct | 
     images,
     coverImage: toText(product.coverImage) || images[0] || "",
     priceRub: toNumber(product.priceRub),
-    available: Boolean(product.available ?? true),
-    params: toParams(product.params),
-    keyAttributes: toParams(product.keyAttributes),
+    available,
+    stockByWarehouse,
+    availabilityState: moscowStockStateOf({ available, stockByWarehouse }),
+    stockObservedAt: stockByWarehouse ? toText(product.stockObservedAt) || sourceUpdatedAt || null : null,
+    packQty: packQty !== null && Number.isFinite(packQty) && packQty > 0 ? packQty : null,
+    catalogVersion: toText(product.catalogVersion) || undefined,
+    params: toParams(product.params).filter((param) => !warehouseParam(param)),
+    keyAttributes: toParams(product.keyAttributes).filter((param) => !warehouseParam(param)),
     system: (toText(product.system) || "UNKNOWN") as FeedCatalogProduct["system"],
     kind: (toText(product.kind) || "OTHER") as FeedCatalogProduct["kind"],
     unit: (toText(product.unit) === "m" ? "m" : "pcs") as FeedCatalogProduct["unit"],
@@ -79,8 +94,8 @@ export function normalizeFeedCatalogProduct(raw: unknown): FeedCatalogProduct | 
   return normalized;
 }
 
-export function normalizeFeedCatalogProducts(rawProducts: unknown[]): FeedCatalogProduct[] {
+export function normalizeFeedCatalogProducts(rawProducts: unknown[], sourceUpdatedAt?: string): FeedCatalogProduct[] {
   return rawProducts
-    .map((item) => normalizeFeedCatalogProduct(item))
+    .map((item) => normalizeFeedCatalogProduct(item, sourceUpdatedAt))
     .filter((item): item is FeedCatalogProduct => Boolean(item));
 }

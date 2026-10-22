@@ -13,6 +13,7 @@
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { catalogVersionOf } from "./feed-review.mjs";
 
 const ROOT = resolve(import.meta.dirname, "..");
 const SOURCE = resolve(ROOT, "data/eks-feed2-snapshot.json");
@@ -60,6 +61,11 @@ function detectSocket(product) {
 }
 
 const feed = JSON.parse(readFileSync(SOURCE, "utf8"));
+const catalogVersion = catalogVersionOf(feed);
+if (feed.catalogVersion && feed.catalogVersion !== catalogVersion) {
+  console.error("[catalog-index] catalogVersion не соответствует содержимому снапшота");
+  process.exit(1);
+}
 const rawProducts = Array.isArray(feed.products) ? feed.products : [];
 const retiredPolicy = JSON.parse(readFileSync(resolve(ROOT, "content/catalog-retired.json"), "utf8"));
 const isRetired = (p) => retiredPolicy.some(rule => rule.vendorCode === text(p.vendorCode)
@@ -123,6 +129,7 @@ const systems = makeDictionary();
 const kinds = makeDictionary();
 const units = makeDictionary();
 const sockets = makeDictionary();
+const stockDates = makeDictionary();
 
 const rows = products.map((product) => {
   const pieceLength = product.pieceLengthMeters;
@@ -140,6 +147,11 @@ const rows = products.map((product) => {
     pieceLength === null || pieceLength === undefined ? null : Number(pieceLength),
     sockets.idOf(detectSocket(product)),
     cover.startsWith(IMAGE_PREFIX) ? cover.slice(IMAGE_PREFIX.length) : cover,
+    // Missing Moscow stock stays null even when supplier available=true.
+    product.stockByWarehouse?.moscow == null ? null : Number(product.stockByWarehouse.moscow),
+    product.packQty == null ? null : Number(product.packQty),
+    stockDates.idOf(product.stockByWarehouse?.moscow == null
+      ? "" : product.stockObservedAt),
   ];
 });
 
@@ -159,6 +171,7 @@ for (const product of products) {
 
 const payload = {
   updatedAt: text(feed.updatedAt),
+  catalogVersion,
   discountPercentForCeilingOrder: feed.discountPercentForCeilingOrder ?? null,
   imagePrefix: IMAGE_PREFIX,
   // Порядок полей в кортеже — контракт с lib/lighting/catalog-index.ts.
@@ -174,12 +187,16 @@ const payload = {
     "pieceLengthMeters",
     "socket",
     "coverImage",
+    "moscowStock",
+    "packQty",
+    "stockObservedAt",
   ],
   dictionaries: {
     system: systems.values,
     kind: kinds.values,
     unit: units.values,
     socket: sockets.values,
+    stockDate: stockDates.values,
   },
   rows,
 };
