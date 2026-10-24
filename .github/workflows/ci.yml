@@ -3,7 +3,8 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [quizv2, quizv2ver1, main]
+    # Полный CI и для изолированной preview-ветки: это не merge/deploy в main.
+    branches: [quizv2, quizv2ver1, main, feat/company-rebrand-v7-preview]
 
 # Новый пуш в ту же ветку отменяет предыдущий прогон — незачем греть раннеры.
 concurrency:
