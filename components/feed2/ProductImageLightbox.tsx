@@ -5,7 +5,7 @@ import { useDialogFocus } from "@/lib/use-dialog-focus";
 import { createPortal } from "react-dom";
 
 import { ProductImage } from "@/components/feed2/ProductImage";
-import { hasLocalPhoto, isPhotoPending } from "@/lib/catalog-photo";
+import { isPhotoPending, localPhotoUrl } from "@/lib/catalog-photo";
 
 type Props = {
   src: string;
@@ -32,7 +32,7 @@ export function ProductImageLightbox({ src, alt, thumbClassName, productId, kind
    * без фотографии и терял доверие покупателя.
    */
   const id = String(productId ?? "").trim();
-  const localSrc = hasLocalPhoto(id) ? `/catalog/${id}-512.webp` : null;
+  const localSrc = localPhotoUrl(id, 512);
   const fullSrc = safeSrc || localSrc || "";
   // PT-017: увеличивать нечего, если снимка нет, — вместо битой картинки
   // на весь экран показываем заглушку с пометкой «Фото уточняется».

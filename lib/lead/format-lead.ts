@@ -1,4 +1,5 @@
 import { lightingTaskLines } from "@/lib/lighting/project-lighting-tasks";
+import { pricing } from "@/content/pricing";
 /**
  * T-027 · Единый формат письма/сообщения по заявке.
  *
@@ -144,10 +145,31 @@ export function formatLeadBody(payload: LeadPayload, leadCode?: string): string 
     }
   }
 
+  const ledReview = snapshot?.ledReview;
+  if (ledReview) {
+    lines.push("", "LED · ПРЕДВАРИТЕЛЬНЫЙ ПОДБОР, НЕ СЧЁТ");
+    lines.push(`Версия расчёта: ${ledReview.quoteVersion}; правила: ${ledReview.rulesVersion}`);
+    lines.push(`Задач: ${ledReview.tasks.length}; LED-позиций в корзине: ${ledReview.bom.length}; монтаж: уточнить.`);
+    for (const draft of ledReview.planning) {
+      lines.push(`Черновик ${draft.taskId ?? "без комнаты"}: ${draft.meters ?? "?"} м × ${draft.rows} ряд(а), зон ${draft.zones}; лента ${draft.stripSku ?? "не выбрана"} — не подтверждено.`);
+    }
+    for (const item of ledReview.bom) {
+      lines.push(`BOM (на проверку): ${item.sku} · ${item.role} · ${item.qty} ${item.unit} · задача ${item.taskId ?? "не назначена"} · Москва: ${item.availabilityState}.`);
+    }
+    for (const link of ledReview.assignments) {
+      lines.push(`БП для ${link.taskId}: ${link.sku} × ${link.qty} — заменяет включённые ${fmt(pricing.corniceLighting.psu)} ₽/шт в потолочной ставке.`);
+    }
+    // Ни одного вопроса не теряем в письме: именно они определяют работу
+    // специалиста при частичном BOM, не только отдельный DB snapshot.
+    for (const question of ledReview.questions) lines.push(`? ${question}`);
+  }
+
   const totals = snapshot?.totals ?? payload.totals;
   lines.push("", "ИТОГО");
   if (totals) {
     lines.push(`Потолок: ${fmt(totals.ceilingRaw)} ₽`);
+    if (totals.ledPsuReplacementRub) lines.push(`Из ставки карниза вычтены включённые БП: −${fmt(totals.ledPsuReplacementRub)} ₽ до проверки минимального заказа; выбранные SKU — в блоке света.`);
+    if (totals.ledIncludedRub !== undefined) lines.push(`LED · включено в ставку: ${fmt(totals.ledIncludedRub)} ₽; оборудование отдельно до скидки: ${fmt(totals.ledEquipmentExtraRub ?? 0)} ₽; фактическая дельта потолка после минимума: ${fmt(totals.ledCeilingDeltaRub ?? 0)} ₽. Это предварительный подбор, не коммерческий счёт.`);
     if (totals.installExtra > 0) lines.push(`Монтаж света: ${fmt(totals.installExtra)} ₽`);
     if (totals.lightingEffective > 0) lines.push(`Свет: ${fmt(totals.lightingEffective)} ₽`);
     lines.push(`Общий ориентир: ~${fmt(totals.grand)} ₽`);
@@ -174,7 +196,7 @@ export function formatLeadBody(payload: LeadPayload, leadCode?: string): string 
   }
   const issues = priceCheck?.issues ?? [];
   const needsAttention = issues.filter((issue) =>
-    ["unavailable-product", "moscow-zero-reported", "catalog-version-drift", "client-price-deviation"].includes(issue.code));
+    ["unavailable-product", "moscow-zero-reported", "catalog-version-drift", "client-price-deviation", "led-quote-drift", "led-assignment-review"].includes(issue.code));
   const unknownStockCount = issues.filter((issue) => issue.code === "moscow-stock-unconfirmed").length;
   if (needsAttention.length || unknownStockCount) {
     if (!priceCheck || priceCheck.status !== "mismatch") lines.push("", "СЛУЖЕБНОЕ");

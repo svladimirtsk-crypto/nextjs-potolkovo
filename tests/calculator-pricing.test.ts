@@ -10,6 +10,7 @@ import {
 } from "../lib/calculator/pricing";
 import type { LightingSnapshot } from "../lib/calculator-modal-types";
 import type { CalculatorLeadSnapshot } from "../lib/calculator/snapshot-types";
+import { buildLeadSnapshotV2 } from "../lib/calculator/types";
 import {
   LIGHTING_ONLY_DISCOUNT_PERCENT,
   LIGHTING_WITH_CEILING_DISCOUNT_PERCENT,
@@ -210,6 +211,27 @@ describe("N-050 · потолок в заявке", () => {
       lightingDiscountMode: "with-ceiling",
     } as unknown as CalculatorLeadSnapshot;
     expect(calcLeadCeilingTotal({ snapshot })).toBe(30500);
+  });
+
+  it("LED-21: linked cornice PSU replaces the raw rate, then reapplies the minimum", () => {
+    const lighting = { mode: "catalog", userCustomizedLighting: true,
+      discountMode: "with-ceiling", items: [{ sku: "psu", name: "Блок питания LED 24V", qty: 1,
+        priceRub: 800, kind: "LED_STRIP", unit: "pcs" }],
+      ledPsuAssignments: [{ taskId: "r1:cornice", sku: "psu", qty: 1 }] } as LightingSnapshot;
+    const snapshot = { total: 19_000, totalRawRub: 19_000, lightingDiscountMode: "with-ceiling", lighting,
+      roomBreakdown: [{ id: "r1", label: "Кухня", area: 18, totalRub: 19_000,
+        ceilingTypeLabel: "Простой", corniceType: "built-in",
+        corniceLightingEnabled: true, corniceLightingLength: 5, corniceLightingPowerSupplies: 1 }]
+    } as unknown as CalculatorLeadSnapshot;
+    expect(calcLeadCeilingTotal({ snapshot })).toBe(18_000);
+    expect(calcCeilingEffectiveTotal({ snapshot, showCeilingInUi: true,
+      step0AreaConfirmed: true, lighting, discountMode: "with-ceiling" })).toBe(18_000);
+    expect(calcCeilingEffectiveTotal({ snapshot, showCeilingInUi: true,
+      step0AreaConfirmed: true, lighting, discountMode: "lighting-only" })).toBe(19_000);
+    const lead = buildLeadSnapshotV2({ snapshot, ceilingEffectiveTotal: 18_000,
+      lightingRegularTotal: 800, lightingEffectiveTotal: 600, source: "test" });
+    expect(lead.totals).toMatchObject({ ledIncludedRub: 1500,
+      ledEquipmentExtraRub: 800, ledCeilingDeltaRub: -1000, minimumApplied: true });
   });
 
   it("пустой снапшот — ноль", () => {

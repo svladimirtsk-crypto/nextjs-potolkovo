@@ -1,5 +1,6 @@
 import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
+import type { LedPlanningDraft, LedPsuAssignment } from "@/lib/lighting/led-commercial";
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
 import {
   LIGHTING_ONLY_DISCOUNT_PERCENT,
@@ -25,6 +26,8 @@ export function productToLightingItem(product: FeedCatalogProduct, qty: number):
     vendorCode: toText(product.vendorCode),
     offerId: toText(product.offerId) || undefined,
     unit: toText(product.unit),
+    kind: toText(product.kind),
+    system: toText(product.system),
     packQty: product.packQty ?? null,
     moscowStock: product.stockByWarehouse?.moscow ?? null,
     stockObservedAt: product.stockObservedAt ?? null,
@@ -53,13 +56,18 @@ export type CatalogLightingSnapshot = LightingSnapshot & {
   withCeilingDiscountedTotalRub: number;
 };
 
-export function buildCatalogLightingSnapshot(items: LightingItem[], catalogVersion?: string): CatalogLightingSnapshot {
+export function buildCatalogLightingSnapshot(
+  items: LightingItem[], catalogVersion?: string, ledPsuAssignments: readonly LedPsuAssignment[] = [],
+  ledPlanning: readonly LedPlanningDraft[] = []
+): CatalogLightingSnapshot {
   const totalRub = items.reduce((sum, item) => sum + item.qty * item.priceRub, 0);
   const discountedTotalRub = applyLightingOnlyDiscount(totalRub);
 
   return {
     mode: "catalog",
     catalogVersion: catalogVersion || undefined,
+    ...(ledPsuAssignments.length ? { ledPsuAssignments: [...ledPsuAssignments] } : {}),
+    ...(ledPlanning.length ? { ledPlanning: [...ledPlanning] } : {}),
     items,
     totalRub,
     discountedTotalRub,

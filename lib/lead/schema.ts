@@ -119,6 +119,22 @@ export const LightingLeadItemSchema = z
     });
   });
 
+export const LedPsuAssignmentSchema = z.object({
+  taskId: z.string().min(1).max(96),
+  sku: z.string().min(1).max(64),
+  qty: z.number().int().positive().max(MAX_COUNT),
+});
+
+export const LedPlanningDraftSchema = z.object({
+  taskId: z.string().max(96).nullable(),
+  meters: z.number().positive().max(300).nullable(),
+  rows: z.number().int().min(1).max(4),
+  zones: z.number().int().min(1).max(6),
+  stripSku: z.string().max(64).nullable(),
+  source: z.enum(["task", "manual"]),
+  confirmed: z.literal(false),
+});
+
 export const LightingLeadBlockSchema = z.object({
   mode: z.string().max(32),
   // Provenance sent by the browser is NOT proof that a supplier approved price
@@ -131,11 +147,41 @@ export const LightingLeadBlockSchema = z.object({
     fields: z.array(z.enum(["missing", "identity", "priceRub", "vendorCode", "unit", "packQty", "moscowStock"])).max(8),
   }).optional(),
   items: z.array(LightingLeadItemSchema).max(200),
+  ledPsuAssignments: z.array(LedPsuAssignmentSchema).max(90).optional(),
+  ledPlanning: z.array(LedPlanningDraftSchema).max(90).optional(),
   regularTotalRub: z.number().nonnegative(),
   effectiveTotalRub: z.number().nonnegative(),
   discountMode: z.string().max(32),
   discountPercentApplied: z.number().nonnegative(),
   discountAmountRub: z.number().nonnegative(),
+});
+
+export const LedIntakeReviewSchema = z.object({
+  status: z.literal("needs_review"),
+  commercialStatus: z.literal("needs_review"),
+  quoteVersion: z.string().regex(/^ledq1-[a-f0-9]{16}$/),
+  rulesVersion: z.string().max(100),
+  compositionVersion: z.string().max(100),
+  equipment: z.literal("extra_except_linked_cornice_psu"),
+  installation: z.literal("unknown"),
+  tasks: z.array(z.object({
+    id: z.string().max(96), roomId: z.string().max(64), roomLabel: z.string().max(80),
+    feature: z.enum(["floating", "light-lines", "cornice"]),
+    geometryMeters: meters,
+  })).max(90),
+  planning: z.array(LedPlanningDraftSchema).max(90),
+  bom: z.array(z.object({
+    sku: z.string().max(64), name: z.string().max(200),
+    role: z.enum(["strip", "psu", "controller", "remote", "controller-remote-kit"]),
+    qty: z.number().positive().max(MAX_COUNT), unit: z.string().max(16),
+    priceRub: z.number().nonnegative().max(MAX_MONEY_RUB),
+    taskId: z.string().max(96).nullable(),
+    availabilityState: z.enum(["unknown", "reported_zero", "reported_positive", "supplier_unavailable"]),
+  })).max(200),
+  assignments: z.array(LedPsuAssignmentSchema).max(90),
+  replacedCeilingRub: z.number().nonnegative().max(MAX_MONEY_RUB),
+  unlinkedCornicePsuQty: z.number().int().nonnegative().max(MAX_COUNT),
+  questions: z.array(z.string().max(400)).max(128),
 });
 
 export const TotalsSchema = z.object({
@@ -145,6 +191,10 @@ export const TotalsSchema = z.object({
   lightingRegular: z.number().nonnegative().max(MAX_MONEY_RUB),
   lightingEffective: z.number().nonnegative().max(MAX_MONEY_RUB),
   discountPct: z.number().nonnegative().max(100),
+  ledPsuReplacementRub: z.number().nonnegative().max(MAX_MONEY_RUB).optional(),
+  ledIncludedRub: z.number().nonnegative().max(MAX_MONEY_RUB).optional(),
+  ledEquipmentExtraRub: z.number().nonnegative().max(MAX_MONEY_RUB).optional(),
+  ledCeilingDeltaRub: z.number().min(-MAX_MONEY_RUB).max(0).optional(),
   grand: z.number().nonnegative().max(MAX_MONEY_RUB),
 });
 
@@ -154,6 +204,7 @@ export const LeadSnapshotV2Schema = z.object({
   scope: z.enum(["room", "object"]),
   rooms: z.array(LeadRoomSnapshotSchema).max(30),
   lighting: LightingLeadBlockSchema.nullable(),
+  ledReview: LedIntakeReviewSchema.optional(),
   totals: TotalsSchema,
   source: z.string().max(64),
   entry: z.enum(["ceiling-first", "lighting-first", "direct"]),

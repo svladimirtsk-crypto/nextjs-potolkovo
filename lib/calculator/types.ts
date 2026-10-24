@@ -8,6 +8,7 @@
 import type { CalculatorLeadSnapshot, CalculatorRoomBreakdown } from "@/lib/calculator/snapshot-types";
 import { scenarioFromRooms } from "@/lib/calculator/room-features";
 import type { LightingDiscountMode, LightingSnapshot, SolutionScenario } from "@/lib/calculator-modal-types";
+import { buildLedIntakeReview, ceilingAfterLedReplacement, type LedIntakeReview } from "@/lib/lighting/led-commercial";
 
 export type CalculationScope = "room" | "object";
 
@@ -22,6 +23,8 @@ export type LightingLeadBlock = {
   /** Version and acceptance reported by the client, NOT supplier approval. */
   catalogVersion?: string;
   catalogReview?: LightingSnapshot["catalogReview"];
+  ledPsuAssignments?: LightingSnapshot["ledPsuAssignments"];
+  ledPlanning?: LightingSnapshot["ledPlanning"];
   items: Array<{
     sku: string;
     vendorCode?: string;
@@ -58,6 +61,13 @@ export type LeadTotals = {
   lightingEffective: number;
   /** Процент скидки, фактически применённый к свету. */
   discountPct: number;
+  /** LED-21 · Сколько включённой ставки за БП заменено явным SKU до минимума. */
+  ledPsuReplacementRub?: number;
+  /** LED-21 · Раздельная сверка: исходное включение, оборудование по каталогу
+   * до скидки и фактическая дельта потолка после повторного минимума. */
+  ledIncludedRub?: number;
+  ledEquipmentExtraRub?: number;
+  ledCeilingDeltaRub?: number;
   /** Итог: потолок (с минимумом и монтажом) + свет со скидкой. */
   grand: number;
 };
@@ -69,6 +79,8 @@ export type LeadSnapshotV2 = {
   scope: CalculationScope;
   rooms: LeadRoomSnapshot[];
   lighting: LightingLeadBlock | null;
+  /** LED-22/23 · preliminary room/BOM/questions; server overwrites client claim. */
+  ledReview?: LedIntakeReview;
   totals: LeadTotals;
   /** "<slug>:<placement>" из контекста страницы (T-021). */
   source: string;
@@ -105,12 +117,14 @@ export function buildLightingLeadBlock(
       ...(item.auto ? { auto: true } : {}),
     };
   });
-  if (items.length === 0 && num(lighting.totalRub) <= 0) return null;
+  if (items.length === 0 && num(lighting.totalRub) <= 0 && !(lighting.ledPlanning?.length)) return null;
 
   return {
     mode: String(lighting.mode ?? "none"),
     ...(lighting.catalogVersion ? { catalogVersion: lighting.catalogVersion } : {}),
     ...(lighting.catalogReview ? { catalogReview: lighting.catalogReview } : {}),
+    ...(lighting.ledPsuAssignments?.length ? { ledPsuAssignments: lighting.ledPsuAssignments.map((a) => ({ ...a })) } : {}),
+    ...(lighting.ledPlanning?.length ? { ledPlanning: lighting.ledPlanning.map((a) => ({ ...a })) } : {}),
     items,
     regularTotalRub: num(lighting.totalRub),
     effectiveTotalRub: num(lighting.discountedTotalRub) || num(lighting.totalRub),
@@ -144,10 +158,17 @@ export function buildLeadSnapshotV2({
 }: BuildLeadSnapshotInput): LeadSnapshotV2 {
   const rooms = snapshot?.roomBreakdown ?? [];
   const lightingBlock = buildLightingLeadBlock(snapshot?.lighting);
+  const ledReview = buildLedIntakeReview({ rooms, lighting: lightingBlock });
 
   const regular = lightingRegularTotal || lightingBlock?.regularTotalRub || 0;
   const effective = lightingEffectiveTotal || lightingBlock?.effectiveTotalRub || 0;
   const discountPct = num(snapshot?.lightingDiscountPercentApplied) || num(lightingBlock?.discountPercentApplied);
+  const ceilingBefore = num(snapshot?.total);
+  const ceilingRawBefore = snapshot?.totalRawRub ??
+    (rooms.length ? rooms.reduce((sum, room) => sum + num(room.totalRub), 0) : ceilingBefore);
+  const included = ledReview?.replacedCeilingRub ?? 0;
+  const adjustedCeiling = included ? ceilingAfterLedReplacement(ceilingRawBefore, included) : null;
+  const ceilingDelta = adjustedCeiling ? Math.min(0, adjustedCeiling.applied - ceilingBefore) : 0;
 
   return {
     version: 2,
@@ -156,9 +177,14 @@ export function buildLeadSnapshotV2({
     scope: (snapshot?.calculationScope ?? "room") as CalculationScope,
     rooms,
     lighting: lightingBlock,
+    ...(ledReview ? { ledReview } : {}),
     totals: {
-      ceilingRaw: num(snapshot?.totalRawRub) || num(snapshot?.total),
-      minimumApplied: Boolean(snapshot?.minimumOrderApplied),
+      ceilingRaw: Math.max(0, ceilingRawBefore - included),
+      ...(included ? { ledPsuReplacementRub: included } : {}),
+      ...(ledReview ? { ledIncludedRub: included,
+        ledEquipmentExtraRub: ledReview.bom.reduce((sum, item) => sum + item.qty * item.priceRub, 0),
+        ledCeilingDeltaRub: ceilingDelta } : {}),
+      minimumApplied: adjustedCeiling?.minimumApplied ?? Boolean(snapshot?.minimumOrderApplied),
       installExtra: num(snapshot?.extraInstallRub),
       lightingRegular: regular,
       lightingEffective: effective,

@@ -15,22 +15,25 @@
  *   FEED_URL="https://…" node scripts/refresh-feed.mjs
  *   node scripts/refresh-feed.mjs --dry-run   # только показать диффы
  *   node scripts/refresh-feed.mjs --check     # проверить staging, ничего не публиковать
+ *   node scripts/refresh-feed.mjs --rollback # переключить указатель на предыдущий выпуск
+ *   node scripts/refresh-feed.mjs --rollback=r-... # на проверенный выпуск по ID
  */
 import { execFileSync } from "node:child_process";
 import {
-  copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync,
-  readdirSync, renameSync, rmSync, symlinkSync, writeFileSync,
+  copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync,
+  readdirSync, rmSync, symlinkSync, writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { randomUUID } from "node:crypto";
-import { basename, dirname, join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { catalogVersionOf, diffCatalog, formatCatalogReview } from "./feed-review.mjs";
+import { activeReleaseId, publishCatalogRelease, rollbackCatalogRelease, stageCatalogImages } from "./catalog-release.mjs";
 
 const ROOT = resolve(import.meta.dirname, "..");
 const SNAPSHOT = resolve(ROOT, "data/eks-feed2-snapshot.json");
 
 const DRY_RUN = process.argv.includes("--dry-run");
 const CHECK_ONLY = process.argv.includes("--check");
+const ROLLBACK_ARG = process.argv.find((arg) => arg === "--rollback" || arg.startsWith("--rollback="));
 /** Сколько строк дельты цен показать в теле PR. */
 const TOP_CHANGES = 20;
 
@@ -223,6 +226,7 @@ const VALIDATION_INPUTS = [
   "scripts/feed-review.mjs",
   "scripts/build-catalog-index.mjs",
   "scripts/build-catalog-images.mjs",
+  "scripts/check-catalog-images.mjs",
   "data/catalog-retired.json",
   "content/catalog-retired.json",
   "lib/catalog-ui-config.ts",
@@ -234,7 +238,7 @@ const VALIDATION_INPUTS = [
  * LED-26 · Все валидаторы и сборщики работают с копией каталога в /tmp.
  * Ни снапшот, ни индекс, ни обложки рабочего дерева до их успеха не меняются.
  * PR по-прежнему требует ревью: это защита локального last-known-good, а не
- * подтверждение цены, упаковки, склада или транзакция нескольких файлов ОС.
+ * подтверждение цены, упаковки, склада или live-миграция уже открытых вкладок.
  */
 function prepareStage(candidate) {
   const stage = mkdtempSync(join(tmpdir(), "potolkovo-feed-"));
@@ -248,8 +252,12 @@ function prepareStage(candidate) {
     }
     const originalImages = resolve(ROOT, "public/catalog");
     const stageImages = resolve(stage, "public/catalog");
-    if (existsSync(originalImages)) cpSync(originalImages, stageImages, { recursive: true });
-    else mkdirSync(stageImages, { recursive: true });
+    mkdirSync(stageImages, { recursive: true });
+    if (existsSync(originalImages)) {
+      for (const name of readdirSync(originalImages).filter((name) => name.endsWith(".webp"))) {
+        copyFileSync(resolve(originalImages, name), resolve(stageImages, name));
+      }
+    }
     // sharp зависит от локальных node_modules; staging не копирует их в /tmp.
     symlinkSync(resolve(ROOT, "node_modules"), resolve(stage, "node_modules"), "dir");
     writeFileSync(resolve(stage, "data/eks-feed2-snapshot.json"), `${JSON.stringify(candidate, null, 2)}\n`);
@@ -265,63 +273,15 @@ function runStaged(stage, script) {
   execFileSync(process.execPath, [resolve(stage, "scripts", script)], { stdio: "inherit", cwd: stage });
 }
 
-function atomicWrite(dest, content) {
-  mkdirSync(dirname(dest), { recursive: true });
-  const tmp = join(dirname(dest), `.${basename(dest)}.${process.pid}.${randomUUID()}.tmp`);
-  try {
-    writeFileSync(tmp, content);
-    renameSync(tmp, dest);
-  } finally {
-    rmSync(tmp, { force: true });
-  }
-}
-
-function publishStage(stage, report, review) {
-  const stagedImages = resolve(stage, "public/catalog");
-  const imageOutputs = readdirSync(stagedImages, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith(".webp"))
-    .map((entry) => `public/catalog/${entry.name}`)
-    .filter((rel) => {
-      const candidate = readFileSync(resolve(stage, rel));
-      const live = resolve(ROOT, rel);
-      return !existsSync(live) || !candidate.equals(readFileSync(live));
-    });
-
-  const dataOutputs = [
-    "data/catalog-retired.json", "data/catalog-index.json", "data/catalog-prefill.json",
-    "data/proof-pricing-inputs.json", "data/catalog-images.json",
-    "data/catalog-images-missing.json", "data/eks-feed2-snapshot.json",
-  ];
-  const outputs = [
-    ...imageOutputs.map((rel) => ({ rel, content: readFileSync(resolve(stage, rel)) })),
-    ...dataOutputs.map((rel) => ({ rel, content: readFileSync(resolve(stage, rel)) })),
-    { rel: "data/catalog-review.json", content: Buffer.from(`${JSON.stringify(review, null, 2)}\n`) },
-    { rel: "feed-diff.md", content: Buffer.from(`${report}\n`) },
-  ];
-  const backups = new Map(outputs.map(({ rel }) => [rel, existsSync(resolve(ROOT, rel)) ? readFileSync(resolve(ROOT, rel)) : null]));
-  const published = [];
-  try {
-    for (const { rel, content } of outputs) {
-      atomicWrite(resolve(ROOT, rel), content);
-      published.push(rel);
-    }
-  } catch (error) {
-    const rollbackErrors = [];
-    for (const rel of published.reverse()) {
-      try {
-        const previous = backups.get(rel);
-        if (previous === null || previous === undefined) rmSync(resolve(ROOT, rel), { force: true });
-        else atomicWrite(resolve(ROOT, rel), previous);
-      } catch (rollbackError) {
-        rollbackErrors.push(`${rel}: ${rollbackError?.message ?? rollbackError}`);
-      }
-    }
-    if (rollbackErrors.length) throw new Error(`сбой публикации и отката: ${rollbackErrors.join("; ")}`, { cause: error });
-    throw error;
-  }
-}
-
 async function main() {
+  if (ROLLBACK_ARG) {
+    if (DRY_RUN || CHECK_ONLY) fail("--rollback нельзя совмещать с --check/--dry-run");
+    const targetId = ROLLBACK_ARG.startsWith("--rollback=") ? ROLLBACK_ARG.slice("--rollback=".length) : null;
+    const result = rollbackCatalogRelease({ root: ROOT, targetId });
+    console.log(`[refresh-feed] атомарный откат ${result.fromReleaseId} → ${result.toReleaseId}; версия ${result.catalogVersion}; production не переключался`);
+    return;
+  }
+  const initialPointer = activeReleaseId(ROOT);
   const url = process.env.FEED_URL;
   if (!url) fail("не задан FEED_URL (секрет репозитория)");
 
@@ -351,15 +311,25 @@ async function main() {
 
   const stage = prepareStage(after);
   try {
+    stageCatalogImages(ROOT, stage, before, after);
     // При провале любого этапа в /tmp рабочий snapshot/индекс/картинки не тронуты.
     runStaged(stage, "validate-catalog.mjs");
     runStaged(stage, "build-catalog-index.mjs");
     runStaged(stage, "build-catalog-images.mjs");
+    runStaged(stage, "check-catalog-images.mjs");
+    const missingPhotos = JSON.parse(readFileSync(resolve(stage, "data/catalog-images-missing.json"), "utf8"));
+    if (!Array.isArray(missingPhotos) || missingPhotos.length) {
+      throw new Error(`неполный набор обложек в staging (${missingPhotos?.length ?? "неизвестно"}); оставляю прошлый выпуск до ручного review`);
+    }
     if (CHECK_ONLY) {
       console.log("[refresh-feed] check-only: staging прошёл, рабочие файлы не менялись");
       return;
     }
-    publishStage(stage, report, review);
+    const result = publishCatalogRelease({
+      root: ROOT, stage, report, review, expectedVersion: before.catalogVersion ?? catalogVersionOf(before),
+      expectedPointer: initialPointer, failpoint: process.env.CATALOG_RELEASE_FAILPOINT,
+    });
+    console.log(`[refresh-feed] атомарный выпуск ${result.releaseId} (предыдущий ${result.previousReleaseId}); версия ${result.catalogVersion}`);
     console.log("[refresh-feed] готово к PR и ручному ревью: кандидат и полный diff; merge/deploy запрещён без проверки, production не менялся");
   } finally {
     rmSync(stage, { recursive: true, force: true });

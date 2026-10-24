@@ -49,6 +49,17 @@ describe("buildLightingSnapshotFromItems", () => {
     expect(buildLightingSnapshotFromItems([])).toBeNull();
   });
 
+  it("catalogue keeps an incomplete LED planning request without inventing equipment or a discount", () => {
+    const planning = [{ taskId: null, meters: 6, rows: 2, zones: 3,
+      stripSku: null, source: "manual" as const, confirmed: false as const }];
+    const lighting = buildLightingSnapshotFromItems([], "cat-v1", [], planning);
+    const snapshot = nextCatalogSnapshot(null, { lighting, selectedTotal: 0, lightingOnlySelectedTotal: 0 });
+    expect(snapshot?.lighting?.ledPlanning).toEqual(planning);
+    expect(snapshot?.lighting?.items).toEqual([]);
+    expect(snapshot?.lightingDiscountApplied).toBe(false);
+    expect(snapshot?.lightingDiscountMode).toBe("none");
+  });
+
   it("считает сумму и обе скидки: «только свет» и «с потолком»", () => {
     const lighting = buildLightingSnapshotFromItems([item({ qty: 2 }), item({ sku: "0У-00002308", priceRub: 5220 })]);
 

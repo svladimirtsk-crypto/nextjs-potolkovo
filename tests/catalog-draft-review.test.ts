@@ -62,8 +62,13 @@ describe("LED-20 · immutable versioned draft review", () => {
     }
   });
 
-  it("unknown legacy unit and duplicate line are not silently coerced", () => {
+  it("unknown/legacy unit and duplicate line are not silently coerced, even with the same feed version", () => {
     expect(compareCatalogDraft(cart({ unit: undefined }), index()).canApply).toBe(false);
+    const oldHardwareUnit = { ...cart({ unit: "m", moscowStock: 0, priceRub: 1200, vendorCode: "NEW-SKU" }), catalogVersion: "cat-new" };
+    const unitReview = compareCatalogDraft(oldHardwareUnit, index());
+    expect(unitReview.changes.map((change) => change.field)).toEqual(["unit"]);
+    expect(unitReview.requiresReview).toBe(true);
+    expect(unitReview.canApply).toBe(false);
     const duplicated = { ...cart(), items: [...cart().items!, ...cart().items!] };
     expect(compareCatalogDraft(duplicated, index()).canApply).toBe(false);
   });

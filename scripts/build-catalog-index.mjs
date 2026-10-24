@@ -11,7 +11,7 @@
  * Серверные компоненты (LightKitShowcase, home-proof-pricing) продолжают читать
  * полный фид — они рендерятся на сервере и в клиентский бандл его не тянут.
  */
-import { readFileSync, writeFileSync } from "node:fs";
+import { lstatSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { catalogVersionOf } from "./feed-review.mjs";
 
@@ -20,6 +20,20 @@ const SOURCE = resolve(ROOT, "data/eks-feed2-snapshot.json");
 const INDEX_OUT = resolve(ROOT, "data/catalog-index.json");
 const PREFILL_OUT = resolve(ROOT, "data/catalog-prefill.json");
 const PRICING_OUT = resolve(ROOT, "data/proof-pricing-inputs.json");
+
+/** A release is immutable. Prebuild may verify its generated files, not rewrite
+ * a symlink target behind the active catalog pointer. Refresh builds in /tmp. */
+function writeGenerated(file, content) {
+  try {
+    if (lstatSync(file).isSymbolicLink()) {
+      if (readFileSync(file, "utf8") !== content) {
+        throw new Error(`каталог ${file} отличается от собранного: создайте новый выпуск через refresh-feed, не меняйте активную версию`);
+      }
+      return;
+    }
+  } catch (error) { if (error?.code !== "ENOENT") throw error; }
+  writeFileSync(file, content);
+}
 
 /** Бюджеты из ТЗ, КБ. */
 const INDEX_BUDGET_KB = 120;
@@ -82,7 +96,7 @@ for (const p of rawProducts.filter(isRetired)) {
   if (!retiredById.has(key)) retiredById.set(key, { ...p, available: false });
 }
 // Never a new sale/quote: retained values are last-known historical evidence.
-writeFileSync(retiredPath, JSON.stringify({ products: [...retiredById.values()] }));
+writeGenerated(retiredPath, JSON.stringify({ products: [...retiredById.values()] }));
 
 if (products.length === 0) {
   console.error("[catalog-index] В фиде нет товаров — сборка индекса остановлена.");
@@ -201,8 +215,8 @@ const payload = {
   rows,
 };
 
-writeFileSync(INDEX_OUT, JSON.stringify(payload));
-writeFileSync(
+writeGenerated(INDEX_OUT, JSON.stringify(payload));
+writeGenerated(
   PREFILL_OUT,
   JSON.stringify({ dictionaries: { kind: kinds.values, system: systems.values }, items: prefill })
 );
@@ -229,7 +243,7 @@ const pricingInputs = {
   ),
 };
 
-writeFileSync(PRICING_OUT, JSON.stringify(pricingInputs));
+writeGenerated(PRICING_OUT, JSON.stringify(pricingInputs));
 const pricingKb = Buffer.byteLength(JSON.stringify(pricingInputs)) / 1024;
 console.log(`[catalog-index] proof-pricing ${pricingKb.toFixed(1)} КБ (${pricingInputs.profiles.length} профилей)`);
 

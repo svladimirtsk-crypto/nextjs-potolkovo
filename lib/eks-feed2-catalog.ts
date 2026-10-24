@@ -16,6 +16,7 @@ export type FeedCatalogSystem =
   | "CLARUS_48"
   | "TRACK_220"
   | "SMART_HOME"
+  | "LED_STRIP"
   | "UNKNOWN";
 
 export type FeedCatalogKind =

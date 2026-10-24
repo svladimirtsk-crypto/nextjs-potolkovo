@@ -1,4 +1,5 @@
 import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
+import type { LedPlanningDraft, LedPsuAssignment } from "@/lib/lighting/led-commercial";
 import type { CalculatorLeadSnapshot } from "@/lib/calculator/snapshot-types";
 import {
   LIGHTING_ONLY_DISCOUNT_PERCENT,
@@ -74,8 +75,11 @@ export function createLightingOnlySnapshot(): CalculatorLeadSnapshot {
  * «только свет» (−LIGHTING_ONLY_DISCOUNT_PERCENT), `withCeilingDiscountedTotalRub` —
  * «свет с потолком». Какую из них показать, решает экран, а не каталог.
  */
-export function buildLightingSnapshotFromItems(items: LightingItem[], catalogVersion?: string): LightingSnapshot | null {
-  if (items.length === 0) return null;
+export function buildLightingSnapshotFromItems(
+  items: LightingItem[], catalogVersion?: string, ledPsuAssignments: readonly LedPsuAssignment[] = [],
+  ledPlanning: readonly LedPlanningDraft[] = []
+): LightingSnapshot | null {
+  if (items.length === 0 && ledPlanning.length === 0) return null;
 
   const totalRub = items.reduce((sum, item) => sum + item.qty * item.priceRub, 0);
   const discountedTotalRub = applyLightingOnlyDiscount(totalRub);
@@ -84,6 +88,8 @@ export function buildLightingSnapshotFromItems(items: LightingItem[], catalogVer
   return {
     mode: "catalog",
     catalogVersion: catalogVersion || undefined,
+    ...(ledPsuAssignments.length ? { ledPsuAssignments: [...ledPsuAssignments] } : {}),
+    ...(ledPlanning.length ? { ledPlanning: [...ledPlanning] } : {}),
     items,
     totalRub,
     discountedTotalRub,
@@ -133,14 +139,15 @@ export function nextCatalogSnapshot(
   }
 
   const base = prev ?? createLightingOnlySnapshot();
+  const hasItems = (lighting.items?.length ?? 0) > 0;
   return {
     ...base,
     leadSource: base.leadSource ?? "track-sale-page-catalog",
-    lighting,
-    lightingDiscountApplied: true,
-    lightingDiscountPercentApplied: LIGHTING_ONLY_DISCOUNT_PERCENT,
-    lightingDiscountMode: "lighting-only",
-    lightingDiscountAmountRub:
-      lighting.discountAmountRub ?? Math.max(0, selectedTotal - lightingOnlySelectedTotal),
+    lighting: hasItems ? lighting : { ...lighting, discountMode: "none", discountPercentApplied: 0 },
+    lightingDiscountApplied: hasItems,
+    lightingDiscountPercentApplied: hasItems ? LIGHTING_ONLY_DISCOUNT_PERCENT : 0,
+    lightingDiscountMode: hasItems ? "lighting-only" : "none",
+    lightingDiscountAmountRub: hasItems
+      ? lighting.discountAmountRub ?? Math.max(0, selectedTotal - lightingOnlySelectedTotal) : 0,
   };
 }

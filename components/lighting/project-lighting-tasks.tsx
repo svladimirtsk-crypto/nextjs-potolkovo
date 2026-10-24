@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { ledCatalogHrefForTask, type ProjectLightingTask } from "@/lib/lighting/project-lighting-tasks";
 import { Button } from "@/components/ui/button";
+import { formatRub, pricing } from "@/content/pricing";
 
 /** Geometric requests, not verified control zones or a purchased kit. */
 export function ProjectLightingTasks({ tasks, onContinue, onOpenCatalog, compact = false }: {
@@ -22,7 +23,7 @@ export function ProjectLightingTasks({ tasks, onContinue, onOpenCatalog, compact
       <strong>{task.geometryMeters === null ? "Метраж уточнить" : `${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 }).format(task.geometryMeters)} м конструкции`}</strong>
     </li>)}</ul>
     <p className="pk-led-tasks-note">Это геометрический метраж, не количество катушек и не готовый комплект. Ленту, число рядов, блоки питания, контроллеры и пульты нужно проверить по моделям и схеме. Товары автоматически не добавляем.</p>
-    <p className="pk-led-tasks-note">Позиции, уже включённые в потолочную ставку, не должны оплачиваться повторно. Итоговый состав уточним до заказа. Эти задачи сохранятся вместе с помещениями в заявке.</p>
+    <p className="pk-led-tasks-note">По подтверждению владельца лента и управление считаются отдельно; монтаж LED уточняется. Исключение: в ставку подсветки карниза уже заложено {formatRub(pricing.corniceLighting.psu)} за БП. При явной привязке выбранного БП к этой задаче эту часть ставки заменяем ценой SKU, без привязки ничего не вычитаем и просим сверку. Задачи сохранятся в заявке.</p>
     {onContinue && <Button size="sm" onClick={onContinue}>Передать задачи на подбор</Button>}
   </section>;
 }

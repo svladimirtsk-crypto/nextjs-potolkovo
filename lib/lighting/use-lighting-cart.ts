@@ -14,7 +14,9 @@ import { useCallback, useMemo } from "react";
 import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
 import type { LightingItem, LightingSnapshot } from "@/lib/calculator-modal-types";
+import type { LedPsuAssignment } from "@/lib/lighting/led-commercial";
 import { toNumber, toText } from "@/lib/feed2-snapshot-normalize";
+import { ledRoleOf } from "@/lib/lighting/led-hardware";
 import {
   applyLightingOnlyDiscount,
   applyLightingWithCeilingDiscount,
@@ -35,6 +37,10 @@ export type LightingCartApi = {
   entries: CartEntry[];
   itemsCount: number;
   totalRub: number;
+  ledPsuAssignments: LedPsuAssignment[];
+  ledPlanning: NonNullable<LightingSnapshot["ledPlanning"]>;
+  /** Explicitly select a PSU for one cornice task; no URL-only or automatic binding. */
+  addPsuForTask: (product: FeedCatalogProduct, taskId: string) => void;
   /** Сумма со скидкой «только свет» (−10 %). */
   discountedTotalRub: number;
   /** Сумма со скидкой при заказе потолка (−25 %). */
@@ -91,6 +97,8 @@ export function useLightingCart(
 
   // Корзина выводится из черновика — отдельного состояния не заводим.
   const cart = useMemo<Cart>(() => cartFromDraft(lightingDraft), [lightingDraft]);
+  const ledPsuAssignments = useMemo(() => lightingDraft?.ledPsuAssignments ?? [], [lightingDraft]);
+  const ledPlanning = useMemo(() => lightingDraft?.ledPlanning ?? [], [lightingDraft]);
 
   const entries = useMemo<CartEntry[]>(() => {
     const result: CartEntry[] = [];
@@ -145,7 +153,19 @@ export function useLightingCart(
 
       if (items.length === 0) return { mode: "none", userCustomizedLighting: false };
 
+      const available = new Map(items.map((item) => [item.sku, item.qty]));
+      const allocated = new Map<string, number>();
+      for (const assignment of previous?.ledPsuAssignments ?? []) {
+        allocated.set(assignment.sku, (allocated.get(assignment.sku) ?? 0) + assignment.qty);
+      }
+      // If a PSU disappears or its quantity drops below the assigned total,
+      // remove all links for that SKU. Never silently rebind or keep a rebate.
+      const ledPsuAssignments = (previous?.ledPsuAssignments ?? []).filter((assignment) =>
+        (available.get(assignment.sku) ?? 0) >= (allocated.get(assignment.sku) ?? Infinity));
+
       return {
+        ...(ledPsuAssignments.length ? { ledPsuAssignments } : {}),
+        ...(previous?.ledPlanning?.length ? { ledPlanning: previous.ledPlanning.map((entry) => ({ ...entry })) } : {}),
         mode: "catalog",
         catalogVersion: version || undefined,
         ...(previous?.catalogReview?.toVersion === version ? { catalogReview: previous.catalogReview } : {}),
@@ -205,6 +225,22 @@ export function useLightingCart(
     },
     [update]
   );
+
+  const addPsuForTask = useCallback((product: FeedCatalogProduct, taskId: string) => {
+    if (ledRoleOf(product) !== "psu" || product.unit !== "pcs" || !taskId.endsWith(":cornice")) return;
+    const sku = toText(product.productId);
+    setLightingDraft((prev) => {
+      const previousLinks = prev?.ledPsuAssignments ?? [];
+      const alreadyLinked = previousLinks.some((link) => link.taskId === taskId && link.sku === sku);
+      const otherLinks = previousLinks.filter((link) => link.taskId !== taskId);
+      const required = otherLinks.filter((link) => link.sku === sku).reduce((sum, link) => sum + link.qty, 0) + 1;
+      const cart = cartFromDraft(prev);
+      const nextCart = { ...cart, [sku]: Math.max(toNumber(cart[sku]), required) };
+      const next = draftFromCart(nextCart, prev);
+      if (alreadyLinked && toNumber(cart[sku]) >= required) return prev;
+      return { ...next, ledPsuAssignments: [...otherLinks, { taskId, sku, qty: 1 }] };
+    });
+  }, [draftFromCart, setLightingDraft]);
 
   const remove = useCallback(
     (productId: string) => {
@@ -272,6 +308,9 @@ export function useLightingCart(
     entries,
     itemsCount: entries.length,
     totalRub,
+    ledPsuAssignments,
+    ledPlanning,
+    addPsuForTask,
     discountedTotalRub: applyLightingOnlyDiscount(totalRub),
     withCeilingTotalRub: applyLightingWithCeilingDiscount(totalRub),
     setQty,

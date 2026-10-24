@@ -18,7 +18,10 @@
 import { useEffect, useMemo, useState } from "react";
 
 import type { FeedCatalogProduct } from "@/lib/eks-feed2-catalog";
+import { formatRub, pricing } from "@/content/pricing";
 import { useCalculatorStore } from "@/lib/calculator/store";
+import { useCalculatorModal } from "@/components/calculator-modal/calculator-modal-context";
+import { buildLedIntakeReview, type LedPlanningDraft } from "@/lib/lighting/led-commercial";
 import { getDiscountedPrice } from "@/lib/feed2-products";
 import { snapshotLightingTasks } from "@/lib/lighting/project-lighting-tasks";
 import { LIGHTING_ONLY_DISCOUNT_PERCENT } from "@/lib/lighting-formulas";
@@ -34,6 +37,7 @@ import {
   type LedGroupId,
 } from "@/lib/lighting/led-catalog-view";
 import { resolvePriceBasis, stripPurchaseQty } from "@/lib/lighting/led-price-basis";
+import { ledRoleOf } from "@/lib/lighting/led-hardware";
 import { moscowCandidateAllowed, moscowStockMessage } from "@/lib/lighting/moscow-stock";
 
 const METER = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 });
@@ -62,16 +66,21 @@ export function LedKitPanel({
   products,
   cartItems,
   onAdd,
+  onAddLinkedPsu,
+  linkedPsuAssignments = [],
   activeGroup,
   onSelectGroup,
 }: {
   products: readonly FeedCatalogProduct[];
   cartItems: Record<string, number>;
   onAdd: (product: FeedCatalogProduct, qty: number) => void;
+  onAddLinkedPsu?: (product: FeedCatalogProduct, taskId: string) => void;
+  linkedPsuAssignments?: readonly { taskId: string; sku: string; qty: number }[];
   activeGroup: LedGroupId;
   onSelectGroup: (group: LedGroupId) => void;
 }) {
   const { snapshot } = useCalculatorStore();
+  const { lightingDraft, setLightingDraft } = useCalculatorModal();
   const stripOptions = useMemo(() => ledStripOptions(products), [products]);
   const counts = useMemo(() => {
     const map: Record<LedGroupId, number> = { strips: 0, power: 0, control: 0 };
@@ -128,14 +137,59 @@ export function LedKitPanel({
     Math.abs((linkedTask?.geometryMeters ?? 0) - metersValue) > 0.02);
   const rowsValue = Math.min(4, Math.max(1, Math.round(Number(rowsText.replace(",", ".")) || 1)));
   const zonesValue = Math.min(6, Math.max(1, Math.round(Number(zonesText.replace(",", ".")) || 1)));
+
   const plan = useMemo(
     () => ledPlanFor({ products, strip: selected?.spec ?? null, meters: metersValue, rows: rowsValue, zones: zonesValue }),
     [products, selected, metersValue, rowsValue, zonesValue]
   );
 
+  /** Only a declared planning context. Changing inputs updates the quote
+   * revision, but does not silently alter selected PSU/controllers in the cart. */
+  const rememberPlanning = (overrides: Partial<LedPlanningDraft> = {}) => {
+    const taskId = linkedTask?.id ?? null;
+    const intent: LedPlanningDraft = {
+      taskId,
+      meters: metersValue > 0 && metersValue <= 300 ? Math.round(metersValue * 100) / 100 : null,
+      rows: rowsValue,
+      zones: zonesValue,
+      stripSku: selected?.product.productId ?? null,
+      source: taskId ? "task" : "manual",
+      confirmed: false,
+      ...overrides,
+    };
+    setLightingDraft((prev) => {
+      const old = prev?.ledPlanning ?? [];
+      const existing = old.find((entry) => entry.taskId === taskId);
+      if (existing && JSON.stringify(existing) === JSON.stringify(intent)) return prev;
+      const others = old.filter((entry) => entry.taskId !== taskId && !(taskId && entry.taskId === null));
+      return {
+        ...(prev?.mode === "catalog" ? prev : { mode: "catalog" as const, items: [], userCustomizedLighting: true }),
+        ledPlanning: [...others, intent],
+      };
+    });
+  };
+  const quoteRevision = useMemo(() => buildLedIntakeReview({
+    rooms: snapshot?.roomBreakdown ?? [],
+    // The catalog previews an equipment-only order. Its cart draft has no
+    // discountMode yet; checkout records lighting-only in the lead snapshot.
+    // Use that same mode in the displayed revision, not a misleading "none".
+    lighting: lightingDraft ? { ...lightingDraft,
+      discountMode: lightingDraft.discountMode ?? (lightingDraft.items?.length ? "lighting-only" : "none") } : null,
+  })?.quoteVersion ?? null, [snapshot?.roomBreakdown, lightingDraft]);
+
   const controllerStatus = plan?.controller
     ? controlStatusOf({ role: "controller", controller: plan.controller.spec })
     : null;
+  const cartNeedsReview = products.some((product) => {
+    const qty = cartItems[product.productId] ?? 0;
+    if (qty <= 0) return false;
+    const role = ledRoleOf(product);
+    if (role === "psu") return product.productId !== plan?.psu?.product.productId;
+    if (role === "controller") return product.productId !== plan?.controller?.product.productId || qty < zonesValue;
+    if (role === "controller-remote-kit") return product.productId !== plan?.controlKit?.product.productId || qty < zonesValue;
+    if (role === "remote") return product.productId !== plan?.remote?.product.productId;
+    return false;
+  });
 
   /**
    * T8-010 · Сколько уходит в комплект и в каких единицах.
@@ -187,9 +241,17 @@ export function LedKitPanel({
             {price(product)} <small>/ {unitLabel(product)}</small>
           </strong>
           {moscowCandidateAllowed(product) ? (
-            <button type="button" onClick={() => onAdd(product, qty)} data-testid={`${testId}-add`}>
-              В комплект · {product.unit === "m" ? `${METER.format(qty)} м` : `${qty} шт`}
-              {(cartItems[product.productId] ?? 0) > 0 ? ` · уже ${METER.format(cartItems[product.productId] ?? 0)}` : ""}
+            <button type="button" onClick={() => {
+              rememberPlanning();
+              if (testId === "led-psu" && linkedTask?.feature === "cornice" && onAddLinkedPsu) {
+                onAddLinkedPsu(product, linkedTask.id);
+              } else onAdd(product, qty);
+            }} data-testid={`${testId}-add`}>
+              {testId === "led-psu" && linkedTask?.feature === "cornice" && onAddLinkedPsu
+                ? linkedPsuAssignments.some((link) => link.taskId === linkedTask.id && link.sku === product.productId)
+                  ? "БП привязан к задаче карниза"
+                  : "Выбрать БП для задачи карниза"
+                : `В комплект · ${product.unit === "m" ? `${METER.format(qty)} м` : `${qty} шт`}${(cartItems[product.productId] ?? 0) > 0 ? ` · уже ${METER.format(cartItems[product.productId] ?? 0)}` : ""}`}
             </button>
           ) : (
             <p className="pk-led-note">Не добавляем автоматически: наличие Москвы нужно уточнить.</p>
@@ -254,8 +316,12 @@ export function LedKitPanel({
               data-testid="led-meters"
               aria-describedby="led-meters-note"
               onChange={(event) => {
-                setMetersText(event.target.value);
+                const text = event.target.value;
+                setMetersText(text);
                 setMetersTouched(true);
+                const parsed = Number(text.replace(",", "."));
+                rememberPlanning({ meters: Number.isFinite(parsed) && parsed > 0 && parsed <= 300
+                  ? Math.round(parsed * 100) / 100 : null });
               }}
             />
           </label>
@@ -283,7 +349,11 @@ export function LedKitPanel({
                 value={rowsText}
                 data-testid="led-rows"
                 aria-describedby="led-rows-note"
-                onChange={(event) => setRowsText(event.target.value)}
+                onChange={(event) => {
+                  const text = event.target.value;
+                  setRowsText(text);
+                  rememberPlanning({ rows: Math.min(4, Math.max(1, Math.round(Number(text.replace(",", ".")) || 1))) });
+                }}
               />
             </label>
             <label className="pk-led-field">
@@ -294,7 +364,11 @@ export function LedKitPanel({
                 value={zonesText}
                 data-testid="led-zones"
                 aria-describedby="led-rows-note"
-                onChange={(event) => setZonesText(event.target.value)}
+                onChange={(event) => {
+                  const text = event.target.value;
+                  setZonesText(text);
+                  rememberPlanning({ zones: Math.min(6, Math.max(1, Math.round(Number(text.replace(",", ".")) || 1))) });
+                }}
               />
             </label>
           </div>
@@ -308,7 +382,10 @@ export function LedKitPanel({
             <select
               value={selected?.product.productId ?? ""}
               data-testid="led-strip"
-              onChange={(event) => setStripId(event.target.value)}
+              onChange={(event) => {
+                setStripId(event.target.value);
+                rememberPlanning({ stripSku: event.target.value || null });
+              }}
             >
               {!selected ? <option value="">Нет ленты для предварительного подбора: уточните остаток Москвы</option> : null}
               {stripOptions.map((option) => (
@@ -369,6 +446,12 @@ export function LedKitPanel({
             </div>
           </dl>
 
+          {quoteRevision ? (
+            <p className="pk-led-note" data-testid="led-quote-revision" data-quote-version={quoteRevision}>
+              Черновик подбора обновлён. Это не счёт: единицу цены, наличие в Москве и электрическую схему подтвердит специалист.
+            </p>
+          ) : null}
+
           <div className="pk-led-picks">
             {selected
               ? pick(
@@ -402,6 +485,13 @@ export function LedKitPanel({
               "led-psu",
               1
             )}
+            {linkedTask?.feature === "cornice" ? (
+              <p className="pk-led-note" data-testid="led-psu-rate-note">
+                В ставке карниза уже учтено {formatRub(pricing.corniceLighting.psu)} за БП. Если явно выбрать БП для этой задачи,
+                эта часть ставки заменяется ценой выбранного SKU в предварительном расчёте.
+                Без привязки вычета нет; монтаж и состав комплекта уточнит специалист.
+              </p>
+            ) : null}
             {pick(
               "Управление",
               plan?.controller?.product,
@@ -461,6 +551,12 @@ export function LedKitPanel({
             </p>
           ) : null}
 
+          {cartNeedsReview ? (
+            <p className="pk-led-note" data-testid="led-cart-recheck">
+              После изменения метража, зон или модели предложенные БП/управление могли измениться.
+              Сохранённые вами позиции не заменяем автоматически: сверьте корзину и комплектацию по каждой зоне.
+            </p>
+          ) : null}
           {plan && plan.warnings.length > 0 ? (
             <ul className="pk-led-warnings" data-testid="led-warnings">
               {plan.warnings.map((warning) => (

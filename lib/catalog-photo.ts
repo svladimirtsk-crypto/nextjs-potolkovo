@@ -96,6 +96,20 @@ export function hasLocalPhoto(productId: unknown): boolean {
   return id.length > 0 && localPhotoIds.has(id);
 }
 
+/** LED-26: versioned photo overrides pin a release. Older manifests keep the
+ * legacy path; an updated image never overwrites that old public URL. */
+type PhotoPaths = Readonly<Record<string, { href256?: string; href512?: string }>>;
+
+export function localPhotoUrlFor(manifest: PhotoPaths, productId: unknown, width: 256 | 512): string | null {
+  const id = text(productId);
+  if (!id || !Object.hasOwn(manifest, id)) return null;
+  return manifest[id][`href${width}`] ?? `/catalog/${id}-${width}.webp`;
+}
+
+export function localPhotoUrl(productId: unknown, width: 256 | 512): string | null {
+  return localPhotoUrlFor(catalogImages as PhotoPaths, productId, width);
+}
+
 /** Состояние фотографии товара: 0 — локальная, 1 — только внешняя, 2 — нет. */
 export const photoRank: PhotoRanker = createPhotoRanker(
   localPhotoIds,

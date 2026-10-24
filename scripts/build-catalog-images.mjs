@@ -12,7 +12,7 @@
  * НЕ подключён к `prebuild` (сборка не должна зависеть от чужого хоста) —
  * запускать вручную: `npm run build:catalog-images`.
  */
-import { mkdir, readFile, writeFile, stat } from "node:fs/promises";
+import { mkdir, readFile, writeFile, stat, lstat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -104,6 +104,12 @@ async function processOne(product) {
 }
 
 async function main() {
+  // Immutable active releases are only rebuilt in refresh-feed's isolated
+  // staging tree. Manual runs must not rewrite the active image manifest.
+  if (await lstat(MAP_PATH).then((info) => info.isSymbolicLink(), (error) => {
+    if (error?.code === "ENOENT") return false;
+    throw error;
+  })) throw new Error("активный каталог неизменяем: обновите фото через refresh-feed");
   await mkdir(OUT_DIR, { recursive: true });
   await mkdir(path.dirname(MAP_PATH), { recursive: true });
 

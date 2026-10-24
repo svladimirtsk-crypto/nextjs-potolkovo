@@ -12,6 +12,7 @@
 import { pricing } from "@/content/pricing";
 
 import { getLightingKitLabel } from "@/lib/calculator-modal-types";
+import { ceilingAfterLedReplacement, evaluateLedPsuReplacement } from "@/lib/lighting/led-commercial";
 import type { CalculatorLeadSnapshot } from "@/lib/calculator/snapshot-types";
 
 function formatCurrency(value: number) {
@@ -190,7 +191,18 @@ export function getCalculatorSummaryLines(
     );
   }
 
-  const baseTotal = toNumber(snapshot.total);
+  const replacement = evaluateLedPsuReplacement({
+    rooms: snapshot.roomBreakdown ?? [],
+    lighting: snapshot.lighting ? { ...snapshot.lighting, discountMode: snapshot.lightingDiscountMode ?? snapshot.lighting.discountMode } : null,
+  });
+  const raw = snapshot.totalRawRub ?? snapshot.roomBreakdown?.reduce((sum, room) => sum + room.totalRub, 0) ?? snapshot.total;
+  const baseTotal = replacement.includedRub
+    ? ceilingAfterLedReplacement(toNumber(raw), replacement.includedRub).applied
+    : toNumber(snapshot.total);
+  if (replacement.includedRub) {
+    lines.push(`Включённый БП карниза заменён выбранным SKU: −${formatCurrency(replacement.includedRub)} ₽ до применения минимального заказа. Цена SKU — в блоке света.`);
+  }
+  if (replacement.issues.length) lines.push("Привязку БП к карнизу нужно проверить — вычет пока не применён.");
   lines.push(`Итого потолок / работы: ${formatCurrency(baseTotal)} ₽`);
 
   // T-008: печатаем досчёт монтажа только если он пришёл явно

@@ -7,7 +7,7 @@ import { Container } from "@/components/ui/container";
 import { Heading } from "@/components/ui/heading";
 import { Section } from "@/components/ui/section";
 
-import { hasLocalPhoto, photoRank } from "@/lib/catalog-photo";
+import { localPhotoUrl, photoRank } from "@/lib/catalog-photo";
 import {
   applyLightingOnlyDiscount,
   applyLightingWithCeilingDiscount,
@@ -134,7 +134,7 @@ type KitCard = {
  */
 function kitImageSrc(product: { productId?: unknown; coverImage?: unknown }): string {
   const id = toText(product.productId);
-  return hasLocalPhoto(id) ? `/catalog/${id}-512.webp` : "/svc-tracksale.jpeg";
+  return localPhotoUrl(id, 512) ?? "/svc-tracksale.jpeg";
 }
 
 function buildKitKitchen(products: FeedCatalogProduct[]): KitCard | null {

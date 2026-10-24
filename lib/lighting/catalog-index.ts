@@ -13,6 +13,7 @@ import type {
 } from "@/lib/eks-feed2-catalog";
 import type { LampSocket } from "@/lib/catalog-ui-config";
 import { moscowStockStateOf, type MoscowStock, type MoscowStockState } from "./moscow-stock";
+import { ledUnitOf } from "./led-hardware";
 
 /** Товар в облегчённом виде: только то, что нужно UI каталога. */
 export type CatalogIndexProduct = {
@@ -118,7 +119,12 @@ function decodeIndex(raw: RawIndexFile): CatalogIndex {
         packQty: typeof row[12] === "number" && Number.isFinite(row[12]) && row[12] > 0 ? row[12] : null,
         system: lookup(dict.system, row[5]) as FeedCatalogSystem,
         kind: lookup(dict.kind, row[6]) as FeedCatalogKind,
-        unit: lookup(dict.unit, row[7]) as FeedCatalogUnit,
+        // The archived feed/index labels the whole LED category "m", including
+        // controllers and PSU. Decode to a DISPLAY/ORDER unit without altering
+        // historical supplier data; old drafts see a unit diff and need review.
+        unit: ledUnitOf({ name: row[2], kind: lookup(dict.kind, row[6]) as FeedCatalogKind,
+          system: lookup(dict.system, row[5]) as FeedCatalogSystem,
+          unit: lookup(dict.unit, row[7]) as FeedCatalogUnit }),
         pieceLengthMeters: row[8],
         socket: socket ? (socket as LampSocket) : null,
         // Общий префикс вырезан при сборке — возвращаем абсолютный URL.

@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { CATALOG_DATA_FILES, publishCatalogRelease, rollbackCatalogRelease, verifyCatalogRelease } from "../scripts/catalog-release.mjs";
 
 const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const current = JSON.parse(readFileSync(resolve(ROOT, "data/eks-feed2-snapshot.json"), "utf8")) as {
@@ -40,7 +41,7 @@ function fingerprint(): string {
 /** Локальный HTTP fixture: никаких запросов к EKS и никаких реальных PR. */
 async function refreshWithFixture(
   products: Record<string, unknown>[], args: string[] = [], fixtureRoot = ROOT,
-  sourceDate = current.updatedAt,
+  sourceDate = current.updatedAt, failpoint = "",
 ): Promise<{ code: number | null; output: string }> {
   const server = createServer((_, response) => {
     response.writeHead(200, { "content-type": "application/json" });
@@ -53,7 +54,8 @@ async function refreshWithFixture(
     return await new Promise((resolveResult, reject) => {
       const child = spawn(process.execPath, [resolve(fixtureRoot, "scripts/refresh-feed.mjs"), ...args], {
         cwd: fixtureRoot,
-        env: { ...process.env, FEED_URL: `http://127.0.0.1:${address.port}/fixture` },
+        env: { ...process.env, FEED_URL: `http://127.0.0.1:${address.port}/fixture`,
+          CATALOG_RELEASE_FAILPOINT: failpoint },
         stdio: ["ignore", "pipe", "pipe"],
       });
       let output = "";
@@ -70,8 +72,8 @@ async function refreshWithFixture(
 function isolatedFeedRoot(): string {
   const root = mkdtempSync(join(tmpdir(), "potolkovo-refresh-test-"));
   const inputs = [
-    "scripts/refresh-feed.mjs", "scripts/validate-catalog.mjs", "scripts/feed-review.mjs",
-    "scripts/build-catalog-index.mjs", "scripts/build-catalog-images.mjs",
+    "scripts/refresh-feed.mjs", "scripts/catalog-release.mjs", "scripts/validate-catalog.mjs", "scripts/feed-review.mjs",
+    "scripts/build-catalog-index.mjs", "scripts/build-catalog-images.mjs", "scripts/check-catalog-images.mjs",
     "data/eks-feed2-snapshot.json", "data/catalog-retired.json",
     "data/catalog-index.json", "data/catalog-prefill.json", "data/proof-pricing-inputs.json",
     "data/catalog-images.json", "data/catalog-images-missing.json",
@@ -122,11 +124,118 @@ describe("LED-26 · feed refresh сохраняет last-known-good до усп�
       const row = index.rows.find((r: unknown[]) => r[0] === current.products[0]?.productId);
       expect(row[index.columns.indexOf("priceRub")]).toBe(candidatePrice);
       expect(readFileSync(resolve(fixture, "feed-diff.md"), "utf8")).toContain(`${originalPrice} → ${candidatePrice} ₽`);
+      const pointer = resolve(fixture, "data/catalog-current");
+      const selected = readlinkSync(pointer);
+      expect(selected).toMatch(/^catalog-releases\/r-[0-9a-f-]+$/);
+      for (const file of ["eks-feed2-snapshot.json", "catalog-index.json", "catalog-images.json"]) {
+        expect(lstatSync(resolve(fixture, "data", file)).isSymbolicLink()).toBe(true);
+        expect(readlinkSync(resolve(fixture, "data", file))).toBe(`catalog-current/data/${file}`);
+      }
+      const release = JSON.parse(readFileSync(resolve(fixture, "data", selected, "manifest.json"), "utf8"));
+      expect(release.catalogVersion).toBe(saved.catalogVersion);
+      expect(release.previousReleaseId).toMatch(/^r-[0-9a-f-]+$/);
+      const checkedBuild = spawnSync(process.execPath, [resolve(fixture, "scripts/build-catalog-index.mjs")],
+        { cwd: fixture, encoding: "utf8" });
+      expect(checkedBuild.status, checkedBuild.stderr).toBe(0);
+      expect(readlinkSync(pointer)).toBe(selected);
       expect(fingerprint()).toBe(liveBefore);
     } finally {
       rmSync(fixture, { recursive: true, force: true });
     }
   }, 40_000);
+
+  it("LED-26 · rejects a failed switch, then atomically rolls back a reviewed release", async () => {
+    const liveBefore = fingerprint();
+    const fixture = isolatedFeedRoot();
+    const source = resolve(fixture, "data/eks-feed2-snapshot.json");
+    const pointer = resolve(fixture, "data/catalog-current");
+    const oldPrice = Number(current.products[0]?.priceRub);
+    const candidate = (delta: number) => current.products.map((product, i) => i === 0
+      ? { ...product, priceRub: oldPrice + delta } : product);
+    const price = () => Number(JSON.parse(readFileSync(source, "utf8")).products[0].priceRub);
+    try {
+      const rejected = await refreshWithFixture(candidate(50), [], fixture, current.updatedAt, "before-switch");
+      expect(rejected.code).not.toBe(0);
+      expect(rejected.output).toContain("сбой до переключения");
+      // First refresh adopts the old flat snapshot before attempting a switch.
+      expect(price()).toBe(oldPrice);
+      const baseline = readlinkSync(pointer);
+      expect(lstatSync(source).isSymbolicLink()).toBe(true);
+
+      const good = await refreshWithFixture(candidate(100), [], fixture);
+      expect(good.code, good.output).toBe(0);
+      const goodPointer = readlinkSync(pointer);
+      expect(goodPointer).not.toBe(baseline);
+      expect(price()).toBe(oldPrice + 100);
+      const goodIndex = readFileSync(resolve(fixture, "data/catalog-index.json"));
+
+      const failedAfter = await refreshWithFixture(candidate(200), [], fixture, current.updatedAt, "after-switch");
+      expect(failedAfter.code).not.toBe(0);
+      expect(failedAfter.output).toContain("сбой после переключения");
+      expect(readlinkSync(pointer)).toBe(goodPointer);
+      expect(price()).toBe(oldPrice + 100);
+      expect(readFileSync(resolve(fixture, "data/catalog-index.json")).equals(goodIndex)).toBe(true);
+
+      const rollback = await refreshWithFixture(current.products, ["--rollback"], fixture);
+      expect(rollback.code, rollback.output).toBe(0);
+      expect(rollback.output).toContain("атомарный откат");
+      expect(readlinkSync(pointer)).toBe(baseline);
+      expect(price()).toBe(oldPrice);
+      expect(fingerprint()).toBe(liveBefore); // The actual working tree was untouched.
+    } finally {
+      rmSync(fixture, { recursive: true, force: true });
+    }
+  }, 60_000);
+
+  it("LED-26 · changed photo gets an immutable release URL, and a corrupt release cannot be reactivated", async () => {
+    const fixture = isolatedFeedRoot();
+    const stage = mkdtempSync(join(tmpdir(), "potolkovo-photo-stage-"));
+    try {
+      const candidate = current.products.map((product, i) => i === 0
+        ? { ...product, priceRub: Number(product.priceRub) + 100 } : product);
+      const first = await refreshWithFixture(candidate, [], fixture);
+      expect(first.code, first.output).toBe(0);
+      const pointer = resolve(fixture, "data/catalog-current");
+      const previous = readlinkSync(pointer).split("/").pop()!;
+      const version = JSON.parse(readFileSync(resolve(fixture, "data/eks-feed2-snapshot.json"), "utf8")).catalogVersion;
+      for (const file of CATALOG_DATA_FILES) {
+        mkdirSync(resolve(stage, "data"), { recursive: true });
+        copyFileSync(resolve(fixture, "data", file), resolve(stage, "data", file));
+      }
+      const liveImages = resolve(fixture, "public/catalog");
+      mkdirSync(resolve(stage, "public/catalog"), { recursive: true });
+      for (const name of readdirSync(liveImages).filter((value) => value.endsWith(".webp"))) {
+        copyFileSync(resolve(liveImages, name), resolve(stage, "public/catalog", name));
+      }
+      const id = String(current.products[0]?.productId);
+      const oldPhoto = readFileSync(resolve(liveImages, `${id}-512.webp`));
+      const distinctName = readdirSync(liveImages).find((name) => name.endsWith("-512.webp") &&
+        !readFileSync(resolve(liveImages, name)).equals(oldPhoto));
+      expect(distinctName).toBeDefined();
+      const replacement = readFileSync(resolve(liveImages, distinctName!));
+      writeFileSync(resolve(stage, "public/catalog", `${id}-512.webp`), replacement);
+      const issued = publishCatalogRelease({ root: fixture, stage, report: "photo-only test",
+        review: { toVersion: version }, expectedVersion: version, expectedPointer: previous });
+      expect(issued.previousReleaseId).toBe(previous);
+      const mapped = JSON.parse(readFileSync(resolve(fixture, "data/catalog-images.json"), "utf8"));
+      const url = mapped[id].href512 as string;
+      expect(url).toBe(`/catalog/releases/${issued.releaseId}/${id}-512.webp`);
+      expect(readFileSync(resolve(fixture, "public", url.slice(1))).equals(replacement)).toBe(true);
+      expect(readFileSync(resolve(liveImages, `${id}-512.webp`)).equals(oldPhoto)).toBe(true);
+      expect(verifyCatalogRelease(fixture, issued.releaseId).catalogVersion).toBe(version);
+
+      const rolledBack = rollbackCatalogRelease({ root: fixture });
+      expect(rolledBack.toReleaseId).toBe(previous);
+      expect(readlinkSync(pointer)).toBe(`catalog-releases/${previous}`);
+      expect(JSON.parse(readFileSync(resolve(fixture, "data/catalog-images.json"), "utf8"))[id].href512).toBeUndefined();
+      writeFileSync(resolve(fixture, "public", url.slice(1)), Buffer.from("corrupt"));
+      expect(() => rollbackCatalogRelease({ root: fixture, targetId: issued.releaseId })).toThrow(/фото/);
+      expect(readlinkSync(pointer)).toBe(`catalog-releases/${previous}`);
+    } finally {
+      rmSync(stage, { recursive: true, force: true });
+      rmSync(fixture, { recursive: true, force: true });
+    }
+  }, 50_000);
 
   it("LED-19/20 · готовит полный версионированный diff и сохраняет только московский склад", async () => {
     const liveBefore = fingerprint();
@@ -232,6 +341,16 @@ describe("LED-26 · feed refresh сохраняет last-known-good до усп�
     const result = await refreshWithFixture(missing);
     expect(result.code).not.toBe(0);
     expect(result.output).toContain("SKU 0У-00006089 отсутствует");
+    expect(fingerprint()).toBe(before);
+  }, 20_000);
+
+  it("LED-26 · vanished supplier image cannot silently downgrade the published catalog", async () => {
+    const before = fingerprint();
+    const candidate = current.products.map((product, i) => i === 0
+      ? { ...product, coverImage: "" } : product);
+    const result = await refreshWithFixture(candidate);
+    expect(result.code).not.toBe(0);
+    expect(result.output).toContain("неполный набор обложек в staging");
     expect(fingerprint()).toBe(before);
   }, 20_000);
 

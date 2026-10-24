@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 
-import { PHOTO_PENDING_LABEL, hasLocalPhoto, isPhotoPending } from "@/lib/catalog-photo";
+import { PHOTO_PENDING_LABEL, hasLocalPhoto, isPhotoPending, localPhotoUrl } from "@/lib/catalog-photo";
 
 /**
  * N-020 · Честная заглушка: вместо безликого «Фото товара» показываем иконку
@@ -142,7 +142,7 @@ export function ProductImage({
   const imageSrc = failed || pending
     ? fallback
     : local
-      ? `/catalog/${local}-512.webp`
+      ? localPhotoUrl(local, 512) ?? `/catalog/${local}-512.webp`
       : safeSrc || fallback;
 
   return (
@@ -156,7 +156,9 @@ export function ProductImage({
       <img
         ref={checkImage}
         src={imageSrc}
-        srcSet={local && !failed && !pending ? `/catalog/${local}-256.webp 256w, /catalog/${local}-512.webp 512w` : undefined}
+        srcSet={local && !failed && !pending
+          ? `${localPhotoUrl(local, 256) ?? `/catalog/${local}-256.webp`} 256w, ${localPhotoUrl(local, 512) ?? `/catalog/${local}-512.webp`} 512w`
+          : undefined}
         sizes={local ? "(max-width: 768px) 45vw, 256px" : undefined}
         alt={safeAlt}
         width={512}

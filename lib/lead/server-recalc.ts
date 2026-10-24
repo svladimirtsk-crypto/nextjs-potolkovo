@@ -49,6 +49,7 @@ import {
 import { isRetiredCatalogProduct } from "@/lib/catalog-retirement";
 import { getCatalogLookupProducts, getCatalogProducts } from "@/lib/lighting/catalog-products";
 import { moscowStockStateOf } from "@/lib/lighting/moscow-stock";
+import { buildLedIntakeReview, ceilingAfterLedReplacement, evaluateLedPsuReplacement } from "@/lib/lighting/led-commercial";
 
 import {
   METER_UNIT,
@@ -77,6 +78,9 @@ export type PriceIssueCode =
   | "catalog-version-drift"
   /** Цена позиции в заявке не совпала с каталогом (в расчёт пошла каталожная). */
   | "client-price-deviation"
+  /** LED quote/assignment is an intake request, not a confirmed SKU or bill. */
+  | "led-quote-drift"
+  | "led-assignment-review"
   /** Клиент заявил скидку «с потолком», но потолка в заявке нет. */
   | "discount-mode-downgraded"
   /** Серверная сумма разошлась с клиентской больше порога. */
@@ -448,6 +452,26 @@ export function recalculateLeadPriceWithCatalog(
   };
 
   const totals = selectTotals(rooms, lightingSelection);
+  const authoritativeLighting = snapshot.lighting
+    ? lightingBlockFrom(snapshot.lighting, merged, regularTotal, effectiveTotal, effectiveMode, discountPercentApplied)
+    : null;
+  const replacement = evaluateLedPsuReplacement({ rooms: roomSnapshots, lighting: authoritativeLighting });
+  const ledReview = buildLedIntakeReview({
+    rooms: roomSnapshots,
+    lighting: authoritativeLighting,
+    catalogVersion: serverCatalogVersion,
+  });
+  const adjustedCeiling = ceilingAfterLedReplacement(totals.ceilingRaw, replacement.includedRub);
+  if (replacement.issues.length) {
+    issues.push(...replacement.issues.map((message) => ({ code: "led-assignment-review" as const, message })));
+  }
+  if (ledReview?.unlinkedCornicePsuQty) issues.push({
+    code: "led-assignment-review",
+    message: `БП в корзине не привязаны к задаче карниза (${ledReview.unlinkedCornicePsuQty} шт.): потолочная ставка уже включает БП, нужен ручной пересчёт до коммерческой сметы.`,
+  });
+  if (snapshot.ledReview?.quoteVersion && snapshot.ledReview.quoteVersion !== ledReview?.quoteVersion) {
+    issues.push({ code: "led-quote-drift", message: "LED-контекст/прайс изменился после расчёта клиента: новую предварительную смету сверить с ним." });
+  }
 
   /**
    * N-050 в серверном исполнении: клиент, отказавшийся от потолка, его не
@@ -456,12 +480,19 @@ export function recalculateLeadPriceWithCatalog(
    * заказ по потолку, которого человек не заказывал.
    */
   const ceilingPart =
-    effectiveMode === "lighting-only" ? 0 : totals.ceilingApplied + totals.extraInstallRub;
+    effectiveMode === "lighting-only" ? 0 : adjustedCeiling.applied + totals.extraInstallRub;
   const serverGrand = ceilingPart + totals.lightingEffective;
 
   const storedTotals: LeadTotals = {
-    ceilingRaw: totals.ceilingRaw,
-    minimumApplied: totals.minimumApplied,
+    ceilingRaw: adjustedCeiling.raw,
+    minimumApplied: adjustedCeiling.minimumApplied,
+    ...(replacement.includedRub ? { ledPsuReplacementRub: replacement.includedRub } : {}),
+    ...(ledReview ? {
+      ledIncludedRub: replacement.includedRub,
+      ledEquipmentExtraRub: ledReview.bom.reduce((sum, item) => sum + item.qty * item.priceRub, 0),
+      ledCeilingDeltaRub: effectiveMode === "lighting-only"
+        ? 0 : Math.min(0, adjustedCeiling.applied - totals.ceilingApplied),
+    } : {}),
     installExtra: totals.extraInstallRub,
     lightingRegular: totals.lightingRegular,
     lightingEffective: totals.lightingEffective,
@@ -498,16 +529,8 @@ export function recalculateLeadPriceWithCatalog(
   const storedSnapshot: StoredLeadSnapshot = {
     ...snapshot,
     rooms: roomSnapshots,
-    lighting: snapshot.lighting
-      ? lightingBlockFrom(
-          snapshot.lighting,
-          merged,
-          regularTotal,
-          effectiveTotal,
-          effectiveMode,
-          discountPercentApplied
-        )
-      : null,
+    lighting: authoritativeLighting,
+    ...(ledReview ? { ledReview } : { ledReview: undefined }),
     totals: storedTotals,
     priceCheck,
   };

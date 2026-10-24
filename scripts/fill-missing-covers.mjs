@@ -23,7 +23,7 @@
  *   node scripts/fill-missing-covers.mjs --dry-run
  *   FEED_URL=... node scripts/fill-missing-covers.mjs
  */
-import { readFileSync, writeFileSync } from "node:fs";
+import { lstatSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const ROOT = resolve(import.meta.dirname, "..");
@@ -31,6 +31,9 @@ const SNAPSHOT = resolve(ROOT, "data/eks-feed2-snapshot.json");
 
 const DRY_RUN = process.argv.includes("--dry-run");
 const FEED_URL = process.env.FEED_URL ?? "https://eksmarket.ru/api/personal/feed2/";
+if (!DRY_RUN && lstatSync(SNAPSHOT).isSymbolicLink()) {
+  throw new Error("активная версия каталога неизменяема: обновите обложки в новом выпуске refresh-feed");
+}
 
 function fail(message) {
   console.error(`[covers] ${message}`);

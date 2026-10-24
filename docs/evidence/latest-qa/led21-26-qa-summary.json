@@ -1,0 +1,117 @@
+{
+  "dateLocal": "2026-10-23",
+  "timezone": "Europe/Moscow",
+  "branch": "feat/company-rebrand-v7-preview",
+  "baseHead": "69af1537d5bac9a371ed60141a262b6ce599bff4",
+  "scope": "LED-21–24: linked cornice PSU exception, explicit included/extra/delta totals, planning/BOM/questions/quoteVersion in needs_review lead and retry. LED-26: isolated atomic version-pointer publish and rollback, versioned immutable photo URLs.",
+  "previewOnly": true,
+  "pushed": false,
+  "productionChanged": false,
+  "realSupplierFeedImported": false,
+  "realCatalogPointerSwitched": false,
+  "engineeringOrCommercialAccepted": 0,
+  "testDatabase": "not available in this session; DB project skipped 55 tests, no production connection",
+  "qa": {
+    "unit": {
+      "passed": 1506,
+      "skipped": 55,
+      "failed": 0,
+      "filesPassed": 119,
+      "filesSkipped": 4,
+      "logWorkspace": "/home/user/qa-led21-26-unit-post-email-full.log"
+    },
+    "fullBrowser": {
+      "passed": 380,
+      "skipped": 18,
+      "failed": 0,
+      "flaky": 0,
+      "projects": [
+        "chromium-desktop",
+        "chromium-mobile"
+      ],
+      "mode": "NEXT_PUBLIC_QUIZ_STEP_IMAGES=off; CI retries enabled, workers=1; no retries needed",
+      "verifiedBeforeFinalMonetaryFieldsAndEmailDetail": true,
+      "logWorkspace": "/home/user/qa-led21-26-e2e-final-serial.log"
+    },
+    "ledBrowserAfterExplicitTotals": {
+      "passed": 32,
+      "failed": 0,
+      "flaky": 0,
+      "files": [
+        "e2e/led-review-draft.spec.ts",
+        "e2e/led-kit.spec.ts",
+        "e2e/led-acceptance.spec.ts"
+      ],
+      "logWorkspace": "/home/user/qa-led21-26-e2e-final-targeted.log"
+    },
+    "flakyGate": {
+      "passed": true,
+      "summary": "32 passed, 0 failed, 0 flaky (final targeted report); full serial report had 380 passed, 0 flaky"
+    },
+    "typescript": {
+      "passed": true,
+      "source": "production build including TS, plus standalone tsc after totals"
+    },
+    "lint": {
+      "errors": 0,
+      "existingWarnings": 6,
+      "logWorkspace": "/home/user/qa-led21-26-lint-post-email.log"
+    },
+    "flow": {
+      "passed": 8,
+      "failed": 0,
+      "logWorkspace": "/home/user/qa-led21-26-flow-post-email.log"
+    },
+    "build": {
+      "passed": true,
+      "mode": "NEXT_PUBLIC_QUIZ_STEP_IMAGES=off",
+      "logWorkspace": "/home/user/qa-led21-26-build-post-email.log"
+    },
+    "bundle": {
+      "passed": true,
+      "homeGzipKb": 238.3,
+      "maxGzipKb": 300
+    },
+    "catalogReleaseFixture": {
+      "passed": 12,
+      "source": "tests/refresh-feed-guard.test.ts (11 original/rollback/corrupt-image scenarios plus missing-image rejection; included in unit count)"
+    },
+    "firstVersionedReleaseIntegration": {
+      "dateLocal": "2026-10-24",
+      "fixture": "localhost JSON; original 547 offers; first price 132 -> 232 RUB; no supplier import",
+      "source": "isolated copy of working preview code with in-root npm ci node_modules, no symlink",
+      "flatCheckNoWrites": true,
+      "activatedRelease": "r-0137e8545ca2adcc-9a47560f-4a08-4978-b710-3d29d4525282",
+      "legacyBaseline": "r-a90e9e13cd82443f-43fd10df-2e03-4f14-b033-ccb529eb3970",
+      "immutableReleaseAndImageHashVerified": true,
+      "typescriptPassed": true,
+      "unitPassedOnActivatedRelease": 1506,
+      "dbSkipped": 55,
+      "productionBuildOnActivatedReleasePassed": true,
+      "bundleHomeGzipKb": 238.3,
+      "rollbackWithoutFeedUrlPassed": true,
+      "legacyExistingJsonFilesByteIdenticalAfterRollback": 7,
+      "productionBuildAfterRollbackPassed": true,
+      "workingRepositoryCatalogUntouched": true,
+      "logWorkspace": "/home/user/qa-led26-first-release-integration.log",
+      "report": "docs/evidence/catalog-led/first-release-integration-2026-10-24.md"
+    }
+  },
+  "matrix": {
+    "scenariosAssessed": 26,
+    "locallyVerified": 4,
+    "partiallyVerified": 19,
+    "gaps": 1,
+    "externallyBlocked": 2,
+    "engineeringOrCommercialAccepted": 0,
+    "source": "docs/evidence/catalog-led/acceptance-2026-10-18.md"
+  },
+  "limitations": [
+    "Historical catalog has no explicit Moscow stock observations; unknown is not zero, available=true is not inventory.",
+    "Supplier price unit, reel/pack size, MOQ, reserve and electrical passports are unverified; installation scope remains undecided.",
+    "Real refresh/initial flat-to-versioned migration has not run on the working catalog; isolated fixture publisher tests are not live migration acceptance.",
+    "A multi-file live reader must pin a single catalog release id; open browser tabs do not migrate across deploys.",
+    "Standalone catalog-only cart reload remains deliberately out of scope; no preview push without safe credentials.",
+    "Isolated first migration now builds and rolls back with in-root node_modules; it used a localhost fixture only. Real EKS import, GitHub PR workflow/CI and production deployment were not run."
+  ]
+}

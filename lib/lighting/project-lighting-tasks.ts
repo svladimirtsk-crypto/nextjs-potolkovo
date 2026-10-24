@@ -1,4 +1,5 @@
 import type { CalculatorLeadSnapshot, CalculatorRoomBreakdown } from "@/lib/calculator/snapshot-types";
+import { pricing } from "@/content/pricing";
 
 export type ProjectLightingTask = {
   id: string;
@@ -57,5 +58,8 @@ export function lightingTaskLines(rooms: readonly TaskRoom[]): string[] {
   if (!tasks.length) return [];
   return ["LED-ЗАДАЧИ ПО ПОМЕЩЕНИЯМ — НУЖЕН ПОДБОР", ...tasks.map(task =>
     `${task.roomLabel} · ${task.title} · ${task.geometryMeters === null ? "метраж уточнить" : `${task.geometryMeters} м конструкции`}`),
-    "Лента, число рядов, блоки питания и управление не подобраны и не проверены. Геометрический метраж не равен закупке ленты. Не дублировать включённые в потолочную ставку позиции."];
+    "Лента, число рядов, блоки питания и управление не подобраны и не проверены. Геометрический метраж не равен закупке ленты.",
+    ...(tasks.some((task) => task.feature === "cornice")
+      ? [`По решению владельца LED-оборудование отдельно, кроме ${pricing.corniceLighting.psu} ₽ за сам БП в ставке карниза; при явной привязке выбранной модели заменить эту часть ставки, не начислять дважды. Монтаж уточнить.`]
+      : ["LED-оборудование считается отдельно, монтаж уточнить."])];
 }

@@ -29,8 +29,10 @@ test("Owner corrections: true panels exclude controls, accessories have their ow
 
 test("Owner corrections: track controls remain equipment, do not create fixture installation or lamp demand", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(URL);
-  await page.getByRole("button", { name: "Управление", exact: true }).click();
+  await page.goto(URL, { waitUntil: "networkidle" });
+  const controls = page.getByRole("button", { name: "Управление", exact: true });
+  await controls.click();
+  await expect(controls).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".pk-product")).toHaveCount(5);
   await page.getByLabel("Поиск по каталогу").fill("0У-00002099");
   const control = page.locator(".pk-product"); await expect(control).toHaveCount(1);

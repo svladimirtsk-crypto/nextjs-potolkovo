@@ -40,14 +40,15 @@ export function mergeLightingIntoSnapshot(
   input: LightingMergeInput
 ): CalculatorLeadSnapshot | null {
   const hasLighting = hasLightingItems(input.lightingDraft);
+  const hasPlanning = Boolean(input.lightingDraft?.mode === "catalog" && input.lightingDraft.ledPlanning?.length);
 
-  // Ни потолка, ни света — создавать снапшот не из чего.
-  if (!prev && !hasLighting) return prev;
+  // Черновик плана без товара — заявка на подбор, а не пустая корзина/заказ.
+  if (!prev && !hasLighting && !hasPlanning) return prev;
 
   const base = prev ?? input.createEmpty();
 
   const lighting =
-    hasLighting && input.lightingDraft
+    (hasLighting || hasPlanning) && input.lightingDraft
       ? {
           ...input.lightingDraft,
           totalRub: input.regularTotal,

@@ -115,11 +115,11 @@ export function CatalogSectionClient({ data }: Props) {
    * здесь остаётся только сам эффект-мост к стору (п. 0.7 ТЗ v2).
    */
   useEffect(() => {
-    const lighting = buildLightingSnapshotFromItems(selectedLightingItems, data.catalogVersion);
+    const lighting = buildLightingSnapshotFromItems(selectedLightingItems, data.catalogVersion, lightingCart.ledPsuAssignments, lightingCart.ledPlanning);
     setSnapshot((prev) =>
       nextCatalogSnapshot(prev, { lighting, selectedTotal, lightingOnlySelectedTotal })
     );
-  }, [lightingOnlySelectedTotal, selectedLightingItems, selectedTotal, setSnapshot, data.catalogVersion]);
+  }, [lightingOnlySelectedTotal, selectedLightingItems, selectedTotal, setSnapshot, data.catalogVersion, lightingCart.ledPsuAssignments, lightingCart.ledPlanning]);
 
   const openInCalculator = () => {
     const items = cartToLightingItems(selectedEntries);
@@ -135,7 +135,7 @@ export function CatalogSectionClient({ data }: Props) {
       return;
     }
 
-    const initialLighting = buildCatalogLightingSnapshot(items, data.catalogVersion);
+    const initialLighting = buildCatalogLightingSnapshot(items, data.catalogVersion, lightingCart.ledPsuAssignments, lightingCart.ledPlanning);
 
     trackLightingCartCheckout({
       mode: "open-calculator",
@@ -175,7 +175,7 @@ export function CatalogSectionClient({ data }: Props) {
     const items = cartToLightingItems(selectedEntries);
     if (items.length === 0) return;
 
-    const initialLighting = buildCatalogLightingSnapshot(items, data.catalogVersion);
+    const initialLighting = buildCatalogLightingSnapshot(items, data.catalogVersion, lightingCart.ledPsuAssignments, lightingCart.ledPlanning);
 
     trackLightingCartCheckout({
       mode: "lighting-only",
@@ -203,7 +203,7 @@ export function CatalogSectionClient({ data }: Props) {
       return;
     }
 
-    const initialLighting = buildCatalogLightingSnapshot(items, data.catalogVersion);
+    const initialLighting = buildCatalogLightingSnapshot(items, data.catalogVersion, lightingCart.ledPsuAssignments, lightingCart.ledPlanning);
 
     trackLightingCartCheckout({
       mode: "with-ceiling",
@@ -313,6 +313,8 @@ export function CatalogSectionClient({ data }: Props) {
                 products={products}
                 cartItems={cartItems}
                 onAdd={(product, qty) => void incrementProduct(product, qty)}
+                onAddLinkedPsu={lightingCart.addPsuForTask}
+                linkedPsuAssignments={lightingCart.ledPsuAssignments}
                 activeGroup={ledGroup}
                 onSelectGroup={(group) => {
                   setLedGroup(group);

@@ -335,8 +335,8 @@ export function CalculatorModalProvider({ children }: { children: ReactNode }) {
   );
 
   const ceilingEffectiveTotal = useMemo(
-    () => calcCeilingEffectiveTotal({ snapshot, showCeilingInUi, step0AreaConfirmed }),
-    [showCeilingInUi, snapshot, step0AreaConfirmed]
+    () => calcCeilingEffectiveTotal({ snapshot, showCeilingInUi, step0AreaConfirmed, lighting: lightingDraft, discountMode: lightingDiscountMode }),
+    [showCeilingInUi, snapshot, step0AreaConfirmed, lightingDraft, lightingDiscountMode]
   );
 
   const grandTotal = ceilingEffectiveTotal + lightingEffectiveTotal;

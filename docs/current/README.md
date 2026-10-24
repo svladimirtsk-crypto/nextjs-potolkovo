@@ -18,7 +18,7 @@
 9. [UI-STATES.md](UI-STATES.md) — состояния форм/каталога, восстановление, матрица проверки и открытая ручная приёмка.
 
 10. [CATALOG-LED-AUDIT.md](CATALOG-LED-AUDIT.md) — актуальный аудит каталога: 15 находок, browser/data evidence и внешние источники.
-11. [CATALOG-LED-TZ.md](CATALOG-LED-TZ.md) — детализация T8 для лент, питания/управления и 26 обязательных сценариев. Часть кода в preview; [результаты по всем 26](../evidence/catalog-led/acceptance-2026-10-18.md) — 4 локально, 17 частично, 3 пробела, 2 внешних блокера после локальных LED‑19/20, инженерного допуска нет; [отчёт и QA](../evidence/catalog-led/followup-2026-10-22.md).
+11. [CATALOG-LED-TZ.md](CATALOG-LED-TZ.md) — детализация T8 для лент, питания/управления и 26 обязательных сценариев. Часть кода в preview; [результаты по всем 26](../evidence/catalog-led/acceptance-2026-10-18.md) — 4 локально, 19 частично, 1 пробел, 2 внешних блокера после локальных LED‑21–24/26, инженерного допуска нет; [отчёт и QA](../evidence/catalog-led/followup-2026-10-23-led21-26.md), [сквозной тест первого выпуска и отката 24.10](../evidence/catalog-led/first-release-integration-2026-10-24.md).
 
 12. [CALCULATOR-AUDIT.md](CALCULATOR-AUDIT.md) — аудит трёх шагов, сценариев/комнат и ролей светильников; что исправлено, что остаётся.
 13. [CALCULATOR-UX-TZ.md](CALCULATOR-UX-TZ.md) — целевой flow, комнаты/зоны/LED, итог и 30 будущих сценариев приёмки.

@@ -1,4 +1,5 @@
 import type { ServiceCalculatorPreset } from "@/content/services";
+import type { LedPlanningDraft, LedPsuAssignment } from "@/lib/lighting/led-commercial";
 
 /**
  * T-060: режим "kit" удалён. Готовые комплекты приходят как "catalog" с
@@ -52,6 +53,11 @@ export type LightingSnapshot = {
     fromVersion: string | null; toVersion: string; acceptedAt: string;
     fields: Array<"missing" | "identity" | "priceRub" | "vendorCode" | "unit" | "packQty" | "moscowStock">;
   };
+
+  /** Explicit link to a cornice room task; never inferred from a shared cart or URL. */
+  ledPsuAssignments?: LedPsuAssignment[];
+  /** Declared metre/row/zone choices; invalidated on edit, never electrical proof. */
+  ledPlanning?: LedPlanningDraft[];
 
   kitBaseName?: string;
   scaledSpotsQty?: number;

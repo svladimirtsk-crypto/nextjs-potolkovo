@@ -12,6 +12,7 @@ import {
   PHOTO_RANK,
   createPhotoRanker,
   hasLocalPhoto,
+  localPhotoUrlFor,
   isPhotoPending,
   photoCoverage,
   photoRank,
@@ -48,6 +49,14 @@ const withPhotoId = Object.keys(catalogImages)[0];
 const realProducts = (snapshot as unknown as { products: FeedCatalogProduct[] }).products;
 
 describe("PT-017 · ранг фотографии", () => {
+  it("LED-26: image URL follows the selected release, old photos keep legacy URLs", () => {
+    const images = { a: { href512: "/catalog/releases/r-abc/a-512.webp" }, b: {} };
+    expect(localPhotoUrlFor(images, "a", 512)).toBe(images.a.href512);
+    expect(localPhotoUrlFor(images, "a", 256)).toBe("/catalog/a-256.webp");
+    expect(localPhotoUrlFor(images, "b", 512)).toBe("/catalog/b-512.webp");
+    expect(localPhotoUrlFor(images, "missing", 512)).toBeNull();
+  });
+
   it("локальное превью — ранг 0", () => {
     expect(hasLocalPhoto(withPhotoId)).toBe(true);
     expect(photoRank(product({ productId: withPhotoId }))).toBe(PHOTO_RANK.local);

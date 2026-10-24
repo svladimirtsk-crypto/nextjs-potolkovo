@@ -120,6 +120,19 @@ describe("mergeLightingIntoSnapshot", () => {
     expect(out?.lightingDiscountApplied).toBe(false);
   });
 
+  it("incomplete LED plan without cart items reaches the lead as needs_review context", () => {
+    const planning = [{ taskId: "r1:cornice", meters: 6, rows: 2, zones: 3,
+      stripSku: null, source: "task" as const, confirmed: false as const }];
+    const out = mergeLightingIntoSnapshot(emptySnapshot(), lightingInput({
+      lightingDraft: { mode: "catalog", items: [], ledPlanning: planning, userCustomizedLighting: true },
+      regularTotal: 0, effectiveTotal: 0, standaloneTotal: 0, withCeilingTotal: 0,
+      discountMode: "none", discountPercentApplied: 0, discountAmount: 0,
+    }));
+    expect(out?.lighting?.ledPlanning).toEqual(planning);
+    expect(out?.lighting?.items).toEqual([]);
+    expect(out?.lightingDiscountApplied).toBe(false);
+  });
+
   it("очистка корзины убирает блок света, не трогая потолок", () => {
     const withCeiling = { ...emptySnapshot(), area: 18, total: 25500 };
     const out = mergeLightingIntoSnapshot(withCeiling, lightingInput({ lightingDraft: draft(0) }));

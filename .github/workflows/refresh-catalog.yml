@@ -31,10 +31,12 @@ jobs:
           FEED_URL: ${{ secrets.FEED_URL }}
         run: node scripts/refresh-feed.mjs
 
-      - name: Проверки на новых данных
+      - name: Проверки на новых данных и сборка PR-кандидата
         run: |
           npx tsc --noEmit
           npm run test
+          NEXT_PUBLIC_QUIZ_STEP_IMAGES=off npm run build
+          npm run check:bundle
 
       - name: Собрать тело PR
         id: body

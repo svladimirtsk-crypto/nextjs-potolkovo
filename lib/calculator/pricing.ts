@@ -12,6 +12,7 @@ import type {
   LightingSnapshot,
 } from "@/lib/calculator-modal-types";
 import type { CalculatorLeadSnapshot } from "@/lib/calculator/snapshot-types";
+import { ceilingAfterLedReplacement, evaluateLedPsuReplacement } from "@/lib/lighting/led-commercial";
 
 /**
  * N-050 · Денежная часть калькулятора.
@@ -122,6 +123,26 @@ export function shouldShowCeiling(input: {
   return input.currentStep === 0 || input.step0SessionInteracted;
 }
 
+/** LED-21 · Одна потолочная сумма во всех клиентских точках показа. */
+function ceilingWithLinkedPsu(
+  snapshot: CalculatorLeadSnapshot | null | undefined,
+  lighting?: LightingSnapshot | null,
+  discountMode?: LightingDiscountMode,
+): number {
+  if (!snapshot) return 0;
+  const selection = lighting ?? snapshot.lighting;
+  const effectiveMode = discountMode ?? snapshot.lightingDiscountMode ?? selection?.discountMode;
+  const replacement = evaluateLedPsuReplacement({
+    rooms: snapshot.roomBreakdown ?? [],
+    lighting: selection ? { ...selection, discountMode: effectiveMode } : null,
+  });
+  if (!replacement.includedRub) return toNumber(snapshot.total);
+  // `total` can already contain the minimum order. Subtract from RAW rooms,
+  // then reapply the minimum — never blindly deduct from a 18 000 ₽ floor.
+  const raw = snapshot.totalRawRub ?? snapshot.roomBreakdown?.reduce((sum, room) => sum + room.totalRub, 0) ?? snapshot.total;
+  return ceilingAfterLedReplacement(toNumber(raw), replacement.includedRub).applied;
+}
+
 /**
  * Потолок с досчётом монтажа. Досчёт добавляем только после подтверждения
  * Шага 0: до этого площадь — предположение, и завышать смету нельзя.
@@ -130,10 +151,12 @@ export function calcCeilingEffectiveTotal(input: {
   snapshot: CalculatorLeadSnapshot | null | undefined;
   showCeilingInUi: boolean;
   step0AreaConfirmed: boolean;
+  lighting?: LightingSnapshot | null;
+  discountMode?: LightingDiscountMode;
 }): number {
   if (!input.showCeilingInUi) return 0;
 
-  const total = toNumber(input.snapshot?.total);
+  const total = ceilingWithLinkedPsu(input.snapshot, input.lighting, input.discountMode);
   if (!input.step0AreaConfirmed) return total;
 
   // T-008: досчёт монтажа берём из явного поля, а не из устаревшего grandTotal.
@@ -173,5 +196,5 @@ export function calcLeadCeilingTotal(input: {
   const discountMode = snapshot.lightingDiscountMode ?? snapshot.lighting?.discountMode;
   if (discountMode === "lighting-only") return 0;
 
-  return toNumber(snapshot.total) + Math.max(0, toNumber(snapshot.extraInstallRub));
+  return ceilingWithLinkedPsu(snapshot) + Math.max(0, toNumber(snapshot.extraInstallRub));
 }

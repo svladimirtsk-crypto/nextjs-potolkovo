@@ -96,7 +96,7 @@ export function ledUnitOf(product: LedIdentity): "m" | "pcs" {
   return product.unit === "m" ? "m" : "pcs";
 }
 
-export type LedIdentity = Pick<FeedCatalogProduct, "name"> & Partial<Pick<FeedCatalogProduct, "kind" | "categoryPath" | "unit">>;
+export type LedIdentity = Pick<FeedCatalogProduct, "name"> & Partial<Pick<FeedCatalogProduct, "kind" | "system" | "categoryPath" | "unit">>;
 
 const num = (value: string | undefined): number | null => {
   if (!value) return null;
@@ -264,7 +264,10 @@ export function ledRoleOf(product: LedIdentity): LedRole | null {
   // LED_STRIP — включая блоки питания, контроллеры и пульты. Но у `kind=PSU` и
   // `kind=CONTROL` есть позиции и в других разделах (закладные, треки): считать
   // их комплектующими подсветки нельзя, иначе в «Питание» попадут чужие блоки.
-  const inLedGroup = product.kind === "LED_STRIP" || /светодиодная лента/i.test(product.categoryPath ?? "");
+  // Compact index classifies controllers as kind=CONTROL and omits categoryPath;
+  // system=LED_STRIP preserves the section boundary for PSU/controllers there.
+  const inLedGroup = product.kind === "LED_STRIP" || product.system === "LED_STRIP" ||
+    /светодиодная лента/i.test(product.categoryPath ?? "");
   if (!inLedGroup) return null;
   if (KIT_NAME.test(name)) return "controller-remote-kit";
   if (CONTROLLER_NAME.test(name) && /пульт/i.test(name)) return "controller-remote-kit";

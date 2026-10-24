@@ -10,6 +10,7 @@ import {
   resetCatalogIndexForTests,
 } from "@/lib/lighting/catalog-index";
 import snapshotData from "@/data/eks-feed2-snapshot.json";
+import { ledRoleOf } from "@/lib/lighting/led-hardware";
 
 const ROOT = resolve(__dirname, "..");
 
@@ -50,6 +51,17 @@ describe("T-029 - dekodirovanie indeksa", () => {
     expect(track).toBeDefined();
     expect(track?.system).toMatch(/COLIBRI|CLARUS|TRACK/);
     expect(track?.unit).toBeTruthy();
+  });
+
+  it("LED hardware from archived feed is ordered by pieces, not historical metres", async () => {
+    const index = await getCatalogIndex();
+    const psu = index.products.find((p) => p.vendorCode === "0У-00006525");
+    expect(psu?.unit).toBe("pcs");
+    const controller = index.products.find((p) => p.vendorCode === "0У-00006564");
+    if (controller) {
+      expect(controller.unit).toBe("pcs");
+      expect(ledRoleOf(controller)).toBe("controller");
+    }
   });
 
   it("ceny i nalichie sohraneny bez izmeneniy", async () => {

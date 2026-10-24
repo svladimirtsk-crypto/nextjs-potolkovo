@@ -9,6 +9,7 @@
  */
 import { pricing } from "@/content/pricing";
 import type { LightingSnapshot } from "@/lib/calculator-modal-types";
+import type { LedPsuAssignment } from "@/lib/lighting/led-commercial";
 import { calcLeadCeilingTotal } from "@/lib/calculator/pricing";
 import {
   buildRoomBreakdown,
@@ -112,6 +113,7 @@ export function buildClientPayload(input: {
   rooms: V2RoomConfig[];
   cart: CartLine[];
   discountMode: LightingSelection["discountMode"];
+  ledPsuAssignments?: LedPsuAssignment[];
   phone?: string;
 }): LeadPayload {
   const { rooms, cart, discountMode } = input;
@@ -140,6 +142,8 @@ export function buildClientPayload(input: {
     cart.length > 0
       ? {
           mode: "catalog",
+          catalogVersion: cart[0]?.product.catalogVersion,
+          ...(input.ledPsuAssignments?.length ? { ledPsuAssignments: input.ledPsuAssignments } : {}),
           items,
           totalRub: regular,
           discountedTotalRub: effective,
